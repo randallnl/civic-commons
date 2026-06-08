@@ -1,8 +1,8 @@
 ---
-
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
+import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const { slug } = Astro.params;
 const db = env.cvc;
@@ -16,111 +16,650 @@ if (!person) {
   return Astro.redirect("/404");
 }
 
-const terms = await db.prepare(`
-  SELECT 
-    office_terms.*,
-    positions.title,
-    positions.level,
-    positions.body,
-    divisions.name AS division_name
-  FROM office_terms
-  JOIN positions ON positions.id = office_terms.position_id
-  LEFT JOIN divisions ON divisions.id = positions.division_id
-  WHERE office_terms.person_id = ?
-  ORDER BY office_terms.status DESC, office_terms.start_date DESC
-`).bind(person.id).all();
+const terms = await db
+  .prepare(`
+    SELECT
+      office_terms.*,
+      positions.title,
+      positions.level,
+      positions.body,
+      positions.district,
+      divisions.name AS division_name
+    FROM office_terms
+    JOIN positions ON positions.id = office_terms.position_id
+    LEFT JOIN divisions ON divisions.id = positions.division_id
+    WHERE office_terms.person_id = ?
+    ORDER BY office_terms.status DESC, office_terms.start_date DESC
+  `)
+  .bind(person.id)
+  .all();
 
-const candidacies = await db.prepare(`
-  SELECT
-    candidacies.*,
-    elections.name AS election_name,
-    elections.election_date,
-    positions.title AS position_title
-  FROM candidacies
-  JOIN elections ON elections.id = candidacies.election_id
-  JOIN positions ON positions.id = candidacies.position_id
-  WHERE candidacies.person_id = ?
-  ORDER BY elections.election_date DESC
-`).bind(person.id).all();
+const candidacies = await db
+  .prepare(`
+    SELECT
+      candidacies.*,
+      elections.name AS election_name,
+      elections.election_date,
+      positions.title AS position_title
+    FROM candidacies
+    JOIN elections ON elections.id = candidacies.election_id
+    JOIN positions ON positions.id = candidacies.position_id
+    WHERE candidacies.person_id = ?
+    ORDER BY elections.election_date DESC
+  `)
+  .bind(person.id)
+  .all();
 
-const links = await db.prepare(`
-  SELECT * FROM links
-  WHERE entity_type = 'person' AND entity_id = ?
-  ORDER BY link_type, published_date DESC
-`).bind(person.id).all();
+const links = await db
+  .prepare(`
+    SELECT * FROM links
+    WHERE entity_type = 'person' AND entity_id = ?
+    ORDER BY link_type, published_date DESC
+  `)
+  .bind(person.id)
+  .all();
 
-const votes = await db.prepare(`
-  SELECT
-    bills.session_year,
-    bills.bill_number,
-    bills.title,
-    roll_calls.vote_date,
-    roll_calls.motion,
-    legislator_votes.vote
-  FROM legislator_votes
-  JOIN roll_calls ON roll_calls.id = legislator_votes.roll_call_id
-  JOIN bills ON bills.id = roll_calls.bill_id
-  WHERE legislator_votes.person_id = ?
-  ORDER BY roll_calls.vote_date DESC
-  LIMIT 25
-`).bind(person.id).all();
+const votes = await db
+  .prepare(`
+    SELECT
+      bills.session_year,
+      bills.bill_number,
+      bills.title,
+      bills.general_court_url,
+      bills.legiscan_url,
+      roll_calls.vote_date,
+      roll_calls.motion,
+      roll_calls.result,
+      legislator_votes.vote
+    FROM legislator_votes
+    JOIN roll_calls ON roll_calls.id = legislator_votes.roll_call_id
+    JOIN bills ON bills.id = roll_calls.bill_id
+    WHERE legislator_votes.person_id = ?
+    ORDER BY roll_calls.vote_date DESC
+    LIMIT 50
+  `)
+  .bind(person.id)
+  .all();
+
+let trackedBills = new Map();
+
+try {
+  trackedBills = await getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL);
+} catch (error) {
+  console.error(error?.message || "Unable to load tracked bills.");
+}
+
+const trackedVotes = votes.results
+  .map((vote) => ({
+    ...vote,
+    trackedBill: trackedBills.get(normalizeBillCode(vote.bill_number)),
+  }))
+  .filter((vote) => vote.trackedBill);
+
+const currentTerms = terms.results.filter((term) => term.status === "current");
+const primaryTerm = currentTerms[0] || terms.results[0];
+const officeLabel = primaryTerm?.title || "Civic profile";
+const bodyLabel = primaryTerm?.body || "New Hampshire";
+const districtLabel =
+  primaryTerm?.district || primaryTerm?.division_name || "District not listed";
+const fallbackInitial = person.full_name.slice(0, 1);
+
+function formatParty(party) {
+  if (!party) return "Party not listed";
+  if (party === "R") return "Republican";
+  if (party === "D") return "Democrat";
+  if (party === "I") return "Independent";
+  return party;
+}
+
+function formatDate(value) {
+  if (!value) return "";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function contactHref(type, value) {
+  if (!value) return "";
+  if (type === "email") return `mailto:${value}`;
+  if (type === "phone") return `tel:${value}`;
+  return value;
+}
 ---
 
-<html>
+<html lang="en">
   <head>
-    <title>{person.full_name}</title>
+    <title>{person.full_name} | Civic Commons</title>
+    <meta
+      name="description"
+      content={`Profile, offices, links, and tracked votes for ${person.full_name}.`}
+    />
   </head>
+
   <body>
-    <main>
-      <h1>{person.full_name}</h1>
+    <main class="page">
+      <a class="back" href="/">Back home</a>
 
-      {person.photo_url && <img src={person.photo_url} alt={person.full_name} width="180" />}
+      <section class="profile-hero">
+        <div class="portrait-card">
+          {person.photo_url ? (
+            <img src={person.photo_url} alt={person.full_name} />
+          ) : (
+            <div class="portrait-fallback">{fallbackInitial}</div>
+          )}
+        </div>
 
-      {person.party && <p>Party: {person.party}</p>}
-      {person.bio && <p>{person.bio}</p>}
+        <div class="hero-copy">
+          <p class="eyebrow">{officeLabel}</p>
+          <h1>{person.full_name}</h1>
 
-      <h2>Current and Past Offices</h2>
-      <ul>
-        {terms.results.map((term) => (
-          <li>
-            <strong>{term.title}</strong>
-            {term.division_name && <> — {term.division_name}</>}
-            <br />
-            Status: {term.status}
-          </li>
-        ))}
-      </ul>
+          <div class="hero-meta">
+            <span>{formatParty(person.party)}</span>
+            <span>{bodyLabel}</span>
+            <span>{districtLabel}</span>
+          </div>
 
-      <h2>Candidacies</h2>
-      <ul>
-        {candidacies.results.map((race) => (
-          <li>
-            <strong>{race.position_title}</strong><br />
-            {race.election_name} — {race.status}
-          </li>
-        ))}
-      </ul>
+          {person.bio ? (
+            <p class="bio">{person.bio}</p>
+          ) : (
+            <p class="bio">
+              Profile details are being assembled from public civic records.
+            </p>
+          )}
 
-      <h2>Recent Votes</h2>
-      <ul>
-        {votes.results.map((v) => (
-          <li>
-            <strong>{v.bill_number}</strong>: {v.vote}
-            <br />
-            {v.motion}
-          </li>
-        ))}
-      </ul>
+          <div class="contact-actions">
+            {person.email && (
+              <a href={contactHref("email", person.email)}>Email</a>
+            )}
+            {person.phone && (
+              <a href={contactHref("phone", person.phone)}>Call</a>
+            )}
+            {person.website_url && (
+              <a href={contactHref("web", person.website_url)}>Website</a>
+            )}
+          </div>
+        </div>
+      </section>
 
-      <h2>Links and Sources</h2>
-      <ul>
-        {links.results.map((link) => (
-          <li>
-            <a href={link.url}>{link.title || link.link_type}</a>
-            {link.publisher && <> — {link.publisher}</>}
-          </li>
-        ))}
-      </ul>
+      <section class="summary-strip">
+        <article>
+          <span>Current Offices</span>
+          <strong>{currentTerms.length}</strong>
+        </article>
+        <article>
+          <span>Tracked Votes</span>
+          <strong>{trackedVotes.length}</strong>
+        </article>
+        <article>
+          <span>Sources</span>
+          <strong>{links.results.length}</strong>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <div class="stack">
+          <section class="panel">
+            <div class="section-heading">
+              <p class="eyebrow">Service</p>
+              <h2>Current and Past Offices</h2>
+            </div>
+
+            {terms.results.length ? (
+              <div class="timeline-list">
+                {terms.results.map((term) => (
+                  <article class="timeline-item">
+                    <div>
+                      <h3>{term.title}</h3>
+                      <p>
+                        {term.division_name || term.district || "District not listed"}
+                      </p>
+                    </div>
+                    <span class:list={["status-pill", term.status]}>
+                      {term.status}
+                    </span>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No office history is listed yet.</p>
+            )}
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <p class="eyebrow">Vote History</p>
+              <h2>Tracked Bill Votes</h2>
+            </div>
+
+            {trackedVotes.length ? (
+              <div class="vote-list">
+                {trackedVotes.map((vote) => (
+                  <article class="vote-card">
+                    <div class="vote-topline">
+                      <strong>{vote.trackedBill.code}</strong>
+                      <span>{vote.vote}</span>
+                    </div>
+                    <h3>{vote.trackedBill.name || vote.title}</h3>
+                    {vote.trackedBill.summary && (
+                      <p>{vote.trackedBill.summary}</p>
+                    )}
+                    <div class="vote-meta">
+                      {vote.vote_date && <span>{formatDate(vote.vote_date)}</span>}
+                      {vote.motion && <span>{vote.motion}</span>}
+                      {vote.trackedBill.issueArea && (
+                        <span>{vote.trackedBill.issueArea}</span>
+                      )}
+                    </div>
+                    {(vote.trackedBill.moreInfoUrl ||
+                      vote.legiscan_url ||
+                      vote.general_court_url) && (
+                      <a
+                        class="text-link"
+                        href={
+                          vote.trackedBill.moreInfoUrl ||
+                          vote.legiscan_url ||
+                          vote.general_court_url
+                        }
+                      >
+                        Bill details
+                      </a>
+                    )}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">
+                No recorded votes currently match the bill tracker.
+              </p>
+            )}
+          </section>
+        </div>
+
+        <aside class="stack">
+          <section class="panel compact-panel">
+            <div class="section-heading">
+              <p class="eyebrow">Contact</p>
+              <h2>Public Details</h2>
+            </div>
+
+            <dl class="detail-list">
+              <div>
+                <dt>Email</dt>
+                <dd>
+                  {person.email ? (
+                    <a href={contactHref("email", person.email)}>{person.email}</a>
+                  ) : (
+                    "Not listed"
+                  )}
+                </dd>
+              </div>
+
+              <div>
+                <dt>Phone</dt>
+                <dd>
+                  {person.phone ? (
+                    <a href={contactHref("phone", person.phone)}>{person.phone}</a>
+                  ) : (
+                    "Not listed"
+                  )}
+                </dd>
+              </div>
+
+              <div>
+                <dt>Website</dt>
+                <dd>
+                  {person.website_url ? (
+                    <a href={person.website_url}>Open website</a>
+                  ) : (
+                    "Not listed"
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="panel compact-panel">
+            <div class="section-heading">
+              <p class="eyebrow">Elections</p>
+              <h2>Candidacies</h2>
+            </div>
+
+            {candidacies.results.length ? (
+              <div class="side-list">
+                {candidacies.results.map((race) => (
+                  <article>
+                    <h3>{race.position_title}</h3>
+                    <p>{race.election_name}</p>
+                    <span>
+                      {race.election_date && `${formatDate(race.election_date)} - `}
+                      {race.status}
+                    </span>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No candidacy records are listed yet.</p>
+            )}
+          </section>
+
+          <section class="panel compact-panel">
+            <div class="section-heading">
+              <p class="eyebrow">Sources</p>
+              <h2>Links</h2>
+            </div>
+
+            {links.results.length ? (
+              <div class="side-list">
+                {links.results.map((link) => (
+                  <article>
+                    <h3>
+                      <a href={link.url}>{link.title || link.link_type}</a>
+                    </h3>
+                    {link.publisher && <p>{link.publisher}</p>}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No source links are listed yet.</p>
+            )}
+          </section>
+        </aside>
+      </section>
     </main>
   </body>
 </html>
+
+<style>
+  :global(body) {
+    margin: 0;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    background: #f7f4ee;
+    color: #1f2933;
+  }
+
+  .page {
+    margin: 0 auto;
+    padding: 40px 0 72px;
+    width: min(1120px, calc(100% - 32px));
+  }
+
+  .back,
+  a {
+    color: #1f2933;
+    font-weight: 800;
+  }
+
+  .profile-hero {
+    align-items: end;
+    display: grid;
+    gap: 32px;
+    grid-template-columns: minmax(220px, 320px) 1fr;
+    padding: 40px 0 24px;
+  }
+
+  .portrait-card {
+    aspect-ratio: 4 / 5;
+    background: #d8cfc0;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 8px 8px 0 #1f2933;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .portrait-card img,
+  .portrait-fallback {
+    height: 100%;
+    width: 100%;
+  }
+
+  .portrait-card img {
+    display: block;
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  .portrait-fallback {
+    align-items: center;
+    color: white;
+    display: flex;
+    font-size: 7rem;
+    font-weight: 900;
+    justify-content: center;
+    background: #6b4f2a;
+  }
+
+  .eyebrow {
+    color: #6b4f2a;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    margin: 0 0 10px;
+    text-transform: uppercase;
+  }
+
+  h1,
+  h2,
+  h3,
+  p {
+    margin-top: 0;
+  }
+
+  h1 {
+    font-size: clamp(3rem, 8vw, 6.25rem);
+    letter-spacing: 0;
+    line-height: 0.92;
+    margin-bottom: 18px;
+  }
+
+  .hero-meta,
+  .contact-actions,
+  .vote-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .hero-meta span,
+  .contact-actions a,
+  .status-pill,
+  .vote-topline span,
+  .vote-meta span {
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 900;
+    padding: 7px 10px;
+  }
+
+  .hero-meta span,
+  .vote-meta span {
+    background: #fffaf1;
+  }
+
+  .bio {
+    color: #4b5563;
+    font-size: 1.08rem;
+    line-height: 1.65;
+    margin: 20px 0 0;
+    max-width: 720px;
+  }
+
+  .contact-actions {
+    margin-top: 22px;
+  }
+
+  .contact-actions a {
+    background: #1f2933;
+    color: white;
+    text-decoration: none;
+  }
+
+  .summary-strip {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(3, 1fr);
+    margin: 18px 0 28px;
+  }
+
+  .summary-strip article,
+  .panel {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 #1f2933;
+  }
+
+  .summary-strip article {
+    padding: 18px;
+  }
+
+  .summary-strip span,
+  .detail-list dt {
+    color: #6b7280;
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .summary-strip strong {
+    font-size: 2.2rem;
+    line-height: 1;
+  }
+
+  .content-grid {
+    align-items: start;
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+
+  .stack {
+    display: grid;
+    gap: 24px;
+  }
+
+  .panel {
+    padding: 24px;
+  }
+
+  .compact-panel {
+    padding: 20px;
+  }
+
+  .section-heading h2 {
+    font-size: 1.55rem;
+    line-height: 1.1;
+    margin-bottom: 18px;
+  }
+
+  .timeline-list,
+  .vote-list,
+  .side-list,
+  .detail-list {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+  }
+
+  .timeline-item,
+  .vote-card,
+  .side-list article,
+  .detail-list div {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .timeline-item {
+    align-items: start;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+  }
+
+  .timeline-item h3,
+  .vote-card h3,
+  .side-list h3 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+
+  .timeline-item p,
+  .side-list p,
+  .vote-card p {
+    color: #4b5563;
+    line-height: 1.55;
+    margin-bottom: 0;
+  }
+
+  .status-pill.current {
+    background: #e8f3df;
+  }
+
+  .vote-topline {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .vote-topline strong {
+    font-size: 1.15rem;
+  }
+
+  .vote-topline span {
+    background: #1f2933;
+    color: white;
+  }
+
+  .vote-meta {
+    margin-top: 14px;
+  }
+
+  .text-link {
+    display: inline-block;
+    margin-top: 14px;
+  }
+
+  .detail-list {
+    gap: 10px;
+  }
+
+  .detail-list dd {
+    font-weight: 800;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .side-list span,
+  .empty {
+    color: #4b5563;
+    font-weight: 800;
+  }
+
+  @media (max-width: 860px) {
+    .profile-hero,
+    .content-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .portrait-card {
+      max-width: 280px;
+    }
+
+    .summary-strip {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
