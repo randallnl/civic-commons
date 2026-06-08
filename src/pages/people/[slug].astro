@@ -6,36 +6,71 @@ import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const { slug } = Astro.params;
 const db = env.cvc;
+const API_BASE =
+  import.meta.env.REP_LOOKUP_API_BASE ||
+  "https://api.nhdeservesbetter.com";
 
-const person = await db
+const dbPerson = await db
   .prepare("SELECT * FROM people WHERE slug = ?")
   .bind(slug)
   .first();
 
-if (!person) {
+let apiData = null;
+
+try {
+  const response = await fetch(`${API_BASE}/reps/${slug}`);
+
+  if (response.ok) {
+    apiData = await response.json();
+  }
+} catch (error) {
+  console.error(error?.message || "Unable to load representative profile.");
+}
+
+const representative = apiData?.representative || null;
+
+if (!dbPerson && !representative) {
   return Astro.redirect("/404");
 }
 
-const terms = await db
-  .prepare(`
+const person = {
+  id: dbPerson?.id || representative?.personid || representative?.id,
+  full_name: representative?.name || dbPerson?.full_name || "Representative",
+  slug,
+  bio: dbPerson?.bio || representative?.notes || "",
+  photo_url: representative?.photo || dbPerson?.photo_url || "",
+  party: representative?.party || dbPerson?.party || "",
+  email: representative?.email || dbPerson?.email || "",
+  phone: representative?.phone || dbPerson?.phone || "",
+  website_url:
+    dbPerson?.website_url || representative?.sourceUrls?.generalCourt || "",
+};
+
+const terms = dbPerson
+  ? await db
+      .prepare(`
     SELECT
       office_terms.*,
       positions.title,
       positions.level,
       positions.body,
       positions.district,
-      divisions.name AS division_name
+      divisions.name AS division_name,
+      divisions.type AS division_type,
+      divisions.towns_represented
     FROM office_terms
     JOIN positions ON positions.id = office_terms.position_id
     LEFT JOIN divisions ON divisions.id = positions.division_id
     WHERE office_terms.person_id = ?
     ORDER BY office_terms.status DESC, office_terms.start_date DESC
   `)
-  .bind(person.id)
-  .all();
+      .bind(dbPerson.id)
+      .all()
+  : { results: [] };
 
-const candidacies = await db
-  .prepare(`
+const candidacies = dbPerson
+  ? await db
+      .prepare(`
     SELECT
       candidacies.*,
       elections.name AS election_name,
@@ -47,20 +82,24 @@ const candidacies = await db
     WHERE candidacies.person_id = ?
     ORDER BY elections.election_date DESC
   `)
-  .bind(person.id)
-  .all();
+      .bind(dbPerson.id)
+      .all()
+  : { results: [] };
 
-const links = await db
-  .prepare(`
+const links = dbPerson
+  ? await db
+      .prepare(`
     SELECT * FROM links
     WHERE entity_type = 'person' AND entity_id = ?
     ORDER BY link_type, published_date DESC
   `)
-  .bind(person.id)
-  .all();
+      .bind(dbPerson.id)
+      .all()
+  : { results: [] };
 
-const votes = await db
-  .prepare(`
+const votes = dbPerson
+  ? await db
+      .prepare(`
     SELECT
       bills.session_year,
       bills.bill_number,
@@ -78,8 +117,9 @@ const votes = await db
     ORDER BY roll_calls.vote_date DESC
     LIMIT 50
   `)
-  .bind(person.id)
-  .all();
+      .bind(dbPerson.id)
+      .all()
+  : { results: [] };
 
 let trackedBills = new Map();
 
@@ -89,19 +129,43 @@ try {
   console.error(error?.message || "Unable to load tracked bills.");
 }
 
-const trackedVotes = votes.results
-  .map((vote) => ({
-    ...vote,
-    trackedBill: trackedBills.get(normalizeBillCode(vote.bill_number)),
-  }))
+const voteHistory = representative
+  ? apiData?.voteHistory || []
+  : votes.results;
+const trackedVotes = voteHistory
+  .map((vote) => normalizeVote(vote, trackedBills))
   .filter((vote) => vote.trackedBill);
 
 const currentTerms = terms.results.filter((term) => term.status === "current");
 const primaryTerm = currentTerms[0] || terms.results[0];
-const officeLabel = primaryTerm?.title || "Civic profile";
-const bodyLabel = primaryTerm?.body || "New Hampshire";
-const districtLabel =
-  primaryTerm?.district || primaryTerm?.division_name || "District not listed";
+const apiTerm = representativeToTerm(representative);
+const officeTerms = terms.results.length
+  ? terms.results
+  : representative
+    ? [{ ...apiTerm, status: "current" }]
+    : [];
+const currentOfficeTerms = officeTerms.filter(
+  (term) => term.status === "current",
+);
+const officeLabel = primaryTerm?.title || apiTerm.title || "Civic profile";
+const bodyLabel = primaryTerm?.body || apiTerm.body || "New Hampshire";
+const districtLabel = formatDistrictLabel(primaryTerm || apiTerm);
+const townServiceAreas = currentTerms
+  .map((term) => ({
+    district: formatDistrictLabel(term),
+    towns: parseTownsServed(term.towns_represented),
+  }))
+  .filter((area) => area.towns.length > 0);
+if (!townServiceAreas.length && representative?.location_text) {
+  townServiceAreas.push({
+    district: formatDistrictLabel(apiTerm),
+    towns: parseLocationText(representative.location_text),
+  });
+}
+const sourceLinks = [
+  ...links.results,
+  ...sourceUrlsToLinks(representative?.sourceUrls),
+];
 const fallbackInitial = person.full_name.slice(0, 1);
 
 function formatParty(party) {
@@ -110,6 +174,127 @@ function formatParty(party) {
   if (party === "D") return "Democrat";
   if (party === "I") return "Independent";
   return party;
+}
+
+function partyClass(party) {
+  if (party === "R") return "party-republican";
+  if (party === "D") return "party-democrat";
+  if (party === "I") return "party-independent";
+  return "party-unknown";
+}
+
+function formatDistrictLabel(term = {}) {
+  const divisionName = term?.division_name || "";
+  const rawDistrict = term?.district || "";
+  const district = formatDistrictNumber(rawDistrict);
+
+  if (divisionName.startsWith("NH House District")) {
+    return `NH House District ${formatDistrictNumber(
+      divisionName.replace("NH House District", "").trim(),
+    )}`;
+  }
+
+  if (divisionName.startsWith("NH Senate District")) {
+    return `NH Senate District ${formatDistrictNumber(
+      divisionName.replace("NH Senate District", "").trim(),
+    )}`;
+  }
+
+  if (term?.body?.includes("House") && district) {
+    return `NH House District ${district}`;
+  }
+
+  if (term?.body?.includes("Senate") && district) {
+    return `NH Senate District ${district}`;
+  }
+
+  return divisionName || rawDistrict || "District not listed";
+}
+
+function formatDistrictNumber(value = "") {
+  const district = String(value).trim();
+  if (!district) return "";
+  if (/^\d+$/.test(district)) return String(Number(district));
+  return district;
+}
+
+function parseTownsServed(value = "") {
+  return String(value)
+    .split(";")
+    .map((town) => town.trim())
+    .filter(Boolean);
+}
+
+function parseLocationText(value = "") {
+  const location = String(value).trim();
+  if (!location) return [];
+  if (/ward/i.test(location)) return [location];
+
+  return location
+    .split(/\s+and\s+|;/i)
+    .map((town) => town.trim())
+    .filter(Boolean);
+}
+
+function representativeToTerm(rep = {}) {
+  if (!rep) return {};
+
+  return {
+    title:
+      rep.chamber === "House"
+        ? "State Representative"
+        : rep.chamber === "Senate"
+          ? "State Senator"
+          : "State Legislator",
+    body:
+      rep.chamber === "House"
+        ? "New Hampshire House of Representatives"
+        : rep.chamber === "Senate"
+          ? "New Hampshire Senate"
+          : "New Hampshire General Court",
+    district: rep.raw_district || rep.district || "",
+    division_name: "",
+  };
+}
+
+function normalizeVote(vote = {}, bills = new Map()) {
+  const billNumber = vote.condensedbillno || vote.bill_number || "";
+  const trackedBill = bills.get(normalizeBillCode(billNumber));
+
+  return {
+    ...vote,
+    bill_number: billNumber,
+    title: vote.title || vote.description || "",
+    vote_date: vote.vote_date || vote.statusdate || "",
+    motion: vote.motion || vote.description || "",
+    general_court_url: vote.general_court_url || "",
+    legiscan_url: vote.legiscan_url || "",
+    trackedBill,
+  };
+}
+
+function sourceUrlsToLinks(sourceUrls = {}) {
+  const links = [];
+
+  if (sourceUrls.generalCourt) {
+    links.push({
+      title: "General Court Profile",
+      link_type: "general_court",
+      url: sourceUrls.generalCourt,
+      publisher: "New Hampshire General Court",
+    });
+  }
+
+  if (sourceUrls.photo) {
+    links.push({
+      title: "Photo Source",
+      link_type: "photo",
+      url: sourceUrls.photo,
+      publisher: "NH Deserves Better",
+    });
+  }
+
+  return links;
 }
 
 function formatDate(value) {
@@ -157,9 +342,11 @@ function contactHref(type, value) {
           <h1>{person.full_name}</h1>
 
           <div class="hero-meta">
-            <span>{formatParty(person.party)}</span>
-            <span>{bodyLabel}</span>
-            <span>{districtLabel}</span>
+            <span class:list={["meta-pill", "party-pill", partyClass(person.party)]}>
+              {formatParty(person.party)}
+            </span>
+            <span class="meta-pill">{bodyLabel}</span>
+            <span class="meta-pill district-pill">{districtLabel}</span>
           </div>
 
           {person.bio ? (
@@ -187,7 +374,7 @@ function contactHref(type, value) {
       <section class="summary-strip">
         <article>
           <span>Current Offices</span>
-          <strong>{currentTerms.length}</strong>
+          <strong>{currentOfficeTerms.length}</strong>
         </article>
         <article>
           <span>Tracked Votes</span>
@@ -195,7 +382,7 @@ function contactHref(type, value) {
         </article>
         <article>
           <span>Sources</span>
-          <strong>{links.results.length}</strong>
+          <strong>{sourceLinks.length}</strong>
         </article>
       </section>
 
@@ -207,14 +394,14 @@ function contactHref(type, value) {
               <h2>Current and Past Offices</h2>
             </div>
 
-            {terms.results.length ? (
+            {officeTerms.length ? (
               <div class="timeline-list">
-                {terms.results.map((term) => (
+                {officeTerms.map((term) => (
                   <article class="timeline-item">
                     <div>
                       <h3>{term.title}</h3>
                       <p>
-                        {term.division_name || term.district || "District not listed"}
+                        {formatDistrictLabel(term)}
                       </p>
                     </div>
                     <span class:list={["status-pill", term.status]}>
@@ -323,6 +510,30 @@ function contactHref(type, value) {
 
           <section class="panel compact-panel">
             <div class="section-heading">
+              <p class="eyebrow">District</p>
+              <h2>Towns Served</h2>
+            </div>
+
+            {townServiceAreas.length ? (
+              <div class="towns-list">
+                {townServiceAreas.map((area) => (
+                  <article>
+                    <h3>{area.district}</h3>
+                    <div>
+                      {area.towns.map((town) => (
+                        <span>{town}</span>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No towns served are listed yet.</p>
+            )}
+          </section>
+
+          <section class="panel compact-panel">
+            <div class="section-heading">
               <p class="eyebrow">Elections</p>
               <h2>Candidacies</h2>
             </div>
@@ -351,9 +562,9 @@ function contactHref(type, value) {
               <h2>Links</h2>
             </div>
 
-            {links.results.length ? (
+            {sourceLinks.length ? (
               <div class="side-list">
-                {links.results.map((link) => (
+                {sourceLinks.map((link) => (
                   <article>
                     <h3>
                       <a href={link.url}>{link.title || link.link_type}</a>
@@ -398,7 +609,7 @@ function contactHref(type, value) {
     align-items: end;
     display: grid;
     gap: 32px;
-    grid-template-columns: minmax(220px, 320px) 1fr;
+    grid-template-columns: minmax(180px, 260px) 1fr;
     padding: 40px 0 24px;
   }
 
@@ -465,7 +676,7 @@ function contactHref(type, value) {
     gap: 8px;
   }
 
-  .hero-meta span,
+  .meta-pill,
   .contact-actions a,
   .status-pill,
   .vote-topline span,
@@ -477,9 +688,34 @@ function contactHref(type, value) {
     padding: 7px 10px;
   }
 
-  .hero-meta span,
+  .meta-pill,
   .vote-meta span {
     background: #fffaf1;
+  }
+
+  .party-pill {
+    border-color: transparent;
+    color: white;
+  }
+
+  .party-republican {
+    background: #b42318;
+  }
+
+  .party-democrat {
+    background: #1d4ed8;
+  }
+
+  .party-independent {
+    background: #5b616e;
+  }
+
+  .party-unknown {
+    background: #6b4f2a;
+  }
+
+  .district-pill {
+    border-color: #1f2933;
   }
 
   .bio {
@@ -564,7 +800,8 @@ function contactHref(type, value) {
   .timeline-list,
   .vote-list,
   .side-list,
-  .detail-list {
+  .detail-list,
+  .towns-list {
     display: grid;
     gap: 12px;
     margin: 0;
@@ -573,7 +810,8 @@ function contactHref(type, value) {
   .timeline-item,
   .vote-card,
   .side-list article,
-  .detail-list div {
+  .detail-list div,
+  .towns-list article {
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 8px;
@@ -589,7 +827,8 @@ function contactHref(type, value) {
 
   .timeline-item h3,
   .vote-card h3,
-  .side-list h3 {
+  .side-list h3,
+  .towns-list h3 {
     font-size: 1rem;
     margin-bottom: 6px;
   }
@@ -642,6 +881,22 @@ function contactHref(type, value) {
     overflow-wrap: anywhere;
   }
 
+  .towns-list div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .towns-list span {
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.82rem;
+    font-weight: 900;
+    padding: 6px 9px;
+  }
+
   .side-list span,
   .empty {
     color: #4b5563;
@@ -655,7 +910,7 @@ function contactHref(type, value) {
     }
 
     .portrait-card {
-      max-width: 280px;
+      max-width: 220px;
     }
 
     .summary-strip {
