@@ -35,6 +35,10 @@ const voteHistory = Array.isArray(rep.voteHistory)
 function trackedBillFor(vote) {
   return trackedBills.get(normalizeBillCode(vote.condensedbillno));
 }
+
+function voteLabel(vote) {
+  return vote.vote_label || vote.vote || "Not listed";
+}
 ---
 
 <a class="rep-card" href={profileHref}>
@@ -107,7 +111,7 @@ function trackedBillFor(vote) {
                 <strong>{bill?.code || vote.condensedbillno || "Bill"}</strong>
                 {bill?.name && <span>{bill.name}</span>}
               </div>
-              <small>Vote {vote.vote || "not listed"}</small>
+              <small>{voteLabel(vote)}</small>
             </div>
           );
         })}

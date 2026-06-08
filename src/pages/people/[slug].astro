@@ -267,6 +267,7 @@ function normalizeVote(vote = {}, bills = new Map()) {
     title: vote.title || vote.description || "",
     vote_date: vote.vote_date || vote.statusdate || "",
     motion: vote.motion || vote.description || "",
+    vote_label: vote.vote_label || vote.vote || "Not listed",
     general_court_url: vote.general_court_url || "",
     legiscan_url: vote.legiscan_url || "",
     trackedBill,
@@ -427,7 +428,7 @@ function contactHref(type, value) {
                   <article class="vote-card">
                     <div class="vote-topline">
                       <strong>{vote.trackedBill.code}</strong>
-                      <span>{vote.vote}</span>
+                      <span>{vote.vote_label}</span>
                     </div>
                     <h3>{vote.trackedBill.name || vote.title}</h3>
                     {vote.trackedBill.summary && (
