@@ -1,7 +1,7 @@
 ---
 const API_BASE =
   import.meta.env.PUBLIC_API_BASE ||
-  "https://api.nhdeservesbetter.com";
+  "https://nhdb-api.randall-d53.workers.dev";
 ---
 
 <html lang="en">
@@ -98,6 +98,15 @@ const API_BASE =
         ]
           .filter(Boolean)
           .join(", ");
+      }
+
+      function slugify(value = "") {
+        return String(value)
+          .toLowerCase()
+          .trim()
+          .replace(/['’]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
       }
 
       function renderDistrictSummary(data) {
@@ -197,15 +206,17 @@ const API_BASE =
           `;
 
         const emailHtml = rep.email
-          ? `<a href="mailto:${escapeHtml(rep.email)}">${escapeHtml(rep.email)}</a>`
+          ? escapeHtml(rep.email)
           : "Email not listed";
 
         const phoneHtml = rep.phone
-          ? `<a href="tel:${escapeHtml(rep.phone)}">${escapeHtml(rep.phone)}</a>`
+          ? escapeHtml(rep.phone)
           : "Phone not listed";
 
+        const profileHref = `/people/${slugify(name)}`;
+
         return `
-          <article class="rep-card panel">
+          <a class="rep-card panel" href="${safeHref(profileHref)}">
             <div class="rep-card-top">
               <div class="photo-wrap">
                 ${photoHtml}
@@ -255,9 +266,9 @@ const API_BASE =
                     </div>
                   `
                   : ""
-              }
+                }
             </div>
-          </article>
+          </a>
         `;
       }
 
@@ -527,8 +538,15 @@ const API_BASE =
   }
 
   .rep-card {
+    color: inherit;
+    display: block;
     padding: 20px;
+    text-decoration: none;
     overflow: hidden;
+  }
+
+  .rep-card:hover h3 {
+    text-decoration: underline;
   }
 
   .rep-card-top {
@@ -598,7 +616,7 @@ const API_BASE =
     padding-top: 16px;
   }
 
-  .rep-contact a {
+  .rep-contact div {
     color: #1f2933;
     font-weight: 800;
     overflow-wrap: anywhere;
