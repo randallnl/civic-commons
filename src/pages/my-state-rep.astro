@@ -1,5 +1,66 @@
 ---
-const LOOKUP_ENDPOINT = "/api/reps/lookup";
+export const prerender = false;
+
+import RepresentativeCard from "../components/RepresentativeCard.astro";
+
+const API_BASE =
+  import.meta.env.REP_LOOKUP_API_BASE ||
+  "https://api.nhdeservesbetter.com";
+
+const address = Astro.url.searchParams.get("address")?.trim() || "";
+
+let lookupData = null;
+let lookupError = "";
+
+if (address) {
+  try {
+    const response = await fetch(`${API_BASE}/reps/lookup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ address }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Something went wrong.");
+    }
+
+    lookupData = data;
+  } catch (error) {
+    lookupError =
+      error?.message || "Unable to look up representatives.";
+  }
+}
+
+const senateReps = lookupData?.groups?.senate || [];
+const houseReps = lookupData?.groups?.house || [];
+const allReps = lookupData?.representatives || [];
+const civic = lookupData?.civic || {};
+const matchedDistricts = lookupData?.matchedDistricts || [];
+const normalizedInput = lookupData?.normalizedInput || {};
+const prettyAddress = formatAddress(normalizedInput);
+const place = civic.place?.name || normalizedInput.city || "";
+const ward = civic.ward?.number ? `Ward ${civic.ward.number}` : "";
+const senateDistrict =
+  civic.senate?.districtLabel || civic.senate?.district || "";
+const houseDistricts = matchedDistricts
+  .filter((district) => district.body === "H")
+  .map((district) => district.district_label)
+  .filter(Boolean);
+
+function formatAddress(normalized = {}) {
+  return [
+    normalized.line1,
+    normalized.city,
+    normalized.state,
+    normalized.zip,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
 ---
 
 <html lang="en">
@@ -24,7 +85,7 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
           community.
         </p>
 
-        <form id="lookup-form" class="lookup-card">
+        <form class="lookup-card" action="/my-state-rep" method="get">
           <label for="address">Your full address</label>
 
           <div class="form-row">
@@ -32,6 +93,7 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
               id="address"
               name="address"
               type="text"
+              value={address}
               placeholder="82 Bobcat Way, Manchester, NH"
               autocomplete="street-address"
               required
@@ -47,340 +109,99 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
         </form>
       </section>
 
-      <div id="status" class="status-message" aria-live="polite"></div>
+      {lookupError && (
+        <div class="status-message" aria-live="polite">
+          {lookupError}
+        </div>
+      )}
 
-      <section id="district-summary" class="district-summary" hidden></section>
+      {address && !lookupError && allReps.length === 0 && (
+        <div class="status-message" aria-live="polite">
+          No representatives found for that address.
+        </div>
+      )}
 
-      <section id="results" class="results" hidden>
-        <div id="senate-section"></div>
-        <div id="house-section"></div>
-      </section>
-    </main>
-
-    <script define:vars={{ LOOKUP_ENDPOINT }}>
-      const form = document.querySelector("#lookup-form");
-      const addressInput = document.querySelector("#address");
-      const statusEl = document.querySelector("#status");
-      const resultsEl = document.querySelector("#results");
-      const districtSummaryEl = document.querySelector("#district-summary");
-      const senateSectionEl = document.querySelector("#senate-section");
-      const houseSectionEl = document.querySelector("#house-section");
-
-      function escapeHtml(value = "") {
-        return String(value)
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;")
-          .replace(/'/g, "&#039;");
-      }
-
-      function safeHref(value = "") {
-        return String(value || "").replace(/"/g, "%22");
-      }
-
-      function formatParty(party) {
-        if (!party) return "Party not listed";
-        if (party === "R") return "Republican";
-        if (party === "D") return "Democrat";
-        if (party === "I") return "Independent";
-        return party;
-      }
-
-      function formatAddress(normalized = {}) {
-        return [
-          normalized.line1,
-          normalized.city,
-          normalized.state,
-          normalized.zip,
-        ]
-          .filter(Boolean)
-          .join(", ");
-      }
-
-      function slugify(value = "") {
-        return String(value)
-          .toLowerCase()
-          .trim()
-          .replace(/['’]/g, "")
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-+|-+$/g, "");
-      }
-
-      function renderDistrictSummary(data) {
-        const civic = data.civic || {};
-        const matchedDistricts = data.matchedDistricts || [];
-        const prettyAddress = formatAddress(data.normalizedInput || {});
-
-        const place = civic.place?.name || data.normalizedInput?.city || "";
-        const ward = civic.ward?.number ? `Ward ${civic.ward.number}` : "";
-        const houseDistricts = matchedDistricts
-          .filter((district) => district.body === "H")
-          .map((district) => district.district_label)
-          .filter(Boolean);
-
-        const senateDistrict =
-          civic.senate?.districtLabel || civic.senate?.district || "";
-
-        districtSummaryEl.hidden = false;
-        districtSummaryEl.innerHTML = `
-          <div class="summary-card panel">
-            <div>
-              <p class="summary-label">Showing results for</p>
-              <h2>${escapeHtml(prettyAddress || data.address || "This address")}</h2>
-            </div>
-
-            <div class="summary-grid">
-              ${
-                place
-                  ? `
-                    <div class="summary-item">
-                      <span>Community</span>
-                      <strong>${escapeHtml(place)}</strong>
-                    </div>
-                  `
-                  : ""
-              }
-
-              ${
-                ward
-                  ? `
-                    <div class="summary-item">
-                      <span>Ward</span>
-                      <strong>${escapeHtml(ward)}</strong>
-                    </div>
-                  `
-                  : ""
-              }
-
-              ${
-                senateDistrict
-                  ? `
-                    <div class="summary-item">
-                      <span>State Senate</span>
-                      <strong>District ${escapeHtml(senateDistrict)}</strong>
-                    </div>
-                  `
-                  : ""
-              }
-
-              ${
-                houseDistricts.length
-                  ? `
-                    <div class="summary-item">
-                      <span>State House</span>
-                      <strong>${escapeHtml(houseDistricts.join(", "))}</strong>
-                    </div>
-                  `
-                  : ""
-              }
-            </div>
-          </div>
-        `;
-      }
-
-      function renderRepCard(rep) {
-        const name =
-          rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim();
-        const fallbackInitial = (rep.firstname || name || "NH").slice(0, 1);
-        const voteHistory = Array.isArray(rep.voteHistory)
-          ? rep.voteHistory.slice(0, 3)
-          : [];
-
-        const photoHtml = rep.photo
-          ? `
-            <img
-              class="rep-photo"
-              src="${safeHref(rep.photo)}"
-              alt="Photo of ${escapeHtml(name)}"
-              loading="lazy"
-              onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';"
-            />
-            <div class="rep-photo fallback-photo" style="display:none;">
-              ${escapeHtml(fallbackInitial)}
-            </div>
-          `
-          : `
-            <div class="rep-photo fallback-photo">
-              ${escapeHtml(fallbackInitial)}
-            </div>
-          `;
-
-        const emailHtml = rep.email
-          ? escapeHtml(rep.email)
-          : "Email not listed";
-
-        const phoneHtml = rep.phone
-          ? escapeHtml(rep.phone)
-          : "Phone not listed";
-
-        const profileHref = `/people/${slugify(name)}`;
-        const voteHtml = voteHistory.length
-          ? `
-            <div class="vote-summary">
-              <span>Recent Votes</span>
-              <div class="vote-list">
-                ${voteHistory
-                  .map(
-                    (vote) => `
-                      <div class="vote-item">
-                        <strong>${escapeHtml(vote.condensedbillno || "Bill")}</strong>
-                        <small>Vote ${escapeHtml(vote.vote || "not listed")}</small>
-                      </div>
-                    `
-                  )
-                  .join("")}
-              </div>
-            </div>
-          `
-          : `
-            <div class="vote-summary">
-              <span>Recent Votes</span>
-              <p>No recent vote history returned.</p>
-            </div>
-          `;
-
-        return `
-          <a class="rep-card panel" href="${safeHref(profileHref)}">
-            <div class="rep-card-top">
-              <div class="photo-wrap">
-                ${photoHtml}
-              </div>
-
-              <div class="rep-main">
-                <h3>${escapeHtml(name)}</h3>
-
-                <div class="rep-meta">
-                  <span>${escapeHtml(rep.chamber || "Legislator")}</span>
-                  <span>${escapeHtml(formatParty(rep.party))}</span>
-                </div>
-
-                <div class="district-line">
-                  <strong>District:</strong> ${escapeHtml(rep.district || "Not listed")}
-                </div>
-
-                ${
-                  rep.location_text
-                    ? `
-                      <div class="location-line">
-                        ${escapeHtml(rep.location_text)}
-                      </div>
-                    `
-                    : ""
-                }
-              </div>
-            </div>
-
-            <div class="rep-contact">
+      {lookupData && allReps.length > 0 && (
+        <>
+          <section class="district-summary">
+            <div class="summary-card panel">
               <div>
-                <span>Email</span>
-                ${emailHtml}
+                <p class="summary-label">Showing results for</p>
+                <h2>{prettyAddress || lookupData.address || "This address"}</h2>
               </div>
 
-              <div>
-                <span>Phone</span>
-                ${phoneHtml}
+              <div class="summary-grid">
+                {place && (
+                  <div class="summary-item">
+                    <span>Community</span>
+                    <strong>{place}</strong>
+                  </div>
+                )}
+
+                {ward && (
+                  <div class="summary-item">
+                    <span>Ward</span>
+                    <strong>{ward}</strong>
+                  </div>
+                )}
+
+                {senateDistrict && (
+                  <div class="summary-item">
+                    <span>State Senate</span>
+                    <strong>District {senateDistrict}</strong>
+                  </div>
+                )}
+
+                {houseDistricts.length > 0 && (
+                  <div class="summary-item">
+                    <span>State House</span>
+                    <strong>{houseDistricts.join(", ")}</strong>
+                  </div>
+                )}
               </div>
-
-              ${
-                rep.notes
-                  ? `
-                    <div>
-                      <span>Notes</span>
-                      <p>${escapeHtml(rep.notes)}</p>
-                    </div>
-                  `
-                  : ""
-                }
-            </div>
-
-            ${voteHtml}
-          </a>
-        `;
-      }
-
-      function renderGroup(title, description, reps) {
-        if (!reps || reps.length === 0) {
-          return "";
-        }
-
-        return `
-          <section class="rep-group">
-            <div class="group-header">
-              <h2>${escapeHtml(title)}</h2>
-              <p>${escapeHtml(description)}</p>
-            </div>
-
-            <div class="rep-grid">
-              ${reps.map(renderRepCard).join("")}
             </div>
           </section>
-        `;
-      }
 
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
+          <section class="results">
+            {senateReps.length > 0 && (
+              <section class="rep-group">
+                <div class="group-header">
+                  <h2>State Senate</h2>
+                  <p>
+                    Your State Senator represents a larger district in the New
+                    Hampshire Senate.
+                  </p>
+                </div>
 
-        const address = addressInput.value.trim();
+                <div class="rep-grid">
+                  {senateReps.map((rep) => (
+                    <RepresentativeCard rep={rep} />
+                  ))}
+                </div>
+              </section>
+            )}
 
-        if (!address) {
-          statusEl.textContent = "Please enter an address.";
-          return;
-        }
+            {houseReps.length > 0 && (
+              <section class="rep-group">
+                <div class="group-header">
+                  <h2>State House</h2>
+                  <p>
+                    Your House representatives may include your ward or town
+                    district plus a floterial district.
+                  </p>
+                </div>
 
-        statusEl.textContent = "Looking up your districts...";
-        resultsEl.hidden = true;
-        districtSummaryEl.hidden = true;
-        senateSectionEl.innerHTML = "";
-        houseSectionEl.innerHTML = "";
-
-        try {
-          const response = await fetch(LOOKUP_ENDPOINT, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ address }),
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.error || "Something went wrong.");
-          }
-
-          const senateReps = data.groups?.senate || [];
-          const houseReps = data.groups?.house || [];
-          const allReps = data.representatives || [];
-
-          if (allReps.length === 0) {
-            statusEl.textContent = "No representatives found for that address.";
-            return;
-          }
-
-          statusEl.textContent = "";
-          resultsEl.hidden = false;
-
-          renderDistrictSummary(data);
-
-          senateSectionEl.innerHTML = renderGroup(
-            "State Senate",
-            "Your State Senator represents a larger district in the New Hampshire Senate.",
-            senateReps
-          );
-
-          houseSectionEl.innerHTML = renderGroup(
-            "State House",
-            "Your House representatives may include your ward or town district plus a floterial district.",
-            houseReps
-          );
-        } catch (error) {
-          console.error(error);
-          statusEl.textContent =
-            error.message || "Unable to look up representatives.";
-        }
-      });
-    </script>
+                <div class="rep-grid">
+                  {houseReps.map((rep) => (
+                    <RepresentativeCard rep={rep} />
+                  ))}
+                </div>
+              </section>
+            )}
+          </section>
+        </>
+      )}
+    </main>
   </body>
 </html>
 
@@ -411,7 +232,6 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
 
   .eyebrow,
   .summary-label,
-  .rep-contact span,
   .summary-item span {
     text-transform: uppercase;
     letter-spacing: 0.12em;
@@ -529,8 +349,7 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
     padding: 16px;
   }
 
-  .summary-item span,
-  .rep-contact span {
+  .summary-item span {
     display: block;
     color: #6b7280;
     margin-bottom: 6px;
@@ -564,139 +383,6 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
     margin-top: 24px;
   }
 
-  .rep-card {
-    background: white;
-    border: 2px solid #1f2933;
-    border-radius: 18px;
-    box-shadow: 4px 4px 0 #1f2933;
-    color: inherit;
-    display: block;
-    overflow: hidden;
-    padding: 18px;
-    text-decoration: none;
-  }
-
-  .rep-card:hover h3 {
-    text-decoration: underline;
-  }
-
-  .rep-card-top {
-    display: grid;
-    grid-template-columns: 96px 1fr;
-    gap: 16px;
-    align-items: start;
-  }
-
-  .photo-wrap,
-  .rep-photo {
-    width: 96px;
-  }
-
-  .rep-photo {
-    height: 96px;
-    border: 2px solid #1f2933;
-    border-radius: 16px;
-    object-fit: cover;
-    object-position: center top;
-    background: #6b4f2a;
-  }
-
-  .fallback-photo {
-    display: grid;
-    place-items: center;
-    color: white;
-    font-size: 2rem;
-    font-weight: 900;
-  }
-
-  .rep-main h3 {
-    font-size: 1.3rem;
-    margin: 0;
-  }
-
-  .rep-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-  }
-
-  .rep-meta span {
-    background: #fffaf1;
-    border: 1px solid #d1d5db;
-    border-radius: 999px;
-    color: #1f2933;
-    font-size: 0.8rem;
-    font-weight: 800;
-    padding: 5px 10px;
-  }
-
-  .district-line,
-  .location-line {
-    margin-top: 10px;
-  }
-
-  .location-line {
-    color: #4b5563;
-  }
-
-  .rep-contact {
-    border-top: 1px solid #d1d5db;
-    display: grid;
-    gap: 12px;
-    margin-top: 16px;
-    padding-top: 16px;
-  }
-
-  .rep-contact div {
-    color: #1f2933;
-    font-weight: 800;
-    overflow-wrap: anywhere;
-  }
-
-  .rep-contact p {
-    margin: 0;
-  }
-
-  .vote-summary {
-    border-top: 1px solid #d1d5db;
-    margin-top: 16px;
-    padding-top: 16px;
-  }
-
-  .vote-summary > span {
-    color: #6b7280;
-    display: block;
-    font-size: 0.8rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-  }
-
-  .vote-list {
-    display: grid;
-    gap: 8px;
-  }
-
-  .vote-item {
-    align-items: center;
-    background: #fffaf1;
-    border: 1px solid #d1d5db;
-    border-radius: 12px;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 10px 12px;
-  }
-
-  .vote-item small,
-  .vote-summary p {
-    color: #4b5563;
-    font-weight: 800;
-    margin: 0;
-  }
-
   @media (max-width: 900px) {
     .summary-grid,
     .rep-grid {
@@ -719,19 +405,6 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
 
     .hero {
       padding-top: 32px;
-    }
-
-    .rep-card-top {
-      grid-template-columns: 1fr;
-    }
-
-    .photo-wrap,
-    .rep-photo {
-      width: 96px;
-    }
-
-    .rep-photo {
-      height: 96px;
     }
   }
 </style>

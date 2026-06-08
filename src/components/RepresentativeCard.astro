@@ -1,0 +1,246 @@
+---
+const { rep } = Astro.props;
+
+function formatParty(party) {
+  if (!party) return "Party not listed";
+  if (party === "R") return "Republican";
+  if (party === "D") return "Democrat";
+  if (party === "I") return "Independent";
+  return party;
+}
+
+function slugify(value = "") {
+  return String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/['']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+const name =
+  rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim();
+const fallbackInitial = (rep.firstname || name || "NH").slice(0, 1);
+const profileHref = `/people/${slugify(name)}`;
+const voteHistory = Array.isArray(rep.voteHistory)
+  ? rep.voteHistory.slice(0, 3)
+  : [];
+---
+
+<a class="rep-card" href={profileHref}>
+  <div class="rep-card-top">
+    <div class="photo-wrap">
+      {rep.photo ? (
+        <img
+          class="rep-photo"
+          src={rep.photo}
+          alt={`Photo of ${name}`}
+          loading="lazy"
+        />
+      ) : (
+        <div class="rep-photo fallback-photo">
+          {fallbackInitial}
+        </div>
+      )}
+    </div>
+
+    <div class="rep-main">
+      <h3>{name}</h3>
+
+      <div class="rep-meta">
+        <span>{rep.chamber || "Legislator"}</span>
+        <span>{formatParty(rep.party)}</span>
+      </div>
+
+      <div class="district-line">
+        <strong>District:</strong> {rep.district || "Not listed"}
+      </div>
+
+      {rep.location_text && (
+        <div class="location-line">
+          {rep.location_text}
+        </div>
+      )}
+    </div>
+  </div>
+
+  <div class="rep-contact">
+    <div>
+      <span>Email</span>
+      {rep.email || "Email not listed"}
+    </div>
+
+    <div>
+      <span>Phone</span>
+      {rep.phone || "Phone not listed"}
+    </div>
+
+    {rep.notes && (
+      <div>
+        <span>Notes</span>
+        <p>{rep.notes}</p>
+      </div>
+    )}
+  </div>
+
+  <div class="vote-summary">
+    <span>Recent Votes</span>
+
+    {voteHistory.length ? (
+      <div class="vote-list">
+        {voteHistory.map((vote) => (
+          <div class="vote-item">
+            <strong>{vote.condensedbillno || "Bill"}</strong>
+            <small>Vote {vote.vote || "not listed"}</small>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <p>No recent vote history returned.</p>
+    )}
+  </div>
+</a>
+
+<style>
+  .rep-card {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 18px;
+    box-shadow: 4px 4px 0 #1f2933;
+    color: inherit;
+    display: block;
+    overflow: hidden;
+    padding: 18px;
+    text-decoration: none;
+  }
+
+  .rep-card:hover h3 {
+    text-decoration: underline;
+  }
+
+  .rep-card-top {
+    align-items: start;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: 96px 1fr;
+  }
+
+  .photo-wrap,
+  .rep-photo {
+    width: 96px;
+  }
+
+  .rep-photo {
+    background: #6b4f2a;
+    border: 2px solid #1f2933;
+    border-radius: 16px;
+    height: 96px;
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  .fallback-photo {
+    color: white;
+    display: grid;
+    font-size: 2rem;
+    font-weight: 900;
+    place-items: center;
+  }
+
+  .rep-main h3 {
+    font-size: 1.3rem;
+    margin: 0;
+  }
+
+  .rep-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .rep-meta span {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.8rem;
+    font-weight: 800;
+    padding: 5px 10px;
+  }
+
+  .district-line,
+  .location-line {
+    margin-top: 10px;
+  }
+
+  .location-line {
+    color: #4b5563;
+  }
+
+  .rep-contact,
+  .vote-summary {
+    border-top: 1px solid #d1d5db;
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .rep-contact {
+    display: grid;
+    gap: 12px;
+  }
+
+  .rep-contact div {
+    color: #1f2933;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+
+  .rep-contact span,
+  .vote-summary > span {
+    color: #6b7280;
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .rep-contact p {
+    margin: 0;
+  }
+
+  .vote-summary > span {
+    margin-bottom: 10px;
+  }
+
+  .vote-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .vote-item {
+    align-items: center;
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    padding: 10px 12px;
+  }
+
+  .vote-item small,
+  .vote-summary p {
+    color: #4b5563;
+    font-weight: 800;
+    margin: 0;
+  }
+
+  @media (max-width: 520px) {
+    .rep-card-top {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
