@@ -93,6 +93,28 @@ function divisionUrl(division) {
         </article>
       </section>
 
+      <section class="rep-preview">
+        <div>
+          <p class="eyebrow">Representative Lookup</p>
+          <h2>Start with an address. See the right districts.</h2>
+          <p>
+            The tool identifies ward-specific House districts, Senate districts,
+            legislator cards, contact details, and recent vote summaries.
+          </p>
+          <a href="/my-state-rep">Open My State Rep</a>
+        </div>
+
+        <div class="preview-panel">
+          <span>Example result</span>
+          <strong>82 Bobcat Way, Manchester</strong>
+          <ul>
+            <li>Ward 8</li>
+            <li>Senate District 18</li>
+            <li>House HIL 15 + HIL 39</li>
+          </ul>
+        </div>
+      </section>
+
       <section class="grid">
         <a class="card" href="/nh">
           <h2>Explore Communities</h2>
@@ -272,6 +294,7 @@ function divisionUrl(division) {
 
   .stats article,
   .card,
+  .rep-preview,
   .content-grid > div,
   .cta {
     background: rgba(255, 255, 255, 0.75);
@@ -294,6 +317,77 @@ function divisionUrl(division) {
     display: block;
     margin-top: 8px;
     color: #4b5563;
+  }
+
+  .rep-preview {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+    gap: 24px;
+    margin: 40px 0;
+    padding: 32px;
+  }
+
+  .rep-preview h2 {
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height: 1;
+    margin: 0;
+    max-width: 760px;
+  }
+
+  .rep-preview p {
+    color: #4b5563;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    max-width: 700px;
+  }
+
+  .rep-preview a {
+    border: 2px solid #1f2933;
+    background: #1f2933;
+    color: white;
+    display: inline-block;
+    padding: 14px 20px;
+    border-radius: 999px;
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .preview-panel {
+    align-self: stretch;
+    background: #fffaf1;
+    border: 2px solid #1f2933;
+    border-radius: 18px;
+    display: grid;
+    gap: 12px;
+    padding: 20px;
+  }
+
+  .preview-panel span {
+    color: #6b4f2a;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .preview-panel strong {
+    font-size: 1.35rem;
+    line-height: 1.1;
+  }
+
+  .preview-panel ul {
+    display: grid;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .preview-panel li {
+    border-top: 1px solid #d1d5db;
+    color: #1f2933;
+    font-weight: 800;
+    padding-top: 8px;
   }
 
   .grid {
@@ -377,6 +471,7 @@ function divisionUrl(division) {
   @media (max-width: 900px) {
     .stats,
     .grid,
+    .rep-preview,
     .content-grid {
       grid-template-columns: 1fr 1fr;
     }
@@ -389,6 +484,7 @@ function divisionUrl(division) {
   @media (max-width: 600px) {
     .stats,
     .grid,
+    .rep-preview,
     .content-grid {
       grid-template-columns: 1fr;
     }

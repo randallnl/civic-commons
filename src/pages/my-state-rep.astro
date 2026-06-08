@@ -183,6 +183,9 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
         const name =
           rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim();
         const fallbackInitial = (rep.firstname || name || "NH").slice(0, 1);
+        const voteHistory = Array.isArray(rep.voteHistory)
+          ? rep.voteHistory.slice(0, 3)
+          : [];
 
         const photoHtml = rep.photo
           ? `
@@ -212,6 +215,30 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
           : "Phone not listed";
 
         const profileHref = `/people/${slugify(name)}`;
+        const voteHtml = voteHistory.length
+          ? `
+            <div class="vote-summary">
+              <span>Recent Votes</span>
+              <div class="vote-list">
+                ${voteHistory
+                  .map(
+                    (vote) => `
+                      <div class="vote-item">
+                        <strong>${escapeHtml(vote.condensedbillno || "Bill")}</strong>
+                        <small>Vote ${escapeHtml(vote.vote || "not listed")}</small>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </div>
+          `
+          : `
+            <div class="vote-summary">
+              <span>Recent Votes</span>
+              <p>No recent vote history returned.</p>
+            </div>
+          `;
 
         return `
           <a class="rep-card panel" href="${safeHref(profileHref)}">
@@ -266,6 +293,8 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
                   : ""
                 }
             </div>
+
+            ${voteHtml}
           </a>
         `;
       }
@@ -538,7 +567,8 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
   .rep-card {
     color: inherit;
     display: block;
-    padding: 20px;
+    border-width: 3px;
+    padding: 22px;
     text-decoration: none;
     overflow: hidden;
   }
@@ -549,21 +579,22 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
 
   .rep-card-top {
     display: grid;
-    grid-template-columns: 96px 1fr;
-    gap: 16px;
+    grid-template-columns: 144px 1fr;
+    gap: 18px;
     align-items: start;
   }
 
   .photo-wrap,
   .rep-photo {
-    width: 96px;
+    width: 144px;
   }
 
   .rep-photo {
-    height: 96px;
+    height: 192px;
     border: 2px solid #1f2933;
     border-radius: 18px;
     object-fit: cover;
+    object-position: center top;
     background: #6b4f2a;
   }
 
@@ -624,6 +655,45 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
     margin: 0;
   }
 
+  .vote-summary {
+    border-top: 1px solid #d1d5db;
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .vote-summary > span {
+    color: #6b7280;
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  .vote-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .vote-item {
+    align-items: center;
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .vote-item small,
+  .vote-summary p {
+    color: #4b5563;
+    font-weight: 800;
+    margin: 0;
+  }
+
   @media (max-width: 900px) {
     .summary-grid,
     .rep-grid {
@@ -654,11 +724,11 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
 
     .photo-wrap,
     .rep-photo {
-      width: 88px;
+      width: 120px;
     }
 
     .rep-photo {
-      height: 88px;
+      height: 160px;
     }
   }
 </style>
