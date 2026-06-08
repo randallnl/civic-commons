@@ -1,5 +1,7 @@
 ---
-const { rep } = Astro.props;
+import { normalizeBillCode } from "../lib/trackedBills";
+
+const { rep, trackedBills = new Map() } = Astro.props;
 
 function formatParty(party) {
   if (!party) return "Party not listed";
@@ -23,8 +25,16 @@ const name =
 const fallbackInitial = (rep.firstname || name || "NH").slice(0, 1);
 const profileHref = `/people/${slugify(name)}`;
 const voteHistory = Array.isArray(rep.voteHistory)
-  ? rep.voteHistory.slice(0, 3)
+  ? rep.voteHistory
+      .filter((vote) =>
+        trackedBills.has(normalizeBillCode(vote.condensedbillno)),
+      )
+      .slice(0, 3)
   : [];
+
+function trackedBillFor(vote) {
+  return trackedBills.get(normalizeBillCode(vote.condensedbillno));
+}
 ---
 
 <a class="rep-card" href={profileHref}>
@@ -88,15 +98,22 @@ const voteHistory = Array.isArray(rep.voteHistory)
 
     {voteHistory.length ? (
       <div class="vote-list">
-        {voteHistory.map((vote) => (
-          <div class="vote-item">
-            <strong>{vote.condensedbillno || "Bill"}</strong>
-            <small>Vote {vote.vote || "not listed"}</small>
-          </div>
-        ))}
+        {voteHistory.map((vote) => {
+          const bill = trackedBillFor(vote);
+
+          return (
+            <div class="vote-item">
+              <div>
+                <strong>{bill?.code || vote.condensedbillno || "Bill"}</strong>
+                {bill?.name && <span>{bill.name}</span>}
+              </div>
+              <small>Vote {vote.vote || "not listed"}</small>
+            </div>
+          );
+        })}
       </div>
     ) : (
-      <p>No recent vote history returned.</p>
+      <p>No tracked vote history returned.</p>
     )}
   </div>
 </a>
@@ -131,10 +148,12 @@ const voteHistory = Array.isArray(rep.voteHistory)
   }
 
   .rep-photo {
+    aspect-ratio: 4 / 5;
     background: #6b4f2a;
     border: 2px solid #1f2933;
     border-radius: 16px;
-    height: 96px;
+    box-sizing: border-box;
+    height: 120px;
     object-fit: cover;
     object-position: center top;
   }
@@ -231,11 +250,23 @@ const voteHistory = Array.isArray(rep.voteHistory)
     padding: 10px 12px;
   }
 
+  .vote-item > div {
+    min-width: 0;
+  }
+
   .vote-item small,
   .vote-summary p {
     color: #4b5563;
     font-weight: 800;
     margin: 0;
+  }
+
+  .vote-item span {
+    color: #4b5563;
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 800;
+    margin-top: 2px;
   }
 
   @media (max-width: 520px) {

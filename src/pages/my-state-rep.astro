@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import RepresentativeCard from "../components/RepresentativeCard.astro";
+import { getTrackedBills } from "../lib/trackedBills";
 
 const API_BASE =
   import.meta.env.REP_LOOKUP_API_BASE ||
@@ -11,6 +12,7 @@ const address = Astro.url.searchParams.get("address")?.trim() || "";
 
 let lookupData = null;
 let lookupError = "";
+let trackedBills = new Map();
 
 if (address) {
   try {
@@ -32,6 +34,14 @@ if (address) {
   } catch (error) {
     lookupError =
       error?.message || "Unable to look up representatives.";
+  }
+}
+
+if (lookupData) {
+  try {
+    trackedBills = await getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL);
+  } catch (error) {
+    console.error(error?.message || "Unable to load tracked bills.");
   }
 }
 
@@ -94,7 +104,7 @@ function formatAddress(normalized = {}) {
               name="address"
               type="text"
               value={address}
-              placeholder="82 Bobcat Way, Manchester, NH"
+              placeholder="72 Concord St, Manchester, NH"
               autocomplete="street-address"
               required
             />
@@ -175,7 +185,7 @@ function formatAddress(normalized = {}) {
 
                 <div class="rep-grid">
                   {senateReps.map((rep) => (
-                    <RepresentativeCard rep={rep} />
+                    <RepresentativeCard rep={rep} trackedBills={trackedBills} />
                   ))}
                 </div>
               </section>
@@ -193,7 +203,7 @@ function formatAddress(normalized = {}) {
 
                 <div class="rep-grid">
                   {houseReps.map((rep) => (
-                    <RepresentativeCard rep={rep} />
+                    <RepresentativeCard rep={rep} trackedBills={trackedBills} />
                   ))}
                 </div>
               </section>
