@@ -1,0 +1,648 @@
+---
+const API_BASE =
+  import.meta.env.PUBLIC_API_BASE ||
+  "https://api.nhdeservesbetter.com";
+---
+
+<html lang="en">
+  <head>
+    <title>My State Rep | Civic Commons</title>
+    <meta
+      name="description"
+      content="Find your New Hampshire state legislators by address."
+    />
+  </head>
+
+  <body>
+    <main class="page">
+      <a class="back" href="/">Back home</a>
+
+      <section class="hero">
+        <p class="eyebrow">My State Rep</p>
+        <h1>Find your New Hampshire state legislators.</h1>
+        <p class="lede">
+          Enter your address to identify your State Senator, your ward-based
+          House district, and any floterial House districts connected to your
+          community.
+        </p>
+
+        <form id="lookup-form" class="lookup-card">
+          <label for="address">Your full address</label>
+
+          <div class="form-row">
+            <input
+              id="address"
+              name="address"
+              type="text"
+              placeholder="82 Bobcat Way, Manchester, NH"
+              autocomplete="street-address"
+              required
+            />
+
+            <button type="submit">Find My Reps</button>
+          </div>
+
+          <p class="help-text">
+            Your address is used to identify your voting districts. It is not
+            stored by this website.
+          </p>
+        </form>
+      </section>
+
+      <div id="status" class="status-message" aria-live="polite"></div>
+
+      <section id="district-summary" class="district-summary" hidden></section>
+
+      <section id="results" class="results" hidden>
+        <div id="senate-section"></div>
+        <div id="house-section"></div>
+      </section>
+    </main>
+
+    <script define:vars={{ API_BASE }}>
+      const form = document.querySelector("#lookup-form");
+      const addressInput = document.querySelector("#address");
+      const statusEl = document.querySelector("#status");
+      const resultsEl = document.querySelector("#results");
+      const districtSummaryEl = document.querySelector("#district-summary");
+      const senateSectionEl = document.querySelector("#senate-section");
+      const houseSectionEl = document.querySelector("#house-section");
+
+      function escapeHtml(value = "") {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function safeHref(value = "") {
+        return String(value || "").replace(/"/g, "%22");
+      }
+
+      function formatParty(party) {
+        if (!party) return "Party not listed";
+        if (party === "R") return "Republican";
+        if (party === "D") return "Democrat";
+        if (party === "I") return "Independent";
+        return party;
+      }
+
+      function formatAddress(normalized = {}) {
+        return [
+          normalized.line1,
+          normalized.city,
+          normalized.state,
+          normalized.zip,
+        ]
+          .filter(Boolean)
+          .join(", ");
+      }
+
+      function renderDistrictSummary(data) {
+        const civic = data.civic || {};
+        const matchedDistricts = data.matchedDistricts || [];
+        const prettyAddress = formatAddress(data.normalizedInput || {});
+
+        const place = civic.place?.name || data.normalizedInput?.city || "";
+        const ward = civic.ward?.number ? `Ward ${civic.ward.number}` : "";
+        const houseDistricts = matchedDistricts
+          .filter((district) => district.body === "H")
+          .map((district) => district.district_label)
+          .filter(Boolean);
+
+        const senateDistrict =
+          civic.senate?.districtLabel || civic.senate?.district || "";
+
+        districtSummaryEl.hidden = false;
+        districtSummaryEl.innerHTML = `
+          <div class="summary-card panel">
+            <div>
+              <p class="summary-label">Showing results for</p>
+              <h2>${escapeHtml(prettyAddress || data.address || "This address")}</h2>
+            </div>
+
+            <div class="summary-grid">
+              ${
+                place
+                  ? `
+                    <div class="summary-item">
+                      <span>Community</span>
+                      <strong>${escapeHtml(place)}</strong>
+                    </div>
+                  `
+                  : ""
+              }
+
+              ${
+                ward
+                  ? `
+                    <div class="summary-item">
+                      <span>Ward</span>
+                      <strong>${escapeHtml(ward)}</strong>
+                    </div>
+                  `
+                  : ""
+              }
+
+              ${
+                senateDistrict
+                  ? `
+                    <div class="summary-item">
+                      <span>State Senate</span>
+                      <strong>District ${escapeHtml(senateDistrict)}</strong>
+                    </div>
+                  `
+                  : ""
+              }
+
+              ${
+                houseDistricts.length
+                  ? `
+                    <div class="summary-item">
+                      <span>State House</span>
+                      <strong>${escapeHtml(houseDistricts.join(", "))}</strong>
+                    </div>
+                  `
+                  : ""
+              }
+            </div>
+          </div>
+        `;
+      }
+
+      function renderRepCard(rep) {
+        const name =
+          rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim();
+        const fallbackInitial = (rep.firstname || name || "NH").slice(0, 1);
+
+        const photoHtml = rep.photo
+          ? `
+            <img
+              class="rep-photo"
+              src="${safeHref(rep.photo)}"
+              alt="Photo of ${escapeHtml(name)}"
+              loading="lazy"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';"
+            />
+            <div class="rep-photo fallback-photo" style="display:none;">
+              ${escapeHtml(fallbackInitial)}
+            </div>
+          `
+          : `
+            <div class="rep-photo fallback-photo">
+              ${escapeHtml(fallbackInitial)}
+            </div>
+          `;
+
+        const emailHtml = rep.email
+          ? `<a href="mailto:${escapeHtml(rep.email)}">${escapeHtml(rep.email)}</a>`
+          : "Email not listed";
+
+        const phoneHtml = rep.phone
+          ? `<a href="tel:${escapeHtml(rep.phone)}">${escapeHtml(rep.phone)}</a>`
+          : "Phone not listed";
+
+        return `
+          <article class="rep-card panel">
+            <div class="rep-card-top">
+              <div class="photo-wrap">
+                ${photoHtml}
+              </div>
+
+              <div class="rep-main">
+                <h3>${escapeHtml(name)}</h3>
+
+                <div class="rep-meta">
+                  <span>${escapeHtml(rep.chamber || "Legislator")}</span>
+                  <span>${escapeHtml(formatParty(rep.party))}</span>
+                </div>
+
+                <div class="district-line">
+                  <strong>District:</strong> ${escapeHtml(rep.district || "Not listed")}
+                </div>
+
+                ${
+                  rep.location_text
+                    ? `
+                      <div class="location-line">
+                        ${escapeHtml(rep.location_text)}
+                      </div>
+                    `
+                    : ""
+                }
+              </div>
+            </div>
+
+            <div class="rep-contact">
+              <div>
+                <span>Email</span>
+                ${emailHtml}
+              </div>
+
+              <div>
+                <span>Phone</span>
+                ${phoneHtml}
+              </div>
+
+              ${
+                rep.notes
+                  ? `
+                    <div>
+                      <span>Notes</span>
+                      <p>${escapeHtml(rep.notes)}</p>
+                    </div>
+                  `
+                  : ""
+              }
+            </div>
+          </article>
+        `;
+      }
+
+      function renderGroup(title, description, reps) {
+        if (!reps || reps.length === 0) {
+          return "";
+        }
+
+        return `
+          <section class="rep-group">
+            <div class="group-header">
+              <h2>${escapeHtml(title)}</h2>
+              <p>${escapeHtml(description)}</p>
+            </div>
+
+            <div class="rep-grid">
+              ${reps.map(renderRepCard).join("")}
+            </div>
+          </section>
+        `;
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const address = addressInput.value.trim();
+
+        if (!address) {
+          statusEl.textContent = "Please enter an address.";
+          return;
+        }
+
+        statusEl.textContent = "Looking up your districts...";
+        resultsEl.hidden = true;
+        districtSummaryEl.hidden = true;
+        senateSectionEl.innerHTML = "";
+        houseSectionEl.innerHTML = "";
+
+        try {
+          const response = await fetch(`${API_BASE}/reps/lookup`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ address }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "Something went wrong.");
+          }
+
+          const senateReps = data.groups?.senate || [];
+          const houseReps = data.groups?.house || [];
+          const allReps = data.representatives || [];
+
+          if (allReps.length === 0) {
+            statusEl.textContent = "No representatives found for that address.";
+            return;
+          }
+
+          statusEl.textContent = "";
+          resultsEl.hidden = false;
+
+          renderDistrictSummary(data);
+
+          senateSectionEl.innerHTML = renderGroup(
+            "State Senate",
+            "Your State Senator represents a larger district in the New Hampshire Senate.",
+            senateReps
+          );
+
+          houseSectionEl.innerHTML = renderGroup(
+            "State House",
+            "Your House representatives may include your ward or town district plus a floterial district.",
+            houseReps
+          );
+        } catch (error) {
+          console.error(error);
+          statusEl.textContent =
+            error.message || "Unable to look up representatives.";
+        }
+      });
+    </script>
+  </body>
+</html>
+
+<style>
+  :global(body) {
+    margin: 0;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    background: #f7f4ee;
+    color: #1f2933;
+  }
+
+  .page {
+    width: min(1120px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 40px 0 64px;
+  }
+
+  .back {
+    color: #1f2933;
+    font-weight: 800;
+  }
+
+  .hero {
+    padding: 48px 0 24px;
+  }
+
+  .eyebrow,
+  .summary-label,
+  .rep-contact span,
+  .summary-item span {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
+  .eyebrow,
+  .summary-label {
+    color: #6b4f2a;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    max-width: 900px;
+    font-size: clamp(2.5rem, 7vw, 5.5rem);
+    line-height: 0.95;
+    margin: 0;
+  }
+
+  .lede {
+    max-width: 760px;
+    font-size: 1.2rem;
+    line-height: 1.6;
+    margin: 24px 0 0;
+    color: #4b5563;
+  }
+
+  .panel,
+  .lookup-card {
+    background: rgba(255, 255, 255, 0.75);
+    border: 2px solid #1f2933;
+    border-radius: 24px;
+    box-shadow: 6px 6px 0 #1f2933;
+  }
+
+  .lookup-card {
+    margin-top: 32px;
+    padding: 24px;
+  }
+
+  label {
+    display: block;
+    font-weight: 800;
+    margin-bottom: 10px;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 16px 18px;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    font: inherit;
+    background: white;
+  }
+
+  button {
+    border: 2px solid #1f2933;
+    background: #1f2933;
+    color: white;
+    padding: 16px 22px;
+    border-radius: 999px;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: #374151;
+  }
+
+  .help-text {
+    color: #4b5563;
+    line-height: 1.5;
+    margin: 14px 0 0;
+  }
+
+  .status-message {
+    color: #4b5563;
+    font-size: 1.1rem;
+    font-weight: 800;
+    min-height: 1.5rem;
+  }
+
+  .district-summary {
+    margin-top: 24px;
+  }
+
+  .summary-card {
+    padding: 24px;
+  }
+
+  .summary-card h2 {
+    font-size: clamp(1.5rem, 4vw, 2.4rem);
+    margin: 0;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .summary-item {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .summary-item span,
+  .rep-contact span {
+    display: block;
+    color: #6b7280;
+    margin-bottom: 6px;
+  }
+
+  .results {
+    margin-top: 48px;
+  }
+
+  .rep-group + .rep-group {
+    margin-top: 48px;
+  }
+
+  .group-header h2 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    line-height: 1;
+    margin: 0;
+  }
+
+  .group-header p {
+    color: #4b5563;
+    line-height: 1.5;
+    max-width: 720px;
+    margin-top: 12px;
+  }
+
+  .rep-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    margin-top: 24px;
+  }
+
+  .rep-card {
+    padding: 20px;
+    overflow: hidden;
+  }
+
+  .rep-card-top {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .photo-wrap,
+  .rep-photo {
+    width: 96px;
+  }
+
+  .rep-photo {
+    height: 96px;
+    border: 2px solid #1f2933;
+    border-radius: 18px;
+    object-fit: cover;
+    background: #6b4f2a;
+  }
+
+  .fallback-photo {
+    display: grid;
+    place-items: center;
+    color: white;
+    font-size: 2rem;
+    font-weight: 900;
+  }
+
+  .rep-main h3 {
+    font-size: 1.3rem;
+    margin: 0;
+  }
+
+  .rep-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .rep-meta span {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.8rem;
+    font-weight: 800;
+    padding: 5px 10px;
+  }
+
+  .district-line,
+  .location-line {
+    margin-top: 10px;
+  }
+
+  .location-line {
+    color: #4b5563;
+  }
+
+  .rep-contact {
+    border-top: 1px solid #d1d5db;
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .rep-contact a {
+    color: #1f2933;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+
+  .rep-contact p {
+    margin: 0;
+  }
+
+  @media (max-width: 900px) {
+    .summary-grid,
+    .rep-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .form-row {
+      flex-direction: column;
+    }
+
+    button {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .page {
+      padding: 24px 0 48px;
+    }
+
+    .hero {
+      padding-top: 32px;
+    }
+
+    .rep-card-top {
+      grid-template-columns: 1fr;
+    }
+
+    .photo-wrap,
+    .rep-photo {
+      width: 88px;
+    }
+
+    .rep-photo {
+      height: 88px;
+    }
+  }
+</style>

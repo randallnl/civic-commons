@@ -1,0 +1,329 @@
+---
+export const prerender = false;
+
+import { env } from "cloudflare:workers";
+
+const db = env.cvc;
+const q = Astro.url.searchParams.get("q")?.trim() || "";
+const like = `%${q}%`;
+
+let people = { results: [] };
+let divisions = { results: [] };
+let bills = { results: [] };
+let elections = { results: [] };
+let organizations = { results: [] };
+
+if (q.length > 0) {
+  people = await db.prepare(`
+    SELECT id, full_name, slug, party, photo_url
+    FROM people
+    WHERE full_name LIKE ?
+       OR party LIKE ?
+       OR email LIKE ?
+    ORDER BY full_name
+    LIMIT 20
+  `).bind(like, like, like).all();
+
+  divisions = await db.prepare(`
+    SELECT id, name, slug, type
+    FROM divisions
+    WHERE name LIKE ?
+       OR slug LIKE ?
+       OR type LIKE ?
+    ORDER BY type, name
+    LIMIT 20
+  `).bind(like, like, like).all();
+
+  bills = await db.prepare(`
+    SELECT id, session_year, bill_number, title, status
+    FROM bills
+    WHERE bill_number LIKE ?
+       OR title LIKE ?
+       OR summary LIKE ?
+       OR status LIKE ?
+    ORDER BY session_year DESC, bill_number
+    LIMIT 20
+  `).bind(like, like, like, like).all();
+
+  elections = await db.prepare(`
+    SELECT id, name, slug, election_date, election_type
+    FROM elections
+    WHERE name LIKE ?
+       OR election_type LIKE ?
+    ORDER BY election_date DESC
+    LIMIT 20
+  `).bind(like, like).all();
+
+  organizations = await db.prepare(`
+    SELECT id, name, slug, description
+    FROM organizations
+    WHERE name LIKE ?
+       OR description LIKE ?
+    ORDER BY name
+    LIMIT 20
+  `).bind(like, like).all();
+}
+
+function divisionUrl(division) {
+  if (division.type === "state") return "/nh";
+  return `/nh/${division.slug}`;
+}
+---
+
+<html lang="en">
+  <head>
+    <title>Search Civic Commons</title>
+  </head>
+
+  <body>
+    <main class="page">
+      <a class="back" href="/">← Back home</a>
+
+      <section class="hero">
+        <h1>Search Civic Commons</h1>
+
+        <form class="search" action="/search" method="get">
+          <input
+            type="search"
+            name="q"
+            value={q}
+            placeholder="Search for a person, town, bill, election, or organization"
+          />
+          <button type="submit">Search</button>
+        </form>
+      </section>
+
+      {q.length === 0 ? (
+        <p class="empty">Enter a search term to begin.</p>
+      ) : (
+        <section class="results">
+          <p class="summary">Showing results for “{q}”</p>
+
+          <div class="group">
+            <h2>People</h2>
+            {people.results.length === 0 ? (
+              <p>No people found.</p>
+            ) : (
+              <ul>
+                {people.results.map((person) => (
+                  <li>
+                    <a href={`/people/${person.slug}`}>
+                      {person.photo_url && (
+                        <img src={person.photo_url} alt="" />
+                      )}
+                      <span>
+                        <strong>{person.full_name}</strong>
+                        <small>{person.party || "No party listed"}</small>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div class="group">
+            <h2>Places and Districts</h2>
+            {divisions.results.length === 0 ? (
+              <p>No places or districts found.</p>
+            ) : (
+              <ul>
+                {divisions.results.map((division) => (
+                  <li>
+                    <a href={divisionUrl(division)}>
+                      <span>
+                        <strong>{division.name}</strong>
+                        <small>{division.type.replaceAll("_", " ")}</small>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div class="group">
+            <h2>Bills</h2>
+            {bills.results.length === 0 ? (
+              <p>No bills found.</p>
+            ) : (
+              <ul>
+                {bills.results.map((bill) => (
+                  <li>
+                    <a href={`/bills/${bill.session_year}/${bill.bill_number.toLowerCase()}`}>
+                      <span>
+                        <strong>{bill.bill_number}: {bill.title}</strong>
+                        <small>{bill.status || "No status listed"}</small>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div class="group">
+            <h2>Elections</h2>
+            {elections.results.length === 0 ? (
+              <p>No elections found.</p>
+            ) : (
+              <ul>
+                {elections.results.map((election) => (
+                  <li>
+                    <a href={`/elections/${election.slug}`}>
+                      <span>
+                        <strong>{election.name}</strong>
+                        <small>{election.election_date} · {election.election_type}</small>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div class="group">
+            <h2>Organizations</h2>
+            {organizations.results.length === 0 ? (
+              <p>No organizations found.</p>
+            ) : (
+              <ul>
+                {organizations.results.map((org) => (
+                  <li>
+                    <a href={`/organizations/${org.slug}`}>
+                      <span>
+                        <strong>{org.name}</strong>
+                        <small>{org.description || "No description listed"}</small>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      )}
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(body) {
+    margin: 0;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f7f4ee;
+    color: #1f2933;
+  }
+
+  .page {
+    width: min(960px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 40px 0;
+  }
+
+  .back {
+    color: #1f2933;
+    font-weight: 800;
+  }
+
+  .hero {
+    margin: 40px 0;
+  }
+
+  h1 {
+    font-size: clamp(2.5rem, 7vw, 5rem);
+    line-height: 0.95;
+    margin: 0 0 24px;
+  }
+
+  .search {
+    display: flex;
+    gap: 12px;
+  }
+
+  .search input {
+    flex: 1;
+    padding: 16px 18px;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    font-size: 1rem;
+    background: white;
+  }
+
+  .search button {
+    border: 2px solid #1f2933;
+    background: #1f2933;
+    color: white;
+    padding: 16px 22px;
+    border-radius: 999px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .summary,
+  .empty {
+    font-size: 1.15rem;
+    color: #4b5563;
+  }
+
+  .group {
+    background: rgba(255, 255, 255, 0.75);
+    border: 2px solid #1f2933;
+    border-radius: 24px;
+    box-shadow: 6px 6px 0 #1f2933;
+    padding: 24px;
+    margin: 24px 0;
+  }
+
+  .group h2 {
+    margin-top: 0;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  li {
+    border-top: 1px solid #d1d5db;
+  }
+
+  li:first-child {
+    border-top: 0;
+  }
+
+  li a {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  img {
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    object-fit: cover;
+    border: 2px solid #1f2933;
+  }
+
+  strong {
+    display: block;
+  }
+
+  small {
+    display: block;
+    margin-top: 4px;
+    color: #6b7280;
+    text-transform: capitalize;
+  }
+
+  @media (max-width: 600px) {
+    .search {
+      flex-direction: column;
+    }
+  }
+</style>

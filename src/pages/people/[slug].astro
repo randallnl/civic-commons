@@ -1,0 +1,126 @@
+---
+
+export const prerender = false;
+
+import { env } from "cloudflare:workers";
+
+const { slug } = Astro.params;
+const db = env.cvc;
+
+const person = await db
+  .prepare("SELECT * FROM people WHERE slug = ?")
+  .bind(slug)
+  .first();
+
+if (!person) {
+  return Astro.redirect("/404");
+}
+
+const terms = await db.prepare(`
+  SELECT 
+    office_terms.*,
+    positions.title,
+    positions.level,
+    positions.body,
+    divisions.name AS division_name
+  FROM office_terms
+  JOIN positions ON positions.id = office_terms.position_id
+  LEFT JOIN divisions ON divisions.id = positions.division_id
+  WHERE office_terms.person_id = ?
+  ORDER BY office_terms.status DESC, office_terms.start_date DESC
+`).bind(person.id).all();
+
+const candidacies = await db.prepare(`
+  SELECT
+    candidacies.*,
+    elections.name AS election_name,
+    elections.election_date,
+    positions.title AS position_title
+  FROM candidacies
+  JOIN elections ON elections.id = candidacies.election_id
+  JOIN positions ON positions.id = candidacies.position_id
+  WHERE candidacies.person_id = ?
+  ORDER BY elections.election_date DESC
+`).bind(person.id).all();
+
+const links = await db.prepare(`
+  SELECT * FROM links
+  WHERE entity_type = 'person' AND entity_id = ?
+  ORDER BY link_type, published_date DESC
+`).bind(person.id).all();
+
+const votes = await db.prepare(`
+  SELECT
+    bills.session_year,
+    bills.bill_number,
+    bills.title,
+    roll_calls.vote_date,
+    roll_calls.motion,
+    legislator_votes.vote
+  FROM legislator_votes
+  JOIN roll_calls ON roll_calls.id = legislator_votes.roll_call_id
+  JOIN bills ON bills.id = roll_calls.bill_id
+  WHERE legislator_votes.person_id = ?
+  ORDER BY roll_calls.vote_date DESC
+  LIMIT 25
+`).bind(person.id).all();
+---
+
+<html>
+  <head>
+    <title>{person.full_name}</title>
+  </head>
+  <body>
+    <main>
+      <h1>{person.full_name}</h1>
+
+      {person.photo_url && <img src={person.photo_url} alt={person.full_name} width="180" />}
+
+      {person.party && <p>Party: {person.party}</p>}
+      {person.bio && <p>{person.bio}</p>}
+
+      <h2>Current and Past Offices</h2>
+      <ul>
+        {terms.results.map((term) => (
+          <li>
+            <strong>{term.title}</strong>
+            {term.division_name && <> — {term.division_name}</>}
+            <br />
+            Status: {term.status}
+          </li>
+        ))}
+      </ul>
+
+      <h2>Candidacies</h2>
+      <ul>
+        {candidacies.results.map((race) => (
+          <li>
+            <strong>{race.position_title}</strong><br />
+            {race.election_name} — {race.status}
+          </li>
+        ))}
+      </ul>
+
+      <h2>Recent Votes</h2>
+      <ul>
+        {votes.results.map((v) => (
+          <li>
+            <strong>{v.bill_number}</strong>: {v.vote}
+            <br />
+            {v.motion}
+          </li>
+        ))}
+      </ul>
+
+      <h2>Links and Sources</h2>
+      <ul>
+        {links.results.map((link) => (
+          <li>
+            <a href={link.url}>{link.title || link.link_type}</a>
+            {link.publisher && <> — {link.publisher}</>}
+          </li>
+        ))}
+      </ul>
+    </main>
+  </body>
+</html>

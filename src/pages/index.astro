@@ -1,11 +1,404 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+export const prerender = false;
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import { env } from "cloudflare:workers";
+
+const db = env.cvc;
+
+const divisionCount = await db.prepare(`SELECT COUNT(*) AS count FROM divisions`).first();
+const peopleCount = await db.prepare(`SELECT COUNT(*) AS count FROM people`).first();
+const billCount = await db.prepare(`SELECT COUNT(*) AS count FROM bills`).first();
+const electionCount = await db.prepare(`SELECT COUNT(*) AS count FROM elections`).first();
+
+const featuredDivisions = await db.prepare(`
+  SELECT *
+  FROM divisions
+  WHERE type IN ('county', 'city', 'town', 'ward', 'house_district', 'senate_district')
+  ORDER BY type, name
+  LIMIT 12
+`).all();
+
+const recentPeople = await db.prepare(`
+  SELECT *
+  FROM people
+  ORDER BY updated_at DESC
+  LIMIT 8
+`).all();
+
+const recentBills = await db.prepare(`
+  SELECT *
+  FROM bills
+  ORDER BY updated_at DESC
+  LIMIT 6
+`).all();
+
+const recentChanges = await db.prepare(`
+  SELECT *
+  FROM change_requests
+  ORDER BY created_at DESC
+  LIMIT 5
+`).all();
+
+function divisionUrl(division) {
+  if (division.type === "state") return "/nh";
+  return `/nh/${division.slug}`;
+}
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<html lang="en">
+  <head>
+    <title>Civic Commons</title>
+    <meta name="description" content="A community-powered civic directory for New Hampshire." />
+  </head>
+
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">Community-powered civic information</p>
+        <h1>Know who represents you and what’s happening in your community.</h1>
+        <p class="lede">
+          Civic Commons is a public directory of elected officials, candidates,
+          voting locations, legislative districts, bills, elections, and civic organizations.
+        </p>
+
+        <form class="search" action="/search" method="get">
+          <input
+            type="search"
+            name="q"
+            placeholder="Search for a town, legislator, bill, district, or candidate"
+          />
+          <button type="submit">Search</button>
+        </form>
+      </section>
+
+      <section class="stats">
+        <article>
+          <strong>{divisionCount?.count ?? 0}</strong>
+          <span>Divisions</span>
+        </article>
+
+        <article>
+          <strong>{peopleCount?.count ?? 0}</strong>
+          <span>People</span>
+        </article>
+
+        <article>
+          <strong>{billCount?.count ?? 0}</strong>
+          <span>Bills</span>
+        </article>
+
+        <article>
+          <strong>{electionCount?.count ?? 0}</strong>
+          <span>Elections</span>
+        </article>
+      </section>
+
+      <section class="grid">
+        <a class="card" href="/nh">
+          <h2>Explore Communities</h2>
+          <p>Browse counties, cities, towns, wards, and districts.</p>
+        </a>
+
+        <a class="card" href="/my-state-rep">
+          <h2>Find Representatives</h2>
+          <p>Enter a New Hampshire address to find state legislators.</p>
+        </a>
+
+        <a class="card" href="/bills">
+          <h2>Track Legislation</h2>
+          <p>Follow bills and see how state officials voted.</p>
+        </a>
+
+        <a class="card" href="/elections">
+          <h2>Elections and Candidates</h2>
+          <p>Find upcoming races, candidate profiles, and election dates.</p>
+        </a>
+      </section>
+
+      <section class="content-grid">
+        <div>
+          <h2>Featured Places and Districts</h2>
+          <ul class="list">
+            {featuredDivisions.results.map((division) => (
+              <li>
+                <a href={divisionUrl(division)}>
+                  {division.name}
+                </a>
+                <span>{division.type.replaceAll("_", " ")}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h2>Recently Updated People</h2>
+          <ul class="list">
+            {recentPeople.results.map((person) => (
+              <li>
+                <a href={`/people/${person.slug}`}>
+                  {person.full_name}
+                </a>
+                <span>{person.party || "No party listed"}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <h2>Recent Bills</h2>
+          <ul class="list">
+            {recentBills.results.length === 0 ? (
+              <li>No bills added yet.</li>
+            ) : (
+              recentBills.results.map((bill) => (
+                <li>
+                  <a href={`/bills/${bill.session_year}/${bill.bill_number.toLowerCase()}`}>
+                    {bill.bill_number}
+                  </a>
+                  <span>{bill.title}</span>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+
+        <div>
+          <h2>Community Updates</h2>
+          <ul class="list">
+            {recentChanges.results.length === 0 ? (
+              <li>No change requests yet.</li>
+            ) : (
+              recentChanges.results.map((change) => (
+                <li>
+                  <strong>{change.entity_type}</strong>
+                  <span>{change.field_name}: {change.status}</span>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      </section>
+
+      <section class="cta">
+        <h2>Help keep civic information accurate.</h2>
+        <p>
+          Found an outdated polling place, missing candidate, wrong contact info,
+          or a useful source? Submit an update for review.
+        </p>
+        <a href="/suggest-update">Suggest an update</a>
+      </section>
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(body) {
+    margin: 0;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    background: #f7f4ee;
+    color: #1f2933;
+  }
+
+  .page {
+    width: min(1120px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 48px 0;
+  }
+
+  .hero {
+    padding: 64px 0 40px;
+  }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #6b4f2a;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    max-width: 900px;
+    font-size: clamp(2.5rem, 7vw, 5.5rem);
+    line-height: 0.95;
+    margin: 0;
+  }
+
+  .lede {
+    max-width: 760px;
+    font-size: 1.25rem;
+    line-height: 1.6;
+    margin: 24px 0 0;
+    color: #4b5563;
+  }
+
+  .search {
+    margin-top: 32px;
+    display: flex;
+    gap: 12px;
+    max-width: 760px;
+  }
+
+  .search input {
+    flex: 1;
+    padding: 16px 18px;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    font-size: 1rem;
+    background: white;
+  }
+
+  .search button,
+  .cta a {
+    border: 2px solid #1f2933;
+    background: #1f2933;
+    color: white;
+    padding: 16px 22px;
+    border-radius: 999px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin: 32px 0;
+  }
+
+  .stats article,
+  .card,
+  .content-grid > div,
+  .cta {
+    background: rgba(255, 255, 255, 0.75);
+    border: 2px solid #1f2933;
+    border-radius: 24px;
+    box-shadow: 6px 6px 0 #1f2933;
+  }
+
+  .stats article {
+    padding: 20px;
+  }
+
+  .stats strong {
+    display: block;
+    font-size: 2.2rem;
+    line-height: 1;
+  }
+
+  .stats span {
+    display: block;
+    margin-top: 8px;
+    color: #4b5563;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin: 40px 0;
+  }
+
+  .card {
+    padding: 24px;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .card h2 {
+    margin-top: 0;
+    font-size: 1.25rem;
+  }
+
+  .card p {
+    color: #4b5563;
+    line-height: 1.5;
+  }
+
+  .content-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin: 40px 0;
+  }
+
+  .content-grid > div {
+    padding: 24px;
+  }
+
+  .content-grid h2 {
+    margin-top: 0;
+  }
+
+  .list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .list li {
+    padding: 14px 0;
+    border-top: 1px solid #d1d5db;
+  }
+
+  .list li:first-child {
+    border-top: 0;
+  }
+
+  .list a {
+    display: block;
+    color: #1f2933;
+    font-weight: 800;
+  }
+
+  .list span {
+    display: block;
+    margin-top: 4px;
+    color: #6b7280;
+    text-transform: capitalize;
+  }
+
+  .cta {
+    padding: 36px;
+    margin-top: 48px;
+  }
+
+  .cta p {
+    max-width: 720px;
+    color: #4b5563;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 900px) {
+    .stats,
+    .grid,
+    .content-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .search {
+      flex-direction: column;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .stats,
+    .grid,
+    .content-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .page {
+      padding: 24px 0;
+    }
+
+    .hero {
+      padding-top: 32px;
+    }
+  }
+</style>

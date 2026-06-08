@@ -1,0 +1,93 @@
+---
+
+export const prerender = false;
+
+import { env } from "cloudflare:workers";
+
+const db = env.cvc;
+const path = Astro.params.path || "";
+const parts = path.split("/").filter(Boolean);
+const currentSlug = parts[parts.length - 1];
+
+const division = await db.prepare(`
+  SELECT * FROM divisions
+  WHERE slug = ?
+`).bind(currentSlug).first();
+
+if (!division) {
+  return Astro.redirect("/404");
+}
+
+const children = await db.prepare(`
+  SELECT * FROM divisions
+  WHERE parent_id = ?
+  ORDER BY type, name
+`).bind(division.id).all();
+
+const positions = await db.prepare(`
+  SELECT 
+    positions.*,
+    people.full_name,
+    people.slug AS person_slug
+  FROM positions
+  LEFT JOIN office_terms ON office_terms.position_id = positions.id 
+    AND office_terms.status = 'current'
+  LEFT JOIN people ON people.id = office_terms.person_id
+  WHERE positions.division_id = ?
+  ORDER BY positions.title
+`).bind(division.id).all();
+
+const polling = await db.prepare(`
+  SELECT * FROM polling_locations
+  WHERE division_id = ?
+  ORDER BY ward, name
+`).bind(division.id).all();
+---
+
+<html>
+  <head>
+    <title>{division.name}</title>
+  </head>
+  <body>
+    <main>
+      <h1>{division.name}</h1>
+      <p>Division type: {division.type}</p>
+
+      <h2>Subdivisions</h2>
+      <ul>
+        {children.results.map((child) => (
+          <li>
+            <a href={`/nh/${[...parts, child.slug].join("/")}`}>
+              {child.name}
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <h2>Officials</h2>
+      <ul>
+        {positions.results.map((position) => (
+          <li>
+            <strong>{position.title}</strong>
+            <br />
+            {position.full_name ? (
+              <a href={`/people/${position.person_slug}`}>{position.full_name}</a>
+            ) : (
+              <span>Vacant or not added yet</span>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      <h2>Polling Locations</h2>
+      <ul>
+        {polling.results.map((place) => (
+          <li>
+            <strong>{place.name}</strong><br />
+            {place.address}
+          </li>
+        ))}
+      </ul>
+    </main>
+  </body>
+</html>
