@@ -1,7 +1,5 @@
 ---
-const API_BASE =
-  import.meta.env.PUBLIC_API_BASE ||
-  "https://api.nhdeservesbetter.com";
+const LOOKUP_ENDPOINT = "/api/reps/lookup";
 ---
 
 <html lang="en">
@@ -59,7 +57,7 @@ const API_BASE =
       </section>
     </main>
 
-    <script define:vars={{ API_BASE }}>
+    <script define:vars={{ LOOKUP_ENDPOINT }}>
       const form = document.querySelector("#lookup-form");
       const addressInput = document.querySelector("#address");
       const statusEl = document.querySelector("#status");
@@ -308,11 +306,7 @@ const API_BASE =
         houseSectionEl.innerHTML = "";
 
         try {
-          if (!API_BASE) {
-            throw new Error("Representative lookup API is not configured.");
-          }
-
-          const response = await fetch(`${API_BASE}/reps/lookup`, {
+          const response = await fetch(LOOKUP_ENDPOINT, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
