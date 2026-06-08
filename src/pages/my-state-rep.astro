@@ -565,12 +565,15 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
   }
 
   .rep-card {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 18px;
+    box-shadow: 4px 4px 0 #1f2933;
     color: inherit;
     display: block;
-    border-width: 3px;
-    padding: 22px;
-    text-decoration: none;
     overflow: hidden;
+    padding: 18px;
+    text-decoration: none;
   }
 
   .rep-card:hover h3 {
@@ -579,20 +582,20 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
 
   .rep-card-top {
     display: grid;
-    grid-template-columns: 144px 1fr;
-    gap: 18px;
+    grid-template-columns: 96px 1fr;
+    gap: 16px;
     align-items: start;
   }
 
   .photo-wrap,
   .rep-photo {
-    width: 144px;
+    width: 96px;
   }
 
   .rep-photo {
-    height: 192px;
+    height: 96px;
     border: 2px solid #1f2933;
-    border-radius: 18px;
+    border-radius: 16px;
     object-fit: cover;
     object-position: center top;
     background: #6b4f2a;
@@ -724,11 +727,11 @@ const LOOKUP_ENDPOINT = "/api/reps/lookup";
 
     .photo-wrap,
     .rep-photo {
-      width: 120px;
+      width: 96px;
     }
 
     .rep-photo {
-      height: 160px;
+      height: 96px;
     }
   }
 </style>
