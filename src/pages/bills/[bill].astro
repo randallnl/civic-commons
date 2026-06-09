@@ -2,7 +2,8 @@
 export const prerender = false;
 
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
-import { getBillDetail, getBillTestimony } from "../../lib/billsApi";
+import { getBillDetail, getBillTestimony, rollCallPath } from "../../lib/billsApi";
+import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const billCode = Astro.params.bill || "";
 const year = Astro.url.searchParams.get("year")?.trim() || "";
@@ -11,16 +12,19 @@ let bill = null;
 let rollCalls = [];
 let testimony = [];
 let error = "";
+let trackedBill = null;
 
 try {
-  const [detailData, testimonyData] = await Promise.all([
+  const [detailData, testimonyData, trackedBills] = await Promise.all([
     getBillDetail(billCode, { year }),
     getBillTestimony(billCode, { year }),
+    getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
   ]);
 
   bill = detailData.bill;
   rollCalls = detailData.rollCalls || [];
   testimony = testimonyData.testimony || [];
+  trackedBill = trackedBills.get(normalizeBillCode(bill?.condensedbillno || billCode));
 } catch (loadError) {
   error = loadError?.message || "Unable to load bill details.";
 }
@@ -36,7 +40,10 @@ function formatDate(value) {
 }
 
 function personName(item) {
-  return [item.firstname, item.lastname].filter(Boolean).join(" ");
+  const first = cleanNamePart(item.firstname);
+  const last = cleanNamePart(item.lastname);
+  const lastInitial = last ? `${last.slice(0, 1).toUpperCase()}.` : "";
+  return [first, lastInitial].filter(Boolean).join(" ");
 }
 
 function positionClass(value = "") {
@@ -45,11 +52,19 @@ function positionClass(value = "") {
   if (position === "oppose") return "oppose";
   return "neutral";
 }
+
+function cleanNamePart(value = "") {
+  return String(value).replace(/^[^a-z0-9]+/i, "").trim();
+}
+
+function billTitle() {
+  return trackedBill?.name || bill?.condensedbillno || billCode;
+}
 ---
 
 <html lang="en">
   <head>
-    <title>{bill?.condensedbillno || billCode} | Civic Commons</title>
+    <title>{billTitle()} | Civic Commons</title>
     <meta
       name="description"
       content={`Bill details and testimony for ${bill?.condensedbillno || billCode}.`}
@@ -67,7 +82,8 @@ function positionClass(value = "") {
           <section class="hero">
             <p class="eyebrow">Bill Detail</p>
             <h1>{bill.condensedbillno}</h1>
-            <p>{bill.description || "No status description returned."}</p>
+            <h2>{billTitle()}</h2>
+            {trackedBill?.summary && <p>{trackedBill.summary}</p>}
 
             <div class="hero-meta">
               <span>{bill.sessionyear}</span>
@@ -76,40 +92,43 @@ function positionClass(value = "") {
             </div>
           </section>
 
-          <section class="summary-grid">
-            <article>
-              <span>Testimony</span>
-              <strong>{bill.testimony_count || 0}</strong>
+          <section class="overview-grid">
+            <article class="latest-action panel">
+              <p class="eyebrow">Latest Action</p>
+              <h2>{bill.description || "No action returned."}</h2>
+              {bill.statusdate && <span>{formatDate(bill.statusdate)}</span>}
             </article>
-            <article>
-              <span>Germane</span>
-              <strong>{bill.germane_count || 0}</strong>
-            </article>
-            <article>
-              <span>Non-Germane</span>
-              <strong>{bill.nongermane_count || 0}</strong>
-            </article>
-          </section>
 
-          <section class="panel">
-            <div class="section-heading">
-              <p class="eyebrow">Position Count</p>
-              <h2>Public Testimony Summary</h2>
-            </div>
-            <BillPositionSummary bill={bill} />
-          </section>
-
-          <section class="content-grid">
-            <section class="panel">
-              <div class="section-heading">
-                <p class="eyebrow">Votes</p>
-                <h2>Roll Calls</h2>
+            <article class="testimony-total panel">
+              <div>
+                <span>Testimony</span>
+                <strong>{bill.testimony_count || 0}</strong>
               </div>
 
-              {rollCalls.length ? (
-                <div class="roll-list">
-                  {rollCalls.map((rollCall) => (
-                    <article>
+              <div class="germane-box">
+                <span>Germane {bill.germane_count || 0}</span>
+                <span>Non-Germane {bill.nongermane_count || 0}</span>
+              </div>
+            </article>
+          </section>
+
+          <section class="panel roll-panel">
+            <div class="section-heading">
+              <p class="eyebrow">Votes</p>
+              <h2>Roll Calls</h2>
+            </div>
+
+            {rollCalls.length ? (
+              <div class="roll-list">
+                {rollCalls.map((rollCall) => (
+                  <a
+                    class="roll-card"
+                    href={rollCallPath(
+                      bill.condensedbillno,
+                      rollCall.votesequencenumber,
+                      rollCall.sessionyear || bill.sessionyear,
+                    )}
+                  >
                       <div class="roll-topline">
                         <strong>{rollCall.question_motion || "Roll call"}</strong>
                         {rollCall.votedate && <span>{formatDate(rollCall.votedate)}</span>}
@@ -123,14 +142,23 @@ function positionClass(value = "") {
                         <span>Present {rollCall.present}</span>
                         <span>Absent {rollCall.absent}</span>
                       </div>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <p class="empty">No roll calls returned.</p>
-              )}
-            </section>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No roll calls returned.</p>
+            )}
+          </section>
 
+          <section class="panel position-panel">
+            <div class="section-heading">
+              <p class="eyebrow">Position Count</p>
+              <h2>Public Testimony Summary</h2>
+            </div>
+            <BillPositionSummary bill={bill} />
+          </section>
+
+          <section class="content-grid">
             <section class="panel">
               <div class="section-heading">
                 <p class="eyebrow">Public Input</p>
@@ -198,7 +226,7 @@ function positionClass(value = "") {
   }
 
   .eyebrow,
-  .summary-grid span {
+  .testimony-total span {
     color: #6b4f2a;
     font-size: 0.78rem;
     font-weight: 900;
@@ -211,6 +239,13 @@ function positionClass(value = "") {
     font-size: clamp(3rem, 9vw, 7rem);
     line-height: 0.9;
     margin: 0 0 18px;
+  }
+
+  .hero h2 {
+    font-size: clamp(1.65rem, 4vw, 3rem);
+    line-height: 1.05;
+    margin: 0 0 16px;
+    max-width: 960px;
   }
 
   .hero > p {
@@ -238,23 +273,23 @@ function positionClass(value = "") {
     padding: 6px 9px;
   }
 
-  .summary-grid,
+  .overview-grid,
   .content-grid {
     display: grid;
     gap: 18px;
   }
 
-  .summary-grid {
-    grid-template-columns: repeat(3, 1fr);
+  .overview-grid {
+    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr) 320px;
     margin-bottom: 22px;
   }
 
   .content-grid {
-    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+    grid-template-columns: 1fr;
     margin-top: 22px;
   }
 
-  .summary-grid article,
   .panel,
   .status-message {
     background: white;
@@ -264,10 +299,47 @@ function positionClass(value = "") {
     padding: 20px;
   }
 
-  .summary-grid strong {
+  .latest-action h2 {
+    font-size: 1.35rem;
+    line-height: 1.25;
+    margin: 0;
+  }
+
+  .latest-action span {
+    color: #4b5563;
     display: block;
-    font-size: 2.2rem;
+    font-weight: 900;
+    margin-top: 14px;
+  }
+
+  .testimony-total {
+    align-items: end;
+    display: grid;
+    gap: 14px;
+    text-align: right;
+  }
+
+  .testimony-total strong {
+    display: block;
+    font-size: clamp(3rem, 8vw, 5rem);
     line-height: 1;
+  }
+
+  .germane-box {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: grid;
+    gap: 6px;
+    justify-self: end;
+    padding: 10px 12px;
+    width: min(100%, 220px);
+  }
+
+  .germane-box span {
+    color: #4b5563;
+    font-size: 0.76rem;
+    margin: 0;
   }
 
   .section-heading h2 {
@@ -281,12 +353,19 @@ function positionClass(value = "") {
     gap: 12px;
   }
 
-  .roll-list article,
+  .roll-card,
   .testimony-list article {
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 8px;
+    color: inherit;
+    display: block;
     padding: 16px;
+    text-decoration: none;
+  }
+
+  .roll-card:hover strong {
+    text-decoration: underline;
   }
 
   .roll-topline,
@@ -343,9 +422,17 @@ function positionClass(value = "") {
   }
 
   @media (max-width: 860px) {
-    .summary-grid,
+    .overview-grid,
     .content-grid {
       grid-template-columns: 1fr;
+    }
+
+    .testimony-total {
+      text-align: left;
+    }
+
+    .germane-box {
+      justify-self: stretch;
     }
   }
 </style>

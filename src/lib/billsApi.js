@@ -16,6 +16,12 @@ export function billDetailPath(code, year) {
   return `/bills/${billCode}${params}`;
 }
 
+export function rollCallPath(code, sequence, year) {
+  const billCode = encodeURIComponent(normalizeBillCodeForUrl(code));
+  const params = year ? `?year=${encodeURIComponent(year)}` : "";
+  return `/bills/${billCode}/roll-calls/${encodeURIComponent(sequence)}${params}`;
+}
+
 export function normalizeBillCodeForUrl(code = "") {
   return String(code).toUpperCase().replace(/\s+/g, "");
 }
@@ -92,6 +98,26 @@ export async function getBillTestimony(code, {
 
   if (!response.ok) {
     throw new Error(`Unable to load testimony: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function getRollCallVotes(code, sequence, {
+  apiBase = billApiBase(),
+  year = "",
+} = {}) {
+  const params = new URLSearchParams();
+  if (year) params.set("year", year);
+
+  const response = await fetch(
+    `${apiBase}/bills/${encodeURIComponent(
+      normalizeBillCodeForUrl(code),
+    )}/roll-calls/${encodeURIComponent(sequence)}?${params}`,
+  );
+
+  if (!response.ok) {
+    throw new Error(`Unable to load roll call votes: ${response.status}`);
   }
 
   return response.json();

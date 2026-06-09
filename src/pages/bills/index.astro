@@ -3,6 +3,7 @@ export const prerender = false;
 
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import { billDetailPath, getBills } from "../../lib/billsApi";
+import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const year = Astro.url.searchParams.get("year")?.trim() || "";
@@ -10,11 +11,16 @@ const year = Astro.url.searchParams.get("year")?.trim() || "";
 let bills = [];
 let meta = {};
 let error = "";
+let trackedBills = new Map();
 
 try {
-  const data = await getBills({ q, year, limit: 100 });
+  const [data, tracked] = await Promise.all([
+    getBills({ q, year, limit: 100 }),
+    getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
+  ]);
   bills = data.bills || [];
   meta = data.meta || {};
+  trackedBills = tracked;
 } catch (loadError) {
   error = loadError?.message || "Unable to load bills.";
 }
@@ -27,6 +33,16 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function trackedBillFor(bill) {
+  return trackedBills.get(normalizeBillCode(bill.condensedbillno));
+}
+
+function previewText(text = "", maxLength = 180) {
+  const normalized = String(text).replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength).trim()}...`;
 }
 ---
 
@@ -85,25 +101,35 @@ function formatDate(value) {
 
           {bills.length ? (
             <div class="bill-grid">
-              {bills.map((bill) => (
-                <article class="bill-card">
-                  <div class="bill-topline">
-                    <strong>{bill.condensedbillno}</strong>
-                    <span>{bill.sessionyear}</span>
-                  </div>
-                  <h3>
-                    <a href={billDetailPath(bill.condensedbillno, bill.sessionyear)}>
-                      {bill.condensedbillno}
-                    </a>
-                  </h3>
-                  <p>{bill.description || "No status description returned."}</p>
-                  <BillPositionSummary bill={bill} />
-                  <div class="bill-meta">
-                    {bill.legislativebody && <span>{bill.legislativebody}</span>}
-                    {bill.statusdate && <span>{formatDate(bill.statusdate)}</span>}
-                  </div>
-                </article>
-              ))}
+              {bills.map((bill) => {
+                const trackedBill = trackedBillFor(bill);
+
+                return (
+                  <article class="bill-card">
+                    <div class="bill-topline">
+                      <strong>{bill.condensedbillno}</strong>
+                      <span>{bill.sessionyear}</span>
+                    </div>
+                    <h3>
+                      <a href={billDetailPath(bill.condensedbillno, bill.sessionyear)}>
+                        {trackedBill?.name || bill.condensedbillno}
+                      </a>
+                    </h3>
+                    <p>
+                      {previewText(
+                        trackedBill?.summary ||
+                          bill.description ||
+                          "No summary returned.",
+                      )}
+                    </p>
+                    <BillPositionSummary bill={bill} />
+                    <div class="bill-meta">
+                      {bill.legislativebody && <span>{bill.legislativebody}</span>}
+                      {bill.statusdate && <span>{formatDate(bill.statusdate)}</span>}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           ) : (
             <p class="status-message">No bills found.</p>

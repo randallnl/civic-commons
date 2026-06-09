@@ -1,0 +1,301 @@
+---
+export const prerender = false;
+
+import { billDetailPath, getRollCallVotes } from "../../../../lib/billsApi";
+import { getTrackedBills, normalizeBillCode } from "../../../../lib/trackedBills";
+
+const billCode = Astro.params.bill || "";
+const sequence = Astro.params.sequence || "";
+const year = Astro.url.searchParams.get("year")?.trim() || "";
+
+let bill = null;
+let rollCall = null;
+let votes = [];
+let trackedBill = null;
+let error = "";
+
+try {
+  const [data, trackedBills] = await Promise.all([
+    getRollCallVotes(billCode, sequence, { year }),
+    getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
+  ]);
+
+  bill = data.bill;
+  rollCall = data.rollCall;
+  votes = data.votes || [];
+  trackedBill = trackedBills.get(normalizeBillCode(bill?.condensedbillno || billCode));
+} catch (loadError) {
+  error = loadError?.message || "Unable to load roll call votes.";
+}
+
+const groupedVotes = groupVotes(votes);
+
+function groupVotes(voteRows = []) {
+  const groups = new Map();
+
+  for (const vote of voteRows) {
+    const key = vote.vote_label || vote.vote || "Not listed";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(vote);
+  }
+
+  return [...groups].map(([label, rows]) => ({ label, rows }));
+}
+
+function formatDate(value) {
+  if (!value) return "";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function partyClass(party = "") {
+  if (party === "R") return "republican";
+  if (party === "D") return "democrat";
+  if (party === "I") return "independent";
+  return "unknown";
+}
+
+function slugify(value = "") {
+  return String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/['']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+---
+
+<html lang="en">
+  <head>
+    <title>
+      Roll Call {sequence} | {bill?.condensedbillno || billCode} | Civic Commons
+    </title>
+    <meta
+      name="description"
+      content={`Roll call votes for ${bill?.condensedbillno || billCode}.`}
+    />
+  </head>
+
+  <body>
+    <main class="page">
+      <a class="back" href={billDetailPath(bill?.condensedbillno || billCode, bill?.sessionyear || year)}>
+        Back to bill
+      </a>
+
+      {error ? (
+        <p class="status-message">{error}</p>
+      ) : bill && rollCall ? (
+        <>
+          <section class="hero">
+            <p class="eyebrow">Roll Call</p>
+            <h1>{bill.condensedbillno}</h1>
+            <h2>{trackedBill?.name || rollCall.question_motion || "Roll call vote"}</h2>
+            {rollCall.title1 && <p>{rollCall.title1}</p>}
+            <div class="hero-meta">
+              <span>{rollCall.question_motion || "Motion not listed"}</span>
+              {rollCall.votedate && <span>{formatDate(rollCall.votedate)}</span>}
+              <span>{votes.length} votes</span>
+            </div>
+          </section>
+
+          <section class="count-grid">
+            <article>
+              <span>Yeas</span>
+              <strong>{rollCall.yeas}</strong>
+            </article>
+            <article>
+              <span>Nays</span>
+              <strong>{rollCall.nays}</strong>
+            </article>
+            <article>
+              <span>Present</span>
+              <strong>{rollCall.present}</strong>
+            </article>
+            <article>
+              <span>Absent</span>
+              <strong>{rollCall.absent}</strong>
+            </article>
+          </section>
+
+          <section class="vote-groups">
+            {groupedVotes.map((group) => (
+              <section class="panel">
+                <div class="section-heading">
+                  <p class="eyebrow">{group.label}</p>
+                  <h2>{group.rows.length} Legislators</h2>
+                </div>
+
+                <div class="legislator-grid">
+                  {group.rows.map((vote) => (
+                    <a class="legislator-card" href={`/people/${slugify(vote.name)}`}>
+                      <strong>{vote.name}</strong>
+                      <span class:list={["party", partyClass(vote.party)]}>
+                        {vote.party || "N/A"}
+                      </span>
+                      <small>{vote.district || "District not listed"}</small>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </section>
+        </>
+      ) : (
+        <p class="status-message">Roll call not found.</p>
+      )}
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(body) {
+    margin: 0;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    background: #f7f4ee;
+    color: #1f2933;
+  }
+
+  .page {
+    margin: 0 auto;
+    padding: 40px 0 72px;
+    width: min(1120px, calc(100% - 32px));
+  }
+
+  .back,
+  a {
+    color: #1f2933;
+    font-weight: 800;
+  }
+
+  .hero {
+    padding: 42px 0 24px;
+  }
+
+  .eyebrow,
+  .count-grid span {
+    color: #6b4f2a;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    margin: 0 0 10px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(3rem, 9vw, 7rem);
+    line-height: 0.9;
+    margin: 0 0 16px;
+  }
+
+  .hero h2 {
+    font-size: clamp(1.6rem, 4vw, 3rem);
+    line-height: 1.05;
+    margin: 0 0 14px;
+  }
+
+  .hero p {
+    color: #4b5563;
+    line-height: 1.6;
+    max-width: 880px;
+  }
+
+  .hero-meta,
+  .count-grid,
+  .vote-groups,
+  .legislator-grid {
+    display: grid;
+    gap: 14px;
+  }
+
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .hero-meta span {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 900;
+    padding: 6px 9px;
+  }
+
+  .count-grid {
+    grid-template-columns: repeat(4, 1fr);
+    margin-bottom: 22px;
+  }
+
+  .count-grid article,
+  .panel,
+  .status-message {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 #1f2933;
+    padding: 18px;
+  }
+
+  .count-grid strong {
+    font-size: 2.4rem;
+    line-height: 1;
+  }
+
+  .section-heading h2 {
+    font-size: 1.45rem;
+    margin: 0 0 14px;
+  }
+
+  .legislator-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .legislator-card {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    text-decoration: none;
+  }
+
+  .party {
+    border-radius: 999px;
+    color: white;
+    font-size: 0.76rem;
+    font-weight: 900;
+    justify-self: start;
+    padding: 5px 8px;
+  }
+
+  .republican {
+    background: #b42318;
+  }
+
+  .democrat {
+    background: #1d4ed8;
+  }
+
+  .independent,
+  .unknown {
+    background: #5b616e;
+  }
+
+  small {
+    color: #4b5563;
+    font-weight: 800;
+  }
+
+  @media (max-width: 760px) {
+    .count-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>
