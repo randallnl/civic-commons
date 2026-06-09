@@ -1,0 +1,123 @@
+---
+const { articles = [], emptyText = "No articles found.", compact = false } = Astro.props;
+
+function previewText(text = "", maxLength = compact ? 140 : 220) {
+  const normalized = String(text).replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength).trim()}...`;
+}
+
+function articleDate(article = {}) {
+  const value = article.updated_at || article.created_at;
+  if (!value) return "";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function relationLabels(article = {}) {
+  return [
+    ...(article.bills || []).map((bill) => bill.condensedbillno).filter(Boolean),
+    ...(article.towns || []).map((town) => town.town || town.name || town).filter(Boolean),
+    ...(article.legislators || [])
+      .map((person) => person.matched_name || person.legislator_name_raw)
+      .filter(Boolean),
+    ...(article.issueAreas || []).map((issue) => issue.issue_area).filter(Boolean),
+  ].slice(0, compact ? 4 : 8);
+}
+---
+
+{articles.length ? (
+  <div class:list={["article-list", compact && "compact"]}>
+    {articles.map((article) => (
+      <article class="article-card">
+        <div class="article-topline">
+          {article.resource_type && <span>{article.resource_type}</span>}
+          {articleDate(article) && <span>{articleDate(article)}</span>}
+        </div>
+
+        <h3>
+          <a href={article.url}>{article.title}</a>
+        </h3>
+
+        {article.publisher && <p class="publisher">{article.publisher}</p>}
+        {article.summary && <p>{previewText(article.summary)}</p>}
+
+        {relationLabels(article).length > 0 && (
+          <div class="relation-chips">
+            {relationLabels(article).map((label) => (
+              <span>{label}</span>
+            ))}
+          </div>
+        )}
+      </article>
+    ))}
+  </div>
+) : (
+  <p class="empty">{emptyText}</p>
+)}
+
+<style>
+  .article-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .article-card {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .article-list.compact .article-card {
+    padding: 14px;
+  }
+
+  .article-topline,
+  .relation-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .article-topline span,
+  .relation-chips span {
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.76rem;
+    font-weight: 900;
+    padding: 5px 8px;
+  }
+
+  h3 {
+    font-size: 1.05rem;
+    line-height: 1.25;
+    margin: 10px 0 6px;
+  }
+
+  p {
+    color: #4b5563;
+    line-height: 1.5;
+    margin: 8px 0 0;
+  }
+
+  .publisher {
+    font-weight: 900;
+  }
+
+  .relation-chips {
+    margin-top: 12px;
+  }
+
+  .empty {
+    color: #4b5563;
+    font-weight: 800;
+    margin: 0;
+  }
+</style>

@@ -2,7 +2,9 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
+import ArticleList from "../../components/ArticleList.astro";
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
+import { getArticles } from "../../lib/articlesApi";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
@@ -188,6 +190,23 @@ const sourceLinks = [
   ...links.results,
   ...sourceUrlsToLinks(representative?.sourceUrls),
 ];
+let relatedArticles =
+  apiData?.relatedArticles ||
+  representative?.relatedArticles ||
+  [];
+
+if (!relatedArticles.length && person.id) {
+  try {
+    const articleData = await getArticles({
+      personid: person.id,
+      include: "relations",
+      limit: 6,
+    });
+    relatedArticles = articleData.articles || [];
+  } catch (error) {
+    console.error(error?.message || "Unable to load representative articles.");
+  }
+}
 const fallbackInitial = person.full_name.slice(0, 1);
 
 function formatParty(party) {
@@ -575,6 +594,28 @@ function contactHref(type, value) {
               </div>
             ) : (
               <p class="empty">No towns served are listed yet.</p>
+            )}
+          </section>
+
+          <section class="panel compact-panel">
+            <div class="section-heading">
+              <p class="eyebrow">Articles</p>
+              <h2>Relevant Coverage</h2>
+            </div>
+
+            <ArticleList
+              articles={relatedArticles}
+              compact={true}
+              emptyText="No related articles returned."
+            />
+
+            {person.id && (
+              <a
+                class="text-link"
+                href={`/articles?personid=${person.id}&include=relations`}
+              >
+                Browse all articles
+              </a>
             )}
           </section>
 

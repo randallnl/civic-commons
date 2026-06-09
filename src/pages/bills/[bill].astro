@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
+import ArticleList from "../../components/ArticleList.astro";
 import { getBillDetail, getBillTestimony, rollCallPath } from "../../lib/billsApi";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
@@ -13,6 +14,7 @@ let rollCalls = [];
 let testimony = [];
 let error = "";
 let trackedBill = null;
+let relatedArticles = [];
 
 try {
   const [detailData, testimonyData, trackedBills] = await Promise.all([
@@ -23,6 +25,7 @@ try {
 
   bill = detailData.bill;
   rollCalls = detailData.rollCalls || [];
+  relatedArticles = detailData.relatedArticles || [];
   testimony = testimonyData.testimony || [];
   trackedBill = trackedBills.get(normalizeBillCode(bill?.condensedbillno || billCode));
 } catch (loadError) {
@@ -161,6 +164,26 @@ function billTitle() {
           <section class="content-grid">
             <section class="panel">
               <div class="section-heading">
+                <p class="eyebrow">Articles</p>
+                <h2>Related Coverage</h2>
+              </div>
+
+              <ArticleList
+                articles={relatedArticles}
+                compact={true}
+                emptyText="No related articles returned."
+              />
+
+              <a
+                class="text-link"
+                href={`/articles?bill=${encodeURIComponent(bill.condensedbillno)}&include=relations`}
+              >
+                Browse all bill articles
+              </a>
+            </section>
+
+            <section class="panel">
+              <div class="section-heading">
                 <p class="eyebrow">Public Input</p>
                 <h2>Testimony</h2>
               </div>
@@ -286,7 +309,7 @@ function billTitle() {
   }
 
   .content-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
     margin-top: 22px;
   }
 
@@ -419,6 +442,11 @@ function billTitle() {
   .empty {
     color: #4b5563;
     font-weight: 800;
+  }
+
+  .text-link {
+    display: inline-block;
+    margin-top: 16px;
   }
 
   @media (max-width: 860px) {

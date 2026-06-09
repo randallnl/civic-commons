@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
+import { getArticles } from "../lib/articlesApi";
 import { billDetailPath } from "../lib/billsApi";
 
 const db = env.cvc;
@@ -33,12 +34,14 @@ const recentBills = await db.prepare(`
   LIMIT 6
 `).all();
 
-const recentChanges = await db.prepare(`
-  SELECT *
-  FROM change_requests
-  ORDER BY created_at DESC
-  LIMIT 5
-`).all();
+let recentArticles = [];
+
+try {
+  const articleData = await getArticles({ include: "relations", limit: 5 });
+  recentArticles = articleData.articles || [];
+} catch (error) {
+  console.error(error?.message || "Unable to load articles.");
+}
 
 function divisionUrl(division) {
   if (division.type === "state") return "/nh";
@@ -117,9 +120,9 @@ function divisionUrl(division) {
       </section>
 
       <section class="grid">
-        <a class="card" href="/nh">
+        <a class="card" href="/communities">
           <h2>Explore Communities</h2>
-          <p>Browse counties, cities, towns, wards, and districts.</p>
+          <p>Search House districts by the towns they represent.</p>
         </a>
 
         <a class="card" href="/my-state-rep">
@@ -188,13 +191,13 @@ function divisionUrl(division) {
         <div>
           <h2>Community Updates</h2>
           <ul class="list">
-            {recentChanges.results.length === 0 ? (
-              <li>No change requests yet.</li>
+            {recentArticles.length === 0 ? (
+              <li>No articles added yet.</li>
             ) : (
-              recentChanges.results.map((change) => (
+              recentArticles.map((article) => (
                 <li>
-                  <strong>{change.entity_type}</strong>
-                  <span>{change.field_name}: {change.status}</span>
+                  <a href={article.url}>{article.title}</a>
+                  <span>{article.publisher || article.resource_type}</span>
                 </li>
               ))
             )}
