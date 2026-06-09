@@ -1,0 +1,268 @@
+---
+export const prerender = false;
+
+import BillPositionSummary from "../../components/BillPositionSummary.astro";
+import { billDetailPath, getBills } from "../../lib/billsApi";
+
+const q = Astro.url.searchParams.get("q")?.trim() || "";
+const year = Astro.url.searchParams.get("year")?.trim() || "";
+
+let bills = [];
+let meta = {};
+let error = "";
+
+try {
+  const data = await getBills({ q, year, limit: 100 });
+  bills = data.bills || [];
+  meta = data.meta || {};
+} catch (loadError) {
+  error = loadError?.message || "Unable to load bills.";
+}
+
+function formatDate(value) {
+  if (!value) return "";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+---
+
+<html lang="en">
+  <head>
+    <title>Bills | Civic Commons</title>
+    <meta
+      name="description"
+      content="Browse tracked New Hampshire bills and testimony summaries."
+    />
+  </head>
+
+  <body>
+    <main class="page">
+      <a class="back" href="/">Back home</a>
+
+      <section class="hero">
+        <p class="eyebrow">Tracked Bills</p>
+        <h1>Browse bills and public testimony.</h1>
+
+        <form class="filters" action="/bills" method="get">
+          <label>
+            <span>Search</span>
+            <input
+              type="search"
+              name="q"
+              value={q}
+              placeholder="HB699, education, labor..."
+            />
+          </label>
+
+          <label>
+            <span>Year</span>
+            <input
+              type="number"
+              name="year"
+              value={year}
+              placeholder="2025"
+              min="2020"
+              max="2030"
+            />
+          </label>
+
+          <button type="submit">Filter</button>
+        </form>
+      </section>
+
+      {error && <p class="status-message">{error}</p>}
+
+      {!error && (
+        <section class="results">
+          <div class="results-heading">
+            <h2>{meta.count ?? bills.length} Bills</h2>
+            {(q || year) && <a href="/bills">Clear filters</a>}
+          </div>
+
+          {bills.length ? (
+            <div class="bill-grid">
+              {bills.map((bill) => (
+                <article class="bill-card">
+                  <div class="bill-topline">
+                    <strong>{bill.condensedbillno}</strong>
+                    <span>{bill.sessionyear}</span>
+                  </div>
+                  <h3>
+                    <a href={billDetailPath(bill.condensedbillno, bill.sessionyear)}>
+                      {bill.condensedbillno}
+                    </a>
+                  </h3>
+                  <p>{bill.description || "No status description returned."}</p>
+                  <BillPositionSummary bill={bill} />
+                  <div class="bill-meta">
+                    {bill.legislativebody && <span>{bill.legislativebody}</span>}
+                    {bill.statusdate && <span>{formatDate(bill.statusdate)}</span>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p class="status-message">No bills found.</p>
+          )}
+        </section>
+      )}
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(body) {
+    margin: 0;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    background: #f7f4ee;
+    color: #1f2933;
+  }
+
+  .page {
+    margin: 0 auto;
+    padding: 40px 0 72px;
+    width: min(1120px, calc(100% - 32px));
+  }
+
+  .back,
+  a {
+    color: #1f2933;
+    font-weight: 800;
+  }
+
+  .hero {
+    padding: 42px 0 28px;
+  }
+
+  .eyebrow {
+    color: #6b4f2a;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    margin: 0 0 12px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    line-height: 0.95;
+    margin: 0 0 24px;
+    max-width: 900px;
+  }
+
+  .filters {
+    align-items: end;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) 140px auto;
+    max-width: 760px;
+  }
+
+  label {
+    display: grid;
+    gap: 6px;
+  }
+
+  label span {
+    color: #6b7280;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  input,
+  button {
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font: inherit;
+    font-weight: 800;
+    min-height: 48px;
+    padding: 10px 12px;
+  }
+
+  button {
+    background: #1f2933;
+    color: white;
+    cursor: pointer;
+  }
+
+  .results-heading {
+    align-items: center;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  .results-heading h2 {
+    font-size: 1.7rem;
+    margin: 0;
+  }
+
+  .bill-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  .bill-card,
+  .status-message {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 #1f2933;
+    padding: 18px;
+  }
+
+  .bill-topline,
+  .bill-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  .bill-topline strong {
+    font-size: 1.1rem;
+  }
+
+  .bill-topline span,
+  .bill-meta span {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 900;
+    padding: 6px 9px;
+  }
+
+  .bill-card h3 {
+    font-size: 1.35rem;
+    margin: 14px 0 8px;
+  }
+
+  .bill-card p {
+    color: #4b5563;
+    line-height: 1.55;
+    margin: 0 0 14px;
+  }
+
+  .bill-meta {
+    justify-content: start;
+    margin-top: 14px;
+  }
+
+  @media (max-width: 640px) {
+    .filters {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

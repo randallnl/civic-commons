@@ -1,7 +1,9 @@
 ---
+import BillPositionSummary from "./BillPositionSummary.astro";
+import { billDetailPath } from "../lib/billsApi";
 import { normalizeBillCode } from "../lib/trackedBills";
 
-const { rep, trackedBills = new Map() } = Astro.props;
+const { rep, trackedBills = new Map(), billSummaries = new Map() } = Astro.props;
 
 function formatParty(party) {
   if (!party) return "Party not listed";
@@ -36,14 +38,18 @@ function trackedBillFor(vote) {
   return trackedBills.get(normalizeBillCode(vote.condensedbillno));
 }
 
+function billSummaryFor(vote) {
+  return billSummaries.get(normalizeBillCode(vote.condensedbillno));
+}
+
 function voteLabel(vote) {
   return vote.vote_label || vote.vote || "Not listed";
 }
 ---
 
-<a class="rep-card" href={profileHref}>
+<article class="rep-card">
   <div class="rep-card-top">
-    <div class="photo-wrap">
+    <a class="photo-wrap" href={profileHref}>
       {rep.photo ? (
         <img
           class="rep-photo"
@@ -56,10 +62,10 @@ function voteLabel(vote) {
           {fallbackInitial}
         </div>
       )}
-    </div>
+    </a>
 
     <div class="rep-main">
-      <h3>{name}</h3>
+      <h3><a href={profileHref}>{name}</a></h3>
 
       <div class="rep-meta">
         <span>{rep.chamber || "Legislator"}</span>
@@ -104,12 +110,21 @@ function voteLabel(vote) {
       <div class="vote-list">
         {voteHistory.map((vote) => {
           const bill = trackedBillFor(vote);
+          const billSummary = billSummaryFor(vote);
+          const billYear = billSummary?.sessionyear || vote.sessionyear;
 
           return (
             <div class="vote-item">
               <div>
-                <strong>{bill?.code || vote.condensedbillno || "Bill"}</strong>
+                <strong>
+                  <a href={billDetailPath(bill?.code || vote.condensedbillno, billYear)}>
+                    {bill?.code || vote.condensedbillno || "Bill"}
+                  </a>
+                </strong>
                 {bill?.name && <span>{bill.name}</span>}
+                {billSummary && (
+                  <BillPositionSummary bill={billSummary} compact={true} />
+                )}
               </div>
               <small>{voteLabel(vote)}</small>
             </div>
@@ -120,7 +135,7 @@ function voteLabel(vote) {
       <p>No tracked vote history returned.</p>
     )}
   </div>
-</a>
+</article>
 
 <style>
   .rep-card {
@@ -129,14 +144,20 @@ function voteLabel(vote) {
     border-radius: 18px;
     box-shadow: 4px 4px 0 #1f2933;
     color: inherit;
-    display: block;
     overflow: hidden;
     padding: 18px;
-    text-decoration: none;
   }
 
-  .rep-card:hover h3 {
+  .rep-card a {
+    color: inherit;
+  }
+
+  .rep-card:hover h3 a {
     text-decoration: underline;
+  }
+
+  .photo-wrap {
+    display: block;
   }
 
   .rep-card-top {
@@ -244,7 +265,7 @@ function voteLabel(vote) {
   }
 
   .vote-item {
-    align-items: center;
+    align-items: start;
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 12px;
@@ -255,6 +276,8 @@ function voteLabel(vote) {
   }
 
   .vote-item > div {
+    display: grid;
+    gap: 6px;
     min-width: 0;
   }
 

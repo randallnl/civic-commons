@@ -2,6 +2,8 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
+import BillPositionSummary from "../../components/BillPositionSummary.astro";
+import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const { slug } = Astro.params;
@@ -122,19 +124,39 @@ const votes = dbPerson
   : { results: [] };
 
 let trackedBills = new Map();
+let billSummaries = new Map();
 
 try {
-  trackedBills = await getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL);
+  [trackedBills, billSummaries] = await Promise.all([
+    getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
+    getBillSummaries(),
+  ]);
 } catch (error) {
-  console.error(error?.message || "Unable to load tracked bills.");
+  console.error(error?.message || "Unable to load tracked bill data.");
 }
 
 const voteHistory = representative
   ? apiData?.voteHistory || []
   : votes.results;
-const trackedVotes = voteHistory
-  .map((vote) => normalizeVote(vote, trackedBills))
+let trackedVotes = voteHistory
+  .map((vote) => normalizeVote(vote, trackedBills, billSummaries))
   .filter((vote) => vote.trackedBill);
+
+trackedVotes = await Promise.all(
+  trackedVotes.map(async (vote) => {
+    if (vote.billSummary) return vote;
+
+    try {
+      const detail = await getBillDetail(vote.trackedBill.code, {
+        year: vote.sessionyear,
+      });
+      return { ...vote, billSummary: detail.bill };
+    } catch (error) {
+      console.error(error?.message || "Unable to load bill summary.");
+      return vote;
+    }
+  }),
+);
 
 const currentTerms = terms.results.filter((term) => term.status === "current");
 const primaryTerm = currentTerms[0] || terms.results[0];
@@ -257,9 +279,10 @@ function representativeToTerm(rep = {}) {
   };
 }
 
-function normalizeVote(vote = {}, bills = new Map()) {
+function normalizeVote(vote = {}, bills = new Map(), summaries = new Map()) {
   const billNumber = vote.condensedbillno || vote.bill_number || "";
   const trackedBill = bills.get(normalizeBillCode(billNumber));
+  const billSummary = summaries.get(normalizeBillCode(billNumber));
 
   return {
     ...vote,
@@ -270,6 +293,7 @@ function normalizeVote(vote = {}, bills = new Map()) {
     vote_label: vote.vote_label || vote.vote || "Not listed",
     general_court_url: vote.general_court_url || "",
     legiscan_url: vote.legiscan_url || "",
+    billSummary,
     trackedBill,
   };
 }
@@ -427,12 +451,33 @@ function contactHref(type, value) {
                 {trackedVotes.map((vote) => (
                   <article class="vote-card">
                     <div class="vote-topline">
-                      <strong>{vote.trackedBill.code}</strong>
+                      <strong>
+                        <a
+                          href={billDetailPath(
+                            vote.trackedBill.code,
+                            vote.billSummary?.sessionyear || vote.sessionyear,
+                          )}
+                        >
+                          {vote.trackedBill.code}
+                        </a>
+                      </strong>
                       <span>{vote.vote_label}</span>
                     </div>
-                    <h3>{vote.trackedBill.name || vote.title}</h3>
+                    <h3>
+                      <a
+                        href={billDetailPath(
+                          vote.trackedBill.code,
+                          vote.billSummary?.sessionyear || vote.sessionyear,
+                        )}
+                      >
+                        {vote.trackedBill.name || vote.title}
+                      </a>
+                    </h3>
                     {vote.trackedBill.summary && (
                       <p>{vote.trackedBill.summary}</p>
+                    )}
+                    {vote.billSummary && (
+                      <BillPositionSummary bill={vote.billSummary} />
                     )}
                     <div class="vote-meta">
                       {vote.vote_date && <span>{formatDate(vote.vote_date)}</span>}

@@ -2,7 +2,8 @@
 export const prerender = false;
 
 import RepresentativeCard from "../components/RepresentativeCard.astro";
-import { getTrackedBills } from "../lib/trackedBills";
+import { getBillDetail, getBillSummaries } from "../lib/billsApi";
+import { normalizeBillCode, getTrackedBills } from "../lib/trackedBills";
 
 const API_BASE =
   import.meta.env.REP_LOOKUP_API_BASE ||
@@ -13,6 +14,7 @@ const address = Astro.url.searchParams.get("address")?.trim() || "";
 let lookupData = null;
 let lookupError = "";
 let trackedBills = new Map();
+let billSummaries = new Map();
 
 if (address) {
   try {
@@ -39,9 +41,12 @@ if (address) {
 
 if (lookupData) {
   try {
-    trackedBills = await getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL);
+    [trackedBills, billSummaries] = await Promise.all([
+      getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
+      getBillSummaries(),
+    ]);
   } catch (error) {
-    console.error(error?.message || "Unable to load tracked bills.");
+    console.error(error?.message || "Unable to load bill summaries.");
   }
 }
 
@@ -61,6 +66,10 @@ const houseDistricts = matchedDistricts
   .map((district) => district.district_label)
   .filter(Boolean);
 
+if (lookupData && trackedBills.size) {
+  await hydrateMissingBillSummaries(allReps, trackedBills, billSummaries);
+}
+
 function formatAddress(normalized = {}) {
   return [
     normalized.line1,
@@ -70,6 +79,31 @@ function formatAddress(normalized = {}) {
   ]
     .filter(Boolean)
     .join(", ");
+}
+
+async function hydrateMissingBillSummaries(reps, tracked, summaries) {
+  const missingBills = new Map();
+
+  for (const rep of reps) {
+    for (const vote of rep.voteHistory || []) {
+      const code = normalizeBillCode(vote.condensedbillno);
+      if (!code || !tracked.has(code) || summaries.has(code) || missingBills.has(code)) {
+        continue;
+      }
+      missingBills.set(code, vote.sessionyear);
+    }
+  }
+
+  await Promise.all(
+    [...missingBills].map(async ([code, year]) => {
+      try {
+        const detail = await getBillDetail(code, { year });
+        if (detail.bill) summaries.set(code, detail.bill);
+      } catch (error) {
+        console.error(error?.message || "Unable to load bill summary.");
+      }
+    }),
+  );
 }
 ---
 
@@ -185,7 +219,11 @@ function formatAddress(normalized = {}) {
 
                 <div class="rep-grid">
                   {senateReps.map((rep) => (
-                    <RepresentativeCard rep={rep} trackedBills={trackedBills} />
+                    <RepresentativeCard
+                      rep={rep}
+                      trackedBills={trackedBills}
+                      billSummaries={billSummaries}
+                    />
                   ))}
                 </div>
               </section>
@@ -203,7 +241,11 @@ function formatAddress(normalized = {}) {
 
                 <div class="rep-grid">
                   {houseReps.map((rep) => (
-                    <RepresentativeCard rep={rep} trackedBills={trackedBills} />
+                    <RepresentativeCard
+                      rep={rep}
+                      trackedBills={trackedBills}
+                      billSummaries={billSummaries}
+                    />
                   ))}
                 </div>
               </section>

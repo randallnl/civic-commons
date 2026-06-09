@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
+import { billDetailPath } from "../lib/billsApi";
 
 const db = env.cvc;
 const q = Astro.url.searchParams.get("q")?.trim() || "";
@@ -150,7 +151,7 @@ function divisionUrl(division) {
               <ul>
                 {bills.results.map((bill) => (
                   <li>
-                    <a href={`/bills/${bill.session_year}/${bill.bill_number.toLowerCase()}`}>
+                    <a href={billDetailPath(bill.bill_number, bill.session_year)}>
                       <span>
                         <strong>{bill.bill_number}: {bill.title}</strong>
                         <small>{bill.status || "No status listed"}</small>

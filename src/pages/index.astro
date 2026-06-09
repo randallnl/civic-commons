@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
+import { billDetailPath } from "../lib/billsApi";
 
 const db = env.cvc;
 
@@ -174,7 +175,7 @@ function divisionUrl(division) {
             ) : (
               recentBills.results.map((bill) => (
                 <li>
-                  <a href={`/bills/${bill.session_year}/${bill.bill_number.toLowerCase()}`}>
+                  <a href={billDetailPath(bill.bill_number, bill.session_year)}>
                     {bill.bill_number}
                   </a>
                   <span>{bill.title}</span>

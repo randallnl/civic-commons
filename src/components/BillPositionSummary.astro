@@ -1,0 +1,48 @@
+---
+import { positionCounts } from "../lib/billsApi";
+
+const { bill, compact = false } = Astro.props;
+const counts = positionCounts(bill);
+---
+
+<div class:list={["position-summary", compact && "compact"]}>
+  <span class="support">Support {counts.support}</span>
+  <span class="oppose">Oppose {counts.oppose}</span>
+  <span class="neutral">Neutral {counts.neutral}</span>
+  <span>Total {counts.total}</span>
+</div>
+
+<style>
+  .position-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .position-summary span {
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.82rem;
+    font-weight: 900;
+    padding: 6px 9px;
+  }
+
+  .position-summary.compact span {
+    font-size: 0.76rem;
+    padding: 5px 8px;
+  }
+
+  .support {
+    border-color: #8fce9e;
+  }
+
+  .oppose {
+    border-color: #f3a29a;
+  }
+
+  .neutral {
+    border-color: #c4c9d4;
+  }
+</style>
