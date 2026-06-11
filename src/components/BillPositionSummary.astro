@@ -7,21 +7,21 @@ const counts = positionCounts(bill);
 function communityStance() {
   if (counts.support > counts.oppose) {
     return {
-      label: `${counts.support} support this bill`,
+      label: `Remote Testimony: ${counts.support} Support / ${counts.oppose} Oppose`,
       className: "community-support",
     };
   }
 
   if (counts.oppose > counts.support) {
     return {
-      label: `${counts.oppose} oppose this bill`,
+      label: `Remote Testimony: ${counts.support} Support / ${counts.oppose} Oppose`,
       className: "community-oppose",
     };
   }
 
   if (counts.support > 0 || counts.oppose > 0) {
     return {
-      label: `${counts.support} support / ${counts.oppose} oppose this bill`,
+      label: `Remote Testimony: ${counts.support} Support / ${counts.oppose} Oppose`,
       className: "community-neutral",
     };
   }

@@ -225,20 +225,20 @@ function legislatorVoteStance(vote) {
 
   if (label.includes("support") || label === "yea" || label === "yes") {
     return {
-      label: "Vote: In Support",
+      label: "Representative Vote: In Support",
       className: "legislator-support",
     };
   }
 
   if (label.includes("against") || label.includes("oppose") || label === "nay" || label === "no") {
     return {
-      label: "Vote: Against",
+      label: "Representative Vote: Opposed",
       className: "legislator-oppose",
     };
   }
 
   return {
-    label: `Vote: ${vote.vote_label || vote.vote || "Not listed"}`,
+    label: `Representative Vote: ${vote.vote_label || vote.vote || "Not listed"}`,
     className: "legislator-neutral",
   };
 }
@@ -399,59 +399,65 @@ function contactHref(type, value) {
 
                   return (
                     <article class="vote-card">
-                    <div class="vote-topline">
-                      <strong>
-                        <a
-                          href={billDetailPath(
-                            vote.trackedBill.code,
-                            vote.billSummary?.sessionyear || vote.sessionyear,
+                      <div class="vote-card-main">
+                        <div class="vote-copy">
+                          <div class="vote-topline">
+                            <strong>
+                              <a
+                                href={billDetailPath(
+                                  vote.trackedBill.code,
+                                  vote.billSummary?.sessionyear || vote.sessionyear,
+                                )}
+                              >
+                                {vote.trackedBill.code}
+                              </a>
+                            </strong>
+                          </div>
+                          <h3>
+                            <a
+                              href={billDetailPath(
+                                vote.trackedBill.code,
+                                vote.billSummary?.sessionyear || vote.sessionyear,
+                              )}
+                            >
+                              {vote.trackedBill.name || vote.title}
+                            </a>
+                          </h3>
+                          {vote.trackedBill.summary && (
+                            <p>{vote.trackedBill.summary}</p>
                           )}
-                        >
-                          {vote.trackedBill.code}
-                        </a>
-                      </strong>
-                      <span class:list={["legislator-vote-pill", stance.className]}>
-                        {stance.label}
-                      </span>
-                    </div>
-                    <h3>
-                      <a
-                        href={billDetailPath(
-                          vote.trackedBill.code,
-                          vote.billSummary?.sessionyear || vote.sessionyear,
-                        )}
-                      >
-                        {vote.trackedBill.name || vote.title}
-                      </a>
-                    </h3>
-                    {vote.trackedBill.summary && (
-                      <p>{vote.trackedBill.summary}</p>
-                    )}
-                    {vote.billSummary && (
-                      <BillPositionSummary bill={vote.billSummary} />
-                    )}
-                    <div class="vote-meta">
-                      {vote.vote_date && <span>{formatDate(vote.vote_date)}</span>}
-                      {vote.motion && <span>{vote.motion}</span>}
-                      {vote.trackedBill.issueArea && (
-                        <span>{vote.trackedBill.issueArea}</span>
-                      )}
-                    </div>
-                    {(vote.trackedBill.moreInfoUrl ||
-                      vote.legiscan_url ||
-                      vote.general_court_url) && (
-                      <a
-                        class="text-link"
-                        href={
-                          vote.trackedBill.moreInfoUrl ||
-                          vote.legiscan_url ||
-                          vote.general_court_url
-                        }
-                      >
-                        Bill details
-                      </a>
-                    )}
-                  </article>
+                          <div class="vote-meta">
+                            {vote.vote_date && <span>{formatDate(vote.vote_date)}</span>}
+                            {vote.motion && <span>{vote.motion}</span>}
+                            {vote.trackedBill.issueArea && (
+                              <span>{vote.trackedBill.issueArea}</span>
+                            )}
+                          </div>
+                          {(vote.trackedBill.moreInfoUrl ||
+                            vote.legiscan_url ||
+                            vote.general_court_url) && (
+                            <a
+                              class="text-link"
+                              href={
+                                vote.trackedBill.moreInfoUrl ||
+                                vote.legiscan_url ||
+                                vote.general_court_url
+                              }
+                            >
+                              Bill details
+                            </a>
+                          )}
+                        </div>
+                        <div class="vote-pill-stack">
+                          <span class:list={["legislator-vote-pill", stance.className]}>
+                            {stance.label}
+                          </span>
+                          {vote.billSummary && (
+                            <BillPositionSummary bill={vote.billSummary} />
+                          )}
+                        </div>
+                      </div>
+                    </article>
                   );
                 })}
               </div>
@@ -869,7 +875,6 @@ function contactHref(type, value) {
     align-items: center;
     display: flex;
     gap: 12px;
-    justify-content: space-between;
     margin-bottom: 12px;
   }
 
@@ -886,6 +891,20 @@ function contactHref(type, value) {
     line-height: 1.2;
     padding: 7px 10px;
     text-align: right;
+  }
+
+  .vote-card-main {
+    align-items: start;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr);
+  }
+
+  .vote-pill-stack {
+    align-items: end;
+    display: grid;
+    gap: 8px;
+    justify-items: end;
   }
 
   .legislator-support {
@@ -956,6 +975,15 @@ function contactHref(type, value) {
 
     .summary-strip {
       grid-template-columns: 1fr;
+    }
+
+    .vote-card-main {
+      grid-template-columns: 1fr;
+    }
+
+    .vote-pill-stack {
+      align-items: start;
+      justify-items: start;
     }
   }
 </style>

@@ -51,20 +51,20 @@ function legislatorVoteStance(vote) {
 
   if (label.includes("support") || label === "yea" || label === "yes") {
     return {
-      label: "Vote: In Support",
+      label: "Representative Vote: In Support",
       className: "legislator-support",
     };
   }
 
   if (label.includes("against") || label.includes("oppose") || label === "nay" || label === "no") {
     return {
-      label: "Vote: Against",
+      label: "Representative Vote: Opposed",
       className: "legislator-oppose",
     };
   }
 
   return {
-    label: `Vote: ${voteLabel(vote)}`,
+    label: `Representative Vote: ${voteLabel(vote)}`,
     className: "legislator-neutral",
   };
 }
@@ -139,20 +139,22 @@ function legislatorVoteStance(vote) {
 
           return (
             <div class="vote-item">
-              <div>
+              <div class="vote-copy">
                 <strong>
                   <a href={billDetailPath(bill?.code || vote.condensedbillno, billYear)}>
                     {bill?.code || vote.condensedbillno || "Bill"}
                   </a>
                 </strong>
                 {bill?.name && <span>{bill.name}</span>}
+              </div>
+              <div class="vote-pill-stack">
+                <small class:list={["legislator-vote-pill", stance.className]}>
+                  {stance.label}
+                </small>
                 {billSummary && (
                   <BillPositionSummary bill={billSummary} compact={true} />
                 )}
               </div>
-              <small class:list={["legislator-vote-pill", stance.className]}>
-                {stance.label}
-              </small>
             </div>
           );
         })}
@@ -301,10 +303,18 @@ function legislatorVoteStance(vote) {
     padding: 10px 12px;
   }
 
-  .vote-item > div {
+  .vote-copy {
     display: grid;
     gap: 6px;
     min-width: 0;
+  }
+
+  .vote-pill-stack {
+    align-items: flex-end;
+    display: grid;
+    gap: 6px;
+    justify-items: end;
+    min-width: min(210px, 42%);
   }
 
   .vote-summary p {
@@ -320,7 +330,6 @@ function legislatorVoteStance(vote) {
     font-size: 0.74rem;
     font-weight: 900;
     line-height: 1.2;
-    max-width: 190px;
     padding: 6px 8px;
     text-align: right;
   }
@@ -351,6 +360,15 @@ function legislatorVoteStance(vote) {
   @media (max-width: 520px) {
     .rep-card-top {
       grid-template-columns: 1fr;
+    }
+
+    .vote-item {
+      display: grid;
+    }
+
+    .vote-pill-stack {
+      justify-items: start;
+      min-width: 0;
     }
   }
 </style>
