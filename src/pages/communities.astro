@@ -1,34 +1,99 @@
 ---
 export const prerender = false;
 
-import { env } from "cloudflare:workers";
 import TopNav from "../components/TopNav.astro";
+import { getRepresentatives, repName } from "../lib/repsApi";
 
-const db = env.cvc;
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 
-const houseDistricts = await db
-  .prepare(`
-    SELECT *
-    FROM divisions
-    WHERE type = 'house_district'
-      AND (
-        ? = ''
-        OR name LIKE '%' || ? || '%'
-        OR county LIKE '%' || ? || '%'
-        OR towns_represented LIKE '%' || ? || '%'
-      )
-    ORDER BY county, district, name
-    LIMIT 200
-  `)
-  .bind(q, q, q, q)
-  .all();
+let houseDistricts = [];
+let loadError = "";
 
-function townsFor(district = {}) {
-  return String(district.towns_represented || "")
-    .split(";")
-    .map((town) => town.trim())
+try {
+  const data = await getRepresentatives({
+    q,
+    chamber: "House",
+    include: "districts",
+    limit: 400,
+  });
+  houseDistricts = groupHouseDistricts(data.representatives || [], q);
+} catch (error) {
+  loadError = cleanApiError(error?.message) || "Unable to load communities.";
+}
+
+function groupHouseDistricts(representatives = [], search = "") {
+  const districts = new Map();
+
+  for (const rep of representatives.filter((item) => item.chamber === "House")) {
+    const district = rep.raw_district || rep.district || "District not listed";
+    const county = rep.county || rep.countycode || "";
+    const name = rep.district_label || `NH House District ${formatDistrictNumber(district)}`;
+    const key = `${county}-${district}`;
+    const towns = townsFor(rep);
+
+    if (!districts.has(key)) {
+      districts.set(key, {
+        key,
+        county,
+        district,
+        name,
+        towns: new Set(),
+        reps: [],
+      });
+    }
+
+    const districtRecord = districts.get(key);
+    for (const town of towns) districtRecord.towns.add(town);
+    districtRecord.reps.push(rep);
+  }
+
+  const needle = search.toLowerCase();
+  return [...districts.values()]
+    .map((district) => ({
+      ...district,
+      towns: [...district.towns].sort((a, b) => a.localeCompare(b)),
+    }))
+    .filter((district) => {
+      if (!needle) return true;
+      return [
+        district.name,
+        district.county,
+        district.district,
+        ...district.towns,
+        ...district.reps.map((rep) => repName(rep)),
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(needle));
+    })
+    .sort((a, b) => String(a.name).localeCompare(String(b.name), undefined, {
+      numeric: true,
+    }));
+}
+
+function townsFor(rep = {}) {
+  const value = rep.towns_represented || rep.townsRepresented || rep.location_text || "";
+  if (Array.isArray(value)) return value.map(cleanTown).filter(Boolean);
+
+  return String(value)
+    .split(/;|,/)
+    .map(cleanTown)
     .filter(Boolean);
+}
+
+function cleanTown(value = "") {
+  return String(value).trim();
+}
+
+function formatDistrictNumber(value = "") {
+  const district = String(value).trim();
+  if (!district) return "";
+  if (/^\d+$/.test(district)) return String(Number(district));
+  return district;
+}
+
+function cleanApiError(message = "") {
+  if (/internal error/i.test(message)) return "Representative directory is temporarily unavailable.";
+  return message;
 }
 ---
 
@@ -63,29 +128,29 @@ function townsFor(district = {}) {
 
       <section class="results">
         <div class="results-heading">
-          <h2>{houseDistricts.results.length} House Districts</h2>
+          <h2>{houseDistricts.length} House Districts</h2>
           {q && <a href="/communities">Clear search</a>}
         </div>
 
-        {houseDistricts.results.length ? (
+        {loadError ? (
+          <p class="status-message">{loadError}</p>
+        ) : houseDistricts.length ? (
           <div class="district-grid">
-            {houseDistricts.results.map((district) => (
+            {houseDistricts.map((district) => (
               <article class="district-card">
                 <div class="topline">
                   <span>{district.county || "NH"}</span>
-                  {district.seats && <span>{district.seats} seats</span>}
+                  <span>{district.reps.length} reps</span>
                 </div>
-                <h3>
-                  <a href={`/nh/${district.slug}`}>{district.name}</a>
-                </h3>
+                <h3>{district.name}</h3>
                 <div class="towns">
-                  {townsFor(district).map((town) => (
+                  {district.towns.map((town) => (
                     <a href={`/articles?town=${encodeURIComponent(town)}`}>{town}</a>
                   ))}
                 </div>
-                {district.floterial && (
-                  <p>{district.floterial === "True" ? "Floterial district" : "Local district"}</p>
-                )}
+                <p>
+                  {district.reps.map((rep) => repName(rep)).filter(Boolean).join(", ")}
+                </p>
               </article>
             ))}
           </div>

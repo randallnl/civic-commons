@@ -1,130 +1,46 @@
 ---
 export const prerender = false;
 
-import { env } from "cloudflare:workers";
 import ArticleList from "../../components/ArticleList.astro";
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import TopNav from "../../components/TopNav.astro";
 import { getArticles } from "../../lib/articlesApi";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
+import { getRepresentative } from "../../lib/repsApi";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const { slug } = Astro.params;
-const db = env.cvc;
-const API_BASE =
-  import.meta.env.REP_LOOKUP_API_BASE ||
-  "https://api.nhciviccommons.com";
-
-const dbPerson = await db
-  .prepare("SELECT * FROM people WHERE slug = ?")
-  .bind(slug)
-  .first();
 
 let apiData = null;
 
 try {
-  const response = await fetch(`${API_BASE}/reps/${slug}`);
-
-  if (response.ok) {
-    apiData = await response.json();
-  }
+  apiData = await getRepresentative(slug);
 } catch (error) {
   console.error(error?.message || "Unable to load representative profile.");
 }
 
 const representative = apiData?.representative || null;
 
-if (!dbPerson && !representative) {
+if (!representative) {
   return Astro.redirect("/404");
 }
 
 const person = {
-  id: dbPerson?.id || representative?.personid || representative?.id,
-  full_name: representative?.name || dbPerson?.full_name || "Representative",
+  id: representative?.personid || representative?.id,
+  full_name: representative?.name || "Representative",
   slug,
-  bio: dbPerson?.bio || representative?.notes || "",
-  photo_url: representative?.photo || dbPerson?.photo_url || "",
-  party: representative?.party || dbPerson?.party || "",
-  email: representative?.email || dbPerson?.email || "",
-  phone: representative?.phone || dbPerson?.phone || "",
-  website_url:
-    dbPerson?.website_url || representative?.sourceUrls?.generalCourt || "",
+  bio: representative?.notes || "",
+  photo_url: representative?.photo || "",
+  party: representative?.party || "",
+  email: representative?.email || "",
+  phone: representative?.phone || "",
+  website_url: representative?.sourceUrls?.generalCourt || "",
 };
 
-const terms = dbPerson
-  ? await db
-      .prepare(`
-    SELECT
-      office_terms.*,
-      positions.title,
-      positions.level,
-      positions.body,
-      positions.district,
-      divisions.name AS division_name,
-      divisions.type AS division_type,
-      divisions.towns_represented
-    FROM office_terms
-    JOIN positions ON positions.id = office_terms.position_id
-    LEFT JOIN divisions ON divisions.id = positions.division_id
-    WHERE office_terms.person_id = ?
-    ORDER BY office_terms.status DESC, office_terms.start_date DESC
-  `)
-      .bind(dbPerson.id)
-      .all()
-  : { results: [] };
-
-const candidacies = dbPerson
-  ? await db
-      .prepare(`
-    SELECT
-      candidacies.*,
-      elections.name AS election_name,
-      elections.election_date,
-      positions.title AS position_title
-    FROM candidacies
-    JOIN elections ON elections.id = candidacies.election_id
-    JOIN positions ON positions.id = candidacies.position_id
-    WHERE candidacies.person_id = ?
-    ORDER BY elections.election_date DESC
-  `)
-      .bind(dbPerson.id)
-      .all()
-  : { results: [] };
-
-const links = dbPerson
-  ? await db
-      .prepare(`
-    SELECT * FROM links
-    WHERE entity_type = 'person' AND entity_id = ?
-    ORDER BY link_type, published_date DESC
-  `)
-      .bind(dbPerson.id)
-      .all()
-  : { results: [] };
-
-const votes = dbPerson
-  ? await db
-      .prepare(`
-    SELECT
-      bills.session_year,
-      bills.bill_number,
-      bills.title,
-      bills.general_court_url,
-      bills.legiscan_url,
-      roll_calls.vote_date,
-      roll_calls.motion,
-      roll_calls.result,
-      legislator_votes.vote
-    FROM legislator_votes
-    JOIN roll_calls ON roll_calls.id = legislator_votes.roll_call_id
-    JOIN bills ON bills.id = roll_calls.bill_id
-    WHERE legislator_votes.person_id = ?
-    ORDER BY roll_calls.vote_date DESC
-    LIMIT 50
-  `)
-      .bind(dbPerson.id)
-      .all()
-  : { results: [] };
+const apiTerm = representativeToTerm(representative);
+const officeTerms = [{ ...apiTerm, status: "current" }];
+const currentOfficeTerms = officeTerms;
+const candidacies = { results: [] };
 
 let trackedBills = new Map();
 let billSummaries = new Map();
@@ -138,9 +54,7 @@ try {
   console.error(error?.message || "Unable to load tracked bill data.");
 }
 
-const voteHistory = representative
-  ? apiData?.voteHistory || []
-  : votes.results;
+const voteHistory = apiData?.voteHistory || [];
 let trackedVotes = voteHistory
   .map((vote) => normalizeVote(vote, trackedBills, billSummaries))
   .filter((vote) => vote.trackedBill);
@@ -161,36 +75,20 @@ trackedVotes = await Promise.all(
   }),
 );
 
-const currentTerms = terms.results.filter((term) => term.status === "current");
-const primaryTerm = currentTerms[0] || terms.results[0];
-const apiTerm = representativeToTerm(representative);
-const officeTerms = terms.results.length
-  ? terms.results
-  : representative
-    ? [{ ...apiTerm, status: "current" }]
-    : [];
-const currentOfficeTerms = officeTerms.filter(
-  (term) => term.status === "current",
-);
-const officeLabel = primaryTerm?.title || apiTerm.title || "Civic profile";
-const bodyLabel = primaryTerm?.body || apiTerm.body || "New Hampshire";
-const districtLabel = formatDistrictLabel(primaryTerm || apiTerm);
-const townServiceAreas = currentTerms
-  .map((term) => ({
-    district: formatDistrictLabel(term),
-    towns: parseTownsServed(term.towns_represented),
-  }))
-  .filter((area) => area.towns.length > 0);
-if (!townServiceAreas.length && representative?.location_text) {
+const officeLabel = apiTerm.title || "Civic profile";
+const bodyLabel = apiTerm.body || "New Hampshire";
+const districtLabel = formatDistrictLabel(apiTerm);
+const townServiceAreas = [];
+if (representative?.towns_represented || representative?.location_text) {
   townServiceAreas.push({
     district: formatDistrictLabel(apiTerm),
-    towns: parseLocationText(representative.location_text),
+    towns:
+      parseTownsServed(representative.towns_represented).length > 0
+        ? parseTownsServed(representative.towns_represented)
+        : parseLocationText(representative.location_text),
   });
 }
-const sourceLinks = [
-  ...links.results,
-  ...sourceUrlsToLinks(representative?.sourceUrls),
-];
+const sourceLinks = sourceUrlsToLinks(representative?.sourceUrls);
 let relatedArticles =
   apiData?.relatedArticles ||
   representative?.relatedArticles ||
@@ -261,8 +159,12 @@ function formatDistrictNumber(value = "") {
 }
 
 function parseTownsServed(value = "") {
+  if (Array.isArray(value)) {
+    return value.map((town) => String(town).trim()).filter(Boolean);
+  }
+
   return String(value)
-    .split(";")
+    .split(/;|,/)
     .map((town) => town.trim())
     .filter(Boolean);
 }
@@ -315,6 +217,29 @@ function normalizeVote(vote = {}, bills = new Map(), summaries = new Map()) {
     legiscan_url: vote.legiscan_url || "",
     billSummary,
     trackedBill,
+  };
+}
+
+function legislatorVoteStance(vote) {
+  const label = String(vote.vote_label || vote.vote || "").toLowerCase();
+
+  if (label.includes("support") || label === "yea" || label === "yes") {
+    return {
+      label: "This legislator voted in support of this bill",
+      className: "legislator-support",
+    };
+  }
+
+  if (label.includes("against") || label.includes("oppose") || label === "nay" || label === "no") {
+    return {
+      label: "This legislator voted against this bill",
+      className: "legislator-oppose",
+    };
+  }
+
+  return {
+    label: `This legislator vote: ${vote.vote_label || vote.vote || "Not listed"}`,
+    className: "legislator-neutral",
   };
 }
 
@@ -469,8 +394,11 @@ function contactHref(type, value) {
 
             {trackedVotes.length ? (
               <div class="vote-list">
-                {trackedVotes.map((vote) => (
-                  <article class="vote-card">
+                {trackedVotes.map((vote) => {
+                  const stance = legislatorVoteStance(vote);
+
+                  return (
+                    <article class="vote-card">
                     <div class="vote-topline">
                       <strong>
                         <a
@@ -482,7 +410,9 @@ function contactHref(type, value) {
                           {vote.trackedBill.code}
                         </a>
                       </strong>
-                      <span>{vote.vote_label}</span>
+                      <span class:list={["legislator-vote-pill", stance.className]}>
+                        {stance.label}
+                      </span>
                     </div>
                     <h3>
                       <a
@@ -522,7 +452,8 @@ function contactHref(type, value) {
                       </a>
                     )}
                   </article>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p class="empty">
@@ -946,9 +877,30 @@ function contactHref(type, value) {
     font-size: 1.15rem;
   }
 
-  .vote-topline span {
-    background: #1f2933;
-    color: white;
+  .legislator-vote-pill {
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.78rem;
+    font-weight: 900;
+    line-height: 1.2;
+    padding: 7px 10px;
+    text-align: right;
+  }
+
+  .legislator-support {
+    background: #dff0d8;
+    border-color: #2f7d4f;
+  }
+
+  .legislator-oppose {
+    background: #fde2de;
+    border-color: #b42318;
+  }
+
+  .legislator-neutral {
+    background: #eef0f4;
+    border-color: #5b616e;
   }
 
   .vote-meta {

@@ -1,74 +1,39 @@
 ---
 export const prerender = false;
 
-import { env } from "cloudflare:workers";
 import TopNav from "../components/TopNav.astro";
-import { billDetailPath } from "../lib/billsApi";
+import { getArticles } from "../lib/articlesApi";
+import { billDetailPath, getBills } from "../lib/billsApi";
+import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 
-const db = env.cvc;
 const q = Astro.url.searchParams.get("q")?.trim() || "";
-const like = `%${q}%`;
 
-let people = { results: [] };
-let divisions = { results: [] };
-let bills = { results: [] };
-let elections = { results: [] };
-let organizations = { results: [] };
+let people = [];
+let bills = [];
+let articles = [];
+let searchError = "";
 
 if (q.length > 0) {
-  people = await db.prepare(`
-    SELECT id, full_name, slug, party, photo_url
-    FROM people
-    WHERE full_name LIKE ?
-       OR party LIKE ?
-       OR email LIKE ?
-    ORDER BY full_name
-    LIMIT 20
-  `).bind(like, like, like).all();
+  try {
+    const [repResult, billResult, articleResult] = await Promise.allSettled([
+      getRepresentatives({ q, limit: 20 }),
+      getBills({ q, limit: 20 }),
+      getArticles({ q, include: "relations", limit: 20 }),
+    ]);
 
-  divisions = await db.prepare(`
-    SELECT id, name, slug, type
-    FROM divisions
-    WHERE name LIKE ?
-       OR slug LIKE ?
-       OR type LIKE ?
-    ORDER BY type, name
-    LIMIT 20
-  `).bind(like, like, like).all();
+    const repData = repResult.status === "fulfilled" ? repResult.value : {};
+    const billData = billResult.status === "fulfilled" ? billResult.value : {};
+    const articleData = articleResult.status === "fulfilled" ? articleResult.value : {};
 
-  bills = await db.prepare(`
-    SELECT id, session_year, bill_number, title, status
-    FROM bills
-    WHERE bill_number LIKE ?
-       OR title LIKE ?
-       OR summary LIKE ?
-       OR status LIKE ?
-    ORDER BY session_year DESC, bill_number
-    LIMIT 20
-  `).bind(like, like, like, like).all();
-
-  elections = await db.prepare(`
-    SELECT id, name, slug, election_date, election_type
-    FROM elections
-    WHERE name LIKE ?
-       OR election_type LIKE ?
-    ORDER BY election_date DESC
-    LIMIT 20
-  `).bind(like, like).all();
-
-  organizations = await db.prepare(`
-    SELECT id, name, slug, description
-    FROM organizations
-    WHERE name LIKE ?
-       OR description LIKE ?
-    ORDER BY name
-    LIMIT 20
-  `).bind(like, like).all();
-}
-
-function divisionUrl(division) {
-  if (division.type === "state") return "/nh";
-  return `/nh/${division.slug}`;
+    people = repData.representatives || [];
+    bills = billData.bills || [];
+    articles = articleData.articles || [];
+    if ([repResult, billResult, articleResult].some((result) => result.status === "rejected")) {
+      searchError = "Some API results are temporarily unavailable.";
+    }
+  } catch (error) {
+    searchError = error?.message || "Unable to load search results.";
+  }
 }
 ---
 
@@ -86,12 +51,7 @@ function divisionUrl(division) {
         <h1>Search Civic Commons</h1>
 
         <form class="search" action="/search" method="get">
-          <input
-            type="search"
-            name="q"
-            value={q}
-            placeholder="Search for a person, town, bill, election, or organization"
-          />
+          <input type="search" name="q" value={q} placeholder="Search for a legislator, town, bill, or article" />
           <button type="submit">Search</button>
         </form>
       </section>
@@ -101,42 +61,23 @@ function divisionUrl(division) {
       ) : (
         <section class="results">
           <p class="summary">Showing results for “{q}”</p>
+          {searchError && <p class="empty">{searchError}</p>}
 
           <div class="group">
-            <h2>People</h2>
-            {people.results.length === 0 ? (
-              <p>No people found.</p>
+            <h2>Legislators</h2>
+            {people.length === 0 ? (
+              <p>No legislators found.</p>
             ) : (
               <ul>
-                {people.results.map((person) => (
+                {people.map((person) => (
                   <li>
-                    <a href={`/people/${person.slug}`}>
-                      {person.photo_url && (
-                        <img src={person.photo_url} alt="" />
+                    <a href={`/people/${repSlug(person)}`}>
+                      {(person.photo || person.photo_url) && (
+                        <img src={person.photo || person.photo_url} alt="" />
                       )}
                       <span>
-                        <strong>{person.full_name}</strong>
-                        <small>{person.party || "No party listed"}</small>
-                      </span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div class="group">
-            <h2>Places and Districts</h2>
-            {divisions.results.length === 0 ? (
-              <p>No places or districts found.</p>
-            ) : (
-              <ul>
-                {divisions.results.map((division) => (
-                  <li>
-                    <a href={divisionUrl(division)}>
-                      <span>
-                        <strong>{division.name}</strong>
-                        <small>{division.type.replaceAll("_", " ")}</small>
+                        <strong>{repName(person)}</strong>
+                        <small>{[person.chamber, person.party, person.district].filter(Boolean).join(" · ") || "No details listed"}</small>
                       </span>
                     </a>
                   </li>
@@ -147,16 +88,16 @@ function divisionUrl(division) {
 
           <div class="group">
             <h2>Bills</h2>
-            {bills.results.length === 0 ? (
+            {bills.length === 0 ? (
               <p>No bills found.</p>
             ) : (
               <ul>
-                {bills.results.map((bill) => (
+                {bills.map((bill) => (
                   <li>
-                    <a href={billDetailPath(bill.bill_number, bill.session_year)}>
+                    <a href={billDetailPath(bill.condensedbillno || bill.bill_number, bill.sessionyear || bill.session_year)}>
                       <span>
-                        <strong>{bill.bill_number}: {bill.title}</strong>
-                        <small>{bill.status || "No status listed"}</small>
+                        <strong>{bill.condensedbillno || bill.bill_number}: {bill.name || bill.title || bill.description}</strong>
+                        <small>{bill.status || bill.description || "No status listed"}</small>
                       </span>
                     </a>
                   </li>
@@ -166,37 +107,17 @@ function divisionUrl(division) {
           </div>
 
           <div class="group">
-            <h2>Elections</h2>
-            {elections.results.length === 0 ? (
-              <p>No elections found.</p>
+            <h2>Articles</h2>
+            {articles.length === 0 ? (
+              <p>No articles found.</p>
             ) : (
               <ul>
-                {elections.results.map((election) => (
+                {articles.map((article) => (
                   <li>
-                    <a href={`/elections/${election.slug}`}>
+                    <a href={article.url}>
                       <span>
-                        <strong>{election.name}</strong>
-                        <small>{election.election_date} · {election.election_type}</small>
-                      </span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div class="group">
-            <h2>Organizations</h2>
-            {organizations.results.length === 0 ? (
-              <p>No organizations found.</p>
-            ) : (
-              <ul>
-                {organizations.results.map((org) => (
-                  <li>
-                    <a href={`/organizations/${org.slug}`}>
-                      <span>
-                        <strong>{org.name}</strong>
-                        <small>{org.description || "No description listed"}</small>
+                        <strong>{article.title}</strong>
+                        <small>{article.publisher || article.resource_type || "Article"}</small>
                       </span>
                     </a>
                   </li>

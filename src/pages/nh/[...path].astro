@@ -1,95 +1,114 @@
 ---
-
 export const prerender = false;
 
-import { env } from "cloudflare:workers";
 import TopNav from "../../components/TopNav.astro";
 
-const db = env.cvc;
 const path = Astro.params.path || "";
-const parts = path.split("/").filter(Boolean);
-const currentSlug = parts[parts.length - 1];
-
-const division = await db.prepare(`
-  SELECT * FROM divisions
-  WHERE slug = ?
-`).bind(currentSlug).first();
-
-if (!division) {
-  return Astro.redirect("/404");
-}
-
-const children = await db.prepare(`
-  SELECT * FROM divisions
-  WHERE parent_id = ?
-  ORDER BY type, name
-`).bind(division.id).all();
-
-const positions = await db.prepare(`
-  SELECT 
-    positions.*,
-    people.full_name,
-    people.slug AS person_slug
-  FROM positions
-  LEFT JOIN office_terms ON office_terms.position_id = positions.id 
-    AND office_terms.status = 'current'
-  LEFT JOIN people ON people.id = office_terms.person_id
-  WHERE positions.division_id = ?
-  ORDER BY positions.title
-`).bind(division.id).all();
-
-const polling = await db.prepare(`
-  SELECT * FROM polling_locations
-  WHERE division_id = ?
-  ORDER BY ward, name
-`).bind(division.id).all();
+const currentSlug = path.split("/").filter(Boolean).at(-1) || "";
+const label = currentSlug
+  .split("-")
+  .filter(Boolean)
+  .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+  .join(" ");
 ---
 
-<html>
+<html lang="en">
   <head>
-    <title>{division.name}</title>
+    <title>{label || "Communities"} | Civic Commons</title>
+    <meta
+      name="description"
+      content="Explore New Hampshire communities using live Civic Commons API data."
+    />
   </head>
+
   <body>
     <TopNav />
-    <main>
-      <h1>{division.name}</h1>
-      <p>Division type: {division.type}</p>
+    <main class="page">
+      <a class="back" href="/communities">Back to communities</a>
 
-      <h2>Subdivisions</h2>
-      <ul>
-        {children.results.map((child) => (
-          <li>
-            <a href={`/nh/${[...parts, child.slug].join("/")}`}>
-              {child.name}
-            </a>
-          </li>
-        ))}
-      </ul>
+      <section class="panel">
+        <p class="eyebrow">Communities</p>
+        <h1>{label || "New Hampshire Communities"}</h1>
+        <p>
+          Community and district data now comes from the Civic Commons API. Use
+          the community explorer to search House districts by towns represented,
+          or browse related articles for a town.
+        </p>
 
-      <h2>Officials</h2>
-      <ul>
-        {positions.results.map((position) => (
-          <li>
-            <strong>{position.title}</strong>
-            <br />
-            {position.full_name ? (
-              <a href={`/people/${position.person_slug}`}>{position.full_name}</a>
-            ) : (
-              <span>Vacant or not added yet</span>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      <h2>Polling Locations</h2>
-      <ul>
-        {polling.results.map((place) => (
-          <li>
-            <strong>{place.name}</strong><br />
-            {place.address}
-          </li>
-        ))}
-      </ul>
+        <div class="actions">
+          <a href={`/communities?q=${encodeURIComponent(label)}`}>Search communities</a>
+          {label && <a href={`/articles?town=${encodeURIComponent(label)}`}>Town articles</a>}
+        </div>
+      </section>
     </main>
   </body>
 </html>
+
+<style>
+  :global(body) {
+    margin: 0;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    background: #f7f4ee;
+    color: #1f2933;
+  }
+
+  .page {
+    margin: 0 auto;
+    padding: 40px 0 72px;
+    width: min(900px, calc(100% - 32px));
+  }
+
+  .back,
+  a {
+    color: #1f2933;
+    font-weight: 800;
+  }
+
+  .panel {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 #1f2933;
+    margin-top: 36px;
+    padding: 28px;
+  }
+
+  .eyebrow {
+    color: #6b4f2a;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    margin: 0 0 12px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(2.6rem, 7vw, 5rem);
+    line-height: 0.95;
+    margin: 0 0 18px;
+  }
+
+  p {
+    color: #4b5563;
+    line-height: 1.6;
+    max-width: 680px;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .actions a {
+    background: #1f2933;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    padding: 12px 16px;
+    text-decoration: none;
+  }
+</style>

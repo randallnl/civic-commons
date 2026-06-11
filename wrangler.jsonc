@@ -11,12 +11,5 @@
 	},
 	"observability": {
 		"enabled": true
-	},
-	"d1_databases": [
-		{
-			"binding": "cvc",
-			"database_name": "civic_commons",
-			"database_id": "07975d00-e3c9-4d30-96ac-c311ea31b67c"
-		}
-	]
+	}
 }

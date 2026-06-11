@@ -45,6 +45,29 @@ function billSummaryFor(vote) {
 function voteLabel(vote) {
   return vote.vote_label || vote.vote || "Not listed";
 }
+
+function legislatorVoteStance(vote) {
+  const label = String(voteLabel(vote)).toLowerCase();
+
+  if (label.includes("support") || label === "yea" || label === "yes") {
+    return {
+      label: "This legislator voted in support of this bill",
+      className: "legislator-support",
+    };
+  }
+
+  if (label.includes("against") || label.includes("oppose") || label === "nay" || label === "no") {
+    return {
+      label: "This legislator voted against this bill",
+      className: "legislator-oppose",
+    };
+  }
+
+  return {
+    label: `This legislator vote: ${voteLabel(vote)}`,
+    className: "legislator-neutral",
+  };
+}
 ---
 
 <article class="rep-card">
@@ -112,6 +135,7 @@ function voteLabel(vote) {
           const bill = trackedBillFor(vote);
           const billSummary = billSummaryFor(vote);
           const billYear = billSummary?.sessionyear || vote.sessionyear;
+          const stance = legislatorVoteStance(vote);
 
           return (
             <div class="vote-item">
@@ -126,7 +150,9 @@ function voteLabel(vote) {
                   <BillPositionSummary bill={billSummary} compact={true} />
                 )}
               </div>
-              <small>{voteLabel(vote)}</small>
+              <small class:list={["legislator-vote-pill", stance.className]}>
+                {stance.label}
+              </small>
             </div>
           );
         })}
@@ -281,11 +307,37 @@ function voteLabel(vote) {
     min-width: 0;
   }
 
-  .vote-item small,
   .vote-summary p {
     color: #4b5563;
     font-weight: 800;
     margin: 0;
+  }
+
+  .legislator-vote-pill {
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.74rem;
+    font-weight: 900;
+    line-height: 1.2;
+    max-width: 190px;
+    padding: 6px 8px;
+    text-align: right;
+  }
+
+  .legislator-support {
+    background: #dff0d8;
+    border-color: #2f7d4f;
+  }
+
+  .legislator-oppose {
+    background: #fde2de;
+    border-color: #b42318;
+  }
+
+  .legislator-neutral {
+    background: #eef0f4;
+    border-color: #5b616e;
   }
 
   .vote-item span {

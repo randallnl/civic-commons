@@ -1,7 +1,2 @@
 name = "civic-commons"
 compatibility_date = "2026-06-04"
-
-[[d1_databases]]
-binding = "cvc"
-database_name = "civic_commons"
-database_id = "6cd3969d-9a7c-4139-a8a6-9f4022d2e59a"

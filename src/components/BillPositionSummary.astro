@@ -3,9 +3,37 @@ import { positionCounts } from "../lib/billsApi";
 
 const { bill, compact = false } = Astro.props;
 const counts = positionCounts(bill);
+
+function communityStance() {
+  if (counts.support > counts.oppose) {
+    return {
+      label: "Community supported this bill",
+      className: "community-support",
+    };
+  }
+
+  if (counts.oppose > counts.support) {
+    return {
+      label: "Community opposed this bill",
+      className: "community-oppose",
+    };
+  }
+
+  if (counts.support > 0 || counts.oppose > 0) {
+    return {
+      label: "Community split on this bill",
+      className: "community-neutral",
+    };
+  }
+
+  return null;
+}
+
+const stance = communityStance();
 ---
 
 <div class:list={["position-summary", compact && "compact"]}>
+  {stance && <span class:list={["stance-pill", stance.className]}>{stance.label}</span>}
   <span class="support">Support {counts.support}</span>
   <span class="oppose">Oppose {counts.oppose}</span>
   <span class="neutral">Neutral {counts.neutral}</span>
@@ -47,5 +75,24 @@ const counts = positionCounts(bill);
   .neutral {
     background: #eef0f4;
     border-color: #7c8596;
+  }
+
+  .stance-pill {
+    border-width: 2px;
+  }
+
+  .community-support {
+    background: #dff0d8;
+    border-color: #2f7d4f;
+  }
+
+  .community-oppose {
+    background: #fde2de;
+    border-color: #b42318;
+  }
+
+  .community-neutral {
+    background: #eef0f4;
+    border-color: #5b616e;
   }
 </style>

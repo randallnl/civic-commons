@@ -1,52 +1,41 @@
 ---
 export const prerender = false;
 
-import { env } from "cloudflare:workers";
 import TopNav from "../components/TopNav.astro";
 import { getArticles } from "../lib/articlesApi";
-import { billDetailPath } from "../lib/billsApi";
-
-const db = env.cvc;
-
-const divisionCount = await db.prepare(`SELECT COUNT(*) AS count FROM divisions`).first();
-const peopleCount = await db.prepare(`SELECT COUNT(*) AS count FROM people`).first();
-const billCount = await db.prepare(`SELECT COUNT(*) AS count FROM bills`).first();
-const electionCount = await db.prepare(`SELECT COUNT(*) AS count FROM elections`).first();
-
-const featuredDivisions = await db.prepare(`
-  SELECT *
-  FROM divisions
-  WHERE type IN ('county', 'city', 'town', 'ward', 'house_district', 'senate_district')
-  ORDER BY type, name
-  LIMIT 12
-`).all();
-
-const recentPeople = await db.prepare(`
-  SELECT *
-  FROM people
-  ORDER BY updated_at DESC
-  LIMIT 8
-`).all();
-
-const recentBills = await db.prepare(`
-  SELECT *
-  FROM bills
-  ORDER BY updated_at DESC
-  LIMIT 6
-`).all();
+import { billDetailPath, getBills } from "../lib/billsApi";
+import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 
 let recentArticles = [];
+let recentBills = [];
+let recentPeople = [];
+let apiMeta = {
+  articles: 0,
+  bills: 0,
+  representatives: 0,
+};
 
 try {
-  const articleData = await getArticles({ include: "relations", limit: 5 });
-  recentArticles = articleData.articles || [];
-} catch (error) {
-  console.error(error?.message || "Unable to load articles.");
-}
+  const [articleResult, billResult, repResult] = await Promise.allSettled([
+    getArticles({ include: "relations", limit: 5 }),
+    getBills({ limit: 6 }),
+    getRepresentatives({ limit: 8 }),
+  ]);
 
-function divisionUrl(division) {
-  if (division.type === "state") return "/nh";
-  return `/nh/${division.slug}`;
+  const articleData = articleResult.status === "fulfilled" ? articleResult.value : {};
+  const billData = billResult.status === "fulfilled" ? billResult.value : {};
+  const repData = repResult.status === "fulfilled" ? repResult.value : {};
+
+  recentArticles = articleData.articles || [];
+  recentBills = billData.bills || [];
+  recentPeople = repData.representatives || [];
+  apiMeta = {
+    articles: articleData.meta?.total || recentArticles.length,
+    bills: billData.meta?.total || recentBills.length,
+    representatives: repData.meta?.total || recentPeople.length,
+  };
+} catch (error) {
+  console.error(error?.message || "Unable to load homepage API data.");
 }
 ---
 
@@ -64,7 +53,7 @@ function divisionUrl(division) {
         <h1>Know who represents you and what's happening in your community.</h1>
         <p class="lede">
           Civic Commons is a public directory of elected officials, candidates,
-          voting locations, legislative districts, bills, elections, and civic organizations.
+          legislative districts, bills, public testimony, and civic coverage.
         </p>
 
         <form class="search" action="/search" method="get">
@@ -79,23 +68,23 @@ function divisionUrl(division) {
 
       <section class="stats">
         <article>
-          <strong>{divisionCount?.count ?? 0}</strong>
-          <span>Divisions</span>
+          <strong>{apiMeta.representatives}</strong>
+          <span>Legislators</span>
         </article>
 
         <article>
-          <strong>{peopleCount?.count ?? 0}</strong>
-          <span>People</span>
-        </article>
-
-        <article>
-          <strong>{billCount?.count ?? 0}</strong>
+          <strong>{apiMeta.bills}</strong>
           <span>Bills</span>
         </article>
 
         <article>
-          <strong>{electionCount?.count ?? 0}</strong>
-          <span>Elections</span>
+          <strong>{apiMeta.articles}</strong>
+          <span>Articles</span>
+        </article>
+
+        <article>
+          <strong>API</strong>
+          <span>Live Data</span>
         </article>
       </section>
 
@@ -137,34 +126,44 @@ function divisionUrl(division) {
           <p>Follow bills and see how state officials voted.</p>
         </a>
 
-        <a class="card" href="/elections">
-          <h2>Elections and Candidates</h2>
-          <p>Find upcoming races, candidate profiles, and election dates.</p>
+        <a class="card" href="/articles">
+          <h2>Read Articles</h2>
+          <p>Filter coverage by legislator, town represented, or bill.</p>
         </a>
       </section>
 
       <section class="content-grid">
         <div>
-          <h2>Featured Places and Districts</h2>
+          <h2>Explore Communities</h2>
           <ul class="list">
-            {featuredDivisions.results.map((division) => (
+            <li>
+              <a href="/communities?q=Manchester">Manchester House Districts</a>
+              <span>Search districts by towns represented</span>
+            </li>
+            <li>
+              <a href="/communities">All House Districts</a>
+              <span>Grouped from API representative records</span>
+            </li>
+            {recentArticles.slice(0, 3).map((article) => (
               <li>
-                <a href={divisionUrl(division)}>
-                  {division.name}
+                <a href={`/articles?town=${encodeURIComponent(article.towns?.[0]?.town || article.towns?.[0]?.name || "")}`}>
+                  {article.towns?.[0]?.town || article.towns?.[0]?.name || "Community articles"}
                 </a>
-                <span>{division.type.replaceAll("_", " ")}</span>
+                <span>{article.title}</span>
               </li>
             ))}
           </ul>
         </div>
 
         <div>
-          <h2>Recently Updated People</h2>
+          <h2>Legislators</h2>
           <ul class="list">
-            {recentPeople.results.map((person) => (
+            {recentPeople.length === 0 ? (
+              <li>No legislators returned yet.</li>
+            ) : recentPeople.map((person) => (
               <li>
-                <a href={`/people/${person.slug}`}>
-                  {person.full_name}
+                <a href={`/people/${repSlug(person)}`}>
+                  {repName(person)}
                 </a>
                 <span>{person.party || "No party listed"}</span>
               </li>
@@ -175,15 +174,15 @@ function divisionUrl(division) {
         <div>
           <h2>Recent Bills</h2>
           <ul class="list">
-            {recentBills.results.length === 0 ? (
+            {recentBills.length === 0 ? (
               <li>No bills added yet.</li>
             ) : (
-              recentBills.results.map((bill) => (
+              recentBills.map((bill) => (
                 <li>
-                  <a href={billDetailPath(bill.bill_number, bill.session_year)}>
-                    {bill.bill_number}
+                  <a href={billDetailPath(bill.condensedbillno || bill.bill_number, bill.sessionyear || bill.session_year)}>
+                    {bill.condensedbillno || bill.bill_number}
                   </a>
-                  <span>{bill.title}</span>
+                  <span>{bill.name || bill.title || bill.description}</span>
                 </li>
               ))
             )}
