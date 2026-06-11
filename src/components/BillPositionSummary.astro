@@ -7,21 +7,21 @@ const counts = positionCounts(bill);
 function communityStance() {
   if (counts.support > counts.oppose) {
     return {
-      label: "Community supported this bill",
+      label: `${counts.support} support this bill`,
       className: "community-support",
     };
   }
 
   if (counts.oppose > counts.support) {
     return {
-      label: "Community opposed this bill",
+      label: `${counts.oppose} oppose this bill`,
       className: "community-oppose",
     };
   }
 
   if (counts.support > 0 || counts.oppose > 0) {
     return {
-      label: "Community split on this bill",
+      label: `${counts.support} support / ${counts.oppose} oppose this bill`,
       className: "community-neutral",
     };
   }
@@ -34,10 +34,6 @@ const stance = communityStance();
 
 <div class:list={["position-summary", compact && "compact"]}>
   {stance && <span class:list={["stance-pill", stance.className]}>{stance.label}</span>}
-  <span class="support">Support {counts.support}</span>
-  <span class="oppose">Oppose {counts.oppose}</span>
-  <span class="neutral">Neutral {counts.neutral}</span>
-  <span>Total {counts.total}</span>
 </div>
 
 <style>
@@ -60,21 +56,6 @@ const stance = communityStance();
   .position-summary.compact span {
     font-size: 0.76rem;
     padding: 5px 8px;
-  }
-
-  .support {
-    background: #e8f3df;
-    border-color: #4f9d69;
-  }
-
-  .oppose {
-    background: #fde8e5;
-    border-color: #c83a2f;
-  }
-
-  .neutral {
-    background: #eef0f4;
-    border-color: #7c8596;
   }
 
   .stance-pill {

@@ -51,20 +51,20 @@ function legislatorVoteStance(vote) {
 
   if (label.includes("support") || label === "yea" || label === "yes") {
     return {
-      label: "This legislator voted in support of this bill",
+      label: "Vote: In Support",
       className: "legislator-support",
     };
   }
 
   if (label.includes("against") || label.includes("oppose") || label === "nay" || label === "no") {
     return {
-      label: "This legislator voted against this bill",
+      label: "Vote: Against",
       className: "legislator-oppose",
     };
   }
 
   return {
-    label: `This legislator vote: ${voteLabel(vote)}`,
+    label: `Vote: ${voteLabel(vote)}`,
     className: "legislator-neutral",
   };
 }
