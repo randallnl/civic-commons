@@ -2,7 +2,7 @@ export const prerender = false;
 
 const API_BASE =
   import.meta.env.REP_LOOKUP_API_BASE ||
-  "https://api.nhdeservesbetter.com";
+  "https://api.nhciviccommons.com";
 
 export async function POST({ request }) {
   try {

@@ -12,7 +12,7 @@ const { slug } = Astro.params;
 const db = env.cvc;
 const API_BASE =
   import.meta.env.REP_LOOKUP_API_BASE ||
-  "https://api.nhdeservesbetter.com";
+  "https://api.nhciviccommons.com";
 
 const dbPerson = await db
   .prepare("SELECT * FROM people WHERE slug = ?")

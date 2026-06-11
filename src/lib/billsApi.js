@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE = "https://api.nhdeservesbetter.com";
+const DEFAULT_API_BASE = "https://api.nhciviccommons.com";
 
 let billsCache = new Map();
 
