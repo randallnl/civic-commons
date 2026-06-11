@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
+import TopNav from "../components/TopNav.astro";
 import { getArticles } from "../lib/articlesApi";
 import { billDetailPath } from "../lib/billsApi";
 
@@ -56,6 +57,7 @@ function divisionUrl(division) {
   </head>
 
   <body>
+    <TopNav />
     <main class="page">
       <section class="hero">
         <p class="eyebrow">Community-powered civic information</p>

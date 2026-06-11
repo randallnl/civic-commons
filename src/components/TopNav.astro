@@ -1,0 +1,118 @@
+---
+const currentPath = Astro.url.pathname;
+
+const links = [
+  { href: "/", label: "Home", match: (path) => path === "/" },
+  { href: "/my-state-rep", label: "My State Rep" },
+  { href: "/communities", label: "Communities" },
+  { href: "/bills", label: "Bills" },
+  { href: "/articles", label: "Articles" },
+  { href: "/search", label: "Search" },
+];
+
+function isActive(link) {
+  if (link.match) return link.match(currentPath);
+  return currentPath === link.href || currentPath.startsWith(`${link.href}/`);
+}
+---
+
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="brand" href="/">
+      <span>Civic Commons</span>
+    </a>
+
+    <nav aria-label="Primary navigation">
+      {links.map((link) => (
+        <a
+          class:list={["nav-link", isActive(link) && "active"]}
+          href={link.href}
+          aria-current={isActive(link) ? "page" : undefined}
+        >
+          {link.label}
+        </a>
+      ))}
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-nav {
+    background: rgba(247, 244, 238, 0.96);
+    border-bottom: 2px solid #1f2933;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .nav-inner {
+    align-items: center;
+    display: flex;
+    gap: 18px;
+    justify-content: space-between;
+    margin: 0 auto;
+    min-height: 64px;
+    padding: 10px 0;
+    width: min(1120px, calc(100% - 32px));
+  }
+
+  .brand,
+  .nav-link {
+    color: #1f2933;
+    text-decoration: none;
+  }
+
+  .brand {
+    align-items: center;
+    display: inline-flex;
+    font-size: 1.02rem;
+    font-weight: 950;
+    min-height: 40px;
+    white-space: nowrap;
+  }
+
+  nav {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .nav-link {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 850;
+    line-height: 1;
+    padding: 10px 12px;
+  }
+
+  .nav-link:hover,
+  .nav-link.active {
+    background: white;
+    border-color: #1f2933;
+  }
+
+  .nav-link.active {
+    box-shadow: 2px 2px 0 #1f2933;
+  }
+
+  @media (max-width: 720px) {
+    .nav-inner {
+      align-items: start;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    nav {
+      justify-content: flex-start;
+      width: 100%;
+    }
+
+    .nav-link {
+      font-size: 0.84rem;
+      padding: 9px 10px;
+    }
+  }
+</style>

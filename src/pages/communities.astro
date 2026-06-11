@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
+import TopNav from "../components/TopNav.astro";
 
 const db = env.cvc;
 const q = Astro.url.searchParams.get("q")?.trim() || "";
@@ -41,6 +42,7 @@ function townsFor(district = {}) {
   </head>
 
   <body>
+    <TopNav />
     <main class="page">
       <a class="back" href="/">Back home</a>
 

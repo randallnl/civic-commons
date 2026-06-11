@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import { billDetailPath, getRollCallVotes } from "../../../../lib/billsApi";
+import TopNav from "../../../../components/TopNav.astro";
 import { getTrackedBills, normalizeBillCode } from "../../../../lib/trackedBills";
 
 const billCode = Astro.params.bill || "";
@@ -81,6 +82,7 @@ function slugify(value = "") {
   </head>
 
   <body>
+    <TopNav />
     <main class="page">
       <a class="back" href={billDetailPath(bill?.condensedbillno || billCode, bill?.sessionyear || year)}>
         Back to bill

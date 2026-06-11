@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import ArticleList from "../../components/ArticleList.astro";
+import TopNav from "../../components/TopNav.astro";
 import { getArticles } from "../../lib/articlesApi";
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
@@ -39,6 +40,7 @@ try {
   </head>
 
   <body>
+    <TopNav />
     <main class="page">
       <a class="back" href="/">Back home</a>
 

@@ -3,6 +3,7 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
+import TopNav from "../../components/TopNav.astro";
 
 const db = env.cvc;
 const path = Astro.params.path || "";
@@ -49,6 +50,7 @@ const polling = await db.prepare(`
     <title>{division.name}</title>
   </head>
   <body>
+    <TopNav />
     <main>
       <h1>{division.name}</h1>
       <p>Division type: {division.type}</p>

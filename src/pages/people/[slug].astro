@@ -4,6 +4,7 @@ export const prerender = false;
 import { env } from "cloudflare:workers";
 import ArticleList from "../../components/ArticleList.astro";
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
+import TopNav from "../../components/TopNav.astro";
 import { getArticles } from "../../lib/articlesApi";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
@@ -369,6 +370,7 @@ function contactHref(type, value) {
   </head>
 
   <body>
+    <TopNav />
     <main class="page">
       <a class="back" href="/">Back home</a>
 

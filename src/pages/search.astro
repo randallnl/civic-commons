@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
+import TopNav from "../components/TopNav.astro";
 import { billDetailPath } from "../lib/billsApi";
 
 const db = env.cvc;
@@ -77,6 +78,7 @@ function divisionUrl(division) {
   </head>
 
   <body>
+    <TopNav />
     <main class="page">
       <a class="back" href="/">← Back home</a>
 

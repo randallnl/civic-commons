@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import RepresentativeCard from "../components/RepresentativeCard.astro";
+import TopNav from "../components/TopNav.astro";
 import { getBillDetail, getBillSummaries } from "../lib/billsApi";
 import { normalizeBillCode, getTrackedBills } from "../lib/trackedBills";
 
@@ -117,6 +118,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
   </head>
 
   <body>
+    <TopNav />
     <main class="page">
       <a class="back" href="/">Back home</a>
 
