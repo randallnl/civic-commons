@@ -4,6 +4,7 @@ export const prerender = false;
 import RepresentativeCard from "../components/RepresentativeCard.astro";
 import TopNav from "../components/TopNav.astro";
 import { getBillDetail, getBillSummaries } from "../lib/billsApi";
+import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { normalizeBillCode, getTrackedBills } from "../lib/trackedBills";
 
 const API_BASE =
@@ -14,6 +15,7 @@ const address = Astro.url.searchParams.get("address")?.trim() || "";
 
 let lookupData = null;
 let lookupError = "";
+let randomLegislators = [];
 let trackedBills = new Map();
 let billSummaries = new Map();
 
@@ -37,6 +39,15 @@ if (address) {
   } catch (error) {
     lookupError =
       error?.message || "Unable to look up representatives.";
+  }
+}
+
+if (!address) {
+  try {
+    const data = await getRepresentatives({ limit: 40 });
+    randomLegislators = shuffle(data.representatives || []).slice(0, 6);
+  } catch (error) {
+    console.error(error?.message || "Unable to load legislator preview.");
   }
 }
 
@@ -69,6 +80,10 @@ const houseDistricts = matchedDistricts
 
 if (lookupData && trackedBills.size) {
   await hydrateMissingBillSummaries(allReps, trackedBills, billSummaries);
+}
+
+function shuffle(items = []) {
+  return [...items].sort(() => Math.random() - 0.5);
 }
 
 function formatAddress(normalized = {}) {
@@ -165,6 +180,34 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
         <div class="status-message" aria-live="polite">
           No representatives found for that address.
         </div>
+      )}
+
+      {!address && randomLegislators.length > 0 && (
+        <section class="sample-legislators">
+          <div class="group-header">
+            <h2>Meet a few New Hampshire legislators</h2>
+            <p>
+              These profiles come from the Civic Commons API. Enter your address above
+              to see the legislators who represent you.
+            </p>
+          </div>
+
+          <div class="sample-grid">
+            {randomLegislators.map((rep) => (
+              <a class="sample-card" href={`/people/${repSlug(rep)}`}>
+                {rep.photo ? (
+                  <img src={rep.photo} alt={`Photo of ${repName(rep)}`} loading="lazy" />
+                ) : (
+                  <div class="sample-fallback">{repName(rep).slice(0, 1)}</div>
+                )}
+                <div>
+                  <h3>{repName(rep)}</h3>
+                  <p>{[rep.chamber, rep.party, rep.district].filter(Boolean).join(" · ")}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </section>
       )}
 
       {lookupData && allReps.length > 0 && (
@@ -413,6 +456,10 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     margin-top: 48px;
   }
 
+  .sample-legislators {
+    margin-top: 42px;
+  }
+
   .rep-group + .rep-group {
     margin-top: 48px;
   }
@@ -437,9 +484,71 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     margin-top: 24px;
   }
 
+  .sample-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: 22px;
+  }
+
+  .sample-card {
+    align-items: center;
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 16px;
+    box-shadow: 4px 4px 0 #1f2933;
+    color: inherit;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 64px 1fr;
+    padding: 14px;
+    text-decoration: none;
+  }
+
+  .sample-card:hover h3 {
+    text-decoration: underline;
+  }
+
+  .sample-card img,
+  .sample-fallback {
+    aspect-ratio: 4 / 5;
+    border: 2px solid #1f2933;
+    border-radius: 10px;
+    height: 80px;
+    width: 64px;
+  }
+
+  .sample-card img {
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  .sample-fallback {
+    align-items: center;
+    background: #6b4f2a;
+    color: white;
+    display: flex;
+    font-size: 1.8rem;
+    font-weight: 900;
+    justify-content: center;
+  }
+
+  .sample-card h3 {
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  .sample-card p {
+    color: #4b5563;
+    font-weight: 800;
+    line-height: 1.35;
+    margin: 6px 0 0;
+  }
+
   @media (max-width: 900px) {
     .summary-grid,
-    .rep-grid {
+    .rep-grid,
+    .sample-grid {
       grid-template-columns: 1fr;
     }
 

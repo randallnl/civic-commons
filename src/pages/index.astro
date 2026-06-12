@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
+import headingBanner from "../assets/Heading_ banner.svg";
 import { getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
@@ -49,43 +50,41 @@ try {
     <TopNav />
     <main class="page">
       <section class="hero">
+        <img
+          class="hero-banner"
+          src={headingBanner.src}
+          alt="Civic Commons"
+          width="2000"
+          height="500"
+        />
         <p class="eyebrow">Community-powered civic information</p>
         <h1>Know who represents you and what's happening in your community.</h1>
         <p class="lede">
           Civic Commons is a public directory of elected officials, candidates,
           legislative districts, bills, public testimony, and civic coverage.
         </p>
-
-        <form class="search" action="/search" method="get">
-          <input
-            type="search"
-            name="q"
-            placeholder="Search for a town, legislator, bill, district, or candidate"
-          />
-          <button type="submit">Search</button>
-        </form>
       </section>
 
       <section class="stats">
-        <article>
+        <a href="/my-state-rep">
           <strong>{apiMeta.representatives}</strong>
-          <span>Legislators</span>
-        </article>
+          <span>Find Your Legislators</span>
+        </a>
 
-        <article>
+        <a href="/bills">
           <strong>{apiMeta.bills}</strong>
           <span>Bills</span>
-        </article>
+        </a>
 
-        <article>
+        <a href="/articles">
           <strong>{apiMeta.articles}</strong>
           <span>Articles</span>
-        </article>
+        </a>
 
-        <article>
+        <a href="/communities">
           <strong>API</strong>
           <span>Live Data</span>
-        </article>
+        </a>
       </section>
 
       <section class="rep-preview">
@@ -238,6 +237,18 @@ try {
     padding: 64px 0 40px;
   }
 
+  .hero-banner {
+    aspect-ratio: 4 / 1;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 6px 6px 0 #1f2933;
+    display: block;
+    height: auto;
+    margin: 0 0 36px;
+    object-fit: cover;
+    width: 100%;
+  }
+
   .eyebrow {
     text-transform: uppercase;
     letter-spacing: 0.12em;
@@ -262,23 +273,6 @@ try {
     color: #4b5563;
   }
 
-  .search {
-    margin-top: 32px;
-    display: flex;
-    gap: 12px;
-    max-width: 760px;
-  }
-
-  .search input {
-    flex: 1;
-    padding: 16px 18px;
-    border: 2px solid #1f2933;
-    border-radius: 999px;
-    font-size: 1rem;
-    background: white;
-  }
-
-  .search button,
   .cta a {
     border: 2px solid #1f2933;
     background: #1f2933;
@@ -297,7 +291,7 @@ try {
     margin: 32px 0;
   }
 
-  .stats article,
+  .stats a,
   .card,
   .rep-preview,
   .content-grid > div,
@@ -308,8 +302,15 @@ try {
     box-shadow: 6px 6px 0 #1f2933;
   }
 
-  .stats article {
+  .stats a {
+    color: inherit;
+    display: block;
     padding: 20px;
+    text-decoration: none;
+  }
+
+  .stats a:hover strong {
+    text-decoration: underline;
   }
 
   .stats strong {
@@ -481,9 +482,6 @@ try {
       grid-template-columns: 1fr 1fr;
     }
 
-    .search {
-      flex-direction: column;
-    }
   }
 
   @media (max-width: 600px) {
