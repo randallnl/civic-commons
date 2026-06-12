@@ -297,9 +297,9 @@ function legislatorVoteStance(vote) {
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 12px;
-    display: flex;
+    display: grid;
     gap: 10px;
-    justify-content: space-between;
+    grid-template-columns: minmax(0, 1fr) minmax(190px, 220px);
     padding: 10px 12px;
   }
 
@@ -310,11 +310,11 @@ function legislatorVoteStance(vote) {
   }
 
   .vote-pill-stack {
-    align-items: flex-end;
+    align-items: stretch;
     display: grid;
     gap: 6px;
-    justify-items: end;
-    min-width: min(210px, 42%);
+    justify-items: stretch;
+    width: 100%;
   }
 
   .vote-summary p {
@@ -331,7 +331,20 @@ function legislatorVoteStance(vote) {
     font-weight: 900;
     line-height: 1.2;
     padding: 6px 8px;
-    text-align: right;
+    box-sizing: border-box;
+    display: block;
+    text-align: center;
+    width: 100%;
+  }
+
+  .vote-pill-stack :global(.position-summary) {
+    width: 100%;
+  }
+
+  .vote-pill-stack :global(.position-summary span) {
+    box-sizing: border-box;
+    text-align: center;
+    width: 100%;
   }
 
   .legislator-support {
@@ -363,12 +376,11 @@ function legislatorVoteStance(vote) {
     }
 
     .vote-item {
-      display: grid;
+      grid-template-columns: 1fr;
     }
 
     .vote-pill-stack {
       justify-items: start;
-      min-width: 0;
     }
   }
 </style>

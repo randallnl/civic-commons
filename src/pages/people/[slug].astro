@@ -885,26 +885,40 @@ function contactHref(type, value) {
   .legislator-vote-pill {
     border: 1px solid #d1d5db;
     border-radius: 999px;
+    box-sizing: border-box;
     color: #1f2933;
+    display: block;
     font-size: 0.78rem;
     font-weight: 900;
     line-height: 1.2;
     padding: 7px 10px;
-    text-align: right;
+    text-align: center;
+    width: 100%;
   }
 
   .vote-card-main {
     align-items: start;
     display: grid;
     gap: 18px;
-    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr);
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
   }
 
   .vote-pill-stack {
-    align-items: end;
+    align-items: stretch;
     display: grid;
     gap: 8px;
-    justify-items: end;
+    justify-items: stretch;
+    width: 100%;
+  }
+
+  .vote-pill-stack :global(.position-summary) {
+    width: 100%;
+  }
+
+  .vote-pill-stack :global(.position-summary span) {
+    box-sizing: border-box;
+    text-align: center;
+    width: 100%;
   }
 
   .legislator-support {
