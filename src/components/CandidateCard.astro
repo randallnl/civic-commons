@@ -5,11 +5,13 @@ import {
   formatCandidateParty,
   partyClassName,
 } from "../lib/candidatesApi";
+import profileIcon from "../assets/profile icon.png";
+import { profilePhotoUrl } from "../lib/photos";
 
 const { candidate } = Astro.props;
 
 const name = candidateName(candidate);
-const fallbackInitial = name.slice(0, 1) || "C";
+const photoUrl = profilePhotoUrl(candidate.photoUrl);
 const officeParts = [
   candidate.office,
   candidate.county,
@@ -38,10 +40,10 @@ function formatCurrency(value) {
 
 <article class="candidate-card">
   <a class="photo-wrap" href={candidatePath(candidate)}>
-    {candidate.photoUrl ? (
-      <img src={candidate.photoUrl} alt={`Photo of ${name}`} loading="lazy" />
+    {photoUrl ? (
+      <img src={photoUrl} alt={`Photo of ${name}`} loading="lazy" />
     ) : (
-      <div class="photo-fallback">{fallbackInitial}</div>
+      <img class="photo-fallback" src={profileIcon.src} alt="" loading="lazy" />
     )}
   </a>
 
@@ -115,14 +117,10 @@ function formatCurrency(value) {
     object-position: center top;
   }
 
-  .photo-fallback {
-    align-items: center;
-    background: #6b4f2a;
-    color: white;
-    display: flex;
-    font-size: 2rem;
-    font-weight: 950;
-    justify-content: center;
+  .photo-wrap img.photo-fallback {
+    background: #fffaf1;
+    object-fit: contain;
+    padding: 12px;
   }
 
   .eyebrow {

@@ -2,9 +2,11 @@
 export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
+import profileIcon from "../assets/profile icon.png";
 import { getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
 import { communityPath, getCommunities } from "../lib/communitiesApi";
+import { profilePhotoUrl } from "../lib/photos";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
@@ -151,19 +153,25 @@ function representativesFor(community = {}) {
               <p>No legislators found.</p>
             ) : (
               <ul>
-                {people.map((person) => (
-                  <li>
-                    <a href={`/people/${repSlug(person)}`}>
-                      {(person.photo || person.photo_url) && (
-                        <img src={person.photo || person.photo_url} alt="" />
-                      )}
-                      <span>
-                        <strong>{repName(person)}</strong>
-                        <small>{[person.chamber, person.party, person.district].filter(Boolean).join(" · ") || "No details listed"}</small>
-                      </span>
-                    </a>
-                  </li>
-                ))}
+                {people.map((person) => {
+                  const photoUrl = profilePhotoUrl(person.photo || person.photo_url);
+
+                  return (
+                    <li>
+                      <a href={`/people/${repSlug(person)}`}>
+                        <img
+                          class:list={[!photoUrl && "profile-icon"]}
+                          src={photoUrl || profileIcon.src}
+                          alt=""
+                        />
+                        <span>
+                          <strong>{repName(person)}</strong>
+                          <small>{[person.chamber, person.party, person.district].filter(Boolean).join(" · ") || "No details listed"}</small>
+                        </span>
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -314,6 +322,13 @@ function representativesFor(community = {}) {
     border-radius: 999px;
     object-fit: cover;
     border: 2px solid #1f2933;
+  }
+
+  .profile-icon {
+    background: #fffaf1;
+    box-sizing: border-box;
+    object-fit: contain;
+    padding: 7px;
   }
 
   strong {

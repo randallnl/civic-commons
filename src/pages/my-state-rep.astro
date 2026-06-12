@@ -4,7 +4,9 @@ export const prerender = false;
 import CandidateCard from "../components/CandidateCard.astro";
 import RepresentativeCard from "../components/RepresentativeCard.astro";
 import TopNav from "../components/TopNav.astro";
+import profileIcon from "../assets/profile icon.png";
 import { getBillDetail, getBillSummaries } from "../lib/billsApi";
+import { profilePhotoUrl } from "../lib/photos";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { normalizeBillCode, getTrackedBills } from "../lib/trackedBills";
 
@@ -221,10 +223,10 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           <div class="sample-grid">
             {randomLegislators.map((rep) => (
               <a class="sample-card" href={`/people/${repSlug(rep)}`}>
-                {rep.photo ? (
-                  <img src={rep.photo} alt={`Photo of ${repName(rep)}`} loading="lazy" />
+                {profilePhotoUrl(rep.photo) ? (
+                  <img src={profilePhotoUrl(rep.photo)} alt={`Photo of ${repName(rep)}`} loading="lazy" />
                 ) : (
-                  <div class="sample-fallback">{repName(rep).slice(0, 1)}</div>
+                  <img class="sample-fallback" src={profileIcon.src} alt="" loading="lazy" />
                 )}
                 <div>
                   <h3>{repName(rep)}</h3>
@@ -606,14 +608,11 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     object-position: center top;
   }
 
-  .sample-fallback {
-    align-items: center;
-    background: #6b4f2a;
-    color: white;
-    display: flex;
-    font-size: 1.8rem;
-    font-weight: 900;
-    justify-content: center;
+  .sample-card img.sample-fallback {
+    background: #fffaf1;
+    box-sizing: border-box;
+    object-fit: contain;
+    padding: 10px;
   }
 
   .sample-card h3 {

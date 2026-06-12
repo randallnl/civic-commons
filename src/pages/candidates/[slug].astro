@@ -2,12 +2,14 @@
 export const prerender = false;
 
 import TopNav from "../../components/TopNav.astro";
+import profileIcon from "../../assets/profile icon.png";
 import {
   candidateName,
   formatCandidateParty,
   getCandidate,
   partyClassName,
 } from "../../lib/candidatesApi";
+import { profilePhotoUrl } from "../../lib/photos";
 
 const { slug } = Astro.params;
 
@@ -26,7 +28,7 @@ if (!candidate?.filerEntityNumber && !candidate?.name) {
 }
 
 const name = candidateName(candidate);
-const fallbackInitial = name.slice(0, 1) || "C";
+const portraitUrl = profilePhotoUrl(candidate.photoUrl);
 const officeParts = [
   candidate.office,
   candidate.county,
@@ -69,10 +71,10 @@ function formatCurrency(value) {
 
       <section class="profile-hero">
         <div class="portrait-card">
-          {candidate.photoUrl ? (
-            <img src={candidate.photoUrl} alt={name} />
+          {portraitUrl ? (
+            <img src={portraitUrl} alt={name} />
           ) : (
-            <div class="portrait-fallback">{fallbackInitial}</div>
+            <img class="portrait-fallback" src={profileIcon.src} alt="" />
           )}
         </div>
 
@@ -198,14 +200,11 @@ function formatCurrency(value) {
     object-position: center top;
   }
 
-  .portrait-fallback {
-    align-items: center;
-    background: #6b4f2a;
-    color: white;
-    display: flex;
-    font-size: 5rem;
-    font-weight: 950;
-    justify-content: center;
+  .portrait-card img.portrait-fallback {
+    background: #fffaf1;
+    box-sizing: border-box;
+    object-fit: contain;
+    padding: 28px;
   }
 
   .eyebrow {

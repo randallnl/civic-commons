@@ -1,6 +1,8 @@
 ---
 import BillPositionSummary from "./BillPositionSummary.astro";
+import profileIcon from "../assets/profile icon.png";
 import { billDetailPath } from "../lib/billsApi";
+import { profilePhotoUrl } from "../lib/photos";
 import { normalizeBillCode } from "../lib/trackedBills";
 
 const { rep, trackedBills = new Map(), billSummaries = new Map() } = Astro.props;
@@ -24,8 +26,8 @@ function slugify(value = "") {
 
 const name =
   rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim();
-const fallbackInitial = (rep.firstname || name || "NH").slice(0, 1);
 const profileHref = `/people/${slugify(name)}`;
+const photoUrl = profilePhotoUrl(rep.photo);
 const voteHistory = Array.isArray(rep.voteHistory)
   ? rep.voteHistory
       .filter((vote) =>
@@ -73,17 +75,20 @@ function legislatorVoteStance(vote) {
 <article class="rep-card">
   <div class="rep-card-top">
     <a class="photo-wrap" href={profileHref}>
-      {rep.photo ? (
+      {photoUrl ? (
         <img
           class="rep-photo"
-          src={rep.photo}
+          src={photoUrl}
           alt={`Photo of ${name}`}
           loading="lazy"
         />
       ) : (
-        <div class="rep-photo fallback-photo">
-          {fallbackInitial}
-        </div>
+        <img
+          class="rep-photo fallback-photo"
+          src={profileIcon.src}
+          alt=""
+          loading="lazy"
+        />
       )}
     </a>
 
@@ -212,11 +217,9 @@ function legislatorVoteStance(vote) {
   }
 
   .fallback-photo {
-    color: white;
-    display: grid;
-    font-size: 2rem;
-    font-weight: 900;
-    place-items: center;
+    background: #fffaf1;
+    object-fit: contain;
+    padding: 12px;
   }
 
   .rep-main h3 {

@@ -4,8 +4,10 @@ export const prerender = false;
 import ArticleList from "../../components/ArticleList.astro";
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import TopNav from "../../components/TopNav.astro";
+import profileIcon from "../../assets/profile icon.png";
 import { getArticles } from "../../lib/articlesApi";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
+import { profilePhotoUrl } from "../../lib/photos";
 import { getRepresentative } from "../../lib/repsApi";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
@@ -89,6 +91,7 @@ if (representative?.towns_represented || representative?.location_text) {
   });
 }
 const sourceLinks = sourceUrlsToLinks(representative?.sourceUrls);
+const portraitUrl = profilePhotoUrl(person.photo_url);
 let relatedArticles =
   apiData?.relatedArticles ||
   representative?.relatedArticles ||
@@ -106,8 +109,6 @@ if (!relatedArticles.length && person.id) {
     console.error(error?.message || "Unable to load representative articles.");
   }
 }
-const fallbackInitial = person.full_name.slice(0, 1);
-
 function formatParty(party) {
   if (!party) return "Party not listed";
   if (party === "R") return "Republican";
@@ -301,10 +302,10 @@ function contactHref(type, value) {
 
       <section class="profile-hero">
         <div class="portrait-card">
-          {person.photo_url ? (
-            <img src={person.photo_url} alt={person.full_name} />
+          {portraitUrl ? (
+            <img src={portraitUrl} alt={person.full_name} />
           ) : (
-            <div class="portrait-fallback">{fallbackInitial}</div>
+            <img class="portrait-fallback" src={profileIcon.src} alt="" />
           )}
         </div>
 
@@ -661,14 +662,11 @@ function contactHref(type, value) {
     object-position: center top;
   }
 
-  .portrait-fallback {
-    align-items: center;
-    color: white;
-    display: flex;
-    font-size: 7rem;
-    font-weight: 900;
-    justify-content: center;
-    background: #6b4f2a;
+  .portrait-card img.portrait-fallback {
+    background: #fffaf1;
+    box-sizing: border-box;
+    object-fit: contain;
+    padding: 28px;
   }
 
   .eyebrow {
