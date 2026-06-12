@@ -1,6 +1,7 @@
 ---
 export const prerender = false;
 
+import CandidateCard from "../components/CandidateCard.astro";
 import RepresentativeCard from "../components/RepresentativeCard.astro";
 import TopNav from "../components/TopNav.astro";
 import { getBillDetail, getBillSummaries } from "../lib/billsApi";
@@ -65,6 +66,21 @@ if (lookupData) {
 const senateReps = lookupData?.groups?.senate || [];
 const houseReps = lookupData?.groups?.house || [];
 const allReps = lookupData?.representatives || [];
+const candidateGroups = lookupData?.groups?.candidates || {};
+const allCandidates = lookupData?.candidates?.length
+  ? lookupData.candidates
+  : [
+      ...(candidateGroups.senate || []),
+      ...(candidateGroups.house || []),
+    ];
+const senateCandidates =
+  candidateGroups.senate?.length
+    ? candidateGroups.senate
+    : allCandidates.filter((candidate) => isSenateCandidate(candidate));
+const houseCandidates =
+  candidateGroups.house?.length
+    ? candidateGroups.house
+    : allCandidates.filter((candidate) => isHouseCandidate(candidate));
 const civic = lookupData?.civic || {};
 const matchedDistricts = lookupData?.matchedDistricts || [];
 const normalizedInput = lookupData?.normalizedInput || {};
@@ -84,6 +100,16 @@ if (lookupData && trackedBills.size) {
 
 function shuffle(items = []) {
   return [...items].sort(() => Math.random() - 0.5);
+}
+
+function isSenateCandidate(candidate = {}) {
+  return /senate/i.test(`${candidate.office || ""} ${candidate.officeType || ""}`);
+}
+
+function isHouseCandidate(candidate = {}) {
+  return /representative|house/i.test(
+    `${candidate.office || ""} ${candidate.officeType || ""}`,
+  );
 }
 
 function formatAddress(normalized = {}) {
@@ -176,9 +202,9 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
         </div>
       )}
 
-      {address && !lookupError && allReps.length === 0 && (
+      {address && !lookupError && allReps.length === 0 && allCandidates.length === 0 && (
         <div class="status-message" aria-live="polite">
-          No representatives found for that address.
+          No representatives or candidates found for that address.
         </div>
       )}
 
@@ -210,7 +236,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
         </section>
       )}
 
-      {lookupData && allReps.length > 0 && (
+      {lookupData && (allReps.length > 0 || allCandidates.length > 0) && (
         <>
           <section class="district-summary">
             <div class="summary-card panel">
@@ -293,6 +319,40 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
                     />
                   ))}
                 </div>
+              </section>
+            )}
+
+            {(senateCandidates.length > 0 || houseCandidates.length > 0) && (
+              <section class="candidate-results">
+                <div class="group-header">
+                  <h2>2026 Candidates</h2>
+                  <p>
+                    Candidates returned for the same address lookup, grouped by
+                    legislative body.
+                  </p>
+                </div>
+
+                {senateCandidates.length > 0 && (
+                  <section class="candidate-group">
+                    <h3>State Senate Candidates</h3>
+                    <div class="candidate-grid">
+                      {senateCandidates.map((candidate) => (
+                        <CandidateCard candidate={candidate} />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {houseCandidates.length > 0 && (
+                  <section class="candidate-group">
+                    <h3>State House Candidates</h3>
+                    <div class="candidate-grid">
+                      {houseCandidates.map((candidate) => (
+                        <CandidateCard candidate={candidate} />
+                      ))}
+                    </div>
+                  </section>
+                )}
               </section>
             )}
           </section>
@@ -464,6 +524,23 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     margin-top: 48px;
   }
 
+  .candidate-results {
+    margin-top: 56px;
+  }
+
+  .candidate-group {
+    margin-top: 24px;
+  }
+
+  .candidate-group + .candidate-group {
+    margin-top: 34px;
+  }
+
+  .candidate-group h3 {
+    font-size: 1.4rem;
+    margin: 0 0 16px;
+  }
+
   .group-header h2 {
     font-size: clamp(2rem, 5vw, 3.5rem);
     line-height: 1;
@@ -482,6 +559,12 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     grid-template-columns: repeat(2, 1fr);
     gap: 18px;
     margin-top: 24px;
+  }
+
+  .candidate-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .sample-grid {
@@ -548,6 +631,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
   @media (max-width: 900px) {
     .summary-grid,
     .rep-grid,
+    .candidate-grid,
     .sample-grid {
       grid-template-columns: 1fr;
     }

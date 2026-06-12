@@ -4,10 +4,12 @@ export const prerender = false;
 import TopNav from "../components/TopNav.astro";
 import { getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
+import { communityPath, getCommunities } from "../lib/communitiesApi";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 
+let communities = [];
 let people = [];
 let bills = [];
 let articles = [];
@@ -15,25 +17,71 @@ let searchError = "";
 
 if (q.length > 0) {
   try {
-    const [repResult, billResult, articleResult] = await Promise.allSettled([
+    const [communityResult, repResult, billResult, articleResult] = await Promise.allSettled([
+      getCommunities({ q, body: "", limit: 12, articleLimit: 2 }),
       getRepresentatives({ q, limit: 20 }),
       getBills({ q, limit: 20 }),
       getArticles({ q, include: "relations", limit: 20 }),
     ]);
 
+    const communityData = communityResult.status === "fulfilled" ? communityResult.value : {};
     const repData = repResult.status === "fulfilled" ? repResult.value : {};
     const billData = billResult.status === "fulfilled" ? billResult.value : {};
     const articleData = articleResult.status === "fulfilled" ? articleResult.value : {};
 
+    communities = communityData.communities || [];
     people = repData.representatives || [];
     bills = billData.bills || [];
     articles = articleData.articles || [];
-    if ([repResult, billResult, articleResult].some((result) => result.status === "rejected")) {
+    if ([communityResult, repResult, billResult, articleResult].some((result) => result.status === "rejected")) {
       searchError = "Some API results are temporarily unavailable.";
     }
   } catch (error) {
     searchError = error?.message || "Unable to load search results.";
   }
+}
+
+function communityName(community = {}) {
+  return (
+    community.name ||
+    community.district_label ||
+    community.districtLabel ||
+    `${bodyLabel(community)} District ${community.district || community.raw_district || ""}`
+  );
+}
+
+function bodyLabel(community = {}) {
+  const value = String(community.chamber || community.body || "").toLowerCase();
+  if (value === "senate" || value === "s") return "Senate";
+  if (value === "house" || value === "h") return "House";
+  return "District";
+}
+
+function townsFor(community = {}) {
+  const value =
+    community.townsRepresented ||
+    community.towns ||
+    community.towns_represented ||
+    "";
+
+  if (Array.isArray(value)) {
+    return value
+      .map((town) =>
+        typeof town === "object" && town !== null
+          ? town.town || town.name || town.label
+          : town,
+      )
+      .filter(Boolean);
+  }
+
+  return String(value)
+    .split(/;|,/)
+    .map((town) => town.trim())
+    .filter(Boolean);
+}
+
+function representativesFor(community = {}) {
+  return community.representatives || community.reps || community.legislators || [];
 }
 ---
 
@@ -62,6 +110,40 @@ if (q.length > 0) {
         <section class="results">
           <p class="summary">Showing results for “{q}”</p>
           {searchError && <p class="empty">{searchError}</p>}
+
+          <div class="group">
+            <h2>Communities</h2>
+            {communities.length === 0 ? (
+              <p>No communities found.</p>
+            ) : (
+              <ul>
+                {communities.map((community) => {
+                  const towns = townsFor(community);
+                  const representatives = representativesFor(community);
+
+                  return (
+                    <li>
+                      <a href={communityPath(community)}>
+                        <span>
+                          <strong>{communityName(community)}</strong>
+                          <small>
+                            {[
+                              bodyLabel(community),
+                              community.county,
+                              towns.slice(0, 4).join(", "),
+                              representatives.length ? `${representatives.length} reps` : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </small>
+                        </span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
 
           <div class="group">
             <h2>Legislators</h2>
