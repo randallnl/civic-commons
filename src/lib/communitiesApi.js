@@ -40,3 +40,62 @@ export async function getCommunities({
       [],
   };
 }
+
+export async function getHouseCommunity(county, district, {
+  apiBase = communitiesApiBase(),
+  articleLimit = 10,
+} = {}) {
+  const params = new URLSearchParams();
+  if (articleLimit) params.set("articleLimit", String(articleLimit));
+
+  const response = await fetch(
+    `${apiBase}/communities/house/${encodeURIComponent(
+      county,
+    )}/${encodeURIComponent(district)}?${params}`,
+  );
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || data.error || data.message || data.status === "error") {
+    throw new Error("Community profile is temporarily unavailable.");
+  }
+
+  return data;
+}
+
+export async function getSenateCommunity(district, {
+  apiBase = communitiesApiBase(),
+  articleLimit = 10,
+} = {}) {
+  const params = new URLSearchParams();
+  if (articleLimit) params.set("articleLimit", String(articleLimit));
+
+  const response = await fetch(
+    `${apiBase}/communities/senate/${encodeURIComponent(district)}?${params}`,
+  );
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || data.error || data.message || data.status === "error") {
+    throw new Error("Community profile is temporarily unavailable.");
+  }
+
+  return data;
+}
+
+export function communityPath(community = {}) {
+  const body = String(community.body || community.chamber || "").toLowerCase();
+  const district = community.district || community.raw_district || "";
+
+  if (body === "senate" || body === "s") {
+    return `/communities/senate/${encodeURIComponent(district)}`;
+  }
+
+  const county =
+    community.county ||
+    community.county_slug ||
+    String(community.slug || "").split("-").slice(0, -1).join("-") ||
+    "";
+
+  return `/communities/house/${encodeURIComponent(
+    String(county).toLowerCase(),
+  )}/${encodeURIComponent(district)}`;
+}

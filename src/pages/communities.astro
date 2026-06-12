@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
-import { getCommunities } from "../lib/communitiesApi";
+import { communityPath, getCommunities } from "../lib/communitiesApi";
 import { repName, repSlug } from "../lib/repsApi";
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
@@ -99,6 +99,16 @@ function pageUrl(nextOffset) {
   return `/communities?${params.toString()}`;
 }
 
+function showMoreUrl() {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (body) params.set("body", body);
+  params.set("limit", String(limit + 25));
+  params.set("offset", "0");
+  params.set("articleLimit", String(articleLimit));
+  return `/communities?${params.toString()}`;
+}
+
 const total = Number(meta.total || meta.count || communities.length);
 const hasPrevious = offset > 0;
 const hasNext = communities.length === limit && (!total || offset + limit < total);
@@ -155,6 +165,8 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
               const representatives = representativesFor(community);
               const articles = articlesFor(community);
 
+              const detailHref = communityPath(community);
+
               return (
               <article class="district-card">
                 <div class="topline">
@@ -163,7 +175,9 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
                   {representatives.length > 0 && <span>{representatives.length} reps</span>}
                 </div>
 
-                <h3>{communityName(community)}</h3>
+                <h3>
+                  <a href={detailHref}>{communityName(community)}</a>
+                </h3>
 
                 {towns.length > 0 && (
                   <div class="towns">
@@ -189,6 +203,8 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
                     ))}
                   </div>
                 )}
+
+                <a class="card-link" href={detailHref}>View community profile</a>
               </article>
               );
             })}
@@ -197,10 +213,15 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
           <p class="status-message">No districts found.</p>
         )}
 
-        {(hasPrevious || hasNext) && (
+        {hasNext && (
+          <div class="show-more">
+            <a href={showMoreUrl()}>Show more</a>
+          </div>
+        )}
+
+        {hasPrevious && (
           <div class="pagination">
             {hasPrevious && <a href={pageUrl(Math.max(0, offset - limit))}>Previous</a>}
-            {hasNext && <a href={pageUrl(offset + limit)}>Next</a>}
           </div>
         )}
       </section>
@@ -307,6 +328,10 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
     padding: 18px;
   }
 
+  .district-card {
+    display: grid;
+  }
+
   .topline,
   .towns,
   .representatives {
@@ -346,6 +371,19 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
     margin: 14px 0 0;
   }
 
+  .card-link {
+    align-self: end;
+    background: #1f2933;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    display: inline-block;
+    justify-self: start;
+    margin-top: 18px;
+    padding: 10px 14px;
+    text-decoration: none;
+  }
+
   .articles {
     border-top: 1px solid #d1d5db;
     display: grid;
@@ -367,6 +405,7 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
     line-height: 1.35;
   }
 
+  .show-more,
   .pagination {
     display: flex;
     gap: 10px;
@@ -374,6 +413,7 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
     margin-top: 24px;
   }
 
+  .show-more a,
   .pagination a {
     background: #1f2933;
     border: 2px solid #1f2933;

@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+
+import CommunityProfile from "../../../../components/CommunityProfile.astro";
+import { getHouseCommunity } from "../../../../lib/communitiesApi";
+
+const { county = "", district = "" } = Astro.params;
+const articleLimit = Number(Astro.url.searchParams.get("articleLimit") || 10);
+
+let community = null;
+let meta = {};
+let error = "";
+
+try {
+  const data = await getHouseCommunity(county, district, { articleLimit });
+  community = data.community;
+  meta = data.meta || {};
+} catch (loadError) {
+  error = loadError?.message || "Unable to load community profile.";
+}
+---
+
+<CommunityProfile community={community} meta={meta} error={error} />

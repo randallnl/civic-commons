@@ -1,0 +1,268 @@
+---
+import TopNav from "./TopNav.astro";
+import { repName, repSlug } from "../lib/repsApi";
+
+const { community, meta = {}, error = "" } = Astro.props;
+
+function townsFor(value = []) {
+  const towns =
+    community?.townsRepresented ||
+    community?.towns ||
+    community?.towns_represented ||
+    value;
+
+  if (Array.isArray(towns)) return towns.map(cleanTown).filter(Boolean);
+
+  return String(towns)
+    .split(/;|,/)
+    .map(cleanTown)
+    .filter(Boolean);
+}
+
+function cleanTown(value = "") {
+  if (typeof value === "object" && value !== null) {
+    return String(value.town || value.name || value.label || "").trim();
+  }
+
+  return String(value).trim();
+}
+
+function representativesFor() {
+  return community?.representatives || community?.reps || community?.legislators || [];
+}
+
+function articlesFor() {
+  return community?.relatedArticles || community?.articles || [];
+}
+
+function bodyLabel() {
+  const body = String(community?.chamber || community?.body || "").toLowerCase();
+  if (body === "senate" || body === "s") return "Senate";
+  return "House";
+}
+
+const towns = townsFor();
+const representatives = representativesFor();
+const articles = articlesFor();
+---
+
+<html lang="en">
+  <head>
+    <title>{community?.name || "Community"} | Civic Commons</title>
+    <meta
+      name="description"
+      content={`Community profile for ${community?.name || "a New Hampshire district"}.`}
+    />
+  </head>
+
+  <body>
+    <TopNav />
+    <main class="page">
+      <a class="back" href="/communities">Back to communities</a>
+
+      {error ? (
+        <p class="status-message">{error}</p>
+      ) : community ? (
+        <>
+          <section class="hero">
+            <p class="eyebrow">{bodyLabel()} District</p>
+            <h1>{community.name}</h1>
+
+            <div class="hero-meta">
+              {community.label && <span>{community.label}</span>}
+              {community.county && <span>{community.county}</span>}
+              {community.seats && <span>{community.seats} seats</span>}
+              {community.floterial && <span>Floterial</span>}
+            </div>
+          </section>
+
+          <section class="content-grid">
+            <div class="stack">
+              <section class="panel">
+                <div class="section-heading">
+                  <p class="eyebrow">Towns</p>
+                  <h2>Towns Represented</h2>
+                </div>
+
+                {towns.length ? (
+                  <div class="chips">
+                    {towns.map((town) => (
+                      <a href={`/articles?town=${encodeURIComponent(town)}`}>{town}</a>
+                    ))}
+                  </div>
+                ) : (
+                  <p class="empty">No towns returned.</p>
+                )}
+              </section>
+
+              <section class="panel">
+                <div class="section-heading">
+                  <p class="eyebrow">Representation</p>
+                  <h2>Legislators</h2>
+                </div>
+
+                {representatives.length ? (
+                  <div class="rep-list">
+                    {representatives.map((rep) => (
+                      <article>
+                        <h3>
+                          <a href={`/people/${repSlug(rep)}`}>{repName(rep)}</a>
+                        </h3>
+                        <p>
+                          {[rep.party, rep.chamber, rep.district].filter(Boolean).join(" · ")}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p class="empty">No representatives returned.</p>
+                )}
+              </section>
+            </div>
+
+            <aside class="panel">
+              <div class="section-heading">
+                <p class="eyebrow">Articles</p>
+                <h2>Related Coverage</h2>
+              </div>
+
+              {articles.length ? (
+                <div class="article-list">
+                  {articles.map((article) => (
+                    <article>
+                      <h3><a href={article.url}>{article.title}</a></h3>
+                      {article.publisher && <p>{article.publisher}</p>}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p class="empty">No related articles returned.</p>
+              )}
+
+              {meta.articleLimit && (
+                <small>Showing up to {meta.articleLimit} articles.</small>
+              )}
+            </aside>
+          </section>
+        </>
+      ) : (
+        <p class="status-message">Community not found.</p>
+      )}
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(body) {
+    margin: 0;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    background: #f7f4ee;
+    color: #1f2933;
+  }
+
+  .page {
+    margin: 0 auto;
+    padding: 40px 0 72px;
+    width: min(1120px, calc(100% - 32px));
+  }
+
+  .back,
+  a {
+    color: #1f2933;
+    font-weight: 800;
+  }
+
+  .hero {
+    padding: 42px 0 28px;
+  }
+
+  .eyebrow {
+    color: #6b4f2a;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    margin: 0 0 12px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(3rem, 8vw, 6rem);
+    line-height: 0.92;
+    margin: 0 0 18px;
+  }
+
+  .hero-meta,
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .hero-meta span,
+  .chips a {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 900;
+    padding: 6px 9px;
+    text-decoration: none;
+  }
+
+  .content-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.42fr);
+  }
+
+  .stack,
+  .rep-list,
+  .article-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .panel,
+  .status-message {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 #1f2933;
+    padding: 20px;
+  }
+
+  .section-heading h2 {
+    font-size: 1.45rem;
+    margin: 0 0 16px;
+  }
+
+  .rep-list article,
+  .article-list article {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 14px;
+  }
+
+  h3 {
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  p,
+  .empty,
+  small {
+    color: #4b5563;
+    font-weight: 800;
+    line-height: 1.5;
+    margin: 8px 0 0;
+  }
+
+  @media (max-width: 820px) {
+    .content-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
