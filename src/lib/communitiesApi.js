@@ -81,7 +81,30 @@ export async function getSenateCommunity(district, {
   return data;
 }
 
+export async function getCountyCommunity(county, {
+  apiBase = communitiesApiBase(),
+  body = "house",
+  articleLimit = 3,
+} = {}) {
+  const params = new URLSearchParams();
+  if (body) params.set("body", body);
+  if (articleLimit) params.set("articleLimit", String(articleLimit));
+
+  const response = await fetch(
+    `${apiBase}/communities/counties/${encodeURIComponent(county)}?${params}`,
+  );
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || data.error || data.message || data.status === "error") {
+    throw new Error("County community data is temporarily unavailable.");
+  }
+
+  return data;
+}
+
 export function communityPath(community = {}) {
+  if (community.path) return community.path;
+
   const body = String(community.body || community.chamber || "").toLowerCase();
   const district = community.district || community.raw_district || "";
 

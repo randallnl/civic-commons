@@ -2,31 +2,146 @@
 export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
-import { communityPath, getCommunities } from "../lib/communitiesApi";
+import {
+  communityPath,
+  getCommunities,
+  getCountyCommunity,
+} from "../lib/communitiesApi";
 import { repName, repSlug } from "../lib/repsApi";
+
+const COUNTY_NAMES = [
+  "Belknap",
+  "Carroll",
+  "Cheshire",
+  "Coos",
+  "Grafton",
+  "Hillsborough",
+  "Merrimack",
+  "Rockingham",
+  "Strafford",
+  "Sullivan",
+];
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const body = Astro.url.searchParams.get("body")?.trim() || "house";
-const limit = Number(Astro.url.searchParams.get("limit") || 25);
-const offset = Number(Astro.url.searchParams.get("offset") || 0);
 const articleLimit = Number(Astro.url.searchParams.get("articleLimit") || 3);
 
-let communities = [];
+let countyGroups = [];
 let meta = {};
 let loadError = "";
 
 try {
-  const data = await getCommunities({
+  const data = await getCountyGroups({
     q,
     body,
-    limit,
-    offset,
     articleLimit,
   });
-  communities = data.communities || [];
+  countyGroups = data.counties || [];
   meta = data.meta || {};
 } catch (error) {
   loadError = cleanApiError(error?.message) || "Unable to load communities.";
+}
+
+async function getCountyGroups({
+  q = "",
+  body = "house",
+  articleLimit = 3,
+} = {}) {
+  const results = await Promise.allSettled(
+    COUNTY_NAMES.map(async (county) => {
+      const data = await getCountyCommunity(county, {
+        body,
+        articleLimit,
+      });
+      return normalizeCountyGroup(data, county);
+    }),
+  );
+
+  let counties = results
+    .filter((result) => result.status === "fulfilled")
+    .map((result) => result.value)
+    .filter(Boolean);
+
+  if (!counties.length) {
+    const fallback = await getCommunities({
+      q,
+      body,
+      limit: 500,
+      offset: 0,
+      articleLimit,
+    });
+    counties = groupCommunitiesByCounty(fallback.communities || []);
+  }
+
+  if (q) counties = counties.filter((county) => countyMatchesQuery(county, q));
+
+  return {
+    counties,
+    meta: {
+      total: counties.length,
+      body,
+    },
+  };
+}
+
+function normalizeCountyGroup(data = {}, fallbackCounty = "") {
+  const county =
+    data.counties?.[0] ||
+    data.county ||
+    data.community ||
+    data.result ||
+    data;
+  const rawCommunities =
+    county.communities ||
+    county.districts ||
+    county.results ||
+    data.communities ||
+    data.districts ||
+    [];
+  const communities = rawCommunities.map((community) => ({
+    ...community,
+    county: community.county || county.name || county.county || fallbackCounty,
+  }));
+  const towns =
+    county.townsRepresented ||
+    county.towns ||
+    county.towns_represented ||
+    [];
+  const representatives =
+    county.representatives ||
+    county.reps ||
+    county.legislators ||
+    [];
+  const articles =
+    county.relatedArticles ||
+    county.articles ||
+    data.relatedArticles ||
+    data.articles ||
+    [];
+
+  return {
+    county: county.name || county.county || fallbackCounty,
+    slug: county.slug || slugify(county.name || county.county || fallbackCounty),
+    districtCount: county.districtCount || communities.length,
+    representativeCount: county.representativeCount || representatives.length,
+    communities,
+    towns: new Set([
+      ...normalizeTowns(towns),
+      ...communities.flatMap((community) => townsFor(community)),
+    ]),
+    representatives: new Map(
+      [
+        ...representatives,
+        ...communities.flatMap((community) => representativesFor(community)),
+      ]
+        .filter(Boolean)
+        .map((rep) => [rep.personid || rep.id || repName(rep), rep])
+        .filter(([key]) => key),
+    ),
+    articles: [...articles, ...communities.flatMap((community) => articlesFor(community))]
+      .filter(Boolean)
+      .slice(0, articleLimit),
+  };
 }
 
 function townsFor(community = {}) {
@@ -36,6 +151,15 @@ function townsFor(community = {}) {
     community.townsRepresented ||
     community.location_text ||
     "";
+  if (Array.isArray(value)) return value.map(cleanTown).filter(Boolean);
+
+  return String(value)
+    .split(/;|,/)
+    .map(cleanTown)
+    .filter(Boolean);
+}
+
+function normalizeTowns(value = []) {
   if (Array.isArray(value)) return value.map(cleanTown).filter(Boolean);
 
   return String(value)
@@ -61,10 +185,6 @@ function communityName(community = {}) {
   );
 }
 
-function communityBody(community = {}) {
-  return String(community.body || community.chamber || body || "").toLowerCase();
-}
-
 function bodyLabel(value = body) {
   return String(value).toLowerCase() === "senate" ? "Senate" : "House";
 }
@@ -75,6 +195,92 @@ function representativesFor(community = {}) {
 
 function articlesFor(community = {}) {
   return community.articles || community.relatedArticles || [];
+}
+
+function countyFor(community = {}) {
+  return (
+    community.county ||
+    community.countyName ||
+    community.county_slug ||
+    countyFromName(community.name) ||
+    countyFromName(community.slug) ||
+    countyFromName(community.label) ||
+    "New Hampshire"
+  );
+}
+
+function countyFromName(value = "") {
+  const normalized = String(value).toLowerCase();
+  return COUNTY_NAMES.find((county) =>
+    normalized.includes(county.toLowerCase()),
+  );
+}
+
+function countyMatchesQuery(county = {}, query = "") {
+  const needle = query.toLowerCase();
+  const towns = [...county.towns];
+  const representatives = [...county.representatives.values()];
+  const haystack = [
+    county.county,
+    ...towns,
+    ...county.communities.map(communityName),
+    ...representatives.map(repName),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(needle);
+}
+
+function slugify(value = "") {
+  return String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/['']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function groupCommunitiesByCounty(items = []) {
+  const countyMap = new Map();
+
+  for (const community of items) {
+    const county = countyFor(community);
+    if (!countyMap.has(county)) {
+      countyMap.set(county, {
+        county,
+        communities: [],
+        districtCount: 0,
+        representativeCount: 0,
+        towns: new Set(),
+        representatives: new Map(),
+        articles: [],
+      });
+    }
+
+    const group = countyMap.get(county);
+    group.communities.push(community);
+    group.districtCount = group.communities.length;
+
+    for (const town of townsFor(community)) {
+      group.towns.add(town);
+    }
+
+    for (const rep of representativesFor(community)) {
+      const key = rep.personid || rep.id || repName(rep);
+      if (key) group.representatives.set(key, rep);
+    }
+    group.representativeCount = group.representatives.size;
+
+    for (const article of articlesFor(community)) {
+      if (group.articles.length < articleLimit) group.articles.push(article);
+    }
+  }
+
+  return [...countyMap.values()].sort((a, b) =>
+    a.county.localeCompare(b.county),
+  );
 }
 
 function formatDistrictNumber(value = "") {
@@ -89,29 +295,7 @@ function cleanApiError(message = "") {
   return message;
 }
 
-function pageUrl(nextOffset) {
-  const params = new URLSearchParams();
-  if (q) params.set("q", q);
-  if (body) params.set("body", body);
-  params.set("limit", String(limit));
-  params.set("offset", String(nextOffset));
-  params.set("articleLimit", String(articleLimit));
-  return `/communities?${params.toString()}`;
-}
-
-function showMoreUrl() {
-  const params = new URLSearchParams();
-  if (q) params.set("q", q);
-  if (body) params.set("body", body);
-  params.set("limit", String(limit + 25));
-  params.set("offset", "0");
-  params.set("articleLimit", String(articleLimit));
-  return `/communities?${params.toString()}`;
-}
-
-const total = Number(meta.total || meta.count || communities.length);
-const hasPrevious = offset > 0;
-const hasNext = communities.length === limit && (!total || offset + limit < total);
+const total = Number(meta.total || meta.count || countyGroups.length);
 ---
 
 <html lang="en">
@@ -119,7 +303,7 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
     <title>Communities | Civic Commons</title>
     <meta
       name="description"
-      content="Search New Hampshire House districts by towns represented."
+      content="Search New Hampshire communities by county and towns represented."
     />
   </head>
 
@@ -130,7 +314,7 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
 
       <section class="hero">
         <p class="eyebrow">Communities</p>
-        <h1>Explore districts by towns represented.</h1>
+        <h1>Explore communities by county.</h1>
 
         <form class="search" action="/communities" method="get">
           <input
@@ -143,8 +327,6 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
             <option value="house" selected={body === "house"}>House</option>
             <option value="senate" selected={body === "senate"}>Senate</option>
           </select>
-          <input type="hidden" name="limit" value={limit} />
-          <input type="hidden" name="offset" value="0" />
           <input type="hidden" name="articleLimit" value={articleLimit} />
           <button type="submit">Search</button>
         </form>
@@ -152,78 +334,78 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
 
       <section class="results">
         <div class="results-heading">
-          <h2>{total || communities.length} {bodyLabel()} Districts</h2>
+          <h2>{countyGroups.length} Counties</h2>
           {(q || body !== "house") && <a href="/communities">Clear search</a>}
         </div>
 
         {loadError ? (
           <p class="status-message">{loadError}</p>
-        ) : communities.length ? (
-          <div class="district-grid">
-            {communities.map((community) => {
-              const towns = townsFor(community);
-              const representatives = representativesFor(community);
-              const articles = articlesFor(community);
-
-              const detailHref = communityPath(community);
+        ) : countyGroups.length ? (
+          <div class="county-grid">
+            {countyGroups.map((countyGroup) => {
+              const towns = [...countyGroup.towns].sort((a, b) => a.localeCompare(b));
+              const representatives = [...countyGroup.representatives.values()];
+              const previewDistricts = countyGroup.communities.slice(0, 6);
+              const hiddenDistrictCount = Math.max(
+                0,
+                (countyGroup.districtCount || countyGroup.communities.length) -
+                  previewDistricts.length,
+              );
+              const representativeCount =
+                countyGroup.representativeCount || representatives.length;
 
               return (
-              <article class="district-card">
+              <article class="county-card">
                 <div class="topline">
-                  <span>{community.county || community.countycode || "NH"}</span>
-                  <span>{bodyLabel(communityBody(community))}</span>
-                  {representatives.length > 0 && <span>{representatives.length} reps</span>}
+                  <span>{bodyLabel()}</span>
+                  <span>{countyGroup.districtCount || countyGroup.communities.length} districts</span>
+                  {representativeCount > 0 && <span>{representativeCount} reps</span>}
                 </div>
 
-                <h3>
-                  <a href={detailHref}>{communityName(community)}</a>
-                </h3>
+                <h3>{countyGroup.county}</h3>
 
                 {towns.length > 0 && (
                   <div class="towns">
-                    {towns.map((town) => (
+                    {towns.slice(0, 12).map((town) => (
                       <a href={`/articles?town=${encodeURIComponent(town)}`}>{town}</a>
                     ))}
+                    {towns.length > 12 && <span>+{towns.length - 12} more</span>}
                   </div>
                 )}
+
+                <div class="district-links">
+                  <strong>District profiles</strong>
+                  {previewDistricts.map((community) => (
+                    <a href={communityPath(community)}>{communityName(community)}</a>
+                  ))}
+                  {hiddenDistrictCount > 0 && <span>+{hiddenDistrictCount} more districts</span>}
+                </div>
 
                 {representatives.length > 0 && (
                   <div class="representatives">
-                    {representatives.map((rep) => (
+                    {representatives.slice(0, 8).map((rep) => (
                       <a href={`/people/${repSlug(rep)}`}>{repName(rep)}</a>
                     ))}
+                    {representatives.length > 8 && <span>+{representatives.length - 8} more reps</span>}
                   </div>
                 )}
 
-                {articles.length > 0 && (
+                {countyGroup.articles.length > 0 && (
                   <div class="articles">
                     <strong>Recent articles</strong>
-                    {articles.map((article) => (
+                    {countyGroup.articles.map((article) => (
                       <a href={article.url}>{article.title}</a>
                     ))}
                   </div>
                 )}
-
-                <a class="card-link" href={detailHref}>View community profile</a>
               </article>
               );
             })}
           </div>
         ) : (
-          <p class="status-message">No districts found.</p>
+          <p class="status-message">No counties found.</p>
         )}
 
-        {hasNext && (
-          <div class="show-more">
-            <a href={showMoreUrl()}>Show more</a>
-          </div>
-        )}
-
-        {hasPrevious && (
-          <div class="pagination">
-            {hasPrevious && <a href={pageUrl(Math.max(0, offset - limit))}>Previous</a>}
-          </div>
-        )}
       </section>
     </main>
   </body>
@@ -274,7 +456,7 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
   .search {
     display: grid;
     gap: 12px;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     max-width: 720px;
   }
 
@@ -313,13 +495,13 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
     margin: 0;
   }
 
-  .district-grid {
+  .county-grid {
     display: grid;
     gap: 16px;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
 
-  .district-card,
+  .county-card,
   .status-message {
     background: white;
     border: 2px solid #1f2933;
@@ -328,13 +510,14 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
     padding: 18px;
   }
 
-  .district-card {
+  .county-card {
     display: grid;
   }
 
   .topline,
   .towns,
-  .representatives {
+  .representatives,
+  .district-links {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
@@ -342,7 +525,9 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
 
   .topline span,
   .towns a,
-  .representatives a {
+  .towns span,
+  .representatives a,
+  .representatives span {
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 999px;
@@ -356,31 +541,44 @@ const hasNext = communities.length === limit && (!total || offset + limit < tota
     margin-top: 14px;
   }
 
-  .representatives a {
+  .representatives a,
+  .representatives span {
     background: #eef0f4;
   }
 
-  .district-card h3 {
-    font-size: 1.3rem;
+  .county-card h3 {
+    font-size: 1.6rem;
     margin: 14px 0 12px;
   }
 
-  .district-card p {
+  .county-card p {
     color: #4b5563;
     font-weight: 800;
     margin: 14px 0 0;
   }
 
-  .card-link {
-    align-self: end;
-    background: #1f2933;
-    border: 2px solid #1f2933;
+  .district-links {
+    border-top: 1px solid #d1d5db;
+    margin-top: 16px;
+    padding-top: 14px;
+  }
+
+  .district-links strong {
+    color: #6b4f2a;
+    flex-basis: 100%;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .district-links a,
+  .district-links span {
+    background: #eef0f4;
+    border: 1px solid #d1d5db;
     border-radius: 999px;
-    color: white;
-    display: inline-block;
-    justify-self: start;
-    margin-top: 18px;
-    padding: 10px 14px;
+    font-size: 0.78rem;
+    font-weight: 900;
+    padding: 6px 9px;
     text-decoration: none;
   }
 

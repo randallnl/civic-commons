@@ -1,5 +1,6 @@
 ---
 import TopNav from "./TopNav.astro";
+import communityPlaceholder from "../assets/community_profile_placeholder.png";
 import { repName, repSlug } from "../lib/repsApi";
 
 const { community, meta = {}, error = "" } = Astro.props;
@@ -65,14 +66,24 @@ const articles = articlesFor();
       ) : community ? (
         <>
           <section class="hero">
-            <p class="eyebrow">{bodyLabel()} District</p>
-            <h1>{community.name}</h1>
+            <img
+              class="hero-image"
+              src={communityPlaceholder.src}
+              alt=""
+              width="2000"
+              height="500"
+            />
 
-            <div class="hero-meta">
-              {community.label && <span>{community.label}</span>}
-              {community.county && <span>{community.county}</span>}
-              {community.seats && <span>{community.seats} seats</span>}
-              {community.floterial && <span>Floterial</span>}
+            <div class="hero-copy">
+              <p class="eyebrow">{bodyLabel()} District</p>
+              <h1>{community.name}</h1>
+
+              <div class="hero-meta">
+                {community.label && <span>{community.label}</span>}
+                {community.county && <span>{community.county}</span>}
+                {community.seats && <span>{community.seats} seats</span>}
+                {community.floterial && <span>Floterial</span>}
+              </div>
             </div>
           </section>
 
@@ -175,7 +186,20 @@ const articles = articlesFor();
   }
 
   .hero {
+    display: grid;
+    gap: 24px;
     padding: 42px 0 28px;
+  }
+
+  .hero-image {
+    aspect-ratio: 4 / 1;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 6px 6px 0 #1f2933;
+    display: block;
+    height: auto;
+    object-fit: cover;
+    width: 100%;
   }
 
   .eyebrow {
