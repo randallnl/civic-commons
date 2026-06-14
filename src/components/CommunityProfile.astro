@@ -180,13 +180,13 @@ const candidates = candidatesFor();
                 </div>
 
                 {representatives.length ? (
-                  <div class="rep-list legislator-list">
+                  <div class="rep-list profile-preview-list">
                     {representatives.map((rep) => {
                       const photoUrl = profilePhotoUrl(rep.photo || rep.photo_url);
 
                       return (
                       <article>
-                        <a class="rep-photo-link" href={`/people/${repSlug(rep)}`}>
+                        <a class="profile-photo-link" href={`/people/${repSlug(rep)}`}>
                           <img
                             class:list={[!photoUrl && "profile-icon"]}
                             src={photoUrl || profileIcon.src}
@@ -216,21 +216,35 @@ const candidates = candidatesFor();
                     <h2>Current Candidates</h2>
                   </div>
 
-                  <div class="rep-list">
-                    {candidates.map((candidate) => (
+                  <div class="rep-list profile-preview-list">
+                    {candidates.map((candidate) => {
+                      const photoUrl = profilePhotoUrl(candidate.photoUrl || candidate.photo || candidate.photo_url);
+
+                      return (
                       <article>
-                        <h3>
-                          <a href={candidatePath(candidate)}>{cleanText(candidateName(candidate))}</a>
-                        </h3>
-                        <p>
-                          {joinClean([
-                            candidate.politicalParty,
-                            candidate.office,
-                            candidate.district && `District ${candidate.district}`,
-                          ])}
-                        </p>
+                        <a class="profile-photo-link" href={candidatePath(candidate)}>
+                          <img
+                            class:list={[!photoUrl && "profile-icon"]}
+                            src={photoUrl || profileIcon.src}
+                            alt={photoUrl ? `Photo of ${candidateName(candidate)}` : ""}
+                            loading="lazy"
+                          />
+                        </a>
+                        <div>
+                          <h3>
+                            <a href={candidatePath(candidate)}>{cleanText(candidateName(candidate))}</a>
+                          </h3>
+                          <p>
+                            {joinClean([
+                              candidate.politicalParty,
+                              candidate.office,
+                              candidate.district && `District ${candidate.district}`,
+                            ])}
+                          </p>
+                        </div>
                       </article>
-                    ))}
+                      );
+                    })}
                   </div>
                 </section>
               )}
@@ -375,18 +389,18 @@ const candidates = candidatesFor();
     padding: 14px;
   }
 
-  .legislator-list article {
+  .profile-preview-list article {
     align-items: start;
     display: grid;
     gap: 12px;
     grid-template-columns: 64px 1fr;
   }
 
-  .rep-photo-link {
+  .profile-photo-link {
     display: block;
   }
 
-  .rep-photo-link img {
+  .profile-photo-link img {
     aspect-ratio: 4 / 5;
     border: 2px solid #1f2933;
     border-radius: 10px;
@@ -398,7 +412,7 @@ const candidates = candidatesFor();
     width: 64px;
   }
 
-  .rep-photo-link img.profile-icon {
+  .profile-photo-link img.profile-icon {
     object-fit: cover;
   }
 
