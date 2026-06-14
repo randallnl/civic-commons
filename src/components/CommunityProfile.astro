@@ -1,9 +1,12 @@
 ---
 import TopNav from "./TopNav.astro";
 import communityPlaceholder from "../assets/community_profile_placeholder.png";
+import profileIcon from "../assets/profile icon.png";
 import { candidateName, candidatePath } from "../lib/candidatesApi";
 import { communityPath } from "../lib/communitiesApi";
+import { profilePhotoUrl } from "../lib/photos";
 import { repName, repSlug } from "../lib/repsApi";
+import { cleanText, joinClean } from "../lib/text";
 
 const { community, meta = {}, error = "" } = Astro.props;
 
@@ -24,10 +27,10 @@ function townsFor(value = []) {
 
 function cleanTown(value = "") {
   if (typeof value === "object" && value !== null) {
-    return String(value.town || value.name || value.label || "").trim();
+    return cleanText(value.town || value.name || value.label || "").trim();
   }
 
-  return String(value).trim();
+  return cleanText(value).trim();
 }
 
 function representativesFor() {
@@ -60,6 +63,33 @@ function townProfilePath(town = "") {
   return `/communities/towns/${encodeURIComponent(town)}`;
 }
 
+function repLocation(rep = {}) {
+  return (
+    rep.location_text ||
+    rep.townsRepresented ||
+    rep.towns_represented ||
+    rep.towns ||
+    ""
+  );
+}
+
+function repMeta(rep = {}) {
+  return joinClean([
+    rep.party,
+    rep.chamber,
+    rep.district,
+    repLocation(rep),
+  ]);
+}
+
+function articleTitle(article = {}) {
+  return cleanText(article.title);
+}
+
+function articlePublisher(article = {}) {
+  return cleanText(article.publisher || article.resource_type || "");
+}
+
 const towns = townsFor();
 const representatives = representativesFor();
 const articles = articlesFor();
@@ -69,7 +99,7 @@ const candidates = candidatesFor();
 
 <html lang="en">
   <head>
-    <title>{community?.name || "Community"} | Civic Commons</title>
+    <title>{cleanText(community?.name || "Community")} | Civic Commons</title>
     <meta
       name="description"
       content={`Community profile for ${community?.name || "a New Hampshire district"}.`}
@@ -96,11 +126,11 @@ const candidates = candidatesFor();
 
             <div class="hero-copy">
               <p class="eyebrow">{profileLabel()}</p>
-              <h1>{community.name}</h1>
+              <h1>{cleanText(community.name)}</h1>
 
               <div class="hero-meta">
-                {community.label && <span>{community.label}</span>}
-                {community.county && <span>{community.county}</span>}
+                {community.label && <span>{cleanText(community.label)}</span>}
+                {community.county && <span>{cleanText(community.county)}</span>}
                 {community.seats && <span>{community.seats} seats</span>}
                 {community.floterial && <span>Floterial</span>}
                 {community.districtCount && <span>{community.districtCount} districts</span>}
@@ -120,7 +150,7 @@ const candidates = candidatesFor();
 
                   <div class="chips">
                     {districts.map((district) => (
-                      <a href={communityPath(district)}>{district.name || district.label}</a>
+                      <a href={communityPath(district)}>{cleanText(district.name || district.label)}</a>
                     ))}
                   </div>
                 </section>
@@ -135,7 +165,7 @@ const candidates = candidatesFor();
                 {towns.length ? (
                   <div class="chips">
                     {towns.map((town) => (
-                      <a href={townProfilePath(town)}>{town}</a>
+                      <a href={townProfilePath(town)}>{cleanText(town)}</a>
                     ))}
                   </div>
                 ) : (
@@ -150,17 +180,29 @@ const candidates = candidatesFor();
                 </div>
 
                 {representatives.length ? (
-                  <div class="rep-list">
-                    {representatives.map((rep) => (
+                  <div class="rep-list legislator-list">
+                    {representatives.map((rep) => {
+                      const photoUrl = profilePhotoUrl(rep.photo || rep.photo_url);
+
+                      return (
                       <article>
-                        <h3>
-                          <a href={`/people/${repSlug(rep)}`}>{repName(rep)}</a>
-                        </h3>
-                        <p>
-                          {[rep.party, rep.chamber, rep.district].filter(Boolean).join(" · ")}
-                        </p>
+                        <a class="rep-photo-link" href={`/people/${repSlug(rep)}`}>
+                          <img
+                            class:list={[!photoUrl && "profile-icon"]}
+                            src={photoUrl || profileIcon.src}
+                            alt={photoUrl ? `Photo of ${repName(rep)}` : ""}
+                            loading="lazy"
+                          />
+                        </a>
+                        <div>
+                          <h3>
+                            <a href={`/people/${repSlug(rep)}`}>{cleanText(repName(rep))}</a>
+                          </h3>
+                          <p>{repMeta(rep)}</p>
+                        </div>
                       </article>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p class="empty">No representatives returned.</p>
@@ -178,12 +220,14 @@ const candidates = candidatesFor();
                     {candidates.map((candidate) => (
                       <article>
                         <h3>
-                          <a href={candidatePath(candidate)}>{candidateName(candidate)}</a>
+                          <a href={candidatePath(candidate)}>{cleanText(candidateName(candidate))}</a>
                         </h3>
                         <p>
-                          {[candidate.politicalParty, candidate.office, candidate.district && `District ${candidate.district}`]
-                            .filter(Boolean)
-                            .join(" · ")}
+                          {joinClean([
+                            candidate.politicalParty,
+                            candidate.office,
+                            candidate.district && `District ${candidate.district}`,
+                          ])}
                         </p>
                       </article>
                     ))}
@@ -202,8 +246,8 @@ const candidates = candidatesFor();
                 <div class="article-list">
                   {articles.map((article) => (
                     <article>
-                      <h3><a href={article.url}>{article.title}</a></h3>
-                      {article.publisher && <p>{article.publisher}</p>}
+                      <h3><a href={article.url}>{articleTitle(article)}</a></h3>
+                      {articlePublisher(article) && <p>{articlePublisher(article)}</p>}
                     </article>
                   ))}
                 </div>
@@ -329,6 +373,33 @@ const candidates = candidatesFor();
     border: 1px solid #d1d5db;
     border-radius: 8px;
     padding: 14px;
+  }
+
+  .legislator-list article {
+    align-items: start;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 64px 1fr;
+  }
+
+  .rep-photo-link {
+    display: block;
+  }
+
+  .rep-photo-link img {
+    aspect-ratio: 4 / 5;
+    border: 2px solid #1f2933;
+    border-radius: 10px;
+    box-sizing: border-box;
+    display: block;
+    height: 80px;
+    object-fit: cover;
+    object-position: center top;
+    width: 64px;
+  }
+
+  .rep-photo-link img.profile-icon {
+    object-fit: cover;
   }
 
   h3 {

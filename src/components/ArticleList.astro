@@ -1,8 +1,10 @@
 ---
+import { cleanText } from "../lib/text";
+
 const { articles = [], emptyText = "No articles found.", compact = false } = Astro.props;
 
 function previewText(text = "", maxLength = compact ? 140 : 220) {
-  const normalized = String(text).replace(/\s+/g, " ").trim();
+  const normalized = cleanText(text).replace(/\s+/g, " ").trim();
   if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, maxLength).trim()}...`;
 }
@@ -26,7 +28,7 @@ function relationLabels(article = {}) {
       .map((person) => person.matched_name || person.legislator_name_raw)
       .filter(Boolean),
     ...(article.issueAreas || []).map((issue) => issue.issue_area).filter(Boolean),
-  ].slice(0, compact ? 4 : 8);
+  ].map(cleanText).slice(0, compact ? 4 : 8);
 }
 ---
 
@@ -35,15 +37,15 @@ function relationLabels(article = {}) {
     {articles.map((article) => (
       <article class="article-card">
         <div class="article-topline">
-          {article.resource_type && <span>{article.resource_type}</span>}
+          {article.resource_type && <span>{cleanText(article.resource_type)}</span>}
           {articleDate(article) && <span>{articleDate(article)}</span>}
         </div>
 
         <h3>
-          <a href={article.url}>{article.title}</a>
+          <a href={article.url}>{cleanText(article.title)}</a>
         </h3>
 
-        {article.publisher && <p class="publisher">{article.publisher}</p>}
+        {article.publisher && <p class="publisher">{cleanText(article.publisher)}</p>}
         {article.summary && <p>{previewText(article.summary)}</p>}
 
         {relationLabels(article).length > 0 && (
