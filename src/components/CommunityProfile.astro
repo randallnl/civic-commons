@@ -1,6 +1,8 @@
 ---
 import TopNav from "./TopNav.astro";
 import communityPlaceholder from "../assets/community_profile_placeholder.png";
+import { candidateName, candidatePath } from "../lib/candidatesApi";
+import { communityPath } from "../lib/communitiesApi";
 import { repName, repSlug } from "../lib/repsApi";
 
 const { community, meta = {}, error = "" } = Astro.props;
@@ -36,15 +38,33 @@ function articlesFor() {
   return community?.relatedArticles || community?.articles || [];
 }
 
+function districtsFor() {
+  return community?.districts || community?.communities || community?.relatedDistricts || [];
+}
+
+function candidatesFor() {
+  return community?.candidates || community?.candidateSummary?.candidates || [];
+}
+
 function bodyLabel() {
   const body = String(community?.chamber || community?.body || "").toLowerCase();
   if (body === "senate" || body === "s") return "Senate";
   return "House";
 }
 
+function profileLabel() {
+  return community?.profileLabel || `${bodyLabel()} District`;
+}
+
+function townProfilePath(town = "") {
+  return `/communities/towns/${encodeURIComponent(town)}`;
+}
+
 const towns = townsFor();
 const representatives = representativesFor();
 const articles = articlesFor();
+const districts = districtsFor();
+const candidates = candidatesFor();
 ---
 
 <html lang="en">
@@ -75,7 +95,7 @@ const articles = articlesFor();
             />
 
             <div class="hero-copy">
-              <p class="eyebrow">{bodyLabel()} District</p>
+              <p class="eyebrow">{profileLabel()}</p>
               <h1>{community.name}</h1>
 
               <div class="hero-meta">
@@ -83,12 +103,29 @@ const articles = articlesFor();
                 {community.county && <span>{community.county}</span>}
                 {community.seats && <span>{community.seats} seats</span>}
                 {community.floterial && <span>Floterial</span>}
+                {community.districtCount && <span>{community.districtCount} districts</span>}
+                {community.representativeCount && <span>{community.representativeCount} reps</span>}
               </div>
             </div>
           </section>
 
           <section class="content-grid">
             <div class="stack">
+              {districts.length > 0 && (
+                <section class="panel">
+                  <div class="section-heading">
+                    <p class="eyebrow">Districts</p>
+                    <h2>District Profiles</h2>
+                  </div>
+
+                  <div class="chips">
+                    {districts.map((district) => (
+                      <a href={communityPath(district)}>{district.name || district.label}</a>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               <section class="panel">
                 <div class="section-heading">
                   <p class="eyebrow">Towns</p>
@@ -98,7 +135,7 @@ const articles = articlesFor();
                 {towns.length ? (
                   <div class="chips">
                     {towns.map((town) => (
-                      <a href={`/articles?town=${encodeURIComponent(town)}`}>{town}</a>
+                      <a href={townProfilePath(town)}>{town}</a>
                     ))}
                   </div>
                 ) : (
@@ -129,6 +166,30 @@ const articles = articlesFor();
                   <p class="empty">No representatives returned.</p>
                 )}
               </section>
+
+              {candidates.length > 0 && (
+                <section class="panel">
+                  <div class="section-heading">
+                    <p class="eyebrow">Candidates</p>
+                    <h2>Current Candidates</h2>
+                  </div>
+
+                  <div class="rep-list">
+                    {candidates.map((candidate) => (
+                      <article>
+                        <h3>
+                          <a href={candidatePath(candidate)}>{candidateName(candidate)}</a>
+                        </h3>
+                        <p>
+                          {[candidate.politicalParty, candidate.office, candidate.district && `District ${candidate.district}`]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
 
             <aside class="panel">

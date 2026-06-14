@@ -23,7 +23,6 @@ const COUNTY_NAMES = [
 ];
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
-const body = Astro.url.searchParams.get("body")?.trim() || "house";
 const articleLimit = Number(Astro.url.searchParams.get("articleLimit") || 3);
 
 let countyGroups = [];
@@ -33,7 +32,6 @@ let loadError = "";
 try {
   const data = await getCountyGroups({
     q,
-    body,
     articleLimit,
   });
   countyGroups = data.counties || [];
@@ -44,28 +42,28 @@ try {
 
 async function getCountyGroups({
   q = "",
-  body = "house",
   articleLimit = 3,
 } = {}) {
-  const results = await Promise.allSettled(
-    COUNTY_NAMES.map(async (county) => {
-      const data = await getCountyCommunity(county, {
-        body,
-        articleLimit,
-      });
-      return normalizeCountyGroup(data, county);
-    }),
-  );
+  const [countyResults, senateResult] = await Promise.all([
+    Promise.allSettled(
+      COUNTY_NAMES.map(async (county) => {
+        const data = await getCountyCommunity(county, { articleLimit });
+        return normalizeCountyGroup(data, county);
+      }),
+    ),
+    getCommunities({ body: "senate", limit: 50, articleLimit }).catch(() => null),
+  ]);
 
-  let counties = results
+  let counties = countyResults
     .filter((result) => result.status === "fulfilled")
     .map((result) => result.value)
     .filter(Boolean);
+  addSenateDistrictsToCounties(counties, senateResult?.communities || []);
 
   if (!counties.length) {
     const fallback = await getCommunities({
       q,
-      body,
+      body: "",
       limit: 500,
       offset: 0,
       articleLimit,
@@ -79,9 +77,47 @@ async function getCountyGroups({
     counties,
     meta: {
       total: counties.length,
-      body,
     },
   };
+}
+
+function addSenateDistrictsToCounties(counties = [], senateDistricts = []) {
+  for (const county of counties) {
+    const townSet = new Set([...county.towns].map(normalizeTownKey));
+    const matches = senateDistricts.filter((district) =>
+      townsFor(district).some((town) => townSet.has(normalizeTownKey(town))),
+    );
+
+    county.senateCommunities = uniqueCommunities([
+      ...(county.senateCommunities || []),
+      ...matches,
+    ]);
+    county.communities = uniqueCommunities([
+      ...(county.communities || []),
+      ...county.senateCommunities,
+    ]);
+
+    for (const district of county.senateCommunities) {
+      for (const rep of representativesFor(district)) {
+        const key = rep.personid || rep.id || repName(rep);
+        if (key) county.representatives.set(key, rep);
+      }
+    }
+    county.representativeCount = Math.max(
+      county.representativeCount || 0,
+      county.representatives.size,
+    );
+  }
+}
+
+function uniqueCommunities(items = []) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = item.path || `${item.body || item.chamber}-${item.district}-${item.name}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function normalizeCountyGroup(data = {}, fallbackCounty = "") {
@@ -176,17 +212,22 @@ function cleanTown(value = "") {
   return String(value).trim();
 }
 
+function normalizeTownKey(value = "") {
+  return String(value).toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 function communityName(community = {}) {
   return (
     community.name ||
     community.district_label ||
     community.districtLabel ||
-    `${bodyLabel()} District ${formatDistrictNumber(community.district || community.raw_district || "")}`
+    `${bodyLabel(community.body || community.chamber)} District ${formatDistrictNumber(community.district || community.raw_district || "")}`
   );
 }
 
-function bodyLabel(value = body) {
-  return String(value).toLowerCase() === "senate" ? "Senate" : "House";
+function bodyLabel(value = "") {
+  const normalized = String(value).toLowerCase();
+  return normalized === "senate" || normalized === "s" ? "Senate" : "House";
 }
 
 function representativesFor(community = {}) {
@@ -231,6 +272,14 @@ function countyMatchesQuery(county = {}, query = "") {
     .toLowerCase();
 
   return haystack.includes(needle);
+}
+
+function countyProfilePath(county = {}) {
+  return `/communities/counties/${encodeURIComponent(county.slug || slugify(county.county))}`;
+}
+
+function townProfilePath(town = "") {
+  return `/communities/towns/${encodeURIComponent(town)}`;
 }
 
 function slugify(value = "") {
@@ -323,10 +372,6 @@ const total = Number(meta.total || meta.count || countyGroups.length);
             value={q}
             placeholder="Search town, county, or district"
           />
-          <select name="body" aria-label="Legislative body">
-            <option value="house" selected={body === "house"}>House</option>
-            <option value="senate" selected={body === "senate"}>Senate</option>
-          </select>
           <input type="hidden" name="articleLimit" value={articleLimit} />
           <button type="submit">Search</button>
         </form>
@@ -335,7 +380,7 @@ const total = Number(meta.total || meta.count || countyGroups.length);
       <section class="results">
         <div class="results-heading">
           <h2>{countyGroups.length} Counties</h2>
-          {(q || body !== "house") && <a href="/communities">Clear search</a>}
+          {q && <a href="/communities">Clear search</a>}
         </div>
 
         {loadError ? (
@@ -345,31 +390,43 @@ const total = Number(meta.total || meta.count || countyGroups.length);
             {countyGroups.map((countyGroup) => {
               const towns = [...countyGroup.towns].sort((a, b) => a.localeCompare(b));
               const representatives = [...countyGroup.representatives.values()];
-              const previewDistricts = countyGroup.communities.slice(0, 6);
+              const senateDistricts = countyGroup.communities.filter((community) =>
+                String(community.body || community.chamber).toLowerCase().startsWith("s"),
+              );
+              const houseDistricts = countyGroup.communities.filter((community) =>
+                !String(community.body || community.chamber).toLowerCase().startsWith("s"),
+              );
+              const previewDistricts = uniqueCommunities([
+                ...senateDistricts.slice(0, 3),
+                ...houseDistricts.slice(0, senateDistricts.length ? 5 : 8),
+              ]);
+              const districtTotal = countyGroup.communities.length;
               const hiddenDistrictCount = Math.max(
                 0,
-                (countyGroup.districtCount || countyGroup.communities.length) -
-                  previewDistricts.length,
+                districtTotal - previewDistricts.length,
               );
               const representativeCount =
                 countyGroup.representativeCount || representatives.length;
+              const profileHref = countyProfilePath(countyGroup);
 
               return (
               <article class="county-card">
                 <div class="topline">
-                  <span>{bodyLabel()}</span>
-                  <span>{countyGroup.districtCount || countyGroup.communities.length} districts</span>
+                  <span>House + Senate</span>
+                  <span>{districtTotal} districts</span>
                   {representativeCount > 0 && <span>{representativeCount} reps</span>}
                 </div>
 
-                <h3>{countyGroup.county}</h3>
+                <h3><a href={profileHref}>{countyGroup.county}</a></h3>
 
                 {towns.length > 0 && (
                   <div class="towns">
                     {towns.slice(0, 12).map((town) => (
-                      <a href={`/articles?town=${encodeURIComponent(town)}`}>{town}</a>
+                      <a href={townProfilePath(town)}>{town}</a>
                     ))}
-                    {towns.length > 12 && <span>+{towns.length - 12} more</span>}
+                    {towns.length > 12 && (
+                      <a href={profileHref}>+{towns.length - 12} more</a>
+                    )}
                   </div>
                 )}
 
@@ -378,7 +435,9 @@ const total = Number(meta.total || meta.count || countyGroups.length);
                   {previewDistricts.map((community) => (
                     <a href={communityPath(community)}>{communityName(community)}</a>
                   ))}
-                  {hiddenDistrictCount > 0 && <span>+{hiddenDistrictCount} more districts</span>}
+                  {hiddenDistrictCount > 0 && (
+                    <a href={profileHref}>+{hiddenDistrictCount} more districts</a>
+                  )}
                 </div>
 
                 {representatives.length > 0 && (
@@ -456,7 +515,7 @@ const total = Number(meta.total || meta.count || countyGroups.length);
   .search {
     display: grid;
     gap: 12px;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     max-width: 720px;
   }
 

@@ -1,0 +1,67 @@
+---
+export const prerender = false;
+
+import CommunityProfile from "../../../components/CommunityProfile.astro";
+import { getTownCommunity } from "../../../lib/communitiesApi";
+
+const { town = "" } = Astro.params;
+const articleLimit = Number(Astro.url.searchParams.get("articleLimit") || 10);
+
+let community = null;
+let meta = {};
+let error = "";
+
+try {
+  const data = await getTownCommunity(town, { articleLimit });
+  community = normalizeTownProfile(data, town);
+  meta = data.meta || {};
+} catch (loadError) {
+  error = loadError?.message || "Unable to load town profile.";
+}
+
+function normalizeTownProfile(data = {}, fallbackTown = "") {
+  const townData = data.town || data.community || data;
+  const name = townData.name || titleCase(decodeURIComponent(fallbackTown));
+
+  return {
+    ...townData,
+    name,
+    profileLabel: "Town Profile",
+    townsRepresented: [name],
+    districts: data.districts || townData.districts || [],
+    representatives:
+      data.representatives ||
+      townData.representatives ||
+      data.reps ||
+      [],
+    candidates:
+      data.candidates ||
+      townData.candidates ||
+      [
+        ...(data.groups?.candidates?.senate || []),
+        ...(data.groups?.candidates?.house || []),
+      ] ||
+      [],
+    relatedArticles:
+      data.relatedArticles ||
+      data.articles ||
+      townData.relatedArticles ||
+      townData.articles ||
+      [],
+    representativeCount:
+      data.representativeSummary?.count ||
+      data.representatives?.length ||
+      townData.representativeCount,
+  };
+}
+
+function titleCase(value = "") {
+  return String(value)
+    .split(/-|_/)
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+---
+
+<CommunityProfile community={community} meta={meta} error={error} />

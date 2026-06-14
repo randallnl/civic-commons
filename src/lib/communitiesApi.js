@@ -83,7 +83,7 @@ export async function getSenateCommunity(district, {
 
 export async function getCountyCommunity(county, {
   apiBase = communitiesApiBase(),
-  body = "house",
+  body = "",
   articleLimit = 3,
 } = {}) {
   const params = new URLSearchParams();
@@ -97,6 +97,25 @@ export async function getCountyCommunity(county, {
 
   if (!response.ok || data.error || data.message || data.status === "error") {
     throw new Error("County community data is temporarily unavailable.");
+  }
+
+  return data;
+}
+
+export async function getTownCommunity(town, {
+  apiBase = communitiesApiBase(),
+  articleLimit = 10,
+} = {}) {
+  const params = new URLSearchParams();
+  if (articleLimit) params.set("articleLimit", String(articleLimit));
+
+  const response = await fetch(
+    `${apiBase}/communities/towns/${encodeURIComponent(town)}?${params}`,
+  );
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || data.error || data.message || data.status === "error") {
+    throw new Error("Town community data is temporarily unavailable.");
   }
 
   return data;

@@ -1,0 +1,120 @@
+---
+export const prerender = false;
+
+import CommunityProfile from "../../../components/CommunityProfile.astro";
+import { getCommunities, getCountyCommunity } from "../../../lib/communitiesApi";
+
+const { county = "" } = Astro.params;
+const articleLimit = Number(Astro.url.searchParams.get("articleLimit") || 10);
+
+let community = null;
+let meta = {};
+let error = "";
+
+try {
+  const [data, senateData] = await Promise.all([
+    getCountyCommunity(county, { articleLimit }),
+    getCommunities({ body: "senate", limit: 50, articleLimit }).catch(() => null),
+  ]);
+  community = normalizeCountyProfile(data, county, senateData?.communities || []);
+  meta = data.meta || {};
+} catch (loadError) {
+  error = loadError?.message || "Unable to load county profile.";
+}
+
+function normalizeCountyProfile(data = {}, fallbackCounty = "", senateDistricts = []) {
+  const countyData =
+    data.counties?.[0] ||
+    data.county ||
+    data.community ||
+    data;
+  const name = countyData.name || countyData.county || titleCase(fallbackCounty);
+  const districts =
+    countyData.districts ||
+    countyData.communities ||
+    data.districts ||
+    data.communities ||
+    [];
+  const towns =
+    countyData.townsRepresented ||
+    countyData.towns ||
+    countyData.towns_represented ||
+    [];
+  const townSet = new Set(towns.map(normalizeTownKey));
+  const matchedSenateDistricts = senateDistricts.filter((district) =>
+    townsFor(district).some((town) => townSet.has(normalizeTownKey(town))),
+  );
+
+  const allDistricts = uniqueDistricts([...matchedSenateDistricts, ...districts]);
+
+  return {
+    ...countyData,
+    name,
+    county: name,
+    profileLabel: "County Profile",
+    districtCount: allDistricts.length,
+    representativeCount: countyData.representativeCount,
+    townsRepresented: towns,
+    districts: allDistricts,
+    representatives:
+      countyData.representatives ||
+      countyData.reps ||
+      countyData.legislators ||
+      data.representatives ||
+      [],
+    candidates: countyData.candidates || data.candidates || [],
+    relatedArticles:
+      countyData.relatedArticles ||
+      countyData.articles ||
+      data.relatedArticles ||
+      data.articles ||
+      [],
+  };
+}
+
+function townsFor(community = {}) {
+  const value =
+    community.townsRepresented ||
+    community.towns ||
+    community.towns_represented ||
+    "";
+  if (Array.isArray(value)) return value.map(cleanTown).filter(Boolean);
+
+  return String(value)
+    .split(/;|,/)
+    .map(cleanTown)
+    .filter(Boolean);
+}
+
+function cleanTown(value = "") {
+  if (typeof value === "object" && value !== null) {
+    return String(value.town || value.name || value.label || "").trim();
+  }
+
+  return String(value).trim();
+}
+
+function normalizeTownKey(value = "") {
+  return String(value).toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function uniqueDistricts(items = []) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = item.path || `${item.body || item.chamber}-${item.district}-${item.name}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function titleCase(value = "") {
+  return String(value)
+    .split(/-|_/)
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+---
+
+<CommunityProfile community={community} meta={meta} error={error} />
