@@ -13,10 +13,37 @@ let error = "";
 
 try {
   const data = await getHouseCommunity(county, district, { articleLimit });
-  community = data.community;
+  community = normalizeHouseProfile(data.community);
   meta = data.meta || {};
 } catch (loadError) {
   error = loadError?.message || "Unable to load community profile.";
+}
+
+function normalizeHouseProfile(community = {}) {
+  const senators =
+    community.senators ||
+    community.senateRepresentatives ||
+    community.senate_representatives ||
+    [];
+  const representatives = [
+    ...(community.representatives || []),
+    ...senators,
+  ];
+
+  return {
+    ...community,
+    representatives,
+    representativeCount:
+      representatives.length ||
+      community.representativeSummary?.count ||
+      community.representativeCount,
+    candidates:
+      community.candidates ||
+      [
+        ...(community.groups?.candidates?.senate || []),
+        ...(community.groups?.candidates?.house || []),
+      ],
+  };
 }
 ---
 
