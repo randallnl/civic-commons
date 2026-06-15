@@ -6,6 +6,7 @@ import headingBanner from "../assets/heading_banner.png";
 import { getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
+import { cleanText } from "../lib/text";
 
 let recentArticles = [];
 let recentBills = [];
@@ -148,7 +149,7 @@ try {
                 <a href={`/articles?town=${encodeURIComponent(article.towns?.[0]?.town || article.towns?.[0]?.name || "")}`}>
                   {article.towns?.[0]?.town || article.towns?.[0]?.name || "Community articles"}
                 </a>
-                <span>{article.title}</span>
+                <span>{cleanText(article.title)}</span>
               </li>
             ))}
           </ul>
@@ -196,8 +197,8 @@ try {
             ) : (
               recentArticles.map((article) => (
                 <li>
-                  <a href={article.url}>{article.title}</a>
-                  <span>{article.publisher || article.resource_type}</span>
+                  <a href={article.url}>{cleanText(article.title)}</a>
+                  <span>{cleanText(article.publisher || article.resource_type)}</span>
                 </li>
               ))
             )}
