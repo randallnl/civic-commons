@@ -34,14 +34,7 @@ function normalizeTownProfile(data = {}, fallbackTown = "") {
       townData.representatives ||
       data.reps ||
       [],
-    candidates:
-      data.candidates ||
-      townData.candidates ||
-      [
-        ...(data.groups?.candidates?.senate || []),
-        ...(data.groups?.candidates?.house || []),
-      ] ||
-      [],
+    candidates: candidatesForTown(data, townData),
     relatedArticles:
       data.relatedArticles ||
       data.articles ||
@@ -53,6 +46,78 @@ function normalizeTownProfile(data = {}, fallbackTown = "") {
       data.representatives?.length ||
       townData.representativeCount,
   };
+}
+
+function candidatesForTown(data = {}, townData = {}) {
+  return uniqueCandidates([
+    ...(data.candidates || []),
+    ...(townData.candidates || []),
+    ...(data.candidateSummary?.candidates || []),
+    ...(townData.candidateSummary?.candidates || []),
+    ...(data.groups?.candidates?.senate || []),
+    ...(data.groups?.candidates?.house || []),
+    ...findNestedCandidates(data.groups),
+    ...findNestedCandidates(townData.groups),
+  ]);
+}
+
+function findNestedCandidates(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) =>
+      looksLikeCandidate(item) ? [item] : findNestedCandidates(item),
+    );
+  }
+
+  if (typeof value === "object") {
+    return Object.values(value).flatMap(findNestedCandidates);
+  }
+
+  return [];
+}
+
+function uniqueCandidates(candidates = []) {
+  const seen = new Set();
+
+  return candidates.filter((candidate) => {
+    if (!looksLikeCandidate(candidate)) return false;
+
+    const key = [
+      candidate.slug,
+      candidate.filerEntityNumber,
+      candidate.name,
+      candidate.candidateFirstName,
+      candidate.candidateLastName,
+      candidate.office,
+      candidate.district,
+    ]
+      .filter(Boolean)
+      .join("|");
+
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function looksLikeCandidate(value) {
+  return !!(
+    value &&
+    typeof value === "object" &&
+    (
+      value.slug ||
+      value.filerEntityNumber ||
+      value.candidateFirstName ||
+      value.candidateLastName
+    ) &&
+    (
+      value.office ||
+      value.officeType ||
+      value.politicalParty ||
+      value.electionYear
+    )
+  );
 }
 
 function titleCase(value = "") {
