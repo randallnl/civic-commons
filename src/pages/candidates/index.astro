@@ -4,37 +4,159 @@ export const prerender = false;
 import CandidateCard from "../../components/CandidateCard.astro";
 import TopNav from "../../components/TopNav.astro";
 import { getCandidates } from "../../lib/candidatesApi";
+import { getTownCommunity } from "../../lib/communitiesApi";
 
-const q = Astro.url.searchParams.get("q")?.trim() || "";
-const office = Astro.url.searchParams.get("office")?.trim() || "";
-const officeType = Astro.url.searchParams.get("officeType")?.trim() || "";
+const API_BASE =
+  import.meta.env.REP_LOOKUP_API_BASE ||
+  "https://api.nhciviccommons.com";
+
+const address = Astro.url.searchParams.get("address")?.trim() || "";
 const county = Astro.url.searchParams.get("county")?.trim() || "";
 const district = Astro.url.searchParams.get("district")?.trim() || "";
-const party = Astro.url.searchParams.get("party")?.trim() || "";
-const electionYear = Astro.url.searchParams.get("electionYear")?.trim() || "2026";
+const town = Astro.url.searchParams.get("town")?.trim() || "";
+const electionYear = "2026";
 
 let candidates = [];
 let meta = {};
 let error = "";
+let resultContext = "";
 
 try {
-  const data = await getCandidates({
-    q,
-    office,
-    officeType,
-    county,
-    district,
-    party,
-    electionYear,
-    limit: 100,
-  });
-  candidates = data.candidates || [];
-  meta = data.meta || {};
+  if (address) {
+    const response = await fetch(`${API_BASE}/reps/lookup`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ address }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Unable to look up candidates for that address.");
+    }
+
+    candidates = candidatesFromLookup(data);
+    meta = data.meta || {};
+    resultContext = formatAddress(data.normalizedInput) || data.address || address;
+  } else if (town) {
+    const data = await getTownCommunity(town, { articleLimit: 1 });
+    candidates = candidatesFromCommunity(data);
+    meta = data.meta || {};
+    resultContext = data.town?.name || data.community?.name || town;
+  } else {
+    const data = await getCandidates({
+      county,
+      district,
+      electionYear,
+      limit: 100,
+    });
+    candidates = data.candidates || [];
+    meta = data.meta || {};
+  }
 } catch (loadError) {
   error = loadError?.message || "Unable to load candidates.";
 }
 
-const hasFilters = q || office || officeType || county || district || party || electionYear !== "2026";
+const hasFilters = address || county || district || town;
+const resultCount = meta.count ?? candidates.length;
+
+function candidatesFromLookup(data = {}) {
+  const candidateGroups = data.groups?.candidates || {};
+  return uniqueCandidates([
+    ...(data.candidates || []),
+    ...(candidateGroups.senate || []),
+    ...(candidateGroups.house || []),
+    ...findNestedCandidates(candidateGroups),
+  ]);
+}
+
+function candidatesFromCommunity(data = {}) {
+  const community = data.town || data.community || data;
+
+  return uniqueCandidates([
+    ...(data.candidates || []),
+    ...(community.candidates || []),
+    ...(data.candidateSummary?.candidates || []),
+    ...(community.candidateSummary?.candidates || []),
+    ...(data.groups?.candidates?.senate || []),
+    ...(data.groups?.candidates?.house || []),
+    ...findNestedCandidates(data.groups),
+    ...findNestedCandidates(community.groups),
+  ]);
+}
+
+function findNestedCandidates(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) =>
+      looksLikeCandidate(item) ? [item] : findNestedCandidates(item),
+    );
+  }
+
+  if (typeof value === "object") {
+    return Object.values(value).flatMap(findNestedCandidates);
+  }
+
+  return [];
+}
+
+function uniqueCandidates(items = []) {
+  const seen = new Set();
+
+  return items.filter((candidate) => {
+    if (!looksLikeCandidate(candidate)) return false;
+
+    const key = [
+      candidate.slug,
+      candidate.filerEntityNumber,
+      candidate.name,
+      candidate.candidateFirstName,
+      candidate.candidateLastName,
+      candidate.office,
+      candidate.county,
+      candidate.district,
+    ]
+      .filter(Boolean)
+      .join("|");
+
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function looksLikeCandidate(value) {
+  return !!(
+    value &&
+    typeof value === "object" &&
+    (
+      value.slug ||
+      value.filerEntityNumber ||
+      value.candidateFirstName ||
+      value.candidateLastName
+    ) &&
+    (
+      value.office ||
+      value.officeType ||
+      value.politicalParty ||
+      value.electionYear
+    )
+  );
+}
+
+function formatAddress(normalized = {}) {
+  return [
+    normalized.line1,
+    normalized.city,
+    normalized.state,
+    normalized.zip,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
 ---
 
 <html lang="en">
@@ -42,7 +164,7 @@ const hasFilters = q || office || officeType || county || district || party || e
     <title>Candidates | Civic Commons</title>
     <meta
       name="description"
-      content="Browse New Hampshire candidates by office, party, district, and election year."
+      content="Browse New Hampshire candidates by address, district, county, and town."
     />
   </head>
 
@@ -55,19 +177,23 @@ const hasFilters = q || office || officeType || county || district || party || e
         <p class="eyebrow">Candidates</p>
         <h1>Browse candidates running in New Hampshire.</h1>
 
+        <form class="address-lookup" action="/candidates" method="get">
+          <label for="address">Find candidates for your address</label>
+
+          <div class="address-row">
+            <input
+              id="address"
+              type="text"
+              name="address"
+              value={address}
+              placeholder="72 Concord St, Manchester, NH"
+              autocomplete="street-address"
+            />
+            <button type="submit">Find Candidates</button>
+          </div>
+        </form>
+
         <form class="filters" action="/candidates" method="get">
-          <label>
-            <span>Search</span>
-            <input type="search" name="q" value={q} placeholder="bergeron..." />
-          </label>
-          <label>
-            <span>Office</span>
-            <input type="text" name="office" value={office} placeholder="State Representative" />
-          </label>
-          <label>
-            <span>Office Type</span>
-            <input type="text" name="officeType" value={officeType} placeholder="General Court" />
-          </label>
           <label>
             <span>County</span>
             <input type="text" name="county" value={county} placeholder="Hillsborough" />
@@ -77,12 +203,8 @@ const hasFilters = q || office || officeType || county || district || party || e
             <input type="text" name="district" value={district} placeholder="2" />
           </label>
           <label>
-            <span>Party</span>
-            <input type="text" name="party" value={party} placeholder="Republican Party" />
-          </label>
-          <label>
-            <span>Year</span>
-            <input type="number" name="electionYear" value={electionYear} min="2024" max="2030" />
+            <span>Town</span>
+            <input type="text" name="town" value={town} placeholder="Manchester" />
           </label>
           <button type="submit">Filter</button>
         </form>
@@ -93,7 +215,10 @@ const hasFilters = q || office || officeType || county || district || party || e
       ) : (
         <section class="results">
           <div class="results-heading">
-            <h2>{meta.count ?? candidates.length} Candidates</h2>
+            <div>
+              <h2>{resultCount} Candidates</h2>
+              {resultContext && <p>Showing matches for {resultContext}</p>}
+            </div>
             {hasFilters && <a href="/candidates">Clear filters</a>}
           </div>
 
@@ -154,11 +279,34 @@ const hasFilters = q || office || officeType || county || district || party || e
     max-width: 920px;
   }
 
+  .address-lookup,
+  .filters {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 #1f2933;
+    padding: 16px;
+  }
+
+  .address-lookup {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .address-row,
   .filters {
     align-items: end;
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .address-row {
+    grid-template-columns: minmax(0, 1fr) 180px;
+  }
+
+  .filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 150px;
   }
 
   label {
@@ -205,6 +353,12 @@ const hasFilters = q || office || officeType || county || district || party || e
     margin: 0;
   }
 
+  .results-heading p {
+    color: #6b7280;
+    font-weight: 800;
+    margin: 6px 0 0;
+  }
+
   .candidate-grid {
     display: grid;
     gap: 16px;
@@ -223,6 +377,7 @@ const hasFilters = q || office || officeType || county || district || party || e
   }
 
   @media (max-width: 900px) {
+    .address-row,
     .filters,
     .candidate-grid {
       grid-template-columns: 1fr;
