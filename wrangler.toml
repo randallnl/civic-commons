@@ -1,2 +1,6 @@
 name = "civic-commons"
 compatibility_date = "2026-06-04"
+
+[[r2_buckets]]
+binding = "organization-assets"
+bucket_name = "organization-assets"

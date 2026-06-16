@@ -9,6 +9,12 @@
 		"directory": "./dist",
 		"binding": "ASSETS"
 	},
+	"r2_buckets": [
+		{
+			"binding": "organization-assets",
+			"bucket_name": "organization-assets"
+		}
+	],
 	"observability": {
 		"enabled": true
 	}

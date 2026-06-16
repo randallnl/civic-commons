@@ -74,8 +74,8 @@ function parseOrganizationProfiles(csv) {
         city: row.City || "",
         state: row.State || "",
         serviceArea: row["Service Area"] || "",
-        logoUrl: imageUrl(row["Logo URL"] || ""),
-        bannerImageUrl: imageUrl(row["Banner Image URL"] || ""),
+        logoUrl: organizationAssetUrl(row["Logo URL"] || ""),
+        bannerImageUrl: organizationAssetUrl(row["Banner Image URL"] || ""),
         foundedYear: row["Founded Year"] || "",
         approved: /^yes$/i.test(row.Approved || ""),
         notes: row.Notes || "",
@@ -181,11 +181,13 @@ export function normalizeBillCode(value = "") {
   return String(value).toUpperCase().replace(/\s+/g, "");
 }
 
-function imageUrl(value = "") {
-  const url = String(value).trim();
-  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-  if (driveMatch) {
-    return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
-  }
-  return url;
+function organizationAssetUrl(value = "") {
+  const key = String(value).trim();
+  if (!key || key === "...") return "";
+  if (/^https?:\/\//i.test(key)) return key;
+
+  return `/api/organization-assets/${key
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/")}`;
 }
