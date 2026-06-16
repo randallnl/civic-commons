@@ -3,24 +3,30 @@ const DEFAULT_SHEET_BASE =
 
 const DEFAULT_PROFILE_CSV_URL = `${DEFAULT_SHEET_BASE}?gid=0&single=true&output=csv`;
 const DEFAULT_COMMENTS_CSV_URL = `${DEFAULT_SHEET_BASE}?gid=1943709711&single=true&output=csv`;
+const DEFAULT_ENDORSEMENTS_CSV_URL = `${DEFAULT_SHEET_BASE}?gid=1964007252&single=true&output=csv`;
 
 let organizationsCache = null;
 let commentsCache = null;
+let endorsementsCache = null;
 
 export async function getOrganizations({
   profileCsvUrl =
     import.meta.env.ORGANIZATIONS_PROFILE_CSV_URL || DEFAULT_PROFILE_CSV_URL,
   commentsCsvUrl =
     import.meta.env.ORGANIZATIONS_COMMENTS_CSV_URL || DEFAULT_COMMENTS_CSV_URL,
+  endorsementsCsvUrl =
+    import.meta.env.ORGANIZATIONS_ENDORSEMENTS_CSV_URL || DEFAULT_ENDORSEMENTS_CSV_URL,
 } = {}) {
-  const [organizations, comments] = await Promise.all([
+  const [organizations, comments, endorsements] = await Promise.all([
     getOrganizationProfiles(profileCsvUrl),
     getOrganizationComments(commentsCsvUrl),
+    getOrganizationEndorsements(endorsementsCsvUrl),
   ]);
 
   return organizations.map((organization) => ({
     ...organization,
     comments: commentsForOrganization(comments, organization),
+    endorsements: endorsementsForOrganization(endorsements, organization),
   }));
 }
 
@@ -51,6 +57,18 @@ async function getOrganizationComments(csvUrl) {
 
   commentsCache = parseOrganizationComments(await response.text());
   return commentsCache;
+}
+
+async function getOrganizationEndorsements(csvUrl) {
+  if (endorsementsCache) return endorsementsCache;
+
+  const response = await fetch(csvUrl);
+  if (!response.ok) {
+    throw new Error(`Unable to load organization endorsements: ${response.status}`);
+  }
+
+  endorsementsCache = parseOrganizationEndorsements(await response.text());
+  return endorsementsCache;
 }
 
 function parseOrganizationProfiles(csv) {
@@ -99,11 +117,61 @@ function parseOrganizationComments(csv) {
     .filter((comment) => comment.organization && comment.comment);
 }
 
+function parseOrganizationEndorsements(csv) {
+  return rowsFromCsv(csv)
+    .map((row) => ({
+      organization: row.Organization || "",
+      organizationSlug: slugify(row.Organization || ""),
+      candidateName: row["Candidate Name"] || "",
+      candidateSlug: row["Candidate Slug"] || "",
+      candidateSlugKey: slugify(row["Candidate Slug"] || row["Candidate Name"] || ""),
+      office: row.Office || "",
+      district: row.District || "",
+      electionYear: row["Election Year"] || "",
+      position: row.Position || "",
+      statement: row["Endorsement Statement"] || "",
+      date: row.Date || "",
+      status: row.Status || "",
+    }))
+    .filter((endorsement) =>
+      endorsement.organization &&
+      endorsement.candidateName &&
+      /^published$/i.test(endorsement.status || ""),
+    );
+}
+
 function commentsForOrganization(comments, organization) {
   return comments.filter((comment) => {
     const orgKey = slugify(comment.organization);
     return orgKey === organization.slug || comment.organization === organization.name;
   });
+}
+
+function endorsementsForOrganization(endorsements, organization) {
+  return endorsements.filter((endorsement) => {
+    const orgKey = slugify(endorsement.organization);
+    return orgKey === organization.slug || endorsement.organization === organization.name;
+  });
+}
+
+export function endorsementsForCandidate(organizations = [], candidate = {}, slug = "") {
+  const candidateKeys = new Set(
+    [
+      slug,
+      candidate.slug,
+      candidate.filerEntityNumber,
+      candidate.name,
+      [candidate.filerEntityNumber, candidate.name].filter(Boolean).join("-"),
+    ]
+      .filter(Boolean)
+      .map(slugify),
+  );
+
+  return organizations.flatMap((organization) =>
+    (organization.endorsements || [])
+      .filter((endorsement) => candidateKeys.has(endorsement.candidateSlugKey))
+      .map((endorsement) => ({ ...endorsement, organization })),
+  );
 }
 
 function rowsFromCsv(csv) {

@@ -144,6 +144,43 @@ function positionClass(position = "") {
                   <p class="empty">No comments have been published yet.</p>
                 )}
               </section>
+
+              <section class="panel">
+                <div class="section-heading">
+                  <p class="eyebrow">Endorsements</p>
+                  <h2>{organization.endorsements.length} Candidate Endorsements</h2>
+                </div>
+
+                {organization.endorsements.length ? (
+                  <div class="comment-list">
+                    {organization.endorsements.map((endorsement) => (
+                      <article>
+                        <div class="comment-topline">
+                          <a class="bill-link" href={`/candidates/${endorsement.candidateSlug}`}>
+                            {endorsement.candidateName}
+                          </a>
+                          {endorsement.position && (
+                            <span class:list={["position-pill", "endorse"]}>
+                              {endorsement.position}
+                            </span>
+                          )}
+                        </div>
+
+                        {endorsement.statement && <p>{endorsement.statement}</p>}
+
+                        <div class="comment-meta">
+                          {endorsement.office && <span>{endorsement.office}</span>}
+                          {endorsement.district && <span>{endorsement.district}</span>}
+                          {endorsement.electionYear && <span>{endorsement.electionYear}</span>}
+                          {endorsement.date && <span>{endorsement.date}</span>}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p class="empty">No candidate endorsements have been published yet.</p>
+                )}
+              </section>
             </div>
 
             <aside class="panel">
@@ -346,6 +383,12 @@ function positionClass(position = "") {
     background: #fee2e2;
     border-color: #fca5a5;
     color: #991b1b;
+  }
+
+  .position-pill.endorse {
+    background: #e7f7ec;
+    border-color: #86c894;
+    color: #166534;
   }
 
   .comment-meta {

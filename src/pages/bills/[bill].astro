@@ -5,6 +5,7 @@ import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import ArticleList from "../../components/ArticleList.astro";
 import TopNav from "../../components/TopNav.astro";
 import { getBillDetail, getBillTestimony, rollCallPath } from "../../lib/billsApi";
+import { getOrganizations, organizationPath } from "../../lib/organizationsApi";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const billCode = Astro.params.bill || "";
@@ -16,12 +17,14 @@ let testimony = [];
 let error = "";
 let trackedBill = null;
 let relatedArticles = [];
+let organizationComments = [];
 
 try {
-  const [detailData, testimonyData, trackedBills] = await Promise.all([
+  const [detailData, testimonyData, trackedBills, organizations] = await Promise.all([
     getBillDetail(billCode, { year }),
     getBillTestimony(billCode, { year }),
     getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
+    getOrganizations(),
   ]);
 
   bill = detailData.bill;
@@ -29,6 +32,7 @@ try {
   relatedArticles = detailData.relatedArticles || [];
   testimony = testimonyData.testimony || [];
   trackedBill = trackedBills.get(normalizeBillCode(bill?.condensedbillno || billCode));
+  organizationComments = commentsForBill(organizations, bill?.condensedbillno || billCode);
 } catch (loadError) {
   error = loadError?.message || "Unable to load bill details.";
 }
@@ -63,6 +67,16 @@ function cleanNamePart(value = "") {
 
 function billTitle() {
   return trackedBill?.name || bill?.condensedbillno || billCode;
+}
+
+function commentsForBill(organizations = [], code = "") {
+  const normalizedCode = normalizeBillCode(code);
+
+  return organizations.flatMap((organization) =>
+    (organization.comments || [])
+      .filter((comment) => normalizeBillCode(comment.bill || comment.billLabel) === normalizedCode)
+      .map((comment) => ({ ...comment, organization })),
+  );
 }
 ---
 
@@ -117,72 +131,108 @@ function billTitle() {
             </article>
           </section>
 
-          <section class="panel roll-panel">
-            <div class="section-heading">
-              <p class="eyebrow">Votes</p>
-              <h2>Roll Calls</h2>
-            </div>
-
-            {rollCalls.length ? (
-              <div class="roll-list">
-                {rollCalls.map((rollCall) => (
-                  <a
-                    class="roll-card"
-                    href={rollCallPath(
-                      bill.condensedbillno,
-                      rollCall.votesequencenumber,
-                      rollCall.sessionyear || bill.sessionyear,
-                    )}
-                  >
-                      <div class="roll-topline">
-                        <strong>{rollCall.question_motion || "Roll call"}</strong>
-                        {rollCall.votedate && <span>{formatDate(rollCall.votedate)}</span>}
-                      </div>
-                      {(rollCall.title1 || rollCall.title2) && (
-                        <p>{[rollCall.title1, rollCall.title2].filter(Boolean).join(" ")}</p>
-                      )}
-                      <div class="roll-counts">
-                        <span>Yeas {rollCall.yeas}</span>
-                        <span>Nays {rollCall.nays}</span>
-                        <span>Present {rollCall.present}</span>
-                        <span>Absent {rollCall.absent}</span>
-                      </div>
-                  </a>
-                ))}
+          <section class="vote-summary-grid">
+            <section class="panel roll-panel">
+              <div class="section-heading">
+                <p class="eyebrow">Votes</p>
+                <h2>Roll Calls</h2>
               </div>
-            ) : (
-              <p class="empty">No roll calls returned.</p>
-            )}
-          </section>
 
-          <section class="panel position-panel">
-            <div class="section-heading">
-              <p class="eyebrow">Position Count</p>
-              <h2>Public Testimony Summary</h2>
-            </div>
-            <BillPositionSummary bill={bill} />
+              {rollCalls.length ? (
+                <div class="roll-list">
+                  {rollCalls.map((rollCall) => (
+                    <a
+                      class="roll-card"
+                      href={rollCallPath(
+                        bill.condensedbillno,
+                        rollCall.votesequencenumber,
+                        rollCall.sessionyear || bill.sessionyear,
+                      )}
+                    >
+                        <div class="roll-topline">
+                          <strong>{rollCall.question_motion || "Roll call"}</strong>
+                          {rollCall.votedate && <span>{formatDate(rollCall.votedate)}</span>}
+                        </div>
+                        {(rollCall.title1 || rollCall.title2) && (
+                          <p>{[rollCall.title1, rollCall.title2].filter(Boolean).join(" ")}</p>
+                        )}
+                        <div class="roll-counts">
+                          <span>Yeas {rollCall.yeas}</span>
+                          <span>Nays {rollCall.nays}</span>
+                          <span>Present {rollCall.present}</span>
+                          <span>Absent {rollCall.absent}</span>
+                        </div>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p class="empty">No roll calls returned.</p>
+              )}
+            </section>
+
+            <section class="panel position-panel">
+              <div class="section-heading">
+                <p class="eyebrow">Position Count</p>
+                <h2>Public Testimony Summary</h2>
+              </div>
+              <BillPositionSummary bill={bill} />
+            </section>
           </section>
 
           <section class="content-grid">
-            <section class="panel">
-              <div class="section-heading">
-                <p class="eyebrow">Articles</p>
-                <h2>Related Coverage</h2>
-              </div>
+            <div class="stack">
+              <section class="panel">
+                <div class="section-heading">
+                  <p class="eyebrow">Articles</p>
+                  <h2>Related Coverage</h2>
+                </div>
 
-              <ArticleList
-                articles={relatedArticles}
-                compact={true}
-                emptyText="No related articles returned."
-              />
+                <ArticleList
+                  articles={relatedArticles}
+                  compact={true}
+                  emptyText="No related articles returned."
+                />
 
-              <a
-                class="text-link"
-                href={`/articles?bill=${encodeURIComponent(bill.condensedbillno)}&include=relations`}
-              >
-                Browse all bill articles
-              </a>
-            </section>
+                <a
+                  class="text-link"
+                  href={`/articles?bill=${encodeURIComponent(bill.condensedbillno)}&include=relations`}
+                >
+                  Browse all bill articles
+                </a>
+              </section>
+
+              <section class="panel">
+                <div class="section-heading">
+                  <p class="eyebrow">Organizations</p>
+                  <h2>Organizational Comments</h2>
+                </div>
+
+                {organizationComments.length ? (
+                  <div class="organization-comment-list">
+                    {organizationComments.map((item) => (
+                      <article>
+                        <div class="testimony-topline">
+                          <strong>
+                            <a href={organizationPath(item.organization)}>
+                              {item.organization.name}
+                            </a>
+                          </strong>
+                          <span class={positionClass(item.position)}>{item.position || "neutral"}</span>
+                        </div>
+                        <p>{item.comment}</p>
+                        <p class="testimony-meta">
+                          {[item.author, item.date && formatDate(item.date)]
+                            .filter(Boolean)
+                            .join(" - ")}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p class="empty">No organizational comments have been published yet.</p>
+                )}
+              </section>
+            </div>
 
             <section class="panel">
               <div class="section-heading">
@@ -299,6 +349,7 @@ function billTitle() {
   }
 
   .overview-grid,
+  .vote-summary-grid,
   .content-grid {
     display: grid;
     gap: 18px;
@@ -312,6 +363,11 @@ function billTitle() {
 
   .content-grid {
     grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+    margin-top: 22px;
+  }
+
+  .vote-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-top: 22px;
   }
 
@@ -372,14 +428,17 @@ function billTitle() {
     margin: 0 0 16px;
   }
 
+  .stack,
   .roll-list,
-  .testimony-list {
+  .testimony-list,
+  .organization-comment-list {
     display: grid;
     gap: 12px;
   }
 
   .roll-card,
-  .testimony-list article {
+  .testimony-list article,
+  .organization-comment-list article {
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 8px;
@@ -408,6 +467,7 @@ function billTitle() {
 
   .roll-list p,
   .testimony-list p,
+  .organization-comment-list p,
   .testimony-meta {
     color: #4b5563;
     line-height: 1.5;
@@ -453,6 +513,7 @@ function billTitle() {
 
   @media (max-width: 860px) {
     .overview-grid,
+    .vote-summary-grid,
     .content-grid {
       grid-template-columns: 1fr;
     }

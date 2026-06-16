@@ -4,36 +4,35 @@ import { positionCounts } from "../lib/billsApi";
 const { bill, compact = false } = Astro.props;
 const counts = positionCounts(bill);
 
-function communityStance() {
+function communityClass() {
   if (counts.support > counts.oppose) {
-    return {
-      label: `Remote Testimony: ${counts.support} Support / ${counts.oppose} Oppose`,
-      className: "community-support",
-    };
+    return "community-support";
   }
 
   if (counts.oppose > counts.support) {
-    return {
-      label: `Remote Testimony: ${counts.support} Support / ${counts.oppose} Oppose`,
-      className: "community-oppose",
-    };
+    return "community-oppose";
   }
 
   if (counts.support > 0 || counts.oppose > 0) {
-    return {
-      label: `Remote Testimony: ${counts.support} Support / ${counts.oppose} Oppose`,
-      className: "community-neutral",
-    };
+    return "community-neutral";
   }
 
-  return null;
+  return "";
 }
 
-const stance = communityStance();
+const className = communityClass();
 ---
 
 <div class:list={["position-summary", compact && "compact"]}>
-  {stance && <span class:list={["stance-pill", stance.className]}>{stance.label}</span>}
+  {className ? (
+    <>
+      <span class:list={["stance-pill", className]}>Remote Testimony</span>
+      <span class="support-pill">{counts.support} Support</span>
+      <span class="oppose-pill">{counts.oppose} Oppose</span>
+    </>
+  ) : (
+    <span class="stance-pill community-neutral">No remote testimony</span>
+  )}
 </div>
 
 <style>
@@ -75,5 +74,17 @@ const stance = communityStance();
   .community-neutral {
     background: #eef0f4;
     border-color: #5b616e;
+  }
+
+  .support-pill {
+    background: #e7f7ec;
+    border-color: #86c894;
+    color: #166534;
+  }
+
+  .oppose-pill {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
   }
 </style>
