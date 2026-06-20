@@ -1,7 +1,43 @@
 const DEFAULT_PREVIEW_API_BASE = "https://article-preview.randall-d53.workers.dev";
+const BLOCKED_PREVIEW_PATTERNS = [
+  /\berror\s*\d{3}\b/i,
+  /\baccess denied\b/i,
+  /\battention required\b/i,
+  /\bbot detection\b/i,
+  /\bforbidden\b/i,
+  /\bjust a moment\b/i,
+  /\brequest rejected\b/i,
+  /\bsecurity check\b/i,
+  /\bsite not available\b/i,
+  /\bverify you are human\b/i,
+];
 
 function previewApiBase() {
-  return import.meta.env.ARTICLE_PREVIEW_API_BASE || DEFAULT_PREVIEW_API_BASE;
+  return import.meta.env?.ARTICLE_PREVIEW_API_BASE || DEFAULT_PREVIEW_API_BASE;
+}
+
+function usableText(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function isBlockedPreview(preview = {}) {
+  if (Number(preview.status) >= 400) return true;
+
+  return [preview.error, preview.title]
+    .map(usableText)
+    .some((text) => BLOCKED_PREVIEW_PATTERNS.some((pattern) => pattern.test(text)));
+}
+
+function normalizePreview(preview) {
+  if (!preview || typeof preview !== "object" || isBlockedPreview(preview)) return null;
+
+  const normalized = {
+    title: usableText(preview.title),
+    description: usableText(preview.description),
+    imageUrl: usableText(preview.imageUrl),
+  };
+
+  return Object.values(normalized).some(Boolean) ? normalized : null;
 }
 
 async function getArticlePreview(articleUrl, apiBase = previewApiBase()) {
@@ -18,8 +54,7 @@ async function getArticlePreview(articleUrl, apiBase = previewApiBase()) {
 
     if (!response.ok) return null;
 
-    const preview = await response.json();
-    return preview && typeof preview === "object" ? preview : null;
+    return normalizePreview(await response.json());
   } catch (error) {
     console.warn(`Unable to preview article: ${articleUrl}`, error?.message || error);
     return null;
