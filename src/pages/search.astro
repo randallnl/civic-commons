@@ -8,6 +8,7 @@ import { billDetailPath, getBills } from "../lib/billsApi";
 import { communityPath, getCommunities } from "../lib/communitiesApi";
 import { profilePhotoUrl } from "../lib/photos";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
+import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 
@@ -42,6 +43,8 @@ if (q.length > 0) {
     searchError = error?.message || "Unable to load search results.";
   }
 }
+
+articles = await enrichArticlesWithPreviews(articles, { limit: 20 });
 
 function communityName(community = {}) {
   return (
@@ -206,8 +209,8 @@ function representativesFor(community = {}) {
                   <li>
                     <a href={article.url}>
                       <span>
-                        <strong>{article.title}</strong>
-                        <small>{article.publisher || article.resource_type || "Article"}</small>
+                        <strong>{article.preview?.title || article.title}</strong>
+                        <small>{article.preview?.description || article.publisher || article.resource_type || "Article"}</small>
                       </span>
                     </a>
                   </li>

@@ -7,6 +7,7 @@ import { getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
+import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 
 let recentArticles = [];
 let recentBills = [];
@@ -39,6 +40,8 @@ try {
 } catch (error) {
   console.error(error?.message || "Unable to load homepage API data.");
 }
+
+recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
 ---
 
 <html lang="en">
@@ -149,7 +152,7 @@ try {
                 <a href={`/articles?town=${encodeURIComponent(article.towns?.[0]?.town || article.towns?.[0]?.name || "")}`}>
                   {article.towns?.[0]?.town || article.towns?.[0]?.name || "Community articles"}
                 </a>
-                <span>{cleanText(article.title)}</span>
+                <span>{cleanText(article.preview?.title || article.title)}</span>
               </li>
             ))}
           </ul>
@@ -197,8 +200,8 @@ try {
             ) : (
               recentArticles.map((article) => (
                 <li>
-                  <a href={article.url}>{cleanText(article.title)}</a>
-                  <span>{cleanText(article.publisher || article.resource_type)}</span>
+                  <a href={article.url}>{cleanText(article.preview?.title || article.title)}</a>
+                  <span>{cleanText(article.preview?.description || article.publisher || article.resource_type)}</span>
                 </li>
               ))
             )}

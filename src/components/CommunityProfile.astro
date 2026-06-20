@@ -7,6 +7,7 @@ import { communityPath } from "../lib/communitiesApi";
 import { profilePhotoUrl } from "../lib/photos";
 import { repName, repSlug } from "../lib/repsApi";
 import { cleanText, joinClean } from "../lib/text";
+import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 
 const { community, meta = {}, error = "" } = Astro.props;
 
@@ -86,7 +87,7 @@ function repMeta(rep = {}) {
 }
 
 function articleTitle(article = {}) {
-  return cleanText(article.title);
+  return cleanText(article.preview?.title || article.title);
 }
 
 function articlePublisher(article = {}) {
@@ -95,7 +96,7 @@ function articlePublisher(article = {}) {
 
 const towns = townsFor();
 const representatives = representativesFor();
-const articles = articlesFor();
+const articles = await enrichArticlesWithPreviews(articlesFor(), { limit: 10 });
 const districts = districtsFor();
 const candidates = candidatesFor();
 ---
@@ -263,7 +264,9 @@ const candidates = candidatesFor();
                 <div class="article-list">
                   {articles.map((article) => (
                     <article>
+                      {article.preview?.imageUrl && <img src={article.preview.imageUrl} alt="" loading="lazy" />}
                       <h3><a href={article.url}>{articleTitle(article)}</a></h3>
+                      {article.preview?.description && <p>{cleanText(article.preview.description)}</p>}
                       {articlePublisher(article) && <p>{articlePublisher(article)}</p>}
                     </article>
                   ))}
@@ -390,6 +393,16 @@ const candidates = candidatesFor();
     border: 1px solid #d1d5db;
     border-radius: 8px;
     padding: 14px;
+  }
+
+  .article-list article > img {
+    aspect-ratio: 16 / 9;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    display: block;
+    margin-bottom: 12px;
+    object-fit: cover;
+    width: 100%;
   }
 
   .profile-preview-list article {

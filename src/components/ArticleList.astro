@@ -1,7 +1,9 @@
 ---
 import { cleanText } from "../lib/text";
+import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 
 const { articles = [], emptyText = "No articles found.", compact = false } = Astro.props;
+const previewArticles = await enrichArticlesWithPreviews(articles, { limit: compact ? 8 : 20 });
 
 function previewText(text = "", maxLength = compact ? 140 : 220) {
   const normalized = cleanText(text).replace(/\s+/g, " ").trim();
@@ -32,21 +34,29 @@ function relationLabels(article = {}) {
 }
 ---
 
-{articles.length ? (
+{previewArticles.length ? (
   <div class:list={["article-list", compact && "compact"]}>
-    {articles.map((article) => (
+    {previewArticles.map((article) => (
       <article class="article-card">
+        {article.preview?.imageUrl && (
+          <a class="article-image" href={article.url} tabindex="-1" aria-hidden="true">
+            <img src={article.preview.imageUrl} alt="" loading="lazy" />
+          </a>
+        )}
+        <div class="article-copy">
         <div class="article-topline">
           {article.resource_type && <span>{cleanText(article.resource_type)}</span>}
           {articleDate(article) && <span>{articleDate(article)}</span>}
         </div>
 
         <h3>
-          <a href={article.url}>{cleanText(article.title)}</a>
+          <a href={article.url}>{cleanText(article.preview?.title || article.title)}</a>
         </h3>
 
         {article.publisher && <p class="publisher">{cleanText(article.publisher)}</p>}
-        {article.summary && <p>{previewText(article.summary)}</p>}
+        {(article.preview?.description || article.summary) && (
+          <p>{previewText(article.preview?.description || article.summary)}</p>
+        )}
 
         {relationLabels(article).length > 0 && (
           <div class="relation-chips">
@@ -55,6 +65,7 @@ function relationLabels(article = {}) {
             ))}
           </div>
         )}
+        </div>
       </article>
     ))}
   </div>
@@ -72,7 +83,28 @@ function relationLabels(article = {}) {
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 8px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     padding: 16px;
+  }
+
+  .article-card:has(.article-image) {
+    grid-template-columns: 152px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .article-image {
+    display: block;
+  }
+
+  .article-image img {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    display: block;
+    height: 100%;
+    max-height: 132px;
+    object-fit: cover;
+    width: 100%;
   }
 
   .article-list.compact .article-card {
@@ -121,5 +153,12 @@ function relationLabels(article = {}) {
     color: #4b5563;
     font-weight: 800;
     margin: 0;
+  }
+
+  @media (max-width: 560px) {
+    .article-card:has(.article-image) {
+      grid-template-columns: 104px minmax(0, 1fr);
+      gap: 12px;
+    }
   }
 </style>
