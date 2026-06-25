@@ -23,7 +23,6 @@ const COUNTY_NAMES = [
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const articleLimit = Number(Astro.url.searchParams.get("articleLimit") || 3);
-const runtimeEnv = Astro.locals.runtime?.env;
 
 let countyGroups = [];
 let meta = {};
@@ -49,7 +48,6 @@ async function getCountyGroups({
       const data = await getCountyCommunity(county, {
         body: "house",
         articleLimit,
-        runtimeEnv,
       });
       return normalizeCountyGroup(data, county);
     }),

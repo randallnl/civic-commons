@@ -9,8 +9,6 @@ import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 
-const runtimeEnv = Astro.locals.runtime?.env;
-
 let recentArticles = [];
 let recentBills = [];
 let recentPeople = [];
@@ -22,9 +20,9 @@ let apiMeta = {
 
 try {
   const [articleResult, billResult, repResult] = await Promise.allSettled([
-    getArticles({ include: "relations", limit: 5, runtimeEnv }),
-    getBills({ limit: 6, runtimeEnv }),
-    getRepresentatives({ limit: 8, runtimeEnv }),
+    getArticles({ include: "relations", limit: 5 }),
+    getBills({ limit: 6 }),
+    getRepresentatives({ limit: 8 }),
   ]);
 
   const articleData = articleResult.status === "fulfilled" ? articleResult.value : {};

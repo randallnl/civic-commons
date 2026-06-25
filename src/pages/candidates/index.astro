@@ -8,7 +8,6 @@ import { civicApiBase, civicApiFetch } from "../../lib/civicApi";
 import { getTownCommunity } from "../../lib/communitiesApi";
 
 const API_BASE = civicApiBase();
-const runtimeEnv = Astro.locals.runtime?.env;
 
 const address = Astro.url.searchParams.get("address")?.trim() || "";
 const county = Astro.url.searchParams.get("county")?.trim() || "";
@@ -25,7 +24,6 @@ try {
   if (address) {
     const response = await civicApiFetch(`${API_BASE}/reps/lookup`, {
       method: "POST",
-      runtimeEnv,
       headers: {
         "Content-Type": "application/json",
       },
@@ -42,7 +40,7 @@ try {
     meta = data.meta || {};
     resultContext = formatAddress(data.normalizedInput) || data.address || address;
   } else if (town) {
-    const data = await getTownCommunity(town, { articleLimit: 1, runtimeEnv });
+    const data = await getTownCommunity(town, { articleLimit: 1 });
     candidates = candidatesFromCommunity(data);
     meta = data.meta || {};
     resultContext = data.town?.name || data.community?.name || town;
@@ -52,7 +50,6 @@ try {
       district,
       electionYear,
       limit: 100,
-      runtimeEnv,
     });
     candidates = data.candidates || [];
     meta = data.meta || {};

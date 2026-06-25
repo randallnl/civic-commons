@@ -6,14 +6,13 @@ import { getSenateCommunity } from "../../../lib/communitiesApi";
 
 const { district = "" } = Astro.params;
 const articleLimit = Number(Astro.url.searchParams.get("articleLimit") || 10);
-const runtimeEnv = Astro.locals.runtime?.env;
 
 let community = null;
 let meta = {};
 let error = "";
 
 try {
-  const data = await getSenateCommunity(district, { articleLimit, runtimeEnv });
+  const data = await getSenateCommunity(district, { articleLimit });
   community = data.community;
   meta = data.meta || {};
 } catch (loadError) {

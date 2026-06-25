@@ -15,7 +15,6 @@ export async function POST({ request, locals }) {
 
     const response = await civicApiFetch(`${API_BASE}/reps/lookup`, {
       method: "POST",
-      runtimeEnv: locals.runtime?.env,
       headers: {
         "Content-Type": "application/json",
       },

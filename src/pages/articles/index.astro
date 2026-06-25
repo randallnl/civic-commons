@@ -9,7 +9,6 @@ const q = Astro.url.searchParams.get("q")?.trim() || "";
 const bill = Astro.url.searchParams.get("bill")?.trim() || "";
 const town = Astro.url.searchParams.get("town")?.trim() || "";
 const personid = Astro.url.searchParams.get("personid")?.trim() || "";
-const runtimeEnv = Astro.locals.runtime?.env;
 
 let articles = [];
 let meta = {};
@@ -23,7 +22,6 @@ try {
     personid,
     include: "relations",
     limit: 50,
-    runtimeEnv,
   });
   articles = data.articles || [];
   meta = data.meta || {};

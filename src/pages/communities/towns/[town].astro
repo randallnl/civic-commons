@@ -6,14 +6,13 @@ import { getTownCommunity } from "../../../lib/communitiesApi";
 
 const { town = "" } = Astro.params;
 const articleLimit = Number(Astro.url.searchParams.get("articleLimit") || 10);
-const runtimeEnv = Astro.locals.runtime?.env;
 
 let community = null;
 let meta = {};
 let error = "";
 
 try {
-  const data = await getTownCommunity(town, { articleLimit, runtimeEnv });
+  const data = await getTownCommunity(town, { articleLimit });
   community = normalizeTownProfile(data, town);
   meta = data.meta || {};
 } catch (loadError) {

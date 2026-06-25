@@ -10,7 +10,6 @@ import { profilePhotoUrl } from "../lib/photos";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 
-const runtimeEnv = Astro.locals.runtime?.env;
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 
 let communities = [];
@@ -22,10 +21,10 @@ let searchError = "";
 if (q.length > 0) {
   try {
     const [communityResult, repResult, billResult, articleResult] = await Promise.allSettled([
-      getCommunities({ q, body: "", limit: 12, articleLimit: 2, runtimeEnv }),
-      getRepresentatives({ q, limit: 20, runtimeEnv }),
-      getBills({ q, limit: 20, runtimeEnv }),
-      getArticles({ q, include: "relations", limit: 20, runtimeEnv }),
+      getCommunities({ q, body: "", limit: 12, articleLimit: 2 }),
+      getRepresentatives({ q, limit: 20 }),
+      getBills({ q, limit: 20 }),
+      getArticles({ q, include: "relations", limit: 20 }),
     ]);
 
     const communityData = communityResult.status === "fulfilled" ? communityResult.value : {};

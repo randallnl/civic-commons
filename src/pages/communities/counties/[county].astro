@@ -6,7 +6,6 @@ import { getCommunities, getCountyCommunity } from "../../../lib/communitiesApi"
 
 const { county = "" } = Astro.params;
 const articleLimit = Number(Astro.url.searchParams.get("articleLimit") || 10);
-const runtimeEnv = Astro.locals.runtime?.env;
 
 let community = null;
 let meta = {};
@@ -14,8 +13,8 @@ let error = "";
 
 try {
   const [data, senateData] = await Promise.all([
-    getCountyCommunity(county, { articleLimit, runtimeEnv }),
-    getCommunities({ body: "senate", limit: 50, articleLimit, runtimeEnv }).catch(() => null),
+    getCountyCommunity(county, { articleLimit }),
+    getCommunities({ body: "senate", limit: 50, articleLimit }).catch(() => null),
   ]);
   community = normalizeCountyProfile(data, county, senateData?.communities || []);
   meta = data.meta || {};

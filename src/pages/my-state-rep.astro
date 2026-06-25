@@ -12,7 +12,6 @@ import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { normalizeBillCode, getTrackedBills } from "../lib/trackedBills";
 
 const API_BASE = civicApiBase();
-const runtimeEnv = Astro.locals.runtime?.env;
 
 const address = Astro.url.searchParams.get("address")?.trim() || "";
 
@@ -26,7 +25,6 @@ if (address) {
   try {
     const response = await civicApiFetch(`${API_BASE}/reps/lookup`, {
       method: "POST",
-      runtimeEnv,
       headers: {
         "Content-Type": "application/json",
       },
@@ -48,7 +46,7 @@ if (address) {
 
 if (!address) {
   try {
-    const data = await getRepresentatives({ limit: 40, runtimeEnv });
+    const data = await getRepresentatives({ limit: 40 });
     randomLegislators = shuffle(data.representatives || []).slice(0, 6);
   } catch (error) {
     console.error(error?.message || "Unable to load legislator preview.");
@@ -59,7 +57,7 @@ if (lookupData) {
   try {
     [trackedBills, billSummaries] = await Promise.all([
       getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
-      getBillSummaries({ runtimeEnv }),
+      getBillSummaries(),
     ]);
   } catch (error) {
     console.error(error?.message || "Unable to load bill summaries.");
@@ -142,7 +140,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
   await Promise.all(
     [...missingBills].map(async ([code, year]) => {
       try {
-        const detail = await getBillDetail(code, { year, runtimeEnv });
+        const detail = await getBillDetail(code, { year });
         if (detail.bill) summaries.set(code, detail.bill);
       } catch (error) {
         console.error(error?.message || "Unable to load bill summary.");
