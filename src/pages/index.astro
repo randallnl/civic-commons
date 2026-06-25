@@ -171,7 +171,14 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
                 </a>
                 <span>{person.party || "No party listed"}</span>
                 {isFreeStater(person) && (
-                  <a class="free-stater-inline" href="/free-staters">Free Stater</a>
+                  <a
+                    class="free-stater-inline"
+                    href="/free-staters"
+                    title="What is a Free Stater?"
+                    aria-label="What is a Free Stater?"
+                  >
+                    Free Stater
+                  </a>
                 )}
               </li>
             ))}
@@ -467,15 +474,20 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
   }
 
   .list .free-stater-inline {
-    background: #ecfdf5;
-    border: 1px solid #059669;
+    background: #7f1d1d;
+    border: 1px solid #111827;
     border-radius: 999px;
-    color: #064e3b;
+    box-shadow: 2px 2px 0 #111827;
+    color: white;
     display: inline-block;
     font-size: 0.74rem;
     margin-top: 8px;
     padding: 4px 8px;
     text-decoration: none;
+  }
+
+  .list .free-stater-inline:hover {
+    background: #450a0a;
   }
 
   .cta {

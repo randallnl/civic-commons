@@ -206,7 +206,13 @@ const candidates = candidatesFor();
                           <p>{repMeta(rep)}</p>
                           {isFreeStater(rep) && (
                             <div class="mini-tags">
-                              <a href="/free-staters">Free Stater</a>
+                              <a
+                                href="/free-staters"
+                                title="What is a Free Stater?"
+                                aria-label="What is a Free Stater?"
+                              >
+                                Free Stater
+                              </a>
                             </div>
                           )}
                         </div>
@@ -253,7 +259,13 @@ const candidates = candidatesFor();
                           </p>
                           {isFreeStater(candidate) && (
                             <div class="mini-tags">
-                              <a href="/free-staters">Free Stater</a>
+                              <a
+                                href="/free-staters"
+                                title="What is a Free Stater?"
+                                aria-label="What is a Free Stater?"
+                              >
+                                Free Stater
+                              </a>
                             </div>
                           )}
                         </div>
@@ -431,14 +443,19 @@ const candidates = candidatesFor();
   }
 
   .mini-tags a {
-    background: #ecfdf5;
-    border: 1px solid #059669;
+    background: #7f1d1d;
+    border: 1px solid #111827;
     border-radius: 999px;
-    color: #064e3b;
+    box-shadow: 2px 2px 0 #111827;
+    color: white;
     font-size: 0.74rem;
     font-weight: 900;
     padding: 4px 8px;
     text-decoration: none;
+  }
+
+  .mini-tags a:hover {
+    background: #450a0a;
   }
 
   .profile-photo-link {

@@ -319,7 +319,14 @@ function contactHref(type, value) {
               {formatParty(person.party)}
             </span>
             {isFreeStater(representative) && (
-              <a class="meta-pill free-stater-pill" href="/free-staters">Free Stater</a>
+              <a
+                class="meta-pill free-stater-pill"
+                href="/free-staters"
+                title="What is a Free Stater?"
+                aria-label="What is a Free Stater?"
+              >
+                Free Stater
+              </a>
             )}
             <span class="meta-pill">{bodyLabel}</span>
             <span class="meta-pill district-pill">{districtLabel}</span>
@@ -747,9 +754,14 @@ function contactHref(type, value) {
   }
 
   .free-stater-pill {
-    background: #ecfdf5;
-    border-color: #059669;
-    color: #064e3b;
+    background: #7f1d1d;
+    border-color: #111827;
+    box-shadow: 2px 2px 0 #111827;
+    color: white;
+  }
+
+  .free-stater-pill:hover {
+    background: #450a0a;
   }
 
   .bio {

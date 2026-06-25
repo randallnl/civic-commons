@@ -59,7 +59,14 @@ function formatCurrency(value) {
         {formatCandidateParty(candidate.politicalParty)}
       </span>
       {isFreeStater(candidate) && (
-        <a class="free-stater-pill" href="/free-staters">Free Stater</a>
+        <a
+          class="free-stater-pill"
+          href="/free-staters"
+          title="What is a Free Stater?"
+          aria-label="What is a Free Stater?"
+        >
+          Free Stater
+        </a>
       )}
       {candidate.officeType && <span>{candidate.officeType}</span>}
     </div>
@@ -181,9 +188,14 @@ function formatCurrency(value) {
   }
 
   .pill-row .free-stater-pill {
-    background: #ecfdf5;
-    border-color: #059669;
-    color: #064e3b;
+    background: #7f1d1d;
+    border-color: #111827;
+    box-shadow: 2px 2px 0 #111827;
+    color: white;
+  }
+
+  .pill-row .free-stater-pill:hover {
+    background: #450a0a;
   }
 
   .office-line {

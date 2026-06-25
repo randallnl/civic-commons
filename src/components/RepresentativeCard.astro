@@ -100,7 +100,14 @@ function legislatorVoteStance(vote) {
         <span>{rep.chamber || "Legislator"}</span>
         <span>{formatParty(rep.party)}</span>
         {isFreeStater(rep) && (
-          <a class="free-stater-pill" href="/free-staters">Free Stater</a>
+          <a
+            class="free-stater-pill"
+            href="/free-staters"
+            title="What is a Free Stater?"
+            aria-label="What is a Free Stater?"
+          >
+            Free Stater
+          </a>
         )}
       </div>
 
@@ -251,9 +258,14 @@ function legislatorVoteStance(vote) {
   }
 
   .rep-meta .free-stater-pill {
-    background: #ecfdf5;
-    border-color: #059669;
-    color: #064e3b;
+    background: #7f1d1d;
+    border-color: #111827;
+    box-shadow: 2px 2px 0 #111827;
+    color: white;
+  }
+
+  .rep-meta .free-stater-pill:hover {
+    background: #450a0a;
   }
 
   .district-line,
