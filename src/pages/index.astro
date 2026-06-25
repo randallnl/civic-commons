@@ -5,6 +5,7 @@ import TopNav from "../components/TopNav.astro";
 import headingBanner from "../assets/heading_banner.png";
 import { getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
+import { isFreeStater } from "../lib/civicTags";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
@@ -169,6 +170,9 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
                   {repName(person)}
                 </a>
                 <span>{person.party || "No party listed"}</span>
+                {isFreeStater(person) && (
+                  <a class="free-stater-inline" href="/free-staters">Free Stater</a>
+                )}
               </li>
             ))}
           </ul>
@@ -460,7 +464,18 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
     display: block;
     margin-top: 4px;
     color: #6b7280;
-    text-transform: capitalize;
+  }
+
+  .list .free-stater-inline {
+    background: #ecfdf5;
+    border: 1px solid #059669;
+    border-radius: 999px;
+    color: #064e3b;
+    display: inline-block;
+    font-size: 0.74rem;
+    margin-top: 8px;
+    padding: 4px 8px;
+    text-decoration: none;
   }
 
   .cta {

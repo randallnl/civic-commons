@@ -2,6 +2,7 @@
 import BillPositionSummary from "./BillPositionSummary.astro";
 import profileIcon from "../assets/profile icon.png";
 import { billDetailPath } from "../lib/billsApi";
+import { isFreeStater } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
 import { normalizeBillCode } from "../lib/trackedBills";
 
@@ -98,6 +99,9 @@ function legislatorVoteStance(vote) {
       <div class="rep-meta">
         <span>{rep.chamber || "Legislator"}</span>
         <span>{formatParty(rep.party)}</span>
+        {isFreeStater(rep) && (
+          <a class="free-stater-pill" href="/free-staters">Free Stater</a>
+        )}
       </div>
 
       <div class="district-line">
@@ -234,7 +238,8 @@ function legislatorVoteStance(vote) {
     margin-top: 8px;
   }
 
-  .rep-meta span {
+  .rep-meta span,
+  .rep-meta a {
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 999px;
@@ -242,6 +247,13 @@ function legislatorVoteStance(vote) {
     font-size: 0.8rem;
     font-weight: 800;
     padding: 5px 10px;
+    text-decoration: none;
+  }
+
+  .rep-meta .free-stater-pill {
+    background: #ecfdf5;
+    border-color: #059669;
+    color: #064e3b;
   }
 
   .district-line,

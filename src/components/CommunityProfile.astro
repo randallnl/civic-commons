@@ -3,6 +3,7 @@ import TopNav from "./TopNav.astro";
 import communityPlaceholder from "../assets/community_profile_placeholder.png";
 import profileIcon from "../assets/profile icon.png";
 import { candidateName, candidatePath } from "../lib/candidatesApi";
+import { isFreeStater } from "../lib/civicTags";
 import { communityPath } from "../lib/communitiesApi";
 import { profilePhotoUrl } from "../lib/photos";
 import { repName, repSlug } from "../lib/repsApi";
@@ -203,6 +204,11 @@ const candidates = candidatesFor();
                             <a href={`/people/${repSlug(rep)}`}>{cleanText(repName(rep))}</a>
                           </h3>
                           <p>{repMeta(rep)}</p>
+                          {isFreeStater(rep) && (
+                            <div class="mini-tags">
+                              <a href="/free-staters">Free Stater</a>
+                            </div>
+                          )}
                         </div>
                       </article>
                       );
@@ -245,6 +251,11 @@ const candidates = candidatesFor();
                               candidate.district && `District ${candidate.district}`,
                             ])}
                           </p>
+                          {isFreeStater(candidate) && (
+                            <div class="mini-tags">
+                              <a href="/free-staters">Free Stater</a>
+                            </div>
+                          )}
                         </div>
                       </article>
                       );
@@ -410,6 +421,24 @@ const candidates = candidatesFor();
     display: grid;
     gap: 12px;
     grid-template-columns: 64px 1fr;
+  }
+
+  .mini-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .mini-tags a {
+    background: #ecfdf5;
+    border: 1px solid #059669;
+    border-radius: 999px;
+    color: #064e3b;
+    font-size: 0.74rem;
+    font-weight: 900;
+    padding: 4px 8px;
+    text-decoration: none;
   }
 
   .profile-photo-link {

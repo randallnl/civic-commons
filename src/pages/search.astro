@@ -5,6 +5,7 @@ import TopNav from "../components/TopNav.astro";
 import profileIcon from "../assets/profile icon.png";
 import { getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
+import { isFreeStater } from "../lib/civicTags";
 import { communityPath, getCommunities } from "../lib/communitiesApi";
 import { profilePhotoUrl } from "../lib/photos";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
@@ -161,17 +162,28 @@ function representativesFor(community = {}) {
 
                   return (
                     <li>
-                      <a href={`/people/${repSlug(person)}`}>
-                        <img
-                          class:list={[!photoUrl && "profile-icon"]}
-                          src={photoUrl || profileIcon.src}
-                          alt=""
-                        />
-                        <span>
-                          <strong>{repName(person)}</strong>
-                          <small>{[person.chamber, person.party, person.district].filter(Boolean).join(" · ") || "No details listed"}</small>
-                        </span>
-                      </a>
+                      <div class="person-result-row">
+                        <a class="person-result-link" href={`/people/${repSlug(person)}`}>
+                          <img
+                            class:list={[!photoUrl && "profile-icon"]}
+                            src={photoUrl || profileIcon.src}
+                            alt=""
+                          />
+                          <span>
+                            <strong>{repName(person)}</strong>
+                            <small>
+                              {[
+                                person.chamber,
+                                person.party,
+                                person.district,
+                              ].filter(Boolean).join(" · ") || "No details listed"}
+                            </small>
+                          </span>
+                        </a>
+                        {isFreeStater(person) && (
+                          <a class="free-stater-inline" href="/free-staters">Free Stater</a>
+                        )}
+                      </div>
                     </li>
                   );
                 })}
@@ -310,13 +322,33 @@ function representativesFor(community = {}) {
     border-top: 0;
   }
 
-  li a {
+  li a,
+  .person-result-row {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  li a,
+  .person-result-link {
     display: flex;
     gap: 14px;
     align-items: center;
+  }
+
+  li a {
     padding: 14px 0;
-    color: inherit;
-    text-decoration: none;
+  }
+
+  .person-result-row {
+    align-items: center;
+    display: flex;
+    gap: 14px;
+    justify-content: space-between;
+    padding: 14px 0;
+  }
+
+  .person-result-link {
+    min-width: 0;
   }
 
   img {
@@ -342,7 +374,19 @@ function representativesFor(community = {}) {
     display: block;
     margin-top: 4px;
     color: #6b7280;
-    text-transform: capitalize;
+  }
+
+  .free-stater-inline {
+    background: #ecfdf5;
+    border: 1px solid #059669;
+    border-radius: 999px;
+    color: #064e3b;
+    display: inline-block;
+    font-size: 0.74rem;
+    font-weight: 900;
+    margin-top: 8px;
+    padding: 4px 8px;
+    text-decoration: none;
   }
 
   @media (max-width: 600px) {

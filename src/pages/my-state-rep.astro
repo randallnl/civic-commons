@@ -7,6 +7,7 @@ import TopNav from "../components/TopNav.astro";
 import profileIcon from "../assets/profile icon.png";
 import { getBillDetail, getBillSummaries } from "../lib/billsApi";
 import { civicApiBase, civicApiFetch } from "../lib/civicApi";
+import { isFreeStater } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { normalizeBillCode, getTrackedBills } from "../lib/trackedBills";
@@ -221,17 +222,24 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
           <div class="sample-grid">
             {randomLegislators.map((rep) => (
-              <a class="sample-card" href={`/people/${repSlug(rep)}`}>
-                {profilePhotoUrl(rep.photo) ? (
-                  <img src={profilePhotoUrl(rep.photo)} alt={`Photo of ${repName(rep)}`} loading="lazy" />
-                ) : (
-                  <img class="sample-fallback" src={profileIcon.src} alt="" loading="lazy" />
-                )}
+              <article class="sample-card">
+                <a class="sample-photo-link" href={`/people/${repSlug(rep)}`}>
+                  {profilePhotoUrl(rep.photo) ? (
+                    <img src={profilePhotoUrl(rep.photo)} alt={`Photo of ${repName(rep)}`} loading="lazy" />
+                  ) : (
+                    <img class="sample-fallback" src={profileIcon.src} alt="" loading="lazy" />
+                  )}
+                </a>
                 <div>
-                  <h3>{repName(rep)}</h3>
+                  <h3><a href={`/people/${repSlug(rep)}`}>{repName(rep)}</a></h3>
                   <p>{[rep.chamber, rep.party, rep.district].filter(Boolean).join(" · ")}</p>
+                  {isFreeStater(rep) && (
+                    <span class="sample-tags">
+                      <a class="free-stater-pill" href="/free-staters">Free Stater</a>
+                    </span>
+                  )}
                 </div>
-              </a>
+              </article>
             ))}
           </div>
         </section>
@@ -586,10 +594,13 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     gap: 12px;
     grid-template-columns: 64px 1fr;
     padding: 14px;
-    text-decoration: none;
   }
 
-  .sample-card:hover h3 {
+  .sample-card a {
+    color: inherit;
+  }
+
+  .sample-card:hover h3 a {
     text-decoration: underline;
   }
 
@@ -624,6 +635,23 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     font-weight: 800;
     line-height: 1.35;
     margin: 6px 0 0;
+  }
+
+  .free-stater-pill {
+    background: #ecfdf5;
+    border: 1px solid #059669;
+    border-radius: 999px;
+    color: #064e3b;
+    display: inline-block;
+    font-size: 0.74rem;
+    font-weight: 900;
+    margin-top: 8px;
+    padding: 4px 8px;
+    text-decoration: none;
+  }
+
+  .sample-tags {
+    display: inline-flex;
   }
 
   @media (max-width: 900px) {

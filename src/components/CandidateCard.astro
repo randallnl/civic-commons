@@ -6,6 +6,7 @@ import {
   partyClassName,
 } from "../lib/candidatesApi";
 import profileIcon from "../assets/profile icon.png";
+import { isFreeStater } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
 
 const { candidate } = Astro.props;
@@ -57,6 +58,9 @@ function formatCurrency(value) {
       <span class:list={["party-pill", partyClassName(candidate.politicalParty)]}>
         {formatCandidateParty(candidate.politicalParty)}
       </span>
+      {isFreeStater(candidate) && (
+        <a class="free-stater-pill" href="/free-staters">Free Stater</a>
+      )}
       {candidate.officeType && <span>{candidate.officeType}</span>}
     </div>
 
@@ -149,7 +153,8 @@ function formatCurrency(value) {
     margin-top: 10px;
   }
 
-  .pill-row span {
+  .pill-row span,
+  .pill-row a {
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 999px;
@@ -157,6 +162,7 @@ function formatCurrency(value) {
     font-size: 0.78rem;
     font-weight: 900;
     padding: 5px 9px;
+    text-decoration: none;
   }
 
   .pill-row .party-democrat {
@@ -172,6 +178,12 @@ function formatCurrency(value) {
   .pill-row .party-libertarian {
     background: #fef3c7;
     border-color: #d97706;
+  }
+
+  .pill-row .free-stater-pill {
+    background: #ecfdf5;
+    border-color: #059669;
+    color: #064e3b;
   }
 
   .office-line {

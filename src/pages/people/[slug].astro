@@ -7,6 +7,7 @@ import TopNav from "../../components/TopNav.astro";
 import profileIcon from "../../assets/profile icon.png";
 import { getArticles } from "../../lib/articlesApi";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
+import { isFreeStater } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
 import { getRepresentative } from "../../lib/repsApi";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
@@ -317,6 +318,9 @@ function contactHref(type, value) {
             <span class:list={["meta-pill", "party-pill", partyClass(person.party)]}>
               {formatParty(person.party)}
             </span>
+            {isFreeStater(representative) && (
+              <a class="meta-pill free-stater-pill" href="/free-staters">Free Stater</a>
+            )}
             <span class="meta-pill">{bodyLabel}</span>
             <span class="meta-pill district-pill">{districtLabel}</span>
           </div>
@@ -740,6 +744,12 @@ function contactHref(type, value) {
 
   .district-pill {
     border-color: #1f2933;
+  }
+
+  .free-stater-pill {
+    background: #ecfdf5;
+    border-color: #059669;
+    color: #064e3b;
   }
 
   .bio {

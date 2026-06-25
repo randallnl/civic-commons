@@ -9,6 +9,7 @@ import {
   getCandidate,
   partyClassName,
 } from "../../lib/candidatesApi";
+import { isFreeStater } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
 import {
   endorsementsForCandidate,
@@ -110,6 +111,9 @@ function formatDate(value) {
             <span class:list={["meta-pill", partyClassName(candidate.politicalParty)]}>
               {formatCandidateParty(candidate.politicalParty)}
             </span>
+            {isFreeStater(candidate) && (
+              <a class="meta-pill free-stater-pill" href="/free-staters">Free Stater</a>
+            )}
             {candidate.officeType && <span class="meta-pill">{candidate.officeType}</span>}
             {candidate.electionYear && <span class="meta-pill">{candidate.electionYear}</span>}
           </div>
@@ -312,6 +316,12 @@ function formatDate(value) {
   .party-libertarian {
     background: #fef3c7;
     border-color: #d97706;
+  }
+
+  .free-stater-pill {
+    background: #ecfdf5;
+    border-color: #059669;
+    color: #064e3b;
   }
 
   .office-line {
