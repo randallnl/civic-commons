@@ -6,13 +6,13 @@ import RepresentativeCard from "../components/RepresentativeCard.astro";
 import TopNav from "../components/TopNav.astro";
 import profileIcon from "../assets/profile icon.png";
 import { getBillDetail, getBillSummaries } from "../lib/billsApi";
+import { civicApiBase, civicApiFetch } from "../lib/civicApi";
 import { profilePhotoUrl } from "../lib/photos";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { normalizeBillCode, getTrackedBills } from "../lib/trackedBills";
 
-const API_BASE =
-  import.meta.env.REP_LOOKUP_API_BASE ||
-  "https://api.nhciviccommons.com";
+const API_BASE = civicApiBase();
+const runtimeEnv = Astro.locals.runtime?.env;
 
 const address = Astro.url.searchParams.get("address")?.trim() || "";
 
@@ -24,8 +24,9 @@ let billSummaries = new Map();
 
 if (address) {
   try {
-    const response = await fetch(`${API_BASE}/reps/lookup`, {
+    const response = await civicApiFetch(`${API_BASE}/reps/lookup`, {
       method: "POST",
+      runtimeEnv,
       headers: {
         "Content-Type": "application/json",
       },
@@ -47,7 +48,7 @@ if (address) {
 
 if (!address) {
   try {
-    const data = await getRepresentatives({ limit: 40 });
+    const data = await getRepresentatives({ limit: 40, runtimeEnv });
     randomLegislators = shuffle(data.representatives || []).slice(0, 6);
   } catch (error) {
     console.error(error?.message || "Unable to load legislator preview.");
@@ -58,7 +59,7 @@ if (lookupData) {
   try {
     [trackedBills, billSummaries] = await Promise.all([
       getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
-      getBillSummaries(),
+      getBillSummaries({ runtimeEnv }),
     ]);
   } catch (error) {
     console.error(error?.message || "Unable to load bill summaries.");
@@ -141,7 +142,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
   await Promise.all(
     [...missingBills].map(async ([code, year]) => {
       try {
-        const detail = await getBillDetail(code, { year });
+        const detail = await getBillDetail(code, { year, runtimeEnv });
         if (detail.bill) summaries.set(code, detail.bill);
       } catch (error) {
         console.error(error?.message || "Unable to load bill summary.");

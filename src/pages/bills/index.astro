@@ -8,6 +8,7 @@ import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const year = Astro.url.searchParams.get("year")?.trim() || "";
+const runtimeEnv = Astro.locals.runtime?.env;
 
 let bills = [];
 let meta = {};
@@ -16,7 +17,7 @@ let trackedBills = new Map();
 
 try {
   const [data, tracked] = await Promise.all([
-    getBills({ q, year, limit: 100 }),
+    getBills({ q, year, limit: 100, runtimeEnv }),
     getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
   ]);
   bills = data.bills || [];

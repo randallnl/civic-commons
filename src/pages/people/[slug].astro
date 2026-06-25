@@ -12,11 +12,12 @@ import { getRepresentative } from "../../lib/repsApi";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const { slug } = Astro.params;
+const runtimeEnv = Astro.locals.runtime?.env;
 
 let apiData = null;
 
 try {
-  apiData = await getRepresentative(slug);
+  apiData = await getRepresentative(slug, { runtimeEnv });
 } catch (error) {
   console.error(error?.message || "Unable to load representative profile.");
 }
@@ -50,7 +51,7 @@ let billSummaries = new Map();
 try {
   [trackedBills, billSummaries] = await Promise.all([
     getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
-    getBillSummaries(),
+    getBillSummaries({ runtimeEnv }),
   ]);
 } catch (error) {
   console.error(error?.message || "Unable to load tracked bill data.");
@@ -68,6 +69,7 @@ trackedVotes = await Promise.all(
     try {
       const detail = await getBillDetail(vote.trackedBill.code, {
         year: vote.sessionyear,
+        runtimeEnv,
       });
       return { ...vote, billSummary: detail.bill };
     } catch (error) {
@@ -103,6 +105,7 @@ if (!relatedArticles.length && person.id) {
       personid: person.id,
       include: "relations",
       limit: 6,
+      runtimeEnv,
     });
     relatedArticles = articleData.articles || [];
   } catch (error) {

@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE = "https://api.nhciviccommons.com";
+import { DEFAULT_CIVIC_API_BASE, civicApiFetch } from "./civicApi";
 
 let billsCache = new Map();
 
@@ -6,7 +6,7 @@ export function billApiBase() {
   return (
     import.meta.env.BILLS_API_BASE ||
     import.meta.env.REP_LOOKUP_API_BASE ||
-    DEFAULT_API_BASE
+    DEFAULT_CIVIC_API_BASE
   );
 }
 
@@ -32,6 +32,7 @@ export async function getBills({
   year = "",
   limit = 100,
   offset = 0,
+  runtimeEnv,
 } = {}) {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
@@ -40,7 +41,9 @@ export async function getBills({
   if (offset) params.set("offset", String(offset));
 
   const query = params.toString();
-  const response = await fetch(`${apiBase}/bills${query ? `?${query}` : ""}`);
+  const response = await civicApiFetch(`${apiBase}/bills${query ? `?${query}` : ""}`, {
+    runtimeEnv,
+  });
 
   if (!response.ok) {
     throw new Error(`Unable to load bills: ${response.status}`);
@@ -68,12 +71,14 @@ export async function getBillSummaries(options = {}) {
 export async function getBillDetail(code, {
   apiBase = billApiBase(),
   year = "",
+  runtimeEnv,
 } = {}) {
   const params = new URLSearchParams();
   if (year) params.set("year", year);
 
-  const response = await fetch(
+  const response = await civicApiFetch(
     `${apiBase}/bills/${encodeURIComponent(normalizeBillCodeForUrl(code))}?${params}`,
+    { runtimeEnv },
   );
 
   if (!response.ok) {
@@ -86,14 +91,16 @@ export async function getBillDetail(code, {
 export async function getBillTestimony(code, {
   apiBase = billApiBase(),
   year = "",
+  runtimeEnv,
 } = {}) {
   const params = new URLSearchParams();
   if (year) params.set("year", year);
 
-  const response = await fetch(
+  const response = await civicApiFetch(
     `${apiBase}/bills/${encodeURIComponent(
       normalizeBillCodeForUrl(code),
     )}/testimony?${params}`,
+    { runtimeEnv },
   );
 
   if (!response.ok) {
@@ -106,14 +113,16 @@ export async function getBillTestimony(code, {
 export async function getRollCallVotes(code, sequence, {
   apiBase = billApiBase(),
   year = "",
+  runtimeEnv,
 } = {}) {
   const params = new URLSearchParams();
   if (year) params.set("year", year);
 
-  const response = await fetch(
+  const response = await civicApiFetch(
     `${apiBase}/bills/${encodeURIComponent(
       normalizeBillCodeForUrl(code),
     )}/roll-calls/${encodeURIComponent(sequence)}?${params}`,
+    { runtimeEnv },
   );
 
   if (!response.ok) {

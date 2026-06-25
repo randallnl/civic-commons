@@ -10,6 +10,7 @@ import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const billCode = Astro.params.bill || "";
 const year = Astro.url.searchParams.get("year")?.trim() || "";
+const runtimeEnv = Astro.locals.runtime?.env;
 
 let bill = null;
 let rollCalls = [];
@@ -21,8 +22,8 @@ let organizationComments = [];
 
 try {
   const [detailData, testimonyData, trackedBills, organizations] = await Promise.all([
-    getBillDetail(billCode, { year }),
-    getBillTestimony(billCode, { year }),
+    getBillDetail(billCode, { year, runtimeEnv }),
+    getBillTestimony(billCode, { year, runtimeEnv }),
     getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
     getOrganizations(),
   ]);

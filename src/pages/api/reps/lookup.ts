@@ -1,10 +1,10 @@
 export const prerender = false;
 
-const API_BASE =
-  import.meta.env.REP_LOOKUP_API_BASE ||
-  "https://api.nhciviccommons.com";
+import { civicApiBase, civicApiFetch } from "../../../lib/civicApi";
 
-export async function POST({ request }) {
+const API_BASE = civicApiBase();
+
+export async function POST({ request, locals }) {
   try {
     const body = await request.json();
     const address = String(body.address || "").trim();
@@ -13,8 +13,9 @@ export async function POST({ request }) {
       return json({ error: "Address is required." }, 400);
     }
 
-    const response = await fetch(`${API_BASE}/reps/lookup`, {
+    const response = await civicApiFetch(`${API_BASE}/reps/lookup`, {
       method: "POST",
+      runtimeEnv: locals.runtime?.env,
       headers: {
         "Content-Type": "application/json",
       },

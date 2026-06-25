@@ -1,11 +1,11 @@
-const DEFAULT_API_BASE = "https://api.nhciviccommons.com";
+import { DEFAULT_CIVIC_API_BASE, civicApiFetch } from "./civicApi";
 
 export function articlesApiBase() {
   return (
     import.meta.env.ARTICLES_API_BASE ||
     import.meta.env.BILLS_API_BASE ||
     import.meta.env.REP_LOOKUP_API_BASE ||
-    DEFAULT_API_BASE
+    DEFAULT_CIVIC_API_BASE
   );
 }
 
@@ -22,6 +22,7 @@ export async function getArticles({
   include = "",
   limit = 50,
   offset = 0,
+  runtimeEnv,
 } = {}) {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
@@ -37,7 +38,9 @@ export async function getArticles({
   if (offset) params.set("offset", String(offset));
 
   const query = params.toString();
-  const response = await fetch(`${apiBase}/articles${query ? `?${query}` : ""}`);
+  const response = await civicApiFetch(`${apiBase}/articles${query ? `?${query}` : ""}`, {
+    runtimeEnv,
+  });
 
   if (!response.ok) {
     throw new Error(`Unable to load articles: ${response.status}`);

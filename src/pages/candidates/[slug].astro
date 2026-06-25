@@ -17,12 +17,13 @@ import {
 } from "../../lib/organizationsApi";
 
 const { slug } = Astro.params;
+const runtimeEnv = Astro.locals.runtime?.env;
 
 let apiData = null;
 let organizations = [];
 
 try {
-  apiData = await getCandidate(slug);
+  apiData = await getCandidate(slug, { runtimeEnv });
 } catch (error) {
   console.error(error?.message || "Unable to load candidate profile.");
 }

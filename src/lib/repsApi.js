@@ -1,7 +1,7 @@
-const DEFAULT_API_BASE = "https://api.nhciviccommons.com";
+import { DEFAULT_CIVIC_API_BASE, civicApiFetch } from "./civicApi";
 
 export function repsApiBase() {
-  return import.meta.env.REP_LOOKUP_API_BASE || DEFAULT_API_BASE;
+  return import.meta.env.REP_LOOKUP_API_BASE || DEFAULT_CIVIC_API_BASE;
 }
 
 export async function getRepresentatives({
@@ -11,6 +11,7 @@ export async function getRepresentatives({
   include = "",
   limit = 200,
   offset = 0,
+  runtimeEnv,
 } = {}) {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
@@ -20,7 +21,9 @@ export async function getRepresentatives({
   if (offset) params.set("offset", String(offset));
 
   const query = params.toString();
-  const response = await fetch(`${apiBase}/reps${query ? `?${query}` : ""}`);
+  const response = await civicApiFetch(`${apiBase}/reps${query ? `?${query}` : ""}`, {
+    runtimeEnv,
+  });
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
@@ -42,8 +45,13 @@ export async function getRepresentatives({
   };
 }
 
-export async function getRepresentative(slugOrId, { apiBase = repsApiBase() } = {}) {
-  const response = await fetch(`${apiBase}/reps/${encodeURIComponent(slugOrId)}`);
+export async function getRepresentative(slugOrId, {
+  apiBase = repsApiBase(),
+  runtimeEnv,
+} = {}) {
+  const response = await civicApiFetch(`${apiBase}/reps/${encodeURIComponent(slugOrId)}`, {
+    runtimeEnv,
+  });
 
   if (!response.ok) {
     throw new Error(`Unable to load representative: ${response.status}`);

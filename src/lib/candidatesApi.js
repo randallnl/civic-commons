@@ -1,7 +1,7 @@
-const DEFAULT_API_BASE = "https://api.nhciviccommons.com";
+import { DEFAULT_CIVIC_API_BASE, civicApiFetch } from "./civicApi";
 
 export function candidatesApiBase() {
-  return import.meta.env.REP_LOOKUP_API_BASE || DEFAULT_API_BASE;
+  return import.meta.env.REP_LOOKUP_API_BASE || DEFAULT_CIVIC_API_BASE;
 }
 
 export async function getCandidates({
@@ -15,6 +15,7 @@ export async function getCandidates({
   electionYear = "",
   limit = 100,
   offset = 0,
+  runtimeEnv,
 } = {}) {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
@@ -28,7 +29,9 @@ export async function getCandidates({
   if (offset) params.set("offset", String(offset));
 
   const query = params.toString();
-  const response = await fetch(`${apiBase}/candidates${query ? `?${query}` : ""}`);
+  const response = await civicApiFetch(`${apiBase}/candidates${query ? `?${query}` : ""}`, {
+    runtimeEnv,
+  });
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok || data.error || data.message || data.status === "error") {
@@ -45,9 +48,13 @@ export async function getCandidates({
   };
 }
 
-export async function getCandidate(slugOrId, { apiBase = candidatesApiBase() } = {}) {
-  const response = await fetch(
+export async function getCandidate(slugOrId, {
+  apiBase = candidatesApiBase(),
+  runtimeEnv,
+} = {}) {
+  const response = await civicApiFetch(
     `${apiBase}/candidates/${encodeURIComponent(slugOrId)}`,
+    { runtimeEnv },
   );
   const data = await response.json().catch(() => ({}));
 
