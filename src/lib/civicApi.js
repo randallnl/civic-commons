@@ -1,3 +1,5 @@
+import { env } from "cloudflare:workers";
+
 export const DEFAULT_CIVIC_API_BASE = "https://api.nhciviccommons.com";
 
 export function civicApiBase(...overrides) {
@@ -10,7 +12,9 @@ export function civicApiBase(...overrides) {
 
 export function civicApiHeaders(headers = {}, runtimeEnv = {}) {
   const apiKey =
+    env.API_ACCESS_KEY ||
     runtimeEnv.API_ACCESS_KEY ||
+    env.CIVIC_API_KEY ||
     runtimeEnv.CIVIC_API_KEY ||
     import.meta.env.API_ACCESS_KEY ||
     import.meta.env.CIVIC_API_KEY ||
