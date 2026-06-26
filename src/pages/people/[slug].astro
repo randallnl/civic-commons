@@ -432,6 +432,14 @@ function contactHref(type, value) {
                           {vote.trackedBill.summary && (
                             <p>{vote.trackedBill.summary}</p>
                           )}
+                          <div class:list={["vote-interpretation", stance.className]}>
+                            <span class:list={["legislator-vote-pill", stance.className]}>
+                              {stance.label}
+                            </span>
+                            {voteImpact && (
+                              <p class="vote-impact">{voteImpact}</p>
+                            )}
+                          </div>
                           <div class="vote-meta">
                             {vote.vote_date && <span>{formatDate(vote.vote_date)}</span>}
                             {vote.motion && <span>{vote.motion}</span>}
@@ -455,14 +463,6 @@ function contactHref(type, value) {
                           )}
                         </div>
                         <div class="vote-pill-stack">
-                          <div class="vote-interpretation">
-                            <span class:list={["legislator-vote-pill", stance.className]}>
-                              {stance.label}
-                            </span>
-                            {voteImpact && (
-                              <p class="vote-impact">{voteImpact}</p>
-                            )}
-                          </div>
                           {vote.billSummary && (
                             <BillPositionSummary bill={vote.billSummary} />
                           )}
@@ -956,6 +956,21 @@ function contactHref(type, value) {
     display: grid;
     gap: 8px;
     padding: 8px;
+  }
+
+  .vote-interpretation.legislator-support {
+    background: #dff0d8;
+    border-color: #2f7d4f;
+  }
+
+  .vote-interpretation.legislator-oppose {
+    background: #fde2de;
+    border-color: #b42318;
+  }
+
+  .vote-interpretation.legislator-neutral {
+    background: #dbeafe;
+    border-color: #2563eb;
   }
 
   .vote-card .vote-impact {

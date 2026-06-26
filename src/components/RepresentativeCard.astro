@@ -147,14 +147,14 @@ function billSummaryFor(vote) {
                   </a>
                 </strong>
                 {bill?.name && <span>{bill.name}</span>}
-              </div>
-              <div class="vote-pill-stack">
-                <div class="vote-interpretation">
+                <div class:list={["vote-interpretation", stance.className]}>
                   <small class:list={["legislator-vote-pill", stance.className]}>
                     {stance.label}
                   </small>
                   {voteImpact && <p class="vote-impact">{voteImpact}</p>}
                 </div>
+              </div>
+              <div class="vote-pill-stack">
                 {billSummary && (
                   <BillPositionSummary bill={billSummary} compact={true} />
                 )}
@@ -398,6 +398,21 @@ function billSummaryFor(vote) {
     padding: 7px;
   }
 
+  .vote-interpretation.legislator-support {
+    background: #dff0d8;
+    border-color: #2f7d4f;
+  }
+
+  .vote-interpretation.legislator-oppose {
+    background: #fde2de;
+    border-color: #b42318;
+  }
+
+  .vote-interpretation.legislator-neutral {
+    background: #dbeafe;
+    border-color: #2563eb;
+  }
+
   .vote-impact {
     color: #4b5563;
     font-size: 0.82rem;
@@ -437,17 +452,14 @@ function billSummaryFor(vote) {
   }
 
   .legislator-support {
-    background: #dff0d8;
     border-color: #2f7d4f;
   }
 
   .legislator-oppose {
-    background: #fde2de;
     border-color: #b42318;
   }
 
   .legislator-neutral {
-    background: #dbeafe;
     border-color: #2563eb;
   }
 

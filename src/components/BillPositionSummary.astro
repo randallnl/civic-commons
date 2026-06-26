@@ -26,12 +26,14 @@ const className = communityClass();
 <div class:list={["position-summary", compact && "compact"]}>
   {className ? (
     <>
-      <span class:list={["stance-pill", className]}>Remote Testimony</span>
-      <span class="support-pill">{counts.support} Support</span>
-      <span class="oppose-pill">{counts.oppose} Oppose</span>
+      <span class:list={["summary-title", className]}>Remote Testimony</span>
+      <div class="summary-pills">
+        <span class="support-pill">{counts.support} Support</span>
+        <span class="oppose-pill">{counts.oppose} Oppose</span>
+      </div>
     </>
   ) : (
-    <span class="stance-pill community-neutral">No remote testimony</span>
+    <span class="summary-title community-neutral">No remote testimony</span>
   )}
 </div>
 
@@ -40,13 +42,18 @@ const className = communityClass();
     background: #fffaf1;
     border: 1px solid #9ca3af;
     border-radius: 12px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    display: grid;
+    gap: 7px;
     padding: 8px;
   }
 
-  .position-summary span {
+  .summary-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .summary-pills span {
     background: white;
     border: 1px solid #d1d5db;
     border-radius: 999px;
@@ -56,34 +63,43 @@ const className = communityClass();
     padding: 6px 9px;
   }
 
-  .position-summary.compact span {
+  .position-summary.compact .summary-pills span {
     font-size: 0.76rem;
     padding: 5px 8px;
   }
 
   .position-summary.compact {
     border-radius: 10px;
-    gap: 6px;
+    gap: 5px;
     padding: 6px;
   }
 
-  .stance-pill {
-    border-width: 2px;
+  .summary-title {
+    border-bottom: 1px solid #d1d5db;
+    color: #1f2933;
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    padding: 0 0 5px;
+    text-transform: uppercase;
+  }
+
+  .position-summary.compact .summary-title {
+    font-size: 0.66rem;
+    padding-bottom: 4px;
   }
 
   .community-support {
-    background: #dff0d8;
-    border-color: #2f7d4f;
+    color: #166534;
   }
 
   .community-oppose {
-    background: #fde2de;
-    border-color: #b42318;
+    color: #991b1b;
   }
 
   .community-neutral {
-    background: #eef0f4;
-    border-color: #5b616e;
+    color: #475569;
   }
 
   .support-pill {
