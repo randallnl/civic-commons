@@ -62,12 +62,14 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
           width="2000"
           height="500"
         />
-        <p class="eyebrow">Community-powered civic information</p>
-        <h1>Know who represents you and what's happening in your community.</h1>
-        <p class="lede">
-          Civic Commons is a public directory of elected officials, candidates,
-          legislative districts, bills, public testimony, and civic coverage.
-        </p>
+        <div class="hero-copy">
+          <p class="eyebrow">Community-powered civic information</p>
+          <h1>Know who represents you and what's happening in your community.</h1>
+          <p class="lede">
+            Civic Commons is a public directory of elected officials, candidates,
+            legislative districts, bills, public testimony, and civic coverage.
+          </p>
+        </div>
       </section>
 
       <section class="stats">
@@ -249,16 +251,41 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
   }
 
   .hero {
-    padding: 0 0 40px;
+    align-items: end;
+    display: grid;
+    margin: 0 calc(50% - 50vw) 40px;
+    min-height: clamp(420px, 58vw, 620px);
+    overflow: hidden;
+    padding: clamp(72px, 10vw, 128px) 0 clamp(44px, 8vw, 84px);
+    position: relative;
+    width: 100vw;
+  }
+
+  .hero::after {
+    background:
+      linear-gradient(90deg, rgba(17, 24, 39, 0.82), rgba(17, 24, 39, 0.55) 48%, rgba(17, 24, 39, 0.2)),
+      linear-gradient(0deg, rgba(17, 24, 39, 0.58), rgba(17, 24, 39, 0.1));
+    content: "";
+    inset: 0;
+    position: absolute;
+    z-index: 1;
   }
 
   .hero-banner {
-    aspect-ratio: 4 / 1;
-    display: block;
-    height: auto;
-    margin: 0 calc(50% - 50vw) 40px;
+    height: 100%;
+    inset: 0;
     object-fit: cover;
-    width: 100vw;
+    position: absolute;
+    width: 100%;
+    z-index: 0;
+  }
+
+  .hero-copy {
+    color: #fffaf1;
+    margin: 0 auto;
+    position: relative;
+    width: min(1120px, calc(100% - 32px));
+    z-index: 2;
   }
 
   .eyebrow {
@@ -270,11 +297,20 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
     margin-bottom: 16px;
   }
 
+  .hero .eyebrow {
+    color: #fde68a;
+  }
+
   h1 {
     max-width: 900px;
     font-size: clamp(2.5rem, 7vw, 5.5rem);
     line-height: 0.95;
     margin: 0;
+  }
+
+  .hero h1 {
+    color: #fffaf1;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
   }
 
   .lede {
@@ -283,6 +319,11 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
     line-height: 1.6;
     margin: 24px 0 0;
     color: #4b5563;
+  }
+
+  .hero .lede {
+    color: #f8fafc;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
   }
 
   .cta a {
