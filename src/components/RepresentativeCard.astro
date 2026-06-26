@@ -137,16 +137,20 @@ function billSummaryFor(vote) {
           const billYear = billSummary?.sessionyear || vote.sessionyear;
           const stance = representativeVoteStance(vote, bill);
           const voteImpact = representativeVoteImpact(vote, bill);
+          const summary = bill?.summary || billSummary?.summary || billSummary?.description || "";
 
           return (
             <div class="vote-item">
-              <div class="vote-copy">
+              <div class="vote-heading">
                 <strong>
                   <a href={billDetailPath(bill?.code || vote.condensedbillno, billYear)}>
                     {bill?.code || vote.condensedbillno || "Bill"}
                   </a>
                 </strong>
                 {bill?.name && <span>{bill.name}</span>}
+                {summary && <p class="bill-summary">{summary}</p>}
+              </div>
+              <div class="vote-copy">
                 <div class:list={["vote-interpretation", stance.className]}>
                   <small class:list={["legislator-vote-pill", stance.className]}>
                     {stance.label}
@@ -375,10 +379,25 @@ function billSummaryFor(vote) {
     padding: 10px 12px;
   }
 
+  .vote-heading {
+    display: grid;
+    gap: 6px;
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
   .vote-copy {
     display: grid;
     gap: 6px;
     min-width: 0;
+  }
+
+  .bill-summary {
+    color: #4b5563;
+    font-size: 0.86rem;
+    font-weight: 800;
+    line-height: 1.45;
+    margin: 0;
   }
 
   .vote-pill-stack {
