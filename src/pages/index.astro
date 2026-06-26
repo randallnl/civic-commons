@@ -13,11 +13,6 @@ import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 let recentArticles = [];
 let recentBills = [];
 let recentPeople = [];
-let apiMeta = {
-  articles: 0,
-  bills: 0,
-  representatives: 0,
-};
 
 try {
   const [articleResult, billResult, repResult] = await Promise.allSettled([
@@ -33,11 +28,6 @@ try {
   recentArticles = articleData.articles || [];
   recentBills = billData.bills || [];
   recentPeople = repData.representatives || [];
-  apiMeta = {
-    articles: articleData.meta?.total || recentArticles.length,
-    bills: billData.meta?.total || recentBills.length,
-    representatives: repData.meta?.total || recentPeople.length,
-  };
 } catch (error) {
   console.error(error?.message || "Unable to load homepage API data.");
 }
@@ -70,28 +60,6 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
             legislative districts, bills, public testimony, and civic coverage.
           </p>
         </div>
-      </section>
-
-      <section class="stats">
-        <a href="/my-state-rep">
-          <strong>{apiMeta.representatives}</strong>
-          <span>Find Your Legislators</span>
-        </a>
-
-        <a href="/bills">
-          <strong>{apiMeta.bills}</strong>
-          <span>Bills</span>
-        </a>
-
-        <a href="/articles">
-          <strong>{apiMeta.articles}</strong>
-          <span>Articles</span>
-        </a>
-
-        <a href="/communities">
-          <strong>API</strong>
-          <span>Live Data</span>
-        </a>
       </section>
 
       <section class="rep-preview">
@@ -254,9 +222,9 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
     align-items: end;
     display: grid;
     margin: 0 calc(50% - 50vw) 40px;
-    min-height: clamp(420px, 58vw, 620px);
+    min-height: clamp(300px, 38vw, 440px);
     overflow: hidden;
-    padding: clamp(72px, 10vw, 128px) 0 clamp(44px, 8vw, 84px);
+    padding: clamp(48px, 7vw, 84px) 0 clamp(32px, 5vw, 56px);
     position: relative;
     width: 100vw;
   }
@@ -337,14 +305,6 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
     cursor: pointer;
   }
 
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin: 32px 0;
-  }
-
-  .stats a,
   .card,
   .rep-preview,
   .content-grid > div,
@@ -353,29 +313,6 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
     border: 2px solid #1f2933;
     border-radius: 24px;
     box-shadow: 6px 6px 0 #1f2933;
-  }
-
-  .stats a {
-    color: inherit;
-    display: block;
-    padding: 20px;
-    text-decoration: none;
-  }
-
-  .stats a:hover strong {
-    text-decoration: underline;
-  }
-
-  .stats strong {
-    display: block;
-    font-size: 2.2rem;
-    line-height: 1;
-  }
-
-  .stats span {
-    display: block;
-    margin-top: 8px;
-    color: #4b5563;
   }
 
   .rep-preview {
@@ -544,7 +481,6 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
   }
 
   @media (max-width: 900px) {
-    .stats,
     .grid,
     .rep-preview,
     .content-grid {
@@ -554,7 +490,6 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
   }
 
   @media (max-width: 600px) {
-    .stats,
     .grid,
     .rep-preview,
     .content-grid {
@@ -566,7 +501,8 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
     }
 
     .hero {
-      padding-top: 32px;
+      min-height: 340px;
+      padding-top: 40px;
     }
   }
 </style>
