@@ -18,7 +18,7 @@ let error = "";
 try {
   const [data, trackedBills] = await Promise.all([
     getRollCallVotes(billCode, sequence, { year }),
-    getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
+    getTrackedBills(),
   ]);
 
   bill = data.bill;

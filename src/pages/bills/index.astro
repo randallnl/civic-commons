@@ -17,7 +17,7 @@ let trackedBills = new Map();
 try {
   const [data, tracked] = await Promise.all([
     getBills({ q, year, limit: 100 }),
-    getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
+    getTrackedBills(),
   ]);
   bills = data.bills || [];
   meta = data.meta || {};

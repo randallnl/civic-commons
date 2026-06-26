@@ -10,7 +10,11 @@ import { civicApiBase, civicApiFetch } from "../lib/civicApi";
 import { isFreeStater } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
-import { normalizeBillCode, getTrackedBills } from "../lib/trackedBills";
+import {
+  normalizeBillCode,
+  getTrackedBills,
+  trackedBillForVote,
+} from "../lib/trackedBills";
 
 const API_BASE = civicApiBase();
 
@@ -57,7 +61,7 @@ if (!address) {
 if (lookupData) {
   try {
     [trackedBills, billSummaries] = await Promise.all([
-      getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
+      getTrackedBills(),
       getBillSummaries(),
     ]);
   } catch (error) {
@@ -131,7 +135,12 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
   for (const rep of reps) {
     for (const vote of rep.voteHistory || []) {
       const code = normalizeBillCode(vote.condensedbillno);
-      if (!code || !tracked.has(code) || summaries.has(code) || missingBills.has(code)) {
+      if (
+        !code ||
+        !trackedBillForVote(tracked, vote) ||
+        summaries.has(code) ||
+        missingBills.has(code)
+      ) {
         continue;
       }
       missingBills.set(code, vote.sessionyear);

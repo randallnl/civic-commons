@@ -10,7 +10,12 @@ import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/bills
 import { isFreeStater } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
 import { getRepresentative } from "../../lib/repsApi";
-import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
+import {
+  getTrackedBills,
+  normalizeBillCode,
+  representativeVoteStance,
+  trackedBillForVote,
+} from "../../lib/trackedBills";
 
 const { slug } = Astro.params;
 
@@ -50,7 +55,7 @@ let billSummaries = new Map();
 
 try {
   [trackedBills, billSummaries] = await Promise.all([
-    getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
+    getTrackedBills(),
     getBillSummaries(),
   ]);
 } catch (error) {
@@ -205,7 +210,7 @@ function representativeToTerm(rep = {}) {
 
 function normalizeVote(vote = {}, bills = new Map(), summaries = new Map()) {
   const billNumber = vote.condensedbillno || vote.bill_number || "";
-  const trackedBill = bills.get(normalizeBillCode(billNumber));
+  const trackedBill = trackedBillForVote(bills, vote);
   const billSummary = summaries.get(normalizeBillCode(billNumber));
 
   return {
@@ -219,29 +224,6 @@ function normalizeVote(vote = {}, bills = new Map(), summaries = new Map()) {
     legiscan_url: vote.legiscan_url || "",
     billSummary,
     trackedBill,
-  };
-}
-
-function legislatorVoteStance(vote) {
-  const label = String(vote.vote_label || vote.vote || "").toLowerCase();
-
-  if (label.includes("support") || label === "yea" || label === "yes") {
-    return {
-      label: "Representative Vote: In Support",
-      className: "legislator-support",
-    };
-  }
-
-  if (label.includes("against") || label.includes("oppose") || label === "nay" || label === "no") {
-    return {
-      label: "Representative Vote: Opposed",
-      className: "legislator-oppose",
-    };
-  }
-
-  return {
-    label: `Representative Vote: ${vote.vote_label || vote.vote || "Not listed"}`,
-    className: "legislator-neutral",
   };
 }
 
@@ -407,7 +389,7 @@ function contactHref(type, value) {
             {trackedVotes.length ? (
               <div class="vote-list">
                 {trackedVotes.map((vote) => {
-                  const stance = legislatorVoteStance(vote);
+                  const stance = representativeVoteStance(vote, vote.trackedBill);
 
                   return (
                     <article class="vote-card">
@@ -952,8 +934,8 @@ function contactHref(type, value) {
   }
 
   .legislator-neutral {
-    background: #eef0f4;
-    border-color: #5b616e;
+    background: #dbeafe;
+    border-color: #2563eb;
   }
 
   .vote-meta {

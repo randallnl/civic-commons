@@ -4,7 +4,11 @@ import profileIcon from "../assets/profile icon.png";
 import { billDetailPath } from "../lib/billsApi";
 import { isFreeStater } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
-import { normalizeBillCode } from "../lib/trackedBills";
+import {
+  normalizeBillCode,
+  representativeVoteStance,
+  trackedBillForVote,
+} from "../lib/trackedBills";
 
 const { rep, trackedBills = new Map(), billSummaries = new Map() } = Astro.props;
 
@@ -31,45 +35,16 @@ const profileHref = `/people/${slugify(name)}`;
 const photoUrl = profilePhotoUrl(rep.photo);
 const voteHistory = Array.isArray(rep.voteHistory)
   ? rep.voteHistory
-      .filter((vote) =>
-        trackedBills.has(normalizeBillCode(vote.condensedbillno)),
-      )
+      .filter((vote) => trackedBillForVote(trackedBills, vote))
       .slice(0, 3)
   : [];
 
 function trackedBillFor(vote) {
-  return trackedBills.get(normalizeBillCode(vote.condensedbillno));
+  return trackedBillForVote(trackedBills, vote);
 }
 
 function billSummaryFor(vote) {
   return billSummaries.get(normalizeBillCode(vote.condensedbillno));
-}
-
-function voteLabel(vote) {
-  return vote.vote_label || vote.vote || "Not listed";
-}
-
-function legislatorVoteStance(vote) {
-  const label = String(voteLabel(vote)).toLowerCase();
-
-  if (label.includes("support") || label === "yea" || label === "yes") {
-    return {
-      label: "Representative Vote: In Support",
-      className: "legislator-support",
-    };
-  }
-
-  if (label.includes("against") || label.includes("oppose") || label === "nay" || label === "no") {
-    return {
-      label: "Representative Vote: Opposed",
-      className: "legislator-oppose",
-    };
-  }
-
-  return {
-    label: `Representative Vote: ${voteLabel(vote)}`,
-    className: "legislator-neutral",
-  };
 }
 ---
 
@@ -151,7 +126,7 @@ function legislatorVoteStance(vote) {
           const bill = trackedBillFor(vote);
           const billSummary = billSummaryFor(vote);
           const billYear = billSummary?.sessionyear || vote.sessionyear;
-          const stance = legislatorVoteStance(vote);
+          const stance = representativeVoteStance(vote, bill);
 
           return (
             <div class="vote-item">
@@ -385,8 +360,8 @@ function legislatorVoteStance(vote) {
   }
 
   .legislator-neutral {
-    background: #eef0f4;
-    border-color: #5b616e;
+    background: #dbeafe;
+    border-color: #2563eb;
   }
 
   .vote-item span {

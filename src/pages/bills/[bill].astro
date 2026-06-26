@@ -23,7 +23,7 @@ try {
   const [detailData, testimonyData, trackedBills, organizations] = await Promise.all([
     getBillDetail(billCode, { year }),
     getBillTestimony(billCode, { year }),
-    getTrackedBills(import.meta.env.TRACKED_BILLS_CSV_URL),
+    getTrackedBills(),
     getOrganizations(),
   ]);
 
