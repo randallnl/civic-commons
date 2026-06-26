@@ -432,9 +432,6 @@ function contactHref(type, value) {
                           {vote.trackedBill.summary && (
                             <p>{vote.trackedBill.summary}</p>
                           )}
-                          {voteImpact && (
-                            <p class="vote-impact">{voteImpact}</p>
-                          )}
                           <div class="vote-meta">
                             {vote.vote_date && <span>{formatDate(vote.vote_date)}</span>}
                             {vote.motion && <span>{vote.motion}</span>}
@@ -458,9 +455,14 @@ function contactHref(type, value) {
                           )}
                         </div>
                         <div class="vote-pill-stack">
-                          <span class:list={["legislator-vote-pill", stance.className]}>
-                            {stance.label}
-                          </span>
+                          <div class="vote-interpretation">
+                            <span class:list={["legislator-vote-pill", stance.className]}>
+                              {stance.label}
+                            </span>
+                            {voteImpact && (
+                              <p class="vote-impact">{voteImpact}</p>
+                            )}
+                          </div>
                           {vote.billSummary && (
                             <BillPositionSummary bill={vote.billSummary} />
                           )}
@@ -947,13 +949,20 @@ function contactHref(type, value) {
     margin-bottom: 0;
   }
 
+  .vote-interpretation {
+    background: white;
+    border: 1px solid #9ca3af;
+    border-radius: 12px;
+    display: grid;
+    gap: 8px;
+    padding: 8px;
+  }
+
   .vote-card .vote-impact {
-    background: #fffaf1;
-    border-left: 4px solid #1f2933;
     color: #1f2933;
     font-weight: 850;
-    margin-top: 4px;
-    padding: 8px 10px;
+    margin: 0;
+    text-align: left;
   }
 
   .status-pill.current {
