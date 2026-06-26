@@ -13,6 +13,8 @@ import { getRepresentative } from "../../lib/repsApi";
 import {
   getTrackedBills,
   normalizeBillCode,
+  representativeGrade,
+  representativeVoteImpact,
   representativeVoteStance,
   trackedBillForVote,
 } from "../../lib/trackedBills";
@@ -66,6 +68,7 @@ const voteHistory = apiData?.voteHistory || [];
 let trackedVotes = voteHistory
   .map((vote) => normalizeVote(vote, trackedBills, billSummaries))
   .filter((vote) => vote.trackedBill);
+const voteGrade = representativeGrade(voteHistory, trackedBills);
 
 trackedVotes = await Promise.all(
   trackedVotes.map(async (vote) => {
@@ -314,6 +317,14 @@ function contactHref(type, value) {
             <span class="meta-pill district-pill">{districtLabel}</span>
           </div>
 
+          <div class="profile-grade-row">
+            <div class:list={["profile-grade", voteGrade.className]} title={voteGrade.label}>
+              <span>{voteGrade.letter}</span>
+              <small>Vote Grade</small>
+            </div>
+            <p>{voteGrade.label}</p>
+          </div>
+
           {person.bio ? (
             <p class="bio">{person.bio}</p>
           ) : (
@@ -390,6 +401,7 @@ function contactHref(type, value) {
               <div class="vote-list">
                 {trackedVotes.map((vote) => {
                   const stance = representativeVoteStance(vote, vote.trackedBill);
+                  const voteImpact = representativeVoteImpact(vote, vote.trackedBill);
 
                   return (
                     <article class="vote-card">
@@ -419,6 +431,9 @@ function contactHref(type, value) {
                           </h3>
                           {vote.trackedBill.summary && (
                             <p>{vote.trackedBill.summary}</p>
+                          )}
+                          {voteImpact && (
+                            <p class="vote-impact">{voteImpact}</p>
                           )}
                           <div class="vote-meta">
                             {vote.vote_date && <span>{formatDate(vote.vote_date)}</span>}
@@ -735,6 +750,69 @@ function contactHref(type, value) {
     border-color: #1f2933;
   }
 
+  .profile-grade-row {
+    align-items: center;
+    display: flex;
+    gap: 14px;
+    margin-top: 18px;
+  }
+
+  .profile-grade-row p {
+    color: #4b5563;
+    font-weight: 850;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .profile-grade {
+    border: 2px solid #1f2933;
+    border-radius: 14px;
+    box-shadow: 3px 3px 0 #1f2933;
+    color: white;
+    display: grid;
+    min-width: 82px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+
+  .profile-grade span {
+    font-size: 3rem;
+    font-weight: 950;
+    line-height: 1;
+  }
+
+  .profile-grade small {
+    font-size: 0.66rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  .grade-a {
+    background: #166534;
+  }
+
+  .grade-b {
+    background: #65a30d;
+  }
+
+  .grade-c {
+    background: #ca8a04;
+  }
+
+  .grade-d {
+    background: #ea580c;
+  }
+
+  .grade-f {
+    background: #b42318;
+  }
+
+  .grade-unknown {
+    background: #5b616e;
+  }
+
   .free-stater-pill {
     background: #7f1d1d;
     border-color: #111827;
@@ -867,6 +945,15 @@ function contactHref(type, value) {
     color: #4b5563;
     line-height: 1.55;
     margin-bottom: 0;
+  }
+
+  .vote-card .vote-impact {
+    background: #fffaf1;
+    border-left: 4px solid #1f2933;
+    color: #1f2933;
+    font-weight: 850;
+    margin-top: 4px;
+    padding: 8px 10px;
   }
 
   .status-pill.current {

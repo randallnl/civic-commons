@@ -66,6 +66,74 @@ export function trackedBillForVote(bills = new Map(), vote = {}) {
 }
 
 export function representativeVoteStance(vote = {}, trackedBill = {}) {
+  const analysis = representativeVoteAnalysis(vote, trackedBill);
+
+  if (!analysis.voteStance || !analysis.preferredStance) {
+    return {
+      label: `Vote: ${analysis.interpretation || vote.vote_label || vote.vote || "Not listed"}`,
+      className: "legislator-neutral",
+    };
+  }
+
+  return {
+    label: `Vote: ${analysis.interpretation || titleCase(analysis.voteStance)}`,
+    className:
+      analysis.alignment === "neutral"
+        ? "legislator-neutral"
+        : analysis.alignment === "aligned"
+          ? "legislator-support"
+          : "legislator-oppose",
+  };
+}
+
+export function representativeVoteImpact(vote = {}, trackedBill = {}) {
+  return representativeVoteAnalysis(vote, trackedBill).impact;
+}
+
+export function representativeGrade(votes = [], trackedBills = new Map()) {
+  const scoredVotes = votes
+    .map((vote) => {
+      const trackedBill = trackedBillForVote(trackedBills, vote);
+      if (!trackedBill) return null;
+      return representativeVoteAnalysis(vote, trackedBill);
+    })
+    .filter((analysis) => analysis?.alignment === "aligned" || analysis?.alignment === "misaligned");
+
+  if (!scoredVotes.length) {
+    return {
+      letter: "N/A",
+      percent: null,
+      aligned: 0,
+      total: 0,
+      className: "grade-unknown",
+      label: "No scored tracked votes",
+    };
+  }
+
+  const aligned = scoredVotes.filter((analysis) => analysis.alignment === "aligned").length;
+  const percent = aligned / scoredVotes.length;
+  const letter =
+    percent >= 0.9
+      ? "A"
+      : percent >= 0.8
+        ? "B"
+        : percent >= 0.7
+          ? "C"
+          : percent >= 0.6
+            ? "D"
+            : "F";
+
+  return {
+    letter,
+    percent,
+    aligned,
+    total: scoredVotes.length,
+    className: `grade-${letter.toLowerCase()}`,
+    label: `${aligned} of ${scoredVotes.length} aligned with the preferred stance`,
+  };
+}
+
+function representativeVoteAnalysis(vote = {}, trackedBill = {}) {
   const voteStance = normalizeVoteStance(vote);
   const preferredStance = normalizePreferredStance(trackedBill.preferredStance);
   const interpretation =
@@ -74,22 +142,24 @@ export function representativeVoteStance(vote = {}, trackedBill = {}) {
       : voteStance === "nay"
         ? trackedBill.nayInterpretation
         : "";
-
-  if (!voteStance || !preferredStance) {
-    return {
-      label: `Vote: ${interpretation || vote.vote_label || vote.vote || "Not listed"}`,
-      className: "legislator-neutral",
-    };
-  }
+  const impact =
+    voteStance === "yea"
+      ? trackedBill.yeaImpact
+      : voteStance === "nay"
+        ? trackedBill.nayImpact
+        : "";
 
   return {
-    label: `Vote: ${interpretation || titleCase(voteStance)}`,
-    className:
-      preferredStance === "neutral"
-        ? "legislator-neutral"
+    voteStance,
+    preferredStance,
+    interpretation,
+    impact,
+    alignment:
+      !voteStance || !preferredStance || preferredStance === "neutral"
+        ? "neutral"
         : voteStance === preferredStance
-          ? "legislator-support"
-          : "legislator-oppose",
+          ? "aligned"
+          : "misaligned",
   };
 }
 

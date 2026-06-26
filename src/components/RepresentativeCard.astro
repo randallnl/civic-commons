@@ -6,6 +6,8 @@ import { isFreeStater } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
 import {
   normalizeBillCode,
+  representativeGrade,
+  representativeVoteImpact,
   representativeVoteStance,
   trackedBillForVote,
 } from "../lib/trackedBills";
@@ -38,6 +40,7 @@ const voteHistory = Array.isArray(rep.voteHistory)
       .filter((vote) => trackedBillForVote(trackedBills, vote))
       .slice(0, 3)
   : [];
+const grade = representativeGrade(rep.voteHistory || [], trackedBills);
 
 function trackedBillFor(vote) {
   return trackedBillForVote(trackedBills, vote);
@@ -69,7 +72,13 @@ function billSummaryFor(vote) {
     </a>
 
     <div class="rep-main">
-      <h3><a href={profileHref}>{name}</a></h3>
+      <div class="rep-heading">
+        <h3><a href={profileHref}>{name}</a></h3>
+        <div class:list={["rep-grade", grade.className]} title={grade.label}>
+          <span>{grade.letter}</span>
+          <small>Grade</small>
+        </div>
+      </div>
 
       <div class="rep-meta">
         <span>{rep.chamber || "Legislator"}</span>
@@ -127,6 +136,7 @@ function billSummaryFor(vote) {
           const billSummary = billSummaryFor(vote);
           const billYear = billSummary?.sessionyear || vote.sessionyear;
           const stance = representativeVoteStance(vote, bill);
+          const voteImpact = representativeVoteImpact(vote, bill);
 
           return (
             <div class="vote-item">
@@ -137,6 +147,7 @@ function billSummaryFor(vote) {
                   </a>
                 </strong>
                 {bill?.name && <span>{bill.name}</span>}
+                {voteImpact && <p class="vote-impact">{voteImpact}</p>}
               </div>
               <div class="vote-pill-stack">
                 <small class:list={["legislator-vote-pill", stance.className]}>
@@ -211,6 +222,63 @@ function billSummaryFor(vote) {
   .rep-main h3 {
     font-size: 1.3rem;
     margin: 0;
+  }
+
+  .rep-heading {
+    align-items: start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+  }
+
+  .rep-grade {
+    border: 2px solid #1f2933;
+    border-radius: 12px;
+    box-shadow: 2px 2px 0 #1f2933;
+    color: white;
+    display: grid;
+    flex: 0 0 auto;
+    min-width: 58px;
+    padding: 6px 8px;
+    text-align: center;
+  }
+
+  .rep-grade span {
+    font-size: 1.85rem;
+    font-weight: 950;
+    line-height: 1;
+  }
+
+  .rep-grade small {
+    font-size: 0.62rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    margin-top: 3px;
+    text-transform: uppercase;
+  }
+
+  .grade-a {
+    background: #166534;
+  }
+
+  .grade-b {
+    background: #65a30d;
+  }
+
+  .grade-c {
+    background: #ca8a04;
+  }
+
+  .grade-d {
+    background: #ea580c;
+  }
+
+  .grade-f {
+    background: #b42318;
+  }
+
+  .grade-unknown {
+    background: #5b616e;
   }
 
   .rep-meta {
@@ -309,6 +377,14 @@ function billSummaryFor(vote) {
     display: grid;
     gap: 6px;
     min-width: 0;
+  }
+
+  .vote-impact {
+    color: #4b5563;
+    font-size: 0.84rem;
+    font-weight: 800;
+    line-height: 1.35;
+    margin: 0;
   }
 
   .vote-pill-stack {
