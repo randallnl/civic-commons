@@ -77,13 +77,13 @@ export function representativeVoteStance(vote = {}, trackedBill = {}) {
 
   if (!voteStance || !preferredStance) {
     return {
-      label: `Representative Vote: ${interpretation || vote.vote_label || vote.vote || "Not listed"}`,
+      label: `Vote: ${interpretation || vote.vote_label || vote.vote || "Not listed"}`,
       className: "legislator-neutral",
     };
   }
 
   return {
-    label: `Representative Vote: ${interpretation || titleCase(voteStance)}`,
+    label: `Vote: ${interpretation || titleCase(voteStance)}`,
     className:
       preferredStance === "neutral"
         ? "legislator-neutral"

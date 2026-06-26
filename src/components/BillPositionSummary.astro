@@ -37,9 +37,13 @@ const className = communityClass();
 
 <style>
   .position-summary {
+    background: #fffaf1;
+    border: 1px solid #9ca3af;
+    border-radius: 12px;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    padding: 8px;
   }
 
   .position-summary span {
@@ -55,6 +59,12 @@ const className = communityClass();
   .position-summary.compact span {
     font-size: 0.76rem;
     padding: 5px 8px;
+  }
+
+  .position-summary.compact {
+    border-radius: 10px;
+    gap: 6px;
+    padding: 6px;
   }
 
   .stance-pill {
@@ -77,14 +87,14 @@ const className = communityClass();
   }
 
   .support-pill {
-    background: #e7f7ec;
-    border-color: #86c894;
-    color: #166534;
+    background: #e0f2fe;
+    border-color: #0284c7;
+    color: #075985;
   }
 
   .oppose-pill {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: #991b1b;
+    background: #fef3c7;
+    border-color: #d97706;
+    color: #92400e;
   }
 </style>
