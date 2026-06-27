@@ -40,11 +40,27 @@ export async function getSpotlightLegislators({ csvUrl = "", limit = 8 } = {}) {
         try {
           if (row.personid) {
             const data = await getRepresentative(row.personid);
-            return data.representative || data.person || data;
+            return {
+              ...(data.representative || data.person || data),
+              voteHistory: data.voteHistory || data.votes || [],
+            };
           }
 
           const data = await getRepresentatives({ q: row.name, limit: 1 });
-          return data.representatives?.[0] || null;
+          const representative = data.representatives?.[0] || null;
+          if (!representative) return null;
+
+          try {
+            const profileData = await getRepresentative(
+              representative.personid || representative.id || representative.slug || row.name,
+            );
+            return {
+              ...(profileData.representative || profileData.person || representative),
+              voteHistory: profileData.voteHistory || profileData.votes || [],
+            };
+          } catch {
+            return representative;
+          }
         } catch (error) {
           console.warn(`Unable to load spotlight legislator: ${row.personid || row.name}`, error?.message || error);
           return null;

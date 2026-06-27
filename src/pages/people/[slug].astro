@@ -433,11 +433,17 @@ function contactHref(type, value) {
                             >
                               {vote.trackedBill.name || vote.title}
                             </a>
-                          </h3>
-                          {summary && <p class="bill-summary">{summary}</p>}
+                        </h3>
+                          {summary && (
+                            <div class="tracker-summary">
+                              <span>Bill Tracker Summary</span>
+                              <p>{summary}</p>
+                            </div>
+                          )}
                         </div>
                         <div class="vote-copy">
                           <div class:list={["vote-interpretation", stance.className]}>
+                            <strong>Representative Vote</strong>
                             <span class:list={["legislator-vote-pill", stance.className]}>
                               {stance.label}
                             </span>
@@ -953,7 +959,21 @@ function contactHref(type, value) {
     min-width: 0;
   }
 
-  .bill-summary {
+  .tracker-summary {
+    display: grid;
+    gap: 6px;
+  }
+
+  .tracker-summary span,
+  .vote-interpretation > strong {
+    color: #4b5563;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .tracker-summary p {
     color: #4b5563;
     font-weight: 500;
     line-height: 1.55;

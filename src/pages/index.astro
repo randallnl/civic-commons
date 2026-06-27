@@ -10,7 +10,14 @@ import { isFreeStater } from "../lib/civicTags";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
-import { getTrackedBills, normalizeBillCode } from "../lib/trackedBills";
+import {
+  getTrackedBills,
+  normalizeBillCode,
+  representativeGrade,
+  representativeVoteImpact,
+  representativeVoteStance,
+  trackedBillForVote,
+} from "../lib/trackedBills";
 import { getSpotlightLegislators } from "../lib/spotlightTracker";
 import { profilePhotoUrl } from "../lib/photos";
 
@@ -77,6 +84,11 @@ function locationLabel(person = {}) {
       person.townsRepresented ||
       "",
   );
+}
+
+function latestTrackedVote(person = {}) {
+  const votes = Array.isArray(person.voteHistory) ? person.voteHistory : [];
+  return votes.find((vote) => trackedBillForVote(trackedBills, vote)) || null;
 }
 ---
 
@@ -209,6 +221,11 @@ function locationLabel(person = {}) {
               <li>No legislators returned yet.</li>
             ) : recentPeople.map((person) => {
               const photoUrl = profilePhotoUrl(person.photo || person.photo_url);
+              const grade = representativeGrade(person.voteHistory || [], trackedBills);
+              const vote = latestTrackedVote(person);
+              const trackedBill = vote ? trackedBillForVote(trackedBills, vote) : null;
+              const voteStance = vote && trackedBill ? representativeVoteStance(vote, trackedBill) : null;
+              const voteImpact = vote && trackedBill ? representativeVoteImpact(vote, trackedBill) : "";
 
               return (
                 <li class="person-preview">
@@ -229,7 +246,19 @@ function locationLabel(person = {}) {
                       </small>
                       {locationLabel(person) && <em>{locationLabel(person)}</em>}
                     </span>
+                    <span class:list={["mini-grade", grade.className]} title={grade.label}>
+                      <strong>{grade.letter}</strong>
+                      <small>Grade</small>
+                    </span>
                   </a>
+                  {vote && trackedBill && (
+                    <div class:list={["person-vote-preview", voteStance.className]}>
+                      <span>Bill Tracker Vote</span>
+                      <strong>{trackedBill.code}: {trackedBill.name || "Tracked Bill"}</strong>
+                      <small>{voteStance.label}</small>
+                      {voteImpact && <p>{voteImpact}</p>}
+                    </div>
+                  )}
                   {isFreeStater(person) && (
                     <a
                       class="free-stater-inline"
@@ -656,7 +685,7 @@ function locationLabel(person = {}) {
     align-items: center;
     display: grid;
     gap: 12px;
-    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-columns: 64px minmax(0, 1fr) auto;
     text-decoration: none;
   }
 
@@ -695,6 +724,100 @@ function locationLabel(person = {}) {
     font-weight: 600;
     line-height: 1.35;
     margin-top: 3px;
+  }
+
+  .mini-grade {
+    border: 1px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 2px 2px 0 #1f2933;
+    color: white;
+    display: grid;
+    min-width: 52px;
+    padding: 7px 8px;
+    text-align: center;
+  }
+
+  .mini-grade strong {
+    font-size: 1.45rem;
+    line-height: 1;
+  }
+
+  .mini-grade small {
+    color: inherit;
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+    margin: 2px 0 0;
+    text-transform: uppercase;
+  }
+
+  .grade-a {
+    background: #166534;
+  }
+
+  .grade-b {
+    background: #65a30d;
+  }
+
+  .grade-c {
+    background: #ca8a04;
+  }
+
+  .grade-d {
+    background: #ea580c;
+  }
+
+  .grade-f {
+    background: #b42318;
+  }
+
+  .grade-unknown {
+    background: #5b616e;
+  }
+
+  .person-vote-preview {
+    border: 1px solid #9ca3af;
+    border-radius: 8px;
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+  }
+
+  .person-vote-preview.legislator-support {
+    background: #dff0d8;
+    border-color: #2f7d4f;
+  }
+
+  .person-vote-preview.legislator-oppose {
+    background: #fde2de;
+    border-color: #b42318;
+  }
+
+  .person-vote-preview.legislator-neutral {
+    background: #dbeafe;
+    border-color: #2563eb;
+  }
+
+  .person-vote-preview span {
+    color: #4b5563;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  .person-vote-preview strong {
+    font-size: 0.9rem;
+    line-height: 1.25;
+  }
+
+  .person-vote-preview small,
+  .person-vote-preview p {
+    color: #1f2933;
+    font-size: 0.82rem;
+    font-weight: 650;
+    line-height: 1.35;
+    margin: 0;
   }
 
   .list .free-stater-inline {
