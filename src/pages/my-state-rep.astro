@@ -20,8 +20,23 @@ import {
 } from "../lib/trackedBills";
 
 const API_BASE = civicApiBase();
+const WARD_COMMUNITY_COUNTS = new Map([
+  ["claremont", 3],
+  ["concord", 10],
+  ["dover", 6],
+  ["franklin", 3],
+  ["keene", 5],
+  ["laconia", 6],
+  ["lebanon", 3],
+  ["manchester", 12],
+  ["nashua", 9],
+  ["portsmouth", 5],
+  ["rochester", 6],
+  ["somersworth", 5],
+]);
 
 const address = Astro.url.searchParams.get("address")?.trim() || "";
+const selectedWard = normalizeWardNumber(Astro.url.searchParams.get("ward") || "");
 
 let lookupData = null;
 let lookupError = "";
@@ -70,7 +85,7 @@ if (lookupData || randomLegislators.length > 0) {
 }
 
 const senateReps = lookupData?.groups?.senate || [];
-const houseReps = lookupData?.groups?.house || [];
+const houseRepsRaw = lookupData?.groups?.house || [];
 const allReps = lookupData?.representatives || [];
 const candidateGroups = lookupData?.groups?.candidates || {};
 const allCandidates = lookupData?.candidates?.length
@@ -92,11 +107,23 @@ const matchedDistricts = lookupData?.matchedDistricts || [];
 const normalizedInput = lookupData?.normalizedInput || {};
 const prettyAddress = formatAddress(normalizedInput);
 const place = civic.place?.name || normalizedInput.city || "";
-const ward = civic.ward?.number ? `Ward ${civic.ward.number}` : "";
+const wardOptions = wardOptionsFor(place);
+const isWardedCommunity = wardOptions.length > 0;
+const wardNumber = isWardedCommunity
+  ? selectedWard || normalizeWardNumber(civic.ward?.number || "")
+  : normalizeWardNumber(civic.ward?.number || "");
+const ward = wardNumber ? `Ward ${wardNumber}` : "";
+const houseReps = isWardedCommunity && selectedWard
+  ? houseRepsRaw.filter((rep) => representsWard(rep, selectedWard))
+  : houseRepsRaw;
+const filteredHouseCandidates = isWardedCommunity && selectedWard
+  ? houseCandidates.filter((candidate) => representsWard(candidate, selectedWard))
+  : houseCandidates;
 const senateDistrict =
   civic.senate?.districtLabel || civic.senate?.district || "";
 const houseDistricts = matchedDistricts
   .filter((district) => district.body === "H")
+  .filter((district) => !isWardedCommunity || !selectedWard || representsWard(district, selectedWard))
   .map((district) => district.district_label)
   .filter(Boolean);
 
@@ -116,6 +143,69 @@ function isHouseCandidate(candidate = {}) {
   return /representative|house/i.test(
     `${candidate.office || ""} ${candidate.officeType || ""}`,
   );
+}
+
+function normalizeWardNumber(value = "") {
+  const match = String(value || "").match(/\d+/);
+  return match ? String(Number(match[0])) : "";
+}
+
+function normalizedTownName(value = "") {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function wardOptionsFor(town = "") {
+  const count = WARD_COMMUNITY_COUNTS.get(normalizedTownName(town)) || 0;
+  return Array.from({ length: count }, (_, index) => String(index + 1));
+}
+
+function representsWard(record = {}, wardValue = "") {
+  const wardNumber = normalizeWardNumber(wardValue);
+  if (!wardNumber) return true;
+
+  const text = recordText(record);
+  const directWard = new RegExp(`\\bward(?:s)?\\s*${escapeRegExp(wardNumber)}\\b`, "i");
+  if (directWard.test(text)) return true;
+
+  for (const match of text.matchAll(/\bwards?\s+(\d{1,2})\s*(?:-|–|—|to|through)\s*(\d{1,2})\b/gi)) {
+    const start = Number(match[1]);
+    const end = Number(match[2]);
+    const selected = Number(wardNumber);
+    if (selected >= Math.min(start, end) && selected <= Math.max(start, end)) return true;
+  }
+
+  return false;
+}
+
+function recordText(record = {}) {
+  return [
+    record.location_text,
+    record.locationText,
+    record.towns_represented,
+    record.townsRepresented,
+    record.towns,
+    record.town,
+    record.city,
+    record.district_label,
+    record.districtLabel,
+    record.name,
+    record.office,
+    record.district,
+    record.raw_district,
+  ].flatMap(stringifyValue).filter(Boolean).join(" ");
+}
+
+function stringifyValue(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.flatMap(stringifyValue);
+  if (typeof value === "object") {
+    return [value.town, value.name, value.label, value.location_text, value.locationText].flatMap(stringifyValue);
+  }
+  return [String(value)];
+}
+
+function escapeRegExp(value = "") {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function legislativeBody(person = {}) {
@@ -251,7 +341,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
         </div>
       )}
 
-      {randomLegislators.length > 0 && (
+      {!address && randomLegislators.length > 0 && (
         <section class="sample-legislators">
           <div class="group-header">
             <h2>Representative Profiles</h2>
@@ -331,6 +421,33 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
       {lookupData && (allReps.length > 0 || allCandidates.length > 0) && (
         <>
+          {isWardedCommunity && (
+            <section class="ward-filter panel">
+              <div>
+                <p class="summary-label">{place} ward</p>
+                <h2>Choose your ward to narrow House results.</h2>
+                <p>
+                  Google Civic does not always return local wards reliably. Select
+                  your ward to filter ward-specific House representatives and candidates.
+                </p>
+              </div>
+
+              <form action="/my-state-rep" method="get">
+                <input type="hidden" name="address" value={address} />
+                <label for="ward">Ward</label>
+                <select id="ward" name="ward">
+                  <option value="">Use address result</option>
+                  {wardOptions.map((option) => (
+                    <option value={option} selected={selectedWard === option}>
+                      Ward {option}
+                    </option>
+                  ))}
+                </select>
+                <button type="submit">Apply Ward</button>
+              </form>
+            </section>
+          )}
+
           <section class="district-summary">
             <div class="summary-card panel">
               <div>
@@ -415,7 +532,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
               </section>
             )}
 
-            {(senateCandidates.length > 0 || houseCandidates.length > 0) && (
+            {(senateCandidates.length > 0 || filteredHouseCandidates.length > 0) && (
               <section class="candidate-results">
                 <div class="group-header">
                   <h2>2026 Candidates</h2>
@@ -436,11 +553,11 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
                   </section>
                 )}
 
-                {houseCandidates.length > 0 && (
+                {filteredHouseCandidates.length > 0 && (
                   <section class="candidate-group">
                     <h3>State House Candidates</h3>
                     <div class="candidate-grid">
-                      {houseCandidates.map((candidate) => (
+                      {filteredHouseCandidates.map((candidate) => (
                         <CandidateCard candidate={candidate} />
                       ))}
                     </div>
@@ -574,6 +691,49 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
   .district-summary {
     margin-top: 24px;
+  }
+
+  .ward-filter {
+    align-items: end;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 340px);
+    margin-top: 24px;
+    padding: 24px;
+  }
+
+  .ward-filter h2 {
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    line-height: 1.1;
+    margin: 0;
+  }
+
+  .ward-filter p {
+    color: #4b5563;
+    line-height: 1.5;
+    margin: 10px 0 0;
+  }
+
+  .ward-filter form {
+    align-items: end;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ward-filter label {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  select {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    font: inherit;
+    font-weight: 800;
+    min-width: 0;
+    padding: 15px 18px;
   }
 
   .summary-card {
@@ -881,6 +1041,11 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
     .form-row {
       flex-direction: column;
+    }
+
+    .ward-filter,
+    .ward-filter form {
+      grid-template-columns: 1fr;
     }
 
     button {
