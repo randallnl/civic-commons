@@ -14,7 +14,6 @@ import {
   getTrackedBills,
   normalizeBillCode,
   representativeGrade,
-  representativeVoteImpact,
   representativeVoteStance,
   trackedBillForVote,
 } from "../lib/trackedBills";
@@ -86,9 +85,9 @@ function locationLabel(person = {}) {
   );
 }
 
-function latestTrackedVote(person = {}) {
+function trackedVotesFor(person = {}, limit = 3) {
   const votes = Array.isArray(person.voteHistory) ? person.voteHistory : [];
-  return votes.find((vote) => trackedBillForVote(trackedBills, vote)) || null;
+  return votes.filter((vote) => trackedBillForVote(trackedBills, vote)).slice(0, limit);
 }
 ---
 
@@ -222,22 +221,23 @@ function latestTrackedVote(person = {}) {
             ) : recentPeople.map((person) => {
               const photoUrl = profilePhotoUrl(person.photo || person.photo_url);
               const grade = representativeGrade(person.voteHistory || [], trackedBills);
-              const vote = latestTrackedVote(person);
-              const trackedBill = vote ? trackedBillForVote(trackedBills, vote) : null;
-              const voteStance = vote && trackedBill ? representativeVoteStance(vote, trackedBill) : null;
-              const voteImpact = vote && trackedBill ? representativeVoteImpact(vote, trackedBill) : "";
+              const votes = trackedVotesFor(person, 3);
 
               return (
                 <li class="person-preview">
-                  <a class="person-preview-link" href={`/people/${repSlug(person)}`}>
-                    <img
-                      class:list={[!photoUrl && "profile-icon"]}
-                      src={photoUrl || profileIcon.src}
-                      alt={photoUrl ? `Photo of ${repName(person)}` : ""}
-                      loading="lazy"
-                    />
-                    <span>
-                      <strong>{repName(person)}</strong>
+                  <div class="person-preview-link">
+                    <a class="person-photo-link" href={`/people/${repSlug(person)}`}>
+                      <img
+                        class:list={[!photoUrl && "profile-icon"]}
+                        src={photoUrl || profileIcon.src}
+                        alt={photoUrl ? `Photo of ${repName(person)}` : ""}
+                        loading="lazy"
+                      />
+                    </a>
+                    <div class="person-preview-copy">
+                      <a href={`/people/${repSlug(person)}`}>
+                        <strong>{repName(person)}</strong>
+                      </a>
                       <small>
                         {[
                           person.party || "No party listed",
@@ -245,29 +245,37 @@ function latestTrackedVote(person = {}) {
                         ].filter(Boolean).join(" - ")}
                       </small>
                       {locationLabel(person) && <em>{locationLabel(person)}</em>}
-                    </span>
+                      {isFreeStater(person) && (
+                        <a
+                          class="free-stater-inline"
+                          href="/free-staters"
+                          title="What is a Free Stater?"
+                          aria-label="What is a Free Stater?"
+                        >
+                          Free Stater
+                        </a>
+                      )}
+                    </div>
                     <span class:list={["mini-grade", grade.className]} title={grade.label}>
                       <strong>{grade.letter}</strong>
                       <small>Grade</small>
                     </span>
-                  </a>
-                  {vote && trackedBill && (
-                    <div class:list={["person-vote-preview", voteStance.className]}>
-                      <span>Bill Tracker Vote</span>
-                      <strong>{trackedBill.code}: {trackedBill.name || "Tracked Bill"}</strong>
-                      <small>{voteStance.label}</small>
-                      {voteImpact && <p>{voteImpact}</p>}
+                  </div>
+                  {votes.length > 0 && (
+                    <div class="person-vote-list">
+                      <span>Bill Tracker Votes</span>
+                      {votes.map((vote) => {
+                        const trackedBill = trackedBillForVote(trackedBills, vote);
+                        const voteStance = representativeVoteStance(vote, trackedBill);
+
+                        return (
+                          <div class:list={["person-vote-preview", voteStance.className]}>
+                            <strong>{trackedBill.code}: {trackedBill.name || "Tracked Bill"}</strong>
+                            <small>{voteStance.label}</small>
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
-                  {isFreeStater(person) && (
-                    <a
-                      class="free-stater-inline"
-                      href="/free-staters"
-                      title="What is a Free Stater?"
-                      aria-label="What is a Free Stater?"
-                    >
-                      Free Stater
-                    </a>
                   )}
                 </li>
               );
@@ -686,10 +694,13 @@ function latestTrackedVote(person = {}) {
     display: grid;
     gap: 12px;
     grid-template-columns: 64px minmax(0, 1fr) auto;
-    text-decoration: none;
   }
 
-  .person-preview-link img {
+  .person-photo-link {
+    display: block;
+  }
+
+  .person-photo-link img {
     aspect-ratio: 4 / 5;
     background: white;
     border: 1px solid #d1d5db;
@@ -699,17 +710,25 @@ function latestTrackedVote(person = {}) {
     width: 64px;
   }
 
-  .person-preview-link img.profile-icon {
+  .person-photo-link img.profile-icon {
     object-fit: cover;
   }
 
-  .person-preview-link strong,
-  .person-preview-link small,
-  .person-preview-link em {
+  .person-preview-copy {
+    min-width: 0;
+  }
+
+  .person-preview-copy > a {
+    text-decoration: none;
+  }
+
+  .person-preview-copy strong,
+  .person-preview-copy small,
+  .person-preview-copy em {
     display: block;
   }
 
-  .person-preview-link small {
+  .person-preview-copy small {
     color: #4b5563;
     font-size: 0.86rem;
     font-weight: 750;
@@ -717,7 +736,7 @@ function latestTrackedVote(person = {}) {
     margin-top: 4px;
   }
 
-  .person-preview-link em {
+  .person-preview-copy em {
     color: #6b7280;
     font-size: 0.82rem;
     font-style: normal;
@@ -774,12 +793,26 @@ function latestTrackedVote(person = {}) {
     background: #5b616e;
   }
 
+  .person-vote-list {
+    display: grid;
+    gap: 6px;
+  }
+
+  .person-vote-list > span {
+    color: #4b5563;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    margin: 2px 0 0;
+    text-transform: uppercase;
+  }
+
   .person-vote-preview {
     border: 1px solid #9ca3af;
     border-radius: 8px;
     display: grid;
     gap: 4px;
-    padding: 10px;
+    padding: 8px 10px;
   }
 
   .person-vote-preview.legislator-support {
@@ -797,24 +830,14 @@ function latestTrackedVote(person = {}) {
     border-color: #2563eb;
   }
 
-  .person-vote-preview span {
-    color: #4b5563;
-    font-size: 0.72rem;
-    font-weight: 950;
-    letter-spacing: 0.08em;
-    margin: 0;
-    text-transform: uppercase;
-  }
-
   .person-vote-preview strong {
-    font-size: 0.9rem;
+    font-size: 0.86rem;
     line-height: 1.25;
   }
 
-  .person-vote-preview small,
-  .person-vote-preview p {
+  .person-vote-preview small {
     color: #1f2933;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 650;
     line-height: 1.35;
     margin: 0;
