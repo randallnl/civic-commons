@@ -10,6 +10,7 @@ import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 import { getTrackedBills, normalizeBillCode } from "../lib/trackedBills";
+import { getSpotlightLegislators } from "../lib/spotlightTracker";
 
 let recentArticles = [];
 let recentBills = [];
@@ -17,21 +18,23 @@ let recentPeople = [];
 let trackedBills = new Map();
 
 try {
-  const [articleResult, billResult, repResult, trackedBillResult] = await Promise.allSettled([
+  const [articleResult, billResult, repResult, trackedBillResult, spotlightResult] = await Promise.allSettled([
     getArticles({ include: "relations", limit: 5 }),
     getBills({ limit: 6 }),
     getRepresentatives({ limit: 8 }),
     getTrackedBills(),
+    getSpotlightLegislators({ limit: 8 }),
   ]);
 
   const articleData = articleResult.status === "fulfilled" ? articleResult.value : {};
   const billData = billResult.status === "fulfilled" ? billResult.value : {};
   const repData = repResult.status === "fulfilled" ? repResult.value : {};
   trackedBills = trackedBillResult.status === "fulfilled" ? trackedBillResult.value : new Map();
+  const spotlightPeople = spotlightResult.status === "fulfilled" ? spotlightResult.value : [];
 
   recentArticles = articleData.articles || [];
   recentBills = billData.bills || [];
-  recentPeople = repData.representatives || [];
+  recentPeople = spotlightPeople.length ? spotlightPeople : repData.representatives || [];
 } catch (error) {
   console.error(error?.message || "Unable to load homepage API data.");
 }
