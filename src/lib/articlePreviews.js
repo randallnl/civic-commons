@@ -1,3 +1,5 @@
+import { cleanText } from "./text";
+
 const DEFAULT_PREVIEW_API_BASE = "https://article-preview.randall-d53.workers.dev";
 const BLOCKED_PREVIEW_PATTERNS = [
   /\berror\s*\d{3}\b/i,
@@ -17,7 +19,7 @@ function previewApiBase() {
 }
 
 function usableText(value) {
-  return typeof value === "string" ? value.trim() : "";
+  return typeof value === "string" ? cleanText(value).replace(/\s+/g, " ").trim() : "";
 }
 
 function isBlockedPreview(preview = {}) {

@@ -9,21 +9,25 @@ import { isFreeStater } from "../lib/civicTags";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
+import { getTrackedBills, normalizeBillCode } from "../lib/trackedBills";
 
 let recentArticles = [];
 let recentBills = [];
 let recentPeople = [];
+let trackedBills = new Map();
 
 try {
-  const [articleResult, billResult, repResult] = await Promise.allSettled([
+  const [articleResult, billResult, repResult, trackedBillResult] = await Promise.allSettled([
     getArticles({ include: "relations", limit: 5 }),
     getBills({ limit: 6 }),
     getRepresentatives({ limit: 8 }),
+    getTrackedBills(),
   ]);
 
   const articleData = articleResult.status === "fulfilled" ? articleResult.value : {};
   const billData = billResult.status === "fulfilled" ? billResult.value : {};
   const repData = repResult.status === "fulfilled" ? repResult.value : {};
+  trackedBills = trackedBillResult.status === "fulfilled" ? trackedBillResult.value : new Map();
 
   recentArticles = articleData.articles || [];
   recentBills = billData.bills || [];
@@ -33,6 +37,16 @@ try {
 }
 
 recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
+
+function trackedBillFor(bill = {}) {
+  return trackedBills.get(normalizeBillCode(bill.condensedbillno || bill.bill_number));
+}
+
+function previewText(text = "", maxLength = 150) {
+  const normalized = cleanText(text).replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength).trim()}...`;
+}
 ---
 
 <html lang="en">
@@ -189,14 +203,25 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
             {recentBills.length === 0 ? (
               <li>No bills added yet.</li>
             ) : (
-              recentBills.map((bill) => (
-                <li>
-                  <a href={billDetailPath(bill.condensedbillno || bill.bill_number, bill.sessionyear || bill.session_year)}>
-                    {bill.condensedbillno || bill.bill_number}
-                  </a>
-                  <span>{bill.name || bill.title || bill.description}</span>
-                </li>
-              ))
+              recentBills.map((bill) => {
+                const trackedBill = trackedBillFor(bill);
+
+                return (
+                  <li>
+                    <a href={billDetailPath(bill.condensedbillno || bill.bill_number, bill.sessionyear || bill.session_year)}>
+                      {trackedBill?.name || bill.condensedbillno || bill.bill_number}
+                    </a>
+                    <span>
+                      {previewText(
+                        trackedBill?.summary ||
+                          bill.description ||
+                          bill.title ||
+                          "No tracker summary available yet.",
+                      )}
+                    </span>
+                  </li>
+                );
+              })
             )}
           </ul>
         </div>
@@ -208,9 +233,25 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
               <li>No articles added yet.</li>
             ) : (
               recentArticles.map((article) => (
-                <li>
-                  <a href={article.url}>{cleanText(article.preview?.title || article.title)}</a>
-                  <span>{cleanText(article.preview?.description || article.publisher || article.resource_type)}</span>
+                <li class:list={["article-update", article.preview?.imageUrl && "has-image"]}>
+                  {article.preview?.imageUrl && (
+                    <a class="article-thumb" href={article.url} tabindex="-1" aria-hidden="true">
+                      <img src={article.preview.imageUrl} alt="" loading="lazy" />
+                    </a>
+                  )}
+                  <div>
+                    <a href={article.url}>{cleanText(article.preview?.title || article.title)}</a>
+                    <span>
+                      {previewText(
+                        article.preview?.description ||
+                          article.summary ||
+                          article.publisher ||
+                          article.resource_type ||
+                          "Community update",
+                        170,
+                      )}
+                    </span>
+                  </div>
                 </li>
               ))
             )}
@@ -522,6 +563,29 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
     border-top: 0;
   }
 
+  .list .article-update {
+    display: grid;
+    gap: 12px;
+  }
+
+  .list .article-update.has-image {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .article-thumb {
+    display: block;
+  }
+
+  .article-thumb img {
+    aspect-ratio: 4 / 3;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    display: block;
+    height: auto;
+    object-fit: cover;
+    width: 100%;
+  }
+
   .list a {
     display: block;
     color: #1f2933;
@@ -600,6 +664,10 @@ recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
       font-size: 1.1rem;
       height: 42px;
       width: 42px;
+    }
+
+    .list .article-update.has-image {
+      grid-template-columns: 72px minmax(0, 1fr);
     }
   }
 </style>

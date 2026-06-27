@@ -10,6 +10,8 @@ import { communityPath, getCommunities } from "../lib/communitiesApi";
 import { profilePhotoUrl } from "../lib/photos";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
+import { cleanText } from "../lib/text";
+import { getTrackedBills, normalizeBillCode } from "../lib/trackedBills";
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 
@@ -18,26 +20,29 @@ let people = [];
 let bills = [];
 let articles = [];
 let searchError = "";
+let trackedBills = new Map();
 
 if (q.length > 0) {
   try {
-    const [communityResult, repResult, billResult, articleResult] = await Promise.allSettled([
+    const [communityResult, repResult, billResult, articleResult, trackedBillResult] = await Promise.allSettled([
       getCommunities({ q, body: "", limit: 12, articleLimit: 2 }),
       getRepresentatives({ q, limit: 20 }),
       getBills({ q, limit: 20 }),
       getArticles({ q, include: "relations", limit: 20 }),
+      getTrackedBills(),
     ]);
 
     const communityData = communityResult.status === "fulfilled" ? communityResult.value : {};
     const repData = repResult.status === "fulfilled" ? repResult.value : {};
     const billData = billResult.status === "fulfilled" ? billResult.value : {};
     const articleData = articleResult.status === "fulfilled" ? articleResult.value : {};
+    trackedBills = trackedBillResult.status === "fulfilled" ? trackedBillResult.value : new Map();
 
     communities = communityData.communities || [];
     people = repData.representatives || [];
     bills = billData.bills || [];
     articles = articleData.articles || [];
-    if ([communityResult, repResult, billResult, articleResult].some((result) => result.status === "rejected")) {
+    if ([communityResult, repResult, billResult, articleResult, trackedBillResult].some((result) => result.status === "rejected")) {
       searchError = "Some API results are temporarily unavailable.";
     }
   } catch (error) {
@@ -88,6 +93,16 @@ function townsFor(community = {}) {
 
 function representativesFor(community = {}) {
   return community.representatives || community.reps || community.legislators || [];
+}
+
+function trackedBillFor(bill = {}) {
+  return trackedBills.get(normalizeBillCode(bill.condensedbillno || bill.bill_number));
+}
+
+function previewText(text = "", maxLength = 170) {
+  const normalized = cleanText(text).replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength).trim()}...`;
 }
 ---
 
@@ -204,16 +219,29 @@ function representativesFor(community = {}) {
               <p>No bills found.</p>
             ) : (
               <ul>
-                {bills.map((bill) => (
-                  <li>
-                    <a href={billDetailPath(bill.condensedbillno || bill.bill_number, bill.sessionyear || bill.session_year)}>
-                      <span>
-                        <strong>{bill.condensedbillno || bill.bill_number}: {bill.name || bill.title || bill.description}</strong>
-                        <small>{bill.status || bill.description || "No status listed"}</small>
-                      </span>
-                    </a>
-                  </li>
-                ))}
+                {bills.map((bill) => {
+                  const trackedBill = trackedBillFor(bill);
+
+                  return (
+                    <li>
+                      <a href={billDetailPath(bill.condensedbillno || bill.bill_number, bill.sessionyear || bill.session_year)}>
+                        <span>
+                          <strong>
+                            {bill.condensedbillno || bill.bill_number}: {trackedBill?.name || bill.name || bill.title || "Tracked bill"}
+                          </strong>
+                          <small>
+                            {previewText(
+                              trackedBill?.summary ||
+                                bill.description ||
+                                bill.status ||
+                                "No tracker summary available yet.",
+                            )}
+                          </small>
+                        </span>
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -228,8 +256,8 @@ function representativesFor(community = {}) {
                   <li>
                     <a href={article.url}>
                       <span>
-                        <strong>{article.preview?.title || article.title}</strong>
-                        <small>{article.preview?.description || article.publisher || article.resource_type || "Article"}</small>
+                        <strong>{cleanText(article.preview?.title || article.title)}</strong>
+                        <small>{previewText(article.preview?.description || article.publisher || article.resource_type || "Article")}</small>
                       </span>
                     </a>
                   </li>
