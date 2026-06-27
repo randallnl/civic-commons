@@ -62,6 +62,16 @@ function toCsvUrl(value = "", sheetName = "") {
   if (!url) return "";
   if (/output=csv/i.test(url) || /tqx=out:csv/i.test(url)) return url;
 
+  if (/\/spreadsheets\/d\/e\/[^/]+\/pubhtml/i.test(url)) {
+    return url.replace(/\/pubhtml(?:\?.*)?$/i, "/pub?output=csv");
+  }
+
+  if (/\/spreadsheets\/d\/e\/[^/]+\/pub/i.test(url)) {
+    const parsedUrl = new URL(url);
+    parsedUrl.searchParams.set("output", "csv");
+    return parsedUrl.toString();
+  }
+
   const spreadsheetId = url.match(/\/spreadsheets\/d\/([^/]+)/)?.[1];
   if (spreadsheetId) {
     const params = new URLSearchParams({
