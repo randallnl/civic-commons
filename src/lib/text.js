@@ -53,11 +53,12 @@ const UTF8_DECODER = new TextDecoder("utf-8", { fatal: false });
 const MOJIBAKE_MARKERS = /[ÂÃâ]/;
 
 export function cleanText(value = "") {
-  let text = String(value || "");
-  text = decodeMojibake(text);
+  let text = decodeHtmlEntities(String(value || ""));
 
-  for (const [pattern, replacement] of MOJIBAKE_REPLACEMENTS) {
-    text = text.replace(pattern, replacement);
+  for (let index = 0; index < 3; index += 1) {
+    const previousText = text;
+    text = applyMojibakeReplacements(decodeMojibake(text));
+    if (text === previousText) break;
   }
 
   return text;
@@ -94,4 +95,28 @@ function decodeMojibake(text = "") {
 
 function mojibakeScore(text = "") {
   return (text.match(/[ÂÃâ]/g) || []).length;
+}
+
+function applyMojibakeReplacements(text = "") {
+  return MOJIBAKE_REPLACEMENTS.reduce(
+    (cleanedText, [pattern, replacement]) => cleanedText.replace(pattern, replacement),
+    text,
+  );
+}
+
+function decodeHtmlEntities(text = "") {
+  return text
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&acirc;/gi, "â")
+    .replace(/&euro;/gi, "€")
+    .replace(/&trade;/gi, "™")
+    .replace(/&rsquo;/gi, "’")
+    .replace(/&lsquo;/gi, "‘")
+    .replace(/&rdquo;/gi, "”")
+    .replace(/&ldquo;/gi, "“")
+    .replace(/&ndash;/gi, "–")
+    .replace(/&mdash;/gi, "—")
+    .replace(/&hellip;/gi, "…")
+    .replace(/&amp;/gi, "&");
 }

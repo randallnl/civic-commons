@@ -3,6 +3,7 @@ export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
 import headingBanner from "../assets/heading_banner.png";
+import profileIcon from "../assets/profile icon.png";
 import { getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
 import { isFreeStater } from "../lib/civicTags";
@@ -11,6 +12,7 @@ import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 import { getTrackedBills, normalizeBillCode } from "../lib/trackedBills";
 import { getSpotlightLegislators } from "../lib/spotlightTracker";
+import { profilePhotoUrl } from "../lib/photos";
 
 let recentArticles = [];
 let recentBills = [];
@@ -49,6 +51,32 @@ function previewText(text = "", maxLength = 150) {
   const normalized = cleanText(text).replace(/\s+/g, " ").trim();
   if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, maxLength).trim()}...`;
+}
+
+function legislativeBody(person = {}) {
+  const value = String(person.chamber || person.legislativebody || person.body || "").toLowerCase();
+  if (value === "h" || value === "house") return "House";
+  if (value === "s" || value === "senate") return "Senate";
+  return person.chamber || "";
+}
+
+function districtLabel(person = {}) {
+  const district = person.district || person.raw_district || "";
+  const body = legislativeBody(person);
+  if (!district) return body;
+  if (body === "House") return `NH House District ${district}`;
+  if (body === "Senate") return `NH Senate District ${district}`;
+  return `District ${district}`;
+}
+
+function locationLabel(person = {}) {
+  return cleanText(
+    person.location_text ||
+      person.locationText ||
+      person.towns_represented ||
+      person.townsRepresented ||
+      "",
+  );
 }
 ---
 
@@ -179,24 +207,42 @@ function previewText(text = "", maxLength = 150) {
           <ul class="list">
             {recentPeople.length === 0 ? (
               <li>No legislators returned yet.</li>
-            ) : recentPeople.map((person) => (
-              <li>
-                <a href={`/people/${repSlug(person)}`}>
-                  {repName(person)}
-                </a>
-                <span>{person.party || "No party listed"}</span>
-                {isFreeStater(person) && (
-                  <a
-                    class="free-stater-inline"
-                    href="/free-staters"
-                    title="What is a Free Stater?"
-                    aria-label="What is a Free Stater?"
-                  >
-                    Free Stater
+            ) : recentPeople.map((person) => {
+              const photoUrl = profilePhotoUrl(person.photo || person.photo_url);
+
+              return (
+                <li class="person-preview">
+                  <a class="person-preview-link" href={`/people/${repSlug(person)}`}>
+                    <img
+                      class:list={[!photoUrl && "profile-icon"]}
+                      src={photoUrl || profileIcon.src}
+                      alt={photoUrl ? `Photo of ${repName(person)}` : ""}
+                      loading="lazy"
+                    />
+                    <span>
+                      <strong>{repName(person)}</strong>
+                      <small>
+                        {[
+                          person.party || "No party listed",
+                          districtLabel(person),
+                        ].filter(Boolean).join(" - ")}
+                      </small>
+                      {locationLabel(person) && <em>{locationLabel(person)}</em>}
+                    </span>
                   </a>
-                )}
-              </li>
-            ))}
+                  {isFreeStater(person) && (
+                    <a
+                      class="free-stater-inline"
+                      href="/free-staters"
+                      title="What is a Free Stater?"
+                      aria-label="What is a Free Stater?"
+                    >
+                      Free Stater
+                    </a>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
 
@@ -599,6 +645,56 @@ function previewText(text = "", maxLength = 150) {
     display: block;
     margin-top: 4px;
     color: #6b7280;
+  }
+
+  .list .person-preview {
+    display: grid;
+    gap: 8px;
+  }
+
+  .person-preview-link {
+    align-items: center;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 64px minmax(0, 1fr);
+    text-decoration: none;
+  }
+
+  .person-preview-link img {
+    aspect-ratio: 4 / 5;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: block;
+    object-fit: cover;
+    width: 64px;
+  }
+
+  .person-preview-link img.profile-icon {
+    object-fit: cover;
+  }
+
+  .person-preview-link strong,
+  .person-preview-link small,
+  .person-preview-link em {
+    display: block;
+  }
+
+  .person-preview-link small {
+    color: #4b5563;
+    font-size: 0.86rem;
+    font-weight: 750;
+    line-height: 1.35;
+    margin-top: 4px;
+  }
+
+  .person-preview-link em {
+    color: #6b7280;
+    font-size: 0.82rem;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 1.35;
+    margin-top: 3px;
   }
 
   .list .free-stater-inline {
