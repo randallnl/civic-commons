@@ -9,7 +9,8 @@ import { getBillDetail, getBillSummaries } from "../lib/billsApi";
 import { civicApiBase, civicApiFetch } from "../lib/civicApi";
 import { isFreeStater } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
-import { getRepresentative, getRepresentatives, repName, repSlug } from "../lib/repsApi";
+import { repName, repSlug } from "../lib/repsApi";
+import { getSpotlightLegislators } from "../lib/spotlightTracker";
 import {
   normalizeBillCode,
   getTrackedBills,
@@ -52,21 +53,7 @@ if (address) {
 }
 
 try {
-  const data = await getRepresentatives({ limit: 40 });
-  const previewLegislators = shuffle(data.representatives || []).slice(0, 6);
-  randomLegislators = await Promise.all(
-    previewLegislators.map(async (rep) => {
-      try {
-        const profile = await getRepresentative(rep.personid || rep.id || repSlug(rep));
-        return {
-          ...(profile.representative || profile.person || rep),
-          voteHistory: profile.voteHistory || profile.votes || [],
-        };
-      } catch {
-        return rep;
-      }
-    }),
-  );
+  randomLegislators = shuffle(await getSpotlightLegislators({ limit: 8 })).slice(0, 6);
 } catch (error) {
   console.error(error?.message || "Unable to load legislator preview.");
 }
