@@ -9,10 +9,12 @@ import { getBillDetail, getBillSummaries } from "../lib/billsApi";
 import { civicApiBase, civicApiFetch } from "../lib/civicApi";
 import { isFreeStater } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
-import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
+import { getRepresentative, getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import {
   normalizeBillCode,
   getTrackedBills,
+  representativeGrade,
+  representativeVoteStance,
   trackedBillForVote,
 } from "../lib/trackedBills";
 
@@ -52,18 +54,31 @@ if (address) {
 if (!address) {
   try {
     const data = await getRepresentatives({ limit: 40 });
-    randomLegislators = shuffle(data.representatives || []).slice(0, 6);
+    const previewLegislators = shuffle(data.representatives || []).slice(0, 6);
+    randomLegislators = await Promise.all(
+      previewLegislators.map(async (rep) => {
+        try {
+          const profile = await getRepresentative(rep.personid || rep.id || repSlug(rep));
+          return {
+            ...(profile.representative || profile.person || rep),
+            voteHistory: profile.voteHistory || profile.votes || [],
+          };
+        } catch {
+          return rep;
+        }
+      }),
+    );
   } catch (error) {
     console.error(error?.message || "Unable to load legislator preview.");
   }
 }
 
-if (lookupData) {
+if (lookupData || !address) {
   try {
-    [trackedBills, billSummaries] = await Promise.all([
-      getTrackedBills(),
-      getBillSummaries(),
-    ]);
+    trackedBills = await getTrackedBills();
+    if (lookupData) {
+      billSummaries = await getBillSummaries();
+    }
   } catch (error) {
     console.error(error?.message || "Unable to load bill summaries.");
   }
@@ -116,6 +131,38 @@ function isHouseCandidate(candidate = {}) {
   return /representative|house/i.test(
     `${candidate.office || ""} ${candidate.officeType || ""}`,
   );
+}
+
+function legislativeBody(person = {}) {
+  const value = String(person.chamber || person.legislativebody || person.body || "").toLowerCase();
+  if (value === "h" || value === "house") return "House";
+  if (value === "s" || value === "senate") return "Senate";
+  return person.chamber || "";
+}
+
+function districtLabel(person = {}) {
+  const district = person.district || person.raw_district || "";
+  const body = legislativeBody(person);
+  if (!district) return body;
+  if (body === "House") return `NH House District ${district}`;
+  if (body === "Senate") return `NH Senate District ${district}`;
+  return `District ${district}`;
+}
+
+function locationLabel(person = {}) {
+  const value =
+    person.location_text ||
+    person.locationText ||
+    person.towns_represented ||
+    person.townsRepresented ||
+    "";
+  if (Array.isArray(value)) return value.join(", ");
+  return value;
+}
+
+function trackedVotesFor(person = {}, limit = 3) {
+  const votes = Array.isArray(person.voteHistory) ? person.voteHistory : [];
+  return votes.filter((vote) => trackedBillForVote(trackedBills, vote)).slice(0, limit);
 }
 
 function formatAddress(normalized = {}) {
@@ -222,28 +269,41 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
       {!address && randomLegislators.length > 0 && (
         <section class="sample-legislators">
           <div class="group-header">
-            <h2>Meet a few New Hampshire legislators</h2>
+            <h2>Representative Profiles</h2>
             <p>
-              These profiles come from the Civic Commons API. Enter your address above
-              to see the legislators who represent you.
+              Preview legislator profiles, vote grades, and recent tracked bill
+              votes. Enter your address above to see the legislators who represent you.
             </p>
           </div>
 
           <div class="sample-grid">
-            {randomLegislators.map((rep) => (
-              <article class="sample-card">
-                <a class="sample-photo-link" href={`/people/${repSlug(rep)}`}>
-                  {profilePhotoUrl(rep.photo) ? (
-                    <img src={profilePhotoUrl(rep.photo)} alt={`Photo of ${repName(rep)}`} loading="lazy" />
-                  ) : (
-                    <img class="sample-fallback" src={profileIcon.src} alt="" loading="lazy" />
-                  )}
-                </a>
-                <div>
-                  <h3><a href={`/people/${repSlug(rep)}`}>{repName(rep)}</a></h3>
-                  <p>{[rep.chamber, rep.party, rep.district].filter(Boolean).join(" · ")}</p>
-                  {isFreeStater(rep) && (
-                    <span class="sample-tags">
+            {randomLegislators.map((rep) => {
+              const photoUrl = profilePhotoUrl(rep.photo || rep.photo_url);
+              const grade = representativeGrade(rep.voteHistory || [], trackedBills);
+              const votes = trackedVotesFor(rep, 3);
+
+              return (
+                <article class="sample-card">
+                  <div class="sample-profile-row">
+                    <a class="sample-photo-link" href={`/people/${repSlug(rep)}`}>
+                      <img
+                        class:list={[!photoUrl && "sample-fallback"]}
+                        src={photoUrl || profileIcon.src}
+                        alt={photoUrl ? `Photo of ${repName(rep)}` : ""}
+                        loading="lazy"
+                      />
+                    </a>
+
+                    <div class="sample-copy">
+                      <a href={`/people/${repSlug(rep)}`}><strong>{repName(rep)}</strong></a>
+                      <small>
+                        {[
+                          rep.party || "No party listed",
+                          districtLabel(rep),
+                        ].filter(Boolean).join(" - ")}
+                      </small>
+                      {locationLabel(rep) && <em>{locationLabel(rep)}</em>}
+                      {isFreeStater(rep) && (
                       <a
                         class="free-stater-pill"
                         href="/free-staters"
@@ -252,11 +312,34 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
                       >
                         Free Stater
                       </a>
+                      )}
+                    </div>
+
+                    <span class:list={["mini-grade", grade.className]} title={grade.label}>
+                      <strong>{grade.letter}</strong>
+                      <small>Grade</small>
                     </span>
+                  </div>
+
+                  {votes.length > 0 && (
+                    <div class="sample-vote-list">
+                      <span>Bill Tracker Votes</span>
+                      {votes.map((vote) => {
+                        const trackedBill = trackedBillForVote(trackedBills, vote);
+                        const voteStance = representativeVoteStance(vote, trackedBill);
+
+                        return (
+                          <div class:list={["sample-vote-preview", voteStance.className]}>
+                            <strong>{trackedBill.code}: {trackedBill.name || "Tracked Bill"}</strong>
+                            <small>{voteStance.label}</small>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         </section>
       )}
@@ -595,20 +678,18 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
   .sample-grid {
     display: grid;
     gap: 14px;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     margin-top: 22px;
   }
 
   .sample-card {
-    align-items: center;
     background: white;
     border: 2px solid #1f2933;
     border-radius: 16px;
     box-shadow: 4px 4px 0 #1f2933;
     color: inherit;
     display: grid;
-    gap: 12px;
-    grid-template-columns: 64px 1fr;
+    gap: 10px;
     padding: 14px;
   }
 
@@ -616,41 +697,169 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     color: inherit;
   }
 
-  .sample-card:hover h3 a {
-    text-decoration: underline;
+  .sample-profile-row {
+    align-items: center;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
   }
 
-  .sample-card img,
+  .sample-photo-link {
+    display: block;
+  }
+
+  .sample-photo-link img,
   .sample-fallback {
     aspect-ratio: 4 / 5;
     border: 2px solid #1f2933;
     border-radius: 10px;
+    display: block;
     height: 80px;
+    object-fit: cover;
+    object-position: center top;
     width: 64px;
   }
 
-  .sample-card img {
-    object-fit: cover;
-    object-position: center top;
-  }
-
-  .sample-card img.sample-fallback {
+  .sample-photo-link img.sample-fallback {
     background: transparent;
     box-sizing: border-box;
     object-fit: cover;
     padding: 0;
   }
 
-  .sample-card h3 {
-    font-size: 1rem;
-    margin: 0;
+  .sample-copy {
+    min-width: 0;
   }
 
-  .sample-card p {
+  .sample-copy > a {
+    display: block;
+    text-decoration: none;
+  }
+
+  .sample-copy strong,
+  .sample-copy small,
+  .sample-copy em {
+    display: block;
+  }
+
+  .sample-copy strong {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .sample-copy small {
     color: #4b5563;
-    font-weight: 800;
+    font-size: 0.86rem;
+    font-weight: 750;
     line-height: 1.35;
-    margin: 6px 0 0;
+    margin-top: 4px;
+  }
+
+  .sample-copy em {
+    color: #6b7280;
+    font-size: 0.82rem;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 1.35;
+    margin-top: 3px;
+  }
+
+  .mini-grade {
+    border: 1px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 2px 2px 0 #1f2933;
+    color: #fffaf1;
+    display: grid;
+    min-width: 52px;
+    padding: 7px 8px;
+    text-align: center;
+  }
+
+  .mini-grade strong {
+    font-size: 1.45rem;
+    line-height: 1;
+  }
+
+  .mini-grade small {
+    color: inherit;
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+    margin: 2px 0 0;
+    text-transform: uppercase;
+  }
+
+  .grade-a {
+    background: #166534;
+  }
+
+  .grade-b {
+    background: #65a30d;
+  }
+
+  .grade-c {
+    background: #ca8a04;
+  }
+
+  .grade-d {
+    background: #ea580c;
+  }
+
+  .grade-f {
+    background: #b42318;
+  }
+
+  .grade-unknown {
+    background: #5b616e;
+  }
+
+  .sample-vote-list {
+    display: grid;
+    gap: 6px;
+  }
+
+  .sample-vote-list > span {
+    color: #4b5563;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    margin: 2px 0 0;
+    text-transform: uppercase;
+  }
+
+  .sample-vote-preview {
+    border: 1px solid #9ca3af;
+    border-radius: 8px;
+    display: grid;
+    gap: 4px;
+    padding: 8px 10px;
+  }
+
+  .sample-vote-preview.legislator-support {
+    background: #dff0d8;
+    border-color: #2f7d4f;
+  }
+
+  .sample-vote-preview.legislator-oppose {
+    background: #fde2de;
+    border-color: #b42318;
+  }
+
+  .sample-vote-preview.legislator-neutral {
+    background: #dbeafe;
+    border-color: #2563eb;
+  }
+
+  .sample-vote-preview strong {
+    font-size: 0.86rem;
+    line-height: 1.25;
+  }
+
+  .sample-vote-preview small {
+    color: #1f2933;
+    font-size: 0.8rem;
+    font-weight: 650;
+    line-height: 1.35;
+    margin: 0;
   }
 
   .free-stater-pill {
