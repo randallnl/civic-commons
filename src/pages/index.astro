@@ -36,6 +36,12 @@ const COMMUNITY_PREVIEW_COUNTIES = [
   "Strafford",
   "Cheshire",
 ];
+const howToStepImages = [
+  organizationAssetUrl("capital dome.png"),
+  organizationAssetUrl("portsmouth.png"),
+  organizationAssetUrl("nh chamber.jpg"),
+  organizationAssetUrl("community.png"),
+];
 
 try {
   const [
@@ -239,6 +245,13 @@ function trackedBillForCode(code = "") {
   return null;
 }
 
+function organizationAssetUrl(filename = "") {
+  return `/api/organization-assets/${String(filename)
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/")}`;
+}
+
 function previewText(text = "", maxLength = 150) {
   const normalized = cleanText(text).replace(/\s+/g, " ").trim();
   if (normalized.length <= maxLength) return normalized;
@@ -350,6 +363,7 @@ function positionClass(position = "") {
         <ol class="steps">
           <li>
             <span>1</span>
+            <img class="step-photo" src={howToStepImages[0]} alt="" loading="lazy" />
             <div>
               <h3>Find your current representatives</h3>
               <p>Use your address to see your Senate district, House districts, ward-specific representation, candidates, contact information, and vote summaries.</p>
@@ -359,6 +373,7 @@ function positionClass(position = "") {
 
           <li>
             <span>2</span>
+            <img class="step-photo" src={howToStepImages[1]} alt="" loading="lazy" />
             <div>
               <h3>Understand your community profile</h3>
               <p>Search for your town or county to open a local profile with the House districts, Senate districts, representatives, candidates, and community updates tied to that specific region.</p>
@@ -368,6 +383,7 @@ function positionClass(position = "") {
 
           <li>
             <span>3</span>
+            <img class="step-photo" src={howToStepImages[2]} alt="" loading="lazy" />
             <div>
               <h3>Follow votes, bills, and testimony</h3>
               <p>See how representatives voted on tracked bills, compare those votes to the preferred stance, and review remote testimony summaries.</p>
@@ -377,6 +393,7 @@ function positionClass(position = "") {
 
           <li>
             <span>4</span>
+            <img class="step-photo" src={howToStepImages[3]} alt="" loading="lazy" />
             <div>
               <h3>Read the local context</h3>
               <p>Use articles and organizational comments to understand what is happening around a bill, town, district, or elected official.</p>
@@ -852,7 +869,7 @@ function positionClass(position = "") {
     border-radius: 12px;
     display: grid;
     gap: 16px;
-    grid-template-columns: 52px 1fr;
+    grid-template-columns: 52px minmax(150px, 22%) 1fr;
     padding: 18px;
   }
 
@@ -867,6 +884,15 @@ function positionClass(position = "") {
     height: 52px;
     justify-content: center;
     width: 52px;
+  }
+
+  .step-photo {
+    aspect-ratio: 16 / 10;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    height: auto;
+    object-fit: cover;
+    width: 100%;
   }
 
   .steps h3 {
@@ -1404,6 +1430,10 @@ function positionClass(position = "") {
       font-size: 1.1rem;
       height: 42px;
       width: 42px;
+    }
+
+    .step-photo {
+      grid-column: 1 / -1;
     }
 
     .list .article-update.has-image {
