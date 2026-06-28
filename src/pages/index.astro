@@ -7,6 +7,7 @@ import profileIcon from "../assets/profile icon.png";
 import { getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
 import { isFreeStater } from "../lib/civicTags";
+import { countyImageUrl } from "../lib/communityImages";
 import { getCountyCommunity } from "../lib/communitiesApi";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
@@ -28,7 +29,13 @@ let recentPeople = [];
 let organizationComments = [];
 let communityPreviews = [];
 let trackedBills = new Map();
-const COMMUNITY_PREVIEW_COUNTIES = ["Hillsborough", "Merrimack", "Rockingham"];
+const COMMUNITY_PREVIEW_COUNTIES = [
+  "Hillsborough",
+  "Merrimack",
+  "Rockingham",
+  "Strafford",
+  "Cheshire",
+];
 
 try {
   const [
@@ -175,6 +182,7 @@ function normalizeCommunityPreview(data = {}, fallbackCounty = "") {
   return {
     title: `${countyName} County`,
     href: `/communities/counties/${encodeURIComponent(slugify(countyName))}`,
+    imageUrl: countyImageUrl(countyName),
     meta: `${towns.size || "Regional"} towns represented`,
     description:
       previewText(articles[0]?.preview?.title || articles[0]?.title || "", 135) ||
@@ -388,11 +396,16 @@ function positionClass(position = "") {
           <div class="community-preview-grid">
             {(communityPreviews.length ? communityPreviews : fallbackCommunityPreviews).map((community) => (
               <a class="community-preview-card" href={community.href}>
-                <span>{community.meta}</span>
-                <strong>{community.title}</strong>
-                <p>{community.description}</p>
-                <div class="community-preview-stats">
-                  {community.stats.map((stat) => <em>{stat}</em>)}
+                {community.imageUrl && (
+                  <img src={community.imageUrl} alt="" loading="lazy" />
+                )}
+                <div class="community-preview-copy">
+                  <span>{community.meta}</span>
+                  <strong>{community.title}</strong>
+                  <p>{community.description}</p>
+                  <div class="community-preview-stats">
+                    {community.stats.map((stat) => <em>{stat}</em>)}
+                  </div>
                 </div>
               </a>
             ))}
@@ -900,13 +913,16 @@ function positionClass(position = "") {
   }
 
   .community-preview-card {
+    align-items: stretch;
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 12px;
     color: inherit;
     display: grid;
     gap: 8px;
-    padding: 16px;
+    grid-template-columns: 112px minmax(0, 1fr);
+    overflow: hidden;
+    padding: 0;
     text-decoration: none;
   }
 
@@ -914,7 +930,21 @@ function positionClass(position = "") {
     text-decoration: underline;
   }
 
-  .community-preview-card > span {
+  .community-preview-card > img {
+    display: block;
+    height: 100%;
+    min-height: 136px;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  .community-preview-copy {
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+  }
+
+  .community-preview-copy > span {
     color: #6b4f2a;
     font-size: 0.72rem;
     font-weight: 950;
@@ -922,12 +952,12 @@ function positionClass(position = "") {
     text-transform: uppercase;
   }
 
-  .community-preview-card strong {
+  .community-preview-copy strong {
     font-size: 1.15rem;
     line-height: 1.15;
   }
 
-  .community-preview-card p {
+  .community-preview-copy p {
     color: #4b5563;
     line-height: 1.45;
     margin: 0;
@@ -1359,6 +1389,16 @@ function positionClass(position = "") {
 
     .list .article-update.has-image {
       grid-template-columns: 72px minmax(0, 1fr);
+    }
+
+    .community-preview-card {
+      grid-template-columns: 1fr;
+    }
+
+    .community-preview-card > img {
+      aspect-ratio: 16 / 8;
+      height: auto;
+      min-height: 0;
     }
   }
 </style>
