@@ -3,7 +3,7 @@ export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
 import profileIcon from "../assets/profile icon.png";
-import { getArticles } from "../lib/articlesApi";
+import { articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
 import { isFreeStater } from "../lib/civicTags";
 import { communityPath, getCommunities } from "../lib/communitiesApi";
@@ -260,6 +260,11 @@ function previewText(text = "", maxLength = 170) {
                     <a href={article.url}>
                       <span>
                         <strong>{cleanText(article.preview?.title || article.title)}</strong>
+                        <small>
+                          {[articleSourceName(article), articlePublishDate(article)]
+                            .filter(Boolean)
+                            .join(" - ")}
+                        </small>
                         <small>{previewText(article.preview?.description || article.publisher || article.resource_type || "Article")}</small>
                       </span>
                     </a>

@@ -1,6 +1,7 @@
 ---
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
+import { articlePublishDate, articleSourceName } from "../lib/articlesApi";
 
 const { articles = [], emptyText = "No articles found.", compact = false } = Astro.props;
 const previewArticles = await enrichArticlesWithPreviews(articles, { limit: compact ? 8 : 20 });
@@ -9,17 +10,6 @@ function previewText(text = "", maxLength = compact ? 140 : 220) {
   const normalized = cleanText(text).replace(/\s+/g, " ").trim();
   if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, maxLength).trim()}...`;
-}
-
-function articleDate(article = {}) {
-  const value = article.updated_at || article.created_at;
-  if (!value) return "";
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
 }
 
 function relationLabels(article = {}) {
@@ -46,14 +36,14 @@ function relationLabels(article = {}) {
         <div class="article-copy">
         <div class="article-topline">
           {article.resource_type && <span>{cleanText(article.resource_type)}</span>}
-          {articleDate(article) && <span>{articleDate(article)}</span>}
+          {articleSourceName(article) && <span>Source: {articleSourceName(article)}</span>}
+          {articlePublishDate(article) && <span>Published: {articlePublishDate(article)}</span>}
         </div>
 
         <h3>
           <a href={article.url}>{cleanText(article.preview?.title || article.title)}</a>
         </h3>
 
-        {article.publisher && <p class="publisher">{cleanText(article.publisher)}</p>}
         {(article.preview?.description || article.summary) && (
           <p>{previewText(article.preview?.description || article.summary)}</p>
         )}

@@ -2,6 +2,7 @@
 import TopNav from "./TopNav.astro";
 import communityPlaceholder from "../assets/community_profile_placeholder.png";
 import profileIcon from "../assets/profile icon.png";
+import { articlePublishDate, articleSourceName } from "../lib/articlesApi";
 import { candidateName, candidatePath } from "../lib/candidatesApi";
 import { isFreeStater } from "../lib/civicTags";
 import { countyForCommunity, countyImageUrl } from "../lib/communityImages";
@@ -93,7 +94,7 @@ function articleTitle(article = {}) {
 }
 
 function articlePublisher(article = {}) {
-  return cleanText(article.publisher || article.resource_type || "");
+  return articleSourceName(article);
 }
 
 const towns = townsFor();
@@ -295,8 +296,11 @@ const heroImage = countyImageUrl(heroCounty) || communityPlaceholder.src;
                     <article>
                       {article.preview?.imageUrl && <img src={article.preview.imageUrl} alt="" loading="lazy" />}
                       <h3><a href={article.url}>{articleTitle(article)}</a></h3>
+                      <div class="article-meta-inline">
+                        {articlePublisher(article) && <span>Source: {articlePublisher(article)}</span>}
+                        {articlePublishDate(article) && <span>Published: {articlePublishDate(article)}</span>}
+                      </div>
                       {article.preview?.description && <p>{cleanText(article.preview.description)}</p>}
-                      {articlePublisher(article) && <p>{articlePublisher(article)}</p>}
                     </article>
                   ))}
                 </div>
@@ -466,6 +470,23 @@ const heroImage = countyImageUrl(heroCounty) || communityPlaceholder.src;
     margin-bottom: 12px;
     object-fit: cover;
     width: 100%;
+  }
+
+  .article-meta-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0 0;
+  }
+
+  .article-meta-inline span {
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.72rem;
+    font-weight: 900;
+    padding: 4px 7px;
   }
 
   .profile-preview-list article {

@@ -61,6 +61,9 @@ function normalizeArticle(article = {}) {
     title: cleanText(article.title),
     summary: cleanText(article.summary),
     publisher: cleanText(article.publisher),
+    source: cleanText(article.source),
+    publication: cleanText(article.publication),
+    domain: cleanText(article.domain),
     resource_type: cleanText(article.resource_type),
     resourceType: cleanText(article.resourceType),
     towns: cleanRelationList(article.towns, ["town", "name", "label"]),
@@ -74,6 +77,55 @@ function normalizeArticle(article = {}) {
     ]),
     issueAreas: cleanRelationList(article.issueAreas, ["issue_area", "name"]),
   };
+}
+
+export function articlePublishDate(article = {}) {
+  const value =
+    article.published_at ||
+    article.publishedAt ||
+    article.published_date ||
+    article.publishedDate ||
+    article.publish_date ||
+    article.publishDate ||
+    article.date ||
+    article.article_date ||
+    article.articleDate ||
+    article.created_at ||
+    article.createdAt ||
+    article.updated_at ||
+    article.updatedAt;
+
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return cleanText(value);
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+export function articleSourceName(article = {}) {
+  return cleanText(
+    article.publisher ||
+      article.source ||
+      article.publication ||
+      article.source_name ||
+      article.sourceName ||
+      article.domain ||
+      domainFromUrl(article.url) ||
+      "",
+  );
+}
+
+function domainFromUrl(value = "") {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
 }
 
 function cleanRelationList(values, keys = []) {

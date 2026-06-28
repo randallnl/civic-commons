@@ -4,7 +4,7 @@ export const prerender = false;
 import TopNav from "../components/TopNav.astro";
 import headingBanner from "../assets/heading_banner.png";
 import profileIcon from "../assets/profile icon.png";
-import { getArticles } from "../lib/articlesApi";
+import { articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
 import { isFreeStater } from "../lib/civicTags";
 import { countyImageUrl } from "../lib/communityImages";
@@ -530,6 +530,10 @@ function positionClass(position = "") {
                   )}
                   <div>
                     <a href={article.url}>{cleanText(article.preview?.title || article.title)}</a>
+                    <div class="article-meta-inline">
+                      {articleSourceName(article) && <em>Source: {articleSourceName(article)}</em>}
+                      {articlePublishDate(article) && <em>Published: {articlePublishDate(article)}</em>}
+                    </div>
                     <span>
                       {previewText(
                         article.preview?.description ||
@@ -1141,6 +1145,20 @@ function positionClass(position = "") {
     height: auto;
     object-fit: cover;
     width: 100%;
+  }
+
+  .article-meta-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .article-meta-inline em {
+    color: #4b5563;
+    font-size: 0.74rem;
+    font-style: normal;
+    font-weight: 850;
   }
 
   .list a {

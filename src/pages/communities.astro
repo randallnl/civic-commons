@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
+import { articlePublishDate, articleSourceName } from "../lib/articlesApi";
 import {
   communityPath,
   getCountyCommunity,
@@ -339,7 +340,14 @@ const total = Number(meta.total || meta.count || countyGroups.length);
                   <div class="articles">
                     <strong>Recent articles</strong>
                     {countyGroup.articles.map((article) => (
-                      <a href={article.url}>{cleanText(article.title)}</a>
+                      <a href={article.url}>
+                        <span>{cleanText(article.title)}</span>
+                        <small>
+                          {[articleSourceName(article), articlePublishDate(article)]
+                            .filter(Boolean)
+                            .join(" - ")}
+                        </small>
+                      </a>
                     ))}
                   </div>
                 )}
@@ -630,8 +638,16 @@ const total = Number(meta.total || meta.count || countyGroups.length);
 
   .articles a {
     color: #1f2933;
+    display: grid;
+    gap: 3px;
     font-weight: 800;
     line-height: 1.35;
+  }
+
+  .articles small {
+    color: #4b5563;
+    font-size: 0.74rem;
+    font-weight: 850;
   }
 
   .show-more,
