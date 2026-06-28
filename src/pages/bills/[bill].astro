@@ -38,6 +38,15 @@ try {
 }
 
 const testimonyCounts = positionCounts(bill || {});
+const sortedRollCalls = [...rollCalls].sort((first, second) => {
+  const firstDate = new Date(first.votedate || first.statusdate || 0).getTime() || 0;
+  const secondDate = new Date(second.votedate || second.statusdate || 0).getTime() || 0;
+  if (firstDate !== secondDate) return secondDate - firstDate;
+
+  return Number(second.votesequencenumber || 0) - Number(first.votesequencenumber || 0);
+});
+const latestRollCall = sortedRollCalls[0];
+const previousRollCalls = sortedRollCalls.slice(1);
 
 function formatDate(value) {
   if (!value) return "";
@@ -141,39 +150,66 @@ function commentsForBill(organizations = [], code = "") {
               </div>
 
               {rollCalls.length ? (
-                <details class="roll-details">
-                  <summary>
-                    <span>See previous updates</span>
-                    <small>{rollCalls.length} roll call{rollCalls.length === 1 ? "" : "s"}</small>
-                  </summary>
+                <div class="roll-summary">
+                  <a
+                    class="roll-card latest-roll"
+                    href={rollCallPath(
+                      bill.condensedbillno,
+                      latestRollCall.votesequencenumber,
+                      latestRollCall.sessionyear || bill.sessionyear,
+                    )}
+                  >
+                    <div class="roll-topline">
+                      <strong>{latestRollCall.question_motion || "Roll call"}</strong>
+                      {latestRollCall.votedate && <span>{formatDate(latestRollCall.votedate)}</span>}
+                    </div>
+                    {(latestRollCall.title1 || latestRollCall.title2) && (
+                      <p>{[latestRollCall.title1, latestRollCall.title2].filter(Boolean).join(" ")}</p>
+                    )}
+                    <div class="roll-counts">
+                      <span>Yeas {latestRollCall.yeas}</span>
+                      <span>Nays {latestRollCall.nays}</span>
+                      <span>Present {latestRollCall.present}</span>
+                      <span>Absent {latestRollCall.absent}</span>
+                    </div>
+                  </a>
 
-                  <div class="roll-list">
-                    {rollCalls.map((rollCall) => (
-                      <a
-                        class="roll-card"
-                        href={rollCallPath(
-                          bill.condensedbillno,
-                          rollCall.votesequencenumber,
-                          rollCall.sessionyear || bill.sessionyear,
-                        )}
-                      >
-                          <div class="roll-topline">
-                            <strong>{rollCall.question_motion || "Roll call"}</strong>
-                            {rollCall.votedate && <span>{formatDate(rollCall.votedate)}</span>}
-                          </div>
-                          {(rollCall.title1 || rollCall.title2) && (
-                            <p>{[rollCall.title1, rollCall.title2].filter(Boolean).join(" ")}</p>
-                          )}
-                          <div class="roll-counts">
-                            <span>Yeas {rollCall.yeas}</span>
-                            <span>Nays {rollCall.nays}</span>
-                            <span>Present {rollCall.present}</span>
-                            <span>Absent {rollCall.absent}</span>
-                          </div>
-                      </a>
-                    ))}
-                  </div>
-                </details>
+                  {previousRollCalls.length > 0 && (
+                    <details class="roll-details">
+                      <summary>
+                        <span>See previous updates</span>
+                        <small>{previousRollCalls.length} older roll call{previousRollCalls.length === 1 ? "" : "s"}</small>
+                      </summary>
+
+                      <div class="roll-list">
+                        {previousRollCalls.map((rollCall) => (
+                          <a
+                            class="roll-card"
+                            href={rollCallPath(
+                              bill.condensedbillno,
+                              rollCall.votesequencenumber,
+                              rollCall.sessionyear || bill.sessionyear,
+                            )}
+                          >
+                              <div class="roll-topline">
+                                <strong>{rollCall.question_motion || "Roll call"}</strong>
+                                {rollCall.votedate && <span>{formatDate(rollCall.votedate)}</span>}
+                              </div>
+                              {(rollCall.title1 || rollCall.title2) && (
+                                <p>{[rollCall.title1, rollCall.title2].filter(Boolean).join(" ")}</p>
+                              )}
+                              <div class="roll-counts">
+                                <span>Yeas {rollCall.yeas}</span>
+                                <span>Nays {rollCall.nays}</span>
+                                <span>Present {rollCall.present}</span>
+                                <span>Absent {rollCall.absent}</span>
+                              </div>
+                          </a>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </div>
               ) : (
                 <p class="empty">No roll calls returned.</p>
               )}
@@ -394,7 +430,7 @@ function commentsForBill(organizations = [], code = "") {
   }
 
   .vote-summary-grid {
-    align-items: start;
+    align-items: stretch;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-top: 22px;
   }
@@ -504,11 +540,16 @@ function commentsForBill(organizations = [], code = "") {
   }
 
   .stack,
+  .roll-summary,
   .roll-list,
   .testimony-list,
   .organization-comment-list {
     display: grid;
     gap: 12px;
+  }
+
+  .roll-panel {
+    align-content: start;
   }
 
   .roll-details {
@@ -558,6 +599,10 @@ function commentsForBill(organizations = [], code = "") {
 
   .roll-details .roll-list {
     margin-top: 12px;
+  }
+
+  .latest-roll {
+    border-color: #9ca3af;
   }
 
   .organization-comments-inline {
