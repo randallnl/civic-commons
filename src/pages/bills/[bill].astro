@@ -256,20 +256,33 @@ function commentsForBill(organizations = [], code = "") {
                   <div class="organization-comment-list">
                     {organizationComments.map((item) => (
                       <article>
-                        <div class="testimony-topline">
-                          <strong>
-                            <a href={organizationPath(item.organization)}>
-                              {item.organization.name}
-                            </a>
-                          </strong>
+                        <div class="organization-comment-topline">
+                          <a class="organization-logo" href={organizationPath(item.organization)}>
+                            {item.organization.logoUrl ? (
+                              <img
+                                src={item.organization.logoUrl}
+                                alt={`${item.organization.name} logo`}
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span>{item.organization.name.slice(0, 1)}</span>
+                            )}
+                          </a>
+                          <div class="organization-comment-heading">
+                            <strong>
+                              <a href={organizationPath(item.organization)}>
+                                {item.organization.name}
+                              </a>
+                            </strong>
+                            <p class="testimony-meta">
+                              {[item.author, item.date && formatDate(item.date)]
+                                .filter(Boolean)
+                                .join(" - ")}
+                            </p>
+                          </div>
                           <span class={positionClass(item.position)}>{item.position || "neutral"}</span>
                         </div>
                         <p>{item.comment}</p>
-                        <p class="testimony-meta">
-                          {[item.author, item.date && formatDate(item.date)]
-                            .filter(Boolean)
-                            .join(" - ")}
-                        </p>
                       </article>
                     ))}
                   </div>
@@ -720,6 +733,50 @@ function commentsForBill(organizations = [], code = "") {
     justify-content: space-between;
   }
 
+  .organization-comment-topline {
+    align-items: center;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+  }
+
+  .organization-logo {
+    align-items: center;
+    aspect-ratio: 1;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    overflow: hidden;
+    text-decoration: none;
+  }
+
+  .organization-logo img {
+    height: 100%;
+    object-fit: contain;
+    padding: 5px;
+    width: 100%;
+  }
+
+  .organization-logo span {
+    color: #1f2933;
+    font-size: 1.25rem;
+    font-weight: 950;
+  }
+
+  .organization-comment-heading {
+    min-width: 0;
+  }
+
+  .organization-comment-heading strong {
+    display: block;
+  }
+
+  .organization-comment-heading .testimony-meta {
+    margin-top: 3px;
+  }
+
   .roll-topline span {
     color: #4b5563;
     font-weight: 800;
@@ -788,6 +845,18 @@ function commentsForBill(organizations = [], code = "") {
 
     .testimony-breakdown {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 520px) {
+    .organization-comment-topline {
+      align-items: start;
+      grid-template-columns: 48px minmax(0, 1fr);
+    }
+
+    .organization-comment-topline > span {
+      grid-column: 2;
+      justify-self: start;
     }
   }
 </style>
