@@ -43,13 +43,13 @@ const sentiment = testimonySentiment();
 <div class:list={["position-summary", compact && "compact"]}>
   {sentiment ? (
     <>
-      <span class="summary-title">Remote Testimony</span>
+      <span class="summary-title">Public Testimony</span>
       <div class="summary-pills">
         <span class:list={["sentiment-pill", sentiment.className]}>{sentiment.label}</span>
       </div>
     </>
   ) : (
-    <span class="summary-title community-neutral">No remote testimony</span>
+    <span class="summary-title community-neutral">No public testimony</span>
   )}
 </div>
 

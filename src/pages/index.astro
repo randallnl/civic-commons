@@ -10,6 +10,7 @@ import { isFreeStater } from "../lib/civicTags";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
+import { getOrganizations, organizationPath } from "../lib/organizationsApi";
 import {
   getTrackedBills,
   normalizeBillCode,
@@ -23,15 +24,24 @@ import { profilePhotoUrl } from "../lib/photos";
 let recentArticles = [];
 let recentBills = [];
 let recentPeople = [];
+let organizationComments = [];
 let trackedBills = new Map();
 
 try {
-  const [articleResult, billResult, repResult, trackedBillResult, spotlightResult] = await Promise.allSettled([
+  const [
+    articleResult,
+    billResult,
+    repResult,
+    trackedBillResult,
+    spotlightResult,
+    organizationResult,
+  ] = await Promise.allSettled([
     getArticles({ include: "relations", limit: 5 }),
     getBills({ limit: 6 }),
     getRepresentatives({ limit: 8 }),
     getTrackedBills(),
     getSpotlightLegislators({ limit: 8 }),
+    getOrganizations(),
   ]);
 
   const articleData = articleResult.status === "fulfilled" ? articleResult.value : {};
@@ -39,18 +49,50 @@ try {
   const repData = repResult.status === "fulfilled" ? repResult.value : {};
   trackedBills = trackedBillResult.status === "fulfilled" ? trackedBillResult.value : new Map();
   const spotlightPeople = spotlightResult.status === "fulfilled" ? spotlightResult.value : [];
+  const organizations = organizationResult.status === "fulfilled" ? organizationResult.value : [];
 
   recentArticles = articleData.articles || [];
   recentBills = billData.bills || [];
   recentPeople = spotlightPeople.length ? spotlightPeople : repData.representatives || [];
+  organizationComments = organizations
+    .flatMap((organization) =>
+      (organization.comments || []).map((comment) => ({ ...comment, organization })),
+    )
+    .filter((comment) => trackedBillForCode(comment.bill || comment.billLabel))
+    .slice(0, 4);
 } catch (error) {
   console.error(error?.message || "Unable to load homepage API data.");
 }
 
 recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
 
+const publicCommentPlaceholders = [
+  {
+    title: "Resident story collection",
+    description:
+      "A future space for residents to share how a tracked bill, local issue, or district decision affects their household.",
+  },
+  {
+    title: "Town-level comment prompts",
+    description:
+      "A future space for community-specific comments tied to town profiles, wards, and legislative districts.",
+  },
+];
+
 function trackedBillFor(bill = {}) {
   return trackedBills.get(normalizeBillCode(bill.condensedbillno || bill.bill_number));
+}
+
+function trackedBillForCode(code = "") {
+  const normalized = normalizeBillCode(code);
+  if (!normalized) return null;
+  if (trackedBills.has(normalized)) return trackedBills.get(normalized);
+
+  for (const [key, bill] of trackedBills.entries()) {
+    if (String(key).startsWith(`${normalized}::`)) return bill;
+  }
+
+  return null;
 }
 
 function previewText(text = "", maxLength = 150) {
@@ -88,6 +130,13 @@ function locationLabel(person = {}) {
 function trackedVotesFor(person = {}, limit = 3) {
   const votes = Array.isArray(person.voteHistory) ? person.voteHistory : [];
   return votes.filter((vote) => trackedBillForVote(trackedBills, vote)).slice(0, limit);
+}
+
+function positionClass(position = "") {
+  const value = String(position).toLowerCase();
+  if (value.includes("support") || value.includes("favor")) return "support";
+  if (value.includes("oppose") || value.includes("against")) return "oppose";
+  return "neutral";
 }
 ---
 
@@ -165,7 +214,7 @@ function trackedVotesFor(person = {}, limit = 3) {
             <span>2</span>
             <div>
               <h3>Understand your community profile</h3>
-              <p>Look at the towns, wards, counties, and districts that shape who represents your community and what coverage is attached to it.</p>
+              <p>Search for your town or county to open a local profile with the House districts, Senate districts, representatives, candidates, and community updates tied to that specific region.</p>
               <a href="/communities">Explore communities</a>
             </div>
           </li>
@@ -345,6 +394,70 @@ function trackedVotesFor(person = {}, limit = 3) {
         </div>
       </section>
 
+      <section class="community-comments">
+        <div class="section-intro">
+          <p class="eyebrow">Community Comments</p>
+          <h2>Pair public experience with organized civic analysis.</h2>
+          <p>
+            This space will bring together resident comments and published
+            organizational comments on tracked bills so visitors can see both
+            personal impact and policy analysis in one place.
+          </p>
+        </div>
+
+        <div class="comment-columns">
+          <div>
+            <h3>Public comments</h3>
+            <div class="comment-list">
+              {publicCommentPlaceholders.map((item) => (
+                <article class="comment-card placeholder">
+                  <span>Coming soon</span>
+                  <strong>{item.title}</strong>
+                  <p>{item.description}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3>Organizational comments on tracked bills</h3>
+            <div class="comment-list">
+              {organizationComments.length ? (
+                organizationComments.map((item) => {
+                  const trackedBill = trackedBillForCode(item.bill || item.billLabel);
+                  const billCode = trackedBill?.code || normalizeBillCode(item.bill || item.billLabel);
+
+                  return (
+                    <article class="comment-card">
+                      <div class="comment-topline">
+                        <a href={organizationPath(item.organization)}>
+                          {item.organization.name}
+                        </a>
+                        {item.position && (
+                          <span class:list={["position-pill", positionClass(item.position)]}>
+                            {item.position}
+                          </span>
+                        )}
+                      </div>
+                      <a class="bill-comment-link" href={`/bills/${billCode}`}>
+                        {billCode}{trackedBill?.name ? `: ${trackedBill.name}` : ""}
+                      </a>
+                      <p>{previewText(item.comment, 190)}</p>
+                    </article>
+                  );
+                })
+              ) : (
+                <article class="comment-card placeholder">
+                  <span>Organizational comments</span>
+                  <strong>No tracked bill comments yet</strong>
+                  <p>Published partner comments for bills in the tracker will appear here automatically.</p>
+                </article>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="cta">
         <h2>Help keep civic information accurate.</h2>
         <p>
@@ -462,6 +575,7 @@ function trackedVotesFor(person = {}, limit = 3) {
 
   .pathway,
   .rep-preview,
+  .community-comments,
   .content-grid > div,
   .cta {
     background: rgba(255, 255, 255, 0.75);
@@ -632,6 +746,113 @@ function trackedVotesFor(person = {}, limit = 3) {
 
   .content-grid h2 {
     margin-top: 0;
+  }
+
+  .community-comments {
+    display: grid;
+    gap: 24px;
+    margin: 40px 0;
+    padding: 32px;
+  }
+
+  .comment-columns {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+
+  .comment-columns h3 {
+    font-size: 1.25rem;
+    line-height: 1.15;
+    margin: 0 0 14px;
+  }
+
+  .comment-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .comment-card {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    display: grid;
+    gap: 9px;
+    padding: 16px;
+  }
+
+  .comment-card.placeholder {
+    background: #f8fafc;
+    border-style: dashed;
+  }
+
+  .comment-card > span,
+  .comment-card.placeholder span {
+    color: #6b4f2a;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .comment-card strong {
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  .comment-card p {
+    color: #4b5563;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .comment-topline {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+  }
+
+  .comment-topline a,
+  .bill-comment-link {
+    color: #1f2933;
+    font-weight: 900;
+  }
+
+  .bill-comment-link {
+    text-decoration: none;
+  }
+
+  .bill-comment-link:hover {
+    text-decoration: underline;
+  }
+
+  .position-pill {
+    border: 1px solid #64748b;
+    border-radius: 999px;
+    color: #334155;
+    flex: 0 0 auto;
+    font-size: 0.72rem;
+    font-weight: 900;
+    padding: 4px 8px;
+  }
+
+  .position-pill.support {
+    background: #dcfce7;
+    border-color: #16a34a;
+    color: #166534;
+  }
+
+  .position-pill.oppose {
+    background: #fee2e2;
+    border-color: #ef4444;
+    color: #991b1b;
+  }
+
+  .position-pill.neutral {
+    background: #dbeafe;
+    border-color: #60a5fa;
+    color: #1d4ed8;
   }
 
   .list {
@@ -877,6 +1098,7 @@ function trackedVotesFor(person = {}, limit = 3) {
 
   @media (max-width: 900px) {
     .rep-preview,
+    .comment-columns,
     .content-grid {
       grid-template-columns: 1fr 1fr;
     }
@@ -885,6 +1107,7 @@ function trackedVotesFor(person = {}, limit = 3) {
 
   @media (max-width: 600px) {
     .rep-preview,
+    .comment-columns,
     .content-grid {
       grid-template-columns: 1fr;
     }
@@ -899,7 +1122,8 @@ function trackedVotesFor(person = {}, limit = 3) {
     }
 
     .pathway,
-    .rep-preview {
+    .rep-preview,
+    .community-comments {
       padding: 22px;
     }
 

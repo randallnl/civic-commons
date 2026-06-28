@@ -4,7 +4,7 @@ export const prerender = false;
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import ArticleList from "../../components/ArticleList.astro";
 import TopNav from "../../components/TopNav.astro";
-import { getBillDetail, getBillTestimony, rollCallPath } from "../../lib/billsApi";
+import { getBillDetail, getBillTestimony, positionCounts, rollCallPath } from "../../lib/billsApi";
 import { getOrganizations, organizationPath } from "../../lib/organizationsApi";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
@@ -36,6 +36,8 @@ try {
 } catch (loadError) {
   error = loadError?.message || "Unable to load bill details.";
 }
+
+const testimonyCounts = positionCounts(bill || {});
 
 function formatDate(value) {
   if (!value) return "";
@@ -176,6 +178,24 @@ function commentsForBill(organizations = [], code = "") {
                 <h2>Public Testimony Summary</h2>
               </div>
               <BillPositionSummary bill={bill} />
+              <div class="testimony-breakdown" aria-label="Public testimony counts">
+                <span class="support">
+                  <strong>{testimonyCounts.support}</strong>
+                  Support
+                </span>
+                <span class="oppose">
+                  <strong>{testimonyCounts.oppose}</strong>
+                  Oppose
+                </span>
+                <span class="neutral">
+                  <strong>{testimonyCounts.neutral}</strong>
+                  Neutral
+                </span>
+                <span>
+                  <strong>{testimonyCounts.total}</strong>
+                  Total
+                </span>
+              </div>
             </section>
           </section>
 
@@ -428,6 +448,48 @@ function commentsForBill(organizations = [], code = "") {
     margin: 0 0 16px;
   }
 
+  .testimony-breakdown {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 14px;
+  }
+
+  .testimony-breakdown span {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #4b5563;
+    display: grid;
+    font-size: 0.78rem;
+    font-weight: 900;
+    gap: 3px;
+    padding: 10px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .testimony-breakdown strong {
+    color: #1f2933;
+    font-size: 1.45rem;
+    line-height: 1;
+  }
+
+  .testimony-breakdown .support {
+    background: #dcfce7;
+    border-color: #16a34a;
+  }
+
+  .testimony-breakdown .oppose {
+    background: #fee2e2;
+    border-color: #ef4444;
+  }
+
+  .testimony-breakdown .neutral {
+    background: #dbeafe;
+    border-color: #60a5fa;
+  }
+
   .stack,
   .roll-list,
   .testimony-list,
@@ -524,6 +586,10 @@ function commentsForBill(organizations = [], code = "") {
 
     .germane-box {
       justify-self: stretch;
+    }
+
+    .testimony-breakdown {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 </style>
