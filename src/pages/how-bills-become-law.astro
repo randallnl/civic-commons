@@ -6,23 +6,26 @@ import TopNav from "../components/TopNav.astro";
 const examples = [
   {
     eyebrow: "Example 1",
-    title: "HB 155: A bill that changed along the way",
+    title: "HB 155: A bill that needed a Committee of Conference",
     description:
-      "This is one of the most common alternate paths: the second chamber amends a bill, so the first chamber has to decide whether to accept the new version.",
+      "HB 155 shows how a bill can slow down, change in the second chamber, and then need House and Senate negotiators to work out one final version.",
     billHref: "/bills/HB155",
     steps: [
-      ["Bill Introduced", "A representative files the bill."],
-      ["House Committee", "Public hearing, testimony, and recommendation."],
-      ["House Vote", "The full House passes the bill."],
-      ["Senate Committee", "The Senate reviews the House version."],
-      ["Senate Vote", "The Senate passes it with changes."],
-      ["Back to House", "The House reviews the Senate version."],
-      ["House Agrees", "Both chambers now agree on the same language."],
-      ["Governor", "The bill can be signed into law."],
+      ["Introduced in the House", "HB 155 was introduced on January 8, 2025 and sent to House Ways and Means."],
+      ["House Hearing", "The committee held a public hearing on January 28, 2025."],
+      ["Retained in Committee", "Instead of moving right away, the House committee kept the bill for more work."],
+      ["House Committee Report", "The committee later recommended Ought to Pass with Amendment, with a minority report recommending ITL."],
+      ["House Vote", "On January 8, 2026, the House adopted the amendment and passed the bill 189-165."],
+      ["Senate Review", "The Senate sent HB 155 to Ways and Means, held hearings, and added Senate amendments."],
+      ["Senate Finance", "After passing with amendments, the bill was referred to Senate Finance under Rule 4-5."],
+      ["House Non-Concurs", "The House did not agree to the Senate version and requested a Committee of Conference."],
+      ["Committee of Conference", "House and Senate conferees met to negotiate one final version of the bill."],
+      ["Conference Report Adopted", "On June 4, 2026, both chambers adopted the conference committee report."],
     ],
     teaches: [
-      "Bills can change after they leave the House.",
-      "Both chambers must agree on the exact same language before a bill can become law.",
+      "Bills can be retained for more work before they ever reach a chamber vote.",
+      "A second chamber can amend a bill enough that the first chamber refuses to concur.",
+      "A Committee of Conference is used when the House and Senate need to negotiate a final shared version.",
     ],
   },
   {
