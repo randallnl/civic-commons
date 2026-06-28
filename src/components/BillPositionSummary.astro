@@ -4,32 +4,48 @@ import { positionCounts } from "../lib/billsApi";
 const { bill, compact = false } = Astro.props;
 const counts = positionCounts(bill);
 
-function communityClass() {
-  if (counts.support > counts.oppose) {
-    return "community-support";
+function testimonySentiment() {
+  const support = Math.max(0, Number(counts.support || 0));
+  const oppose = Math.max(0, Number(counts.oppose || 0));
+  const total = support + oppose;
+
+  if (!total) {
+    return null;
   }
 
-  if (counts.oppose > counts.support) {
-    return "community-oppose";
+  const difference = Math.abs(support - oppose);
+  const margin = difference / total;
+  const direction = support > oppose ? "Support" : "Oppose";
+  const classDirection = support > oppose ? "support" : "oppose";
+
+  if (total < 50 && margin <= 0.25) {
+    return { label: "Neutral", className: "sentiment-neutral" };
   }
 
-  if (counts.support > 0 || counts.oppose > 0) {
-    return "community-neutral";
+  if (margin <= 0.1) {
+    return { label: "Divided", className: "sentiment-divided" };
   }
 
-  return "";
+  if (margin <= 0.25) {
+    return { label: `Slightly ${direction}`, className: `sentiment-${classDirection}-slight` };
+  }
+
+  if (margin <= 0.5) {
+    return { label: `Mostly ${direction}`, className: `sentiment-${classDirection}-mostly` };
+  }
+
+  return { label: `Overwhelmingly ${direction}`, className: `sentiment-${classDirection}-overwhelming` };
 }
 
-const className = communityClass();
+const sentiment = testimonySentiment();
 ---
 
 <div class:list={["position-summary", compact && "compact"]}>
-  {className ? (
+  {sentiment ? (
     <>
-      <span class:list={["summary-title", className]}>Remote Testimony</span>
+      <span class="summary-title">Remote Testimony</span>
       <div class="summary-pills">
-        <span class="support-pill">{counts.support} Support</span>
-        <span class="oppose-pill">{counts.oppose} Oppose</span>
+        <span class:list={["sentiment-pill", sentiment.className]}>{sentiment.label}</span>
       </div>
     </>
   ) : (
@@ -53,7 +69,7 @@ const className = communityClass();
     gap: 8px;
   }
 
-  .summary-pills span {
+  .sentiment-pill {
     background: white;
     border: 1px solid #d1d5db;
     border-radius: 999px;
@@ -61,9 +77,10 @@ const className = communityClass();
     font-size: 0.82rem;
     font-weight: 900;
     padding: 6px 9px;
+    text-align: center;
   }
 
-  .position-summary.compact .summary-pills span {
+  .position-summary.compact .sentiment-pill {
     font-size: 0.76rem;
     padding: 5px 8px;
   }
@@ -90,27 +107,55 @@ const className = communityClass();
     padding-bottom: 4px;
   }
 
-  .community-support {
-    color: #166534;
-  }
-
-  .community-oppose {
-    color: #991b1b;
-  }
-
   .community-neutral {
     color: #475569;
   }
 
-  .support-pill {
+  .sentiment-neutral {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #334155;
+  }
+
+  .sentiment-divided {
+    background: #dbeafe;
+    border-color: #60a5fa;
+    color: #1d4ed8;
+  }
+
+  .sentiment-support-slight {
     background: #e0f2fe;
     border-color: #0284c7;
     color: #075985;
   }
 
-  .oppose-pill {
+  .sentiment-support-mostly {
+    background: #dcfce7;
+    border-color: #16a34a;
+    color: #166534;
+  }
+
+  .sentiment-support-overwhelming {
+    background: #14532d;
+    border-color: #14532d;
+    color: #f0fdf4;
+  }
+
+  .sentiment-oppose-slight {
     background: #fef3c7;
     border-color: #d97706;
     color: #92400e;
+  }
+
+  .sentiment-oppose-mostly {
+    background: #fee2e2;
+    border-color: #ef4444;
+    color: #991b1b;
+  }
+
+  .sentiment-oppose-overwhelming {
+    background: #7f1d1d;
+    border-color: #7f1d1d;
+    color: #fef2f2;
   }
 </style>
