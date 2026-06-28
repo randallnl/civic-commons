@@ -433,16 +433,24 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
                 {isWardedCommunity && (
                   <form class="ward-filter" action="/my-state-rep" method="get">
                     <input type="hidden" name="address" value={address} />
-                    <label for="ward">Ward</label>
-                    <select id="ward" name="ward">
-                      <option value="">Use address result</option>
-                      {wardOptions.map((option) => (
-                        <option value={option} selected={selectedWard === option}>
-                          Ward {option}
-                        </option>
-                      ))}
-                    </select>
-                    <button type="submit">Apply</button>
+                    <div class="ward-filter-copy">
+                      <label for="ward">Select your ward</label>
+                      <p>
+                        Some lookup results may be town-wide. Choose your ward
+                        to narrow House representatives and candidates.
+                      </p>
+                    </div>
+                    <div class="ward-filter-controls">
+                      <select id="ward" name="ward">
+                        <option value="">Use address result</option>
+                        {wardOptions.map((option) => (
+                          <option value={option} selected={selectedWard === option}>
+                            Ward {option}
+                          </option>
+                        ))}
+                      </select>
+                      <button type="submit">Apply</button>
+                    </div>
                   </form>
                 )}
               </div>
@@ -695,20 +703,42 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
   }
 
   .ward-filter {
-    align-items: end;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    align-items: center;
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
     margin-top: 14px;
+    max-width: 760px;
+    padding: 12px;
   }
 
   .ward-filter label {
-    color: #6b7280;
+    color: #6b4f2a;
+    display: block;
     font-size: 0.78rem;
     font-weight: 900;
     letter-spacing: 0.1em;
-    margin: 0 2px 0 0;
+    margin: 0 0 4px;
     text-transform: uppercase;
+  }
+
+  .ward-filter p {
+    color: #4b5563;
+    font-size: 0.9rem;
+    font-weight: 750;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .ward-filter-controls {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
   }
 
   .ward-filter select {
@@ -1030,6 +1060,14 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
     button {
       width: 100%;
+    }
+
+    .ward-filter {
+      grid-template-columns: 1fr;
+    }
+
+    .ward-filter-controls {
+      justify-content: flex-start;
     }
 
     .ward-filter button {
