@@ -141,32 +141,39 @@ function commentsForBill(organizations = [], code = "") {
               </div>
 
               {rollCalls.length ? (
-                <div class="roll-list">
-                  {rollCalls.map((rollCall) => (
-                    <a
-                      class="roll-card"
-                      href={rollCallPath(
-                        bill.condensedbillno,
-                        rollCall.votesequencenumber,
-                        rollCall.sessionyear || bill.sessionyear,
-                      )}
-                    >
-                        <div class="roll-topline">
-                          <strong>{rollCall.question_motion || "Roll call"}</strong>
-                          {rollCall.votedate && <span>{formatDate(rollCall.votedate)}</span>}
-                        </div>
-                        {(rollCall.title1 || rollCall.title2) && (
-                          <p>{[rollCall.title1, rollCall.title2].filter(Boolean).join(" ")}</p>
+                <details class="roll-details">
+                  <summary>
+                    <span>See previous updates</span>
+                    <small>{rollCalls.length} roll call{rollCalls.length === 1 ? "" : "s"}</small>
+                  </summary>
+
+                  <div class="roll-list">
+                    {rollCalls.map((rollCall) => (
+                      <a
+                        class="roll-card"
+                        href={rollCallPath(
+                          bill.condensedbillno,
+                          rollCall.votesequencenumber,
+                          rollCall.sessionyear || bill.sessionyear,
                         )}
-                        <div class="roll-counts">
-                          <span>Yeas {rollCall.yeas}</span>
-                          <span>Nays {rollCall.nays}</span>
-                          <span>Present {rollCall.present}</span>
-                          <span>Absent {rollCall.absent}</span>
-                        </div>
-                    </a>
-                  ))}
-                </div>
+                      >
+                          <div class="roll-topline">
+                            <strong>{rollCall.question_motion || "Roll call"}</strong>
+                            {rollCall.votedate && <span>{formatDate(rollCall.votedate)}</span>}
+                          </div>
+                          {(rollCall.title1 || rollCall.title2) && (
+                            <p>{[rollCall.title1, rollCall.title2].filter(Boolean).join(" ")}</p>
+                          )}
+                          <div class="roll-counts">
+                            <span>Yeas {rollCall.yeas}</span>
+                            <span>Nays {rollCall.nays}</span>
+                            <span>Present {rollCall.present}</span>
+                            <span>Absent {rollCall.absent}</span>
+                          </div>
+                      </a>
+                    ))}
+                  </div>
+                </details>
               ) : (
                 <p class="empty">No roll calls returned.</p>
               )}
@@ -196,33 +203,9 @@ function commentsForBill(organizations = [], code = "") {
                   Total
                 </span>
               </div>
-            </section>
-          </section>
 
-          <section class="content-grid">
-            <div class="stack">
-              <section class="panel">
-                <div class="section-heading">
-                  <p class="eyebrow">Articles</p>
-                  <h2>Related Coverage</h2>
-                </div>
-
-                <ArticleList
-                  articles={relatedArticles}
-                  compact={true}
-                  emptyText="No related articles returned."
-                />
-
-                <a
-                  class="text-link"
-                  href={`/articles?bill=${encodeURIComponent(bill.condensedbillno)}&include=relations`}
-                >
-                  Browse all bill articles
-                </a>
-              </section>
-
-              <section class="panel">
-                <div class="section-heading">
+              <section class="organization-comments-inline">
+                <div class="section-heading compact">
                   <p class="eyebrow">Organizations</p>
                   <h2>Organizational Comments</h2>
                 </div>
@@ -251,6 +234,30 @@ function commentsForBill(organizations = [], code = "") {
                 ) : (
                   <p class="empty">No organizational comments have been published yet.</p>
                 )}
+              </section>
+            </section>
+          </section>
+
+          <section class="content-grid">
+            <div class="stack">
+              <section class="panel">
+                <div class="section-heading">
+                  <p class="eyebrow">Articles</p>
+                  <h2>Related Coverage</h2>
+                </div>
+
+                <ArticleList
+                  articles={relatedArticles}
+                  compact={true}
+                  emptyText="No related articles returned."
+                />
+
+                <a
+                  class="text-link"
+                  href={`/articles?bill=${encodeURIComponent(bill.condensedbillno)}&include=relations`}
+                >
+                  Browse all bill articles
+                </a>
               </section>
             </div>
 
@@ -387,6 +394,7 @@ function commentsForBill(organizations = [], code = "") {
   }
 
   .vote-summary-grid {
+    align-items: start;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-top: 22px;
   }
@@ -448,11 +456,16 @@ function commentsForBill(organizations = [], code = "") {
     margin: 0 0 16px;
   }
 
+  .section-heading.compact h2 {
+    font-size: 1.15rem;
+    margin-bottom: 12px;
+  }
+
   .testimony-breakdown {
     display: grid;
-    gap: 10px;
+    gap: 8px;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    margin-top: 14px;
+    margin-top: 10px;
   }
 
   .testimony-breakdown span {
@@ -463,15 +476,15 @@ function commentsForBill(organizations = [], code = "") {
     display: grid;
     font-size: 0.78rem;
     font-weight: 900;
-    gap: 3px;
-    padding: 10px;
+    gap: 2px;
+    padding: 8px;
     text-align: center;
     text-transform: uppercase;
   }
 
   .testimony-breakdown strong {
     color: #1f2933;
-    font-size: 1.45rem;
+    font-size: 1.25rem;
     line-height: 1;
   }
 
@@ -496,6 +509,61 @@ function commentsForBill(organizations = [], code = "") {
   .organization-comment-list {
     display: grid;
     gap: 12px;
+  }
+
+  .roll-details {
+    display: grid;
+    gap: 12px;
+  }
+
+  .roll-details summary {
+    align-items: center;
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    list-style: none;
+    padding: 14px 16px;
+  }
+
+  .roll-details summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .roll-details summary::after {
+    content: "+";
+    font-size: 1.35rem;
+    font-weight: 950;
+    line-height: 1;
+  }
+
+  .roll-details[open] summary::after {
+    content: "-";
+  }
+
+  .roll-details summary span {
+    color: #1f2933;
+    font-weight: 950;
+  }
+
+  .roll-details summary small {
+    color: #4b5563;
+    display: inline;
+    font-size: 0.82rem;
+    margin: 0;
+  }
+
+  .roll-details .roll-list {
+    margin-top: 12px;
+  }
+
+  .organization-comments-inline {
+    border-top: 1px solid #d1d5db;
+    margin-top: 16px;
+    padding-top: 16px;
   }
 
   .roll-card,
