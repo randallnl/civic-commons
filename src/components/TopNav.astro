@@ -24,7 +24,8 @@ function isActive(link) {
 <header class="site-nav">
   <div class="nav-inner">
     <a class="brand" href="/">
-      <span>Civic Commons</span>
+      <img src="/NH%20DB%20Logo.png" alt="" width="40" height="40" />
+      <span>NH Deserves Better</span>
     </a>
 
     <nav aria-label="Primary navigation">
@@ -69,11 +70,20 @@ function isActive(link) {
 
   .brand {
     align-items: center;
+    gap: 10px;
     display: inline-flex;
     font-size: 1.02rem;
     font-weight: 950;
     min-height: 40px;
     white-space: nowrap;
+  }
+
+  .brand img {
+    border-radius: 8px;
+    display: block;
+    height: 40px;
+    object-fit: contain;
+    width: 40px;
   }
 
   nav {
