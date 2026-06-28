@@ -127,6 +127,27 @@ const detours = [
         </aside>
       </section>
 
+      <section class="detours panel">
+        <div>
+          <p class="eyebrow">Possible Detours</p>
+          <h2>A bill can take a turn at several points.</h2>
+          <p>
+            When you look at a bill profile, pay attention to committee
+            recommendations, amendments, roll call votes, and whether both
+            chambers agreed on the same language.
+          </p>
+        </div>
+
+        <div class="detour-grid">
+          {detours.map(([title, detail]) => (
+            <article>
+              <strong>{title}</strong>
+              <p>{detail}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section class="examples">
         <div class="section-heading">
           <p class="eyebrow">Three Real Paths</p>
@@ -167,27 +188,6 @@ const detours = [
                   ))}
                 </ul>
               </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section class="detours panel">
-        <div>
-          <p class="eyebrow">Possible Detours</p>
-          <h2>A bill can take a turn at several points.</h2>
-          <p>
-            When you look at a bill profile, pay attention to committee
-            recommendations, amendments, roll call votes, and whether both
-            chambers agreed on the same language.
-          </p>
-        </div>
-
-        <div class="detour-grid">
-          {detours.map(([title, detail]) => (
-            <article>
-              <strong>{title}</strong>
-              <p>{detail}</p>
             </article>
           ))}
         </div>
