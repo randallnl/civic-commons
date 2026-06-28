@@ -70,13 +70,13 @@ export function representativeVoteStance(vote = {}, trackedBill = {}) {
 
   if (!analysis.voteStance || !analysis.preferredStance) {
     return {
-      label: `Vote: ${analysis.interpretation || vote.vote_label || vote.vote || "Not listed"}`,
+      label: `Voted: ${analysis.interpretation || vote.vote_label || vote.vote || "Not listed"}`,
       className: "legislator-neutral",
     };
   }
 
   return {
-    label: `Vote: ${analysis.interpretation || titleCase(analysis.voteStance)}`,
+    label: `Voted: ${analysis.interpretation || titleCase(analysis.voteStance)}`,
     className:
       analysis.alignment === "neutral"
         ? "legislator-neutral"
