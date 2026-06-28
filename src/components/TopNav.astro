@@ -49,6 +49,7 @@ function isActive(link) {
     position: sticky;
     top: 0;
     z-index: 20;
+    backdrop-filter: blur(10px);
   }
 
   .nav-inner {
@@ -114,20 +115,47 @@ function isActive(link) {
   }
 
   @media (max-width: 720px) {
+    .site-nav {
+      position: sticky;
+    }
+
     .nav-inner {
       align-items: start;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
+      min-height: 0;
+      padding: 8px 0;
+    }
+
+    .brand {
+      font-size: 0.98rem;
+      min-height: 34px;
+    }
+
+    .brand img {
+      border-radius: 6px;
+      height: 34px;
+      width: 34px;
     }
 
     nav {
+      flex-wrap: nowrap;
       justify-content: flex-start;
+      margin: 0 calc(50% - 50vw);
+      overflow-x: auto;
+      padding: 2px max(16px, calc(50vw - 560px)) 8px;
+      scrollbar-width: none;
       width: 100%;
     }
 
+    nav::-webkit-scrollbar {
+      display: none;
+    }
+
     .nav-link {
-      font-size: 0.84rem;
-      padding: 9px 10px;
+      flex: 0 0 auto;
+      font-size: 0.82rem;
+      padding: 8px 10px;
     }
   }
 </style>
