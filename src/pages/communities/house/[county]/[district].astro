@@ -32,6 +32,7 @@ function normalizeHouseProfile(community = {}) {
 
   return {
     ...community,
+    county: community.county || titleCase(county),
     representatives,
     representativeCount:
       representatives.length ||
@@ -44,6 +45,14 @@ function normalizeHouseProfile(community = {}) {
         ...(community.groups?.candidates?.house || []),
       ],
   };
+}
+
+function titleCase(value = "") {
+  return String(value)
+    .split(/-|_/)
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 }
 ---
 

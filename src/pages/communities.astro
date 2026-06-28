@@ -6,6 +6,7 @@ import {
   communityPath,
   getCountyCommunity,
 } from "../lib/communitiesApi";
+import { countyImageUrl } from "../lib/communityImages";
 import { repName } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 
@@ -284,15 +285,31 @@ const total = Number(meta.total || meta.count || countyGroups.length);
                 districtTotal - previewDistricts.length,
               );
               const profileHref = countyProfilePath(countyGroup);
+              const imageUrl = countyImageUrl(countyGroup.county);
+              const representativeCount = countyGroup.representatives.size;
 
               return (
               <article class="county-card">
-                <div class="topline">
-                  <span>County</span>
-                  <span>{districtTotal} House districts</span>
-                </div>
+                <a class="county-image" href={profileHref}>
+                  {imageUrl && <img src={imageUrl} alt="" loading="lazy" />}
+                  <div>
+                    <span>County Profile</span>
+                    <h3>{countyGroup.county}</h3>
+                  </div>
+                </a>
 
-                <h3><a href={profileHref}>{countyGroup.county}</a></h3>
+                <div class="county-summary">
+                  <p>
+                    Explore towns, House districts, legislators, candidates, and
+                    local updates connected to {countyGroup.county} County.
+                  </p>
+                  <div class="county-stats">
+                    <span><strong>{towns.length}</strong> Towns</span>
+                    <span><strong>{districtTotal}</strong> House districts</span>
+                    <span><strong>{representativeCount}</strong> Legislators</span>
+                    <span><strong>{countyGroup.articles.length}</strong> Updates</span>
+                  </div>
+                </div>
 
                 {towns.length > 0 && (
                   <div class="towns">
@@ -432,6 +449,9 @@ const total = Number(meta.total || meta.count || countyGroups.length);
 
   .county-card {
     display: grid;
+    gap: 16px;
+    overflow: hidden;
+    padding: 0;
   }
 
   .topline,
@@ -440,6 +460,105 @@ const total = Number(meta.total || meta.count || countyGroups.length);
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .county-image {
+    align-items: end;
+    aspect-ratio: 16 / 8;
+    background: #1f2933;
+    color: white;
+    display: grid;
+    overflow: hidden;
+    position: relative;
+    text-decoration: none;
+  }
+
+  .county-image::after {
+    background:
+      linear-gradient(180deg, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0.82)),
+      linear-gradient(90deg, rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.15));
+    content: "";
+    inset: 0;
+    position: absolute;
+    z-index: 1;
+  }
+
+  .county-image img {
+    height: 100%;
+    inset: 0;
+    object-fit: cover;
+    position: absolute;
+    width: 100%;
+    z-index: 0;
+  }
+
+  .county-image div {
+    display: grid;
+    gap: 6px;
+    padding: 18px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .county-image span {
+    color: #fde68a;
+    font-size: 0.74rem;
+    font-weight: 950;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .county-image h3 {
+    color: #fffaf1;
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    line-height: 0.95;
+    margin: 0;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.38);
+  }
+
+  .county-summary,
+  .towns,
+  .district-links,
+  .articles {
+    margin-left: 18px;
+    margin-right: 18px;
+  }
+
+  .county-summary {
+    display: grid;
+    gap: 12px;
+  }
+
+  .county-summary p {
+    color: #4b5563;
+    font-weight: 800;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .county-stats {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .county-stats span {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #4b5563;
+    display: grid;
+    font-size: 0.75rem;
+    font-weight: 900;
+    gap: 2px;
+    padding: 10px;
+    text-transform: uppercase;
+  }
+
+  .county-stats strong {
+    color: #1f2933;
+    font-size: 1.35rem;
+    line-height: 1;
   }
 
   .topline span,
@@ -496,6 +615,7 @@ const total = Number(meta.total || meta.count || countyGroups.length);
     gap: 8px;
     margin-top: 16px;
     padding-top: 14px;
+    padding-bottom: 18px;
   }
 
   .articles strong {

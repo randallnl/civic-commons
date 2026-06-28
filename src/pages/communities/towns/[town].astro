@@ -22,13 +22,15 @@ try {
 function normalizeTownProfile(data = {}, fallbackTown = "") {
   const townData = data.town || data.community || data;
   const name = townData.name || titleCase(decodeURIComponent(fallbackTown));
+  const districts = data.districts || townData.districts || [];
 
   return {
     ...townData,
     name,
+    county: townData.county || townData.countyName || countyFromDistricts(districts),
     profileLabel: "Town Profile",
     townsRepresented: [name],
-    districts: data.districts || townData.districts || [],
+    districts,
     representatives:
       data.representatives ||
       townData.representatives ||
@@ -46,6 +48,14 @@ function normalizeTownProfile(data = {}, fallbackTown = "") {
       data.representatives?.length ||
       townData.representativeCount,
   };
+}
+
+function countyFromDistricts(districts = []) {
+  const district = districts.find((item) =>
+    item?.county || item?.countyName || item?.county_name || item?.county_slug,
+  );
+
+  return district?.county || district?.countyName || district?.county_name || district?.county_slug || "";
 }
 
 function candidatesForTown(data = {}, townData = {}) {
