@@ -4,6 +4,7 @@ import profileIcon from "../assets/profile icon.png";
 import { billDetailPath } from "../lib/billsApi";
 import { isFreeStater } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
+import { cleanText } from "../lib/text";
 import {
   normalizeBillCode,
   representativeGrade,
@@ -19,7 +20,7 @@ function formatParty(party) {
   if (party === "R") return "Republican";
   if (party === "D") return "Democrat";
   if (party === "I") return "Independent";
-  return party;
+  return cleanText(party);
 }
 
 function slugify(value = "") {
@@ -31,8 +32,9 @@ function slugify(value = "") {
     .replace(/^-+|-+$/g, "");
 }
 
-const name =
-  rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim();
+const name = cleanText(
+  rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim(),
+);
 const profileHref = `/people/${slugify(name)}`;
 const photoUrl = profilePhotoUrl(rep.photo);
 const voteHistory = Array.isArray(rep.voteHistory)
@@ -81,7 +83,7 @@ function billSummaryFor(vote) {
       </div>
 
       <div class="rep-meta">
-        <span>{rep.chamber || "Legislator"}</span>
+        <span>{cleanText(rep.chamber || "Legislator")}</span>
         <span>{formatParty(rep.party)}</span>
         {isFreeStater(rep) && (
           <a
@@ -101,7 +103,7 @@ function billSummaryFor(vote) {
 
       {rep.location_text && (
         <div class="location-line">
-          {rep.location_text}
+          {cleanText(rep.location_text)}
         </div>
       )}
     </div>
@@ -110,18 +112,18 @@ function billSummaryFor(vote) {
   <div class="rep-contact">
     <div>
       <span>Email</span>
-      {rep.email || "Email not listed"}
+      {cleanText(rep.email || "Email not listed")}
     </div>
 
     <div>
       <span>Phone</span>
-      {rep.phone || "Phone not listed"}
+      {cleanText(rep.phone || "Phone not listed")}
     </div>
 
     {rep.notes && (
       <div>
         <span>Notes</span>
-        <p>{rep.notes}</p>
+        <p>{cleanText(rep.notes)}</p>
       </div>
     )}
   </div>
@@ -147,15 +149,15 @@ function billSummaryFor(vote) {
                     {bill?.code || vote.condensedbillno || "Bill"}
                   </a>
                 </strong>
-                {bill?.name && <span>{bill.name}</span>}
-                {summary && <p class="bill-summary">{summary}</p>}
+                {bill?.name && <span>{cleanText(bill.name)}</span>}
+                {summary && <p class="bill-summary">{cleanText(summary)}</p>}
               </div>
               <div class="vote-copy">
                 <div class:list={["vote-interpretation", stance.className]}>
                   <small class:list={["legislator-vote-pill", stance.className]}>
                     {stance.label}
                   </small>
-                  {voteImpact && <p class="vote-impact">{voteImpact}</p>}
+                  {voteImpact && <p class="vote-impact">{cleanText(voteImpact)}</p>}
                 </div>
               </div>
               <div class="vote-pill-stack">

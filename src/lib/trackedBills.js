@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { cleanText } from "./text";
 
 const DEFAULT_TRACKED_BILLS_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vTHKkGGONM78RXb63Igvi2BXipOA4pV4X5CBY6yHaVAizO-l0q_WtU8uyXI-vhxxbKEib9nFlL1nIBz/pub?gid=1337871563&single=true&output=csv";
@@ -180,18 +181,18 @@ function parseTrackedBillsCsv(csv) {
     const voteSequence = normalizeVoteSequence(record[columnIndex["vote sequence"]]);
     const bill = {
       code,
-      name: record[columnIndex.name] || "",
-      summary: record[columnIndex.summary] || "",
-      impact: record[columnIndex.impact] || "",
+      name: cleanText(record[columnIndex.name] || ""),
+      summary: cleanText(record[columnIndex.summary] || ""),
+      impact: cleanText(record[columnIndex.impact] || ""),
       moreInfoUrl: record[columnIndex.moreinfourl] || "",
-      issueArea: record[columnIndex["issue area"]] || "",
-      articles: record[columnIndex.articles] || "",
-      yeaInterpretation: record[columnIndex["yea interpretation"]] || "",
-      nayInterpretation: record[columnIndex["nay interpretation"]] || "",
-      yeaImpact: record[columnIndex["yea impact"]] || "",
-      nayImpact: record[columnIndex["nay impact"]] || "",
+      issueArea: cleanText(record[columnIndex["issue area"]] || ""),
+      articles: cleanText(record[columnIndex.articles] || ""),
+      yeaInterpretation: cleanText(record[columnIndex["yea interpretation"]] || ""),
+      nayInterpretation: cleanText(record[columnIndex["nay interpretation"]] || ""),
+      yeaImpact: cleanText(record[columnIndex["yea impact"]] || ""),
+      nayImpact: cleanText(record[columnIndex["nay impact"]] || ""),
       voteSequence,
-      preferredStance: record[columnIndex["preferred stance"]] || "",
+      preferredStance: cleanText(record[columnIndex["preferred stance"]] || ""),
     };
 
     if (!bills.has(code)) bills.set(code, bill);

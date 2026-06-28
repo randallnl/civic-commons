@@ -1,4 +1,10 @@
 const MOJIBAKE_REPLACEMENTS = [
+  [/[‘’]/g, "'"],
+  [/[“”]/g, '"'],
+  [/[–—]/g, "-"],
+  [/…/g, "..."],
+  [/•/g, "-"],
+  [/·/g, " - "],
   [/\u00c2\u00b7/g, " - "],
   [/\u00c2/g, ""],
   [/\u00e2\u20ac\u2122/g, "'"],
@@ -17,6 +23,18 @@ const MOJIBAKE_REPLACEMENTS = [
   [/â€“/g, "-"],
   [/â€”/g, "-"],
   [/â€¦/g, "..."],
+  [/â€¢/g, "-"],
+  [/â„¢/g, "(TM)"],
+  [/â€º/g, ">"],
+  [/â€¹/g, "<"],
+  [/Ã©/g, "e"],
+  [/Ã¨/g, "e"],
+  [/Ã¡/g, "a"],
+  [/Ã¢/g, "a"],
+  [/Ã³/g, "o"],
+  [/Ã¶/g, "o"],
+  [/Ã¼/g, "u"],
+  [/Ã±/g, "n"],
 ];
 
 const WINDOWS_1252_BYTES = new Map([
@@ -61,7 +79,7 @@ export function cleanText(value = "") {
     if (text === previousText) break;
   }
 
-  return text;
+  return text.replace(/\s+-\s+/g, " - ").replace(/\s{2,}/g, " ").trim();
 }
 
 export function joinClean(parts = [], separator = " - ") {

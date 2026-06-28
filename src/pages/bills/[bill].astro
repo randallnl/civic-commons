@@ -6,6 +6,7 @@ import ArticleList from "../../components/ArticleList.astro";
 import TopNav from "../../components/TopNav.astro";
 import { getBillDetail, getBillTestimony, positionCounts, rollCallPath } from "../../lib/billsApi";
 import { getOrganizations, organizationPath } from "../../lib/organizationsApi";
+import { cleanText } from "../../lib/text";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const billCode = Astro.params.bill || "";
@@ -47,6 +48,8 @@ const sortedRollCalls = [...rollCalls].sort((first, second) => {
 });
 const latestRollCall = sortedRollCalls[0];
 const previousRollCalls = sortedRollCalls.slice(1);
+const visibleTestimony = testimony.slice(0, 15);
+const remainingTestimony = testimony.slice(15);
 
 function formatDate(value) {
   if (!value) return "";
@@ -308,24 +311,54 @@ function commentsForBill(organizations = [], code = "") {
 
               {testimony.length ? (
                 <div class="testimony-list">
-                  {testimony.map((item) => (
+                  {visibleTestimony.map((item) => (
                     <article>
                       <div class="testimony-topline">
-                        <strong>{personName(item) || item.whoisname || "Submitted testimony"}</strong>
-                        <span class={positionClass(item.expr1)}>{item.expr1 || "neutral"}</span>
+                        <strong>{personName(item) || cleanText(item.whoisname) || "Submitted testimony"}</strong>
+                        <span class={positionClass(item.expr1)}>{cleanText(item.expr1 || "neutral")}</span>
                       </div>
                       <p class="testimony-meta">
-                        {[item.representing, item.town, item.state]
+                        {[item.representing, item.town, item.state].map(cleanText)
                           .filter(Boolean)
                           .join(" - ")}
                       </p>
-                      {item.committeename && <p>{item.committeename}</p>}
+                      {item.committeename && <p>{cleanText(item.committeename)}</p>}
                       {item.committeedate && <small>{formatDate(item.committeedate)}</small>}
                       {item.testimonytext && (
-                        <blockquote>{item.testimonytext}</blockquote>
+                        <blockquote>{cleanText(item.testimonytext)}</blockquote>
                       )}
                     </article>
                   ))}
+
+                  {remainingTestimony.length > 0 && (
+                    <details class="testimony-more">
+                      <summary>
+                        <span>Show more testimony</span>
+                        <small>{remainingTestimony.length} more submission{remainingTestimony.length === 1 ? "" : "s"}</small>
+                      </summary>
+
+                      <div class="testimony-list">
+                        {remainingTestimony.map((item) => (
+                          <article>
+                            <div class="testimony-topline">
+                              <strong>{personName(item) || cleanText(item.whoisname) || "Submitted testimony"}</strong>
+                              <span class={positionClass(item.expr1)}>{cleanText(item.expr1 || "neutral")}</span>
+                            </div>
+                            <p class="testimony-meta">
+                              {[item.representing, item.town, item.state].map(cleanText)
+                                .filter(Boolean)
+                                .join(" - ")}
+                            </p>
+                            {item.committeename && <p>{cleanText(item.committeename)}</p>}
+                            {item.committeedate && <small>{formatDate(item.committeedate)}</small>}
+                            {item.testimonytext && (
+                              <blockquote>{cleanText(item.testimonytext)}</blockquote>
+                            )}
+                          </article>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                 </div>
               ) : (
                 <p class="empty">No testimony returned.</p>
@@ -560,6 +593,11 @@ function commentsForBill(organizations = [], code = "") {
     gap: 12px;
   }
 
+  .testimony-more {
+    display: grid;
+    gap: 12px;
+  }
+
   .roll-details summary {
     align-items: center;
     background: #fffaf1;
@@ -573,7 +611,25 @@ function commentsForBill(organizations = [], code = "") {
     padding: 14px 16px;
   }
 
+  .testimony-more summary {
+    align-items: center;
+    background: #1f2933;
+    border: 1px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    list-style: none;
+    padding: 12px 16px;
+  }
+
   .roll-details summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .testimony-more summary::-webkit-details-marker {
     display: none;
   }
 
@@ -588,8 +644,23 @@ function commentsForBill(organizations = [], code = "") {
     content: "-";
   }
 
+  .testimony-more summary::after {
+    content: "+";
+    font-size: 1.2rem;
+    font-weight: 950;
+    line-height: 1;
+  }
+
+  .testimony-more[open] summary::after {
+    content: "-";
+  }
+
   .roll-details summary span {
     color: #1f2933;
+    font-weight: 950;
+  }
+
+  .testimony-more summary span {
     font-weight: 950;
   }
 
@@ -600,7 +671,18 @@ function commentsForBill(organizations = [], code = "") {
     margin: 0;
   }
 
+  .testimony-more summary small {
+    color: #e5e7eb;
+    display: inline;
+    font-size: 0.82rem;
+    margin: 0;
+  }
+
   .roll-details .roll-list {
+    margin-top: 12px;
+  }
+
+  .testimony-more .testimony-list {
     margin-top: 12px;
   }
 

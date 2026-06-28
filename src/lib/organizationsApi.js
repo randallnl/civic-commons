@@ -1,3 +1,5 @@
+import { cleanText } from "./text";
+
 const DEFAULT_SHEET_BASE =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vRlVa_PtnK6MieFoBJ1KEqFda8tTsBYps6zOYYKaX3WG78Hlz0Rab1X5TkCDLddQ5B8IluASVujyRjS/pub";
 
@@ -78,25 +80,25 @@ function parseOrganizationProfiles(csv) {
       const slug = slugify(row.Slug || name);
 
       return {
-        name,
+        name: cleanText(name),
         slug,
-        type: row["Organization Type"] || "",
-        mission: row.Mission || "",
-        shortDescription: row["Short Description"] || "",
+        type: cleanText(row["Organization Type"] || ""),
+        mission: cleanText(row.Mission || ""),
+        shortDescription: cleanText(row["Short Description"] || ""),
         website: row.Website || "",
         email: row["Public Contact Email"] || row.Email || "",
         phone: row.Phone || "",
         facebook: row.Facebook || "",
         instagram: row.Instagram || "",
         bluesky: row.Bluesky || "",
-        city: row.City || "",
-        state: row.State || "",
-        serviceArea: row["Service Area"] || "",
+        city: cleanText(row.City || ""),
+        state: cleanText(row.State || ""),
+        serviceArea: cleanText(row["Service Area"] || ""),
         logoUrl: organizationAssetUrl(row["Logo URL"] || ""),
         bannerImageUrl: organizationAssetUrl(row["Banner Image URL"] || ""),
         foundedYear: row["Founded Year"] || "",
         approved: /^yes$/i.test(row.Approved || ""),
-        notes: row.Notes || "",
+        notes: cleanText(row.Notes || ""),
       };
     })
     .filter((organization) => organization.name && organization.approved);
@@ -105,14 +107,14 @@ function parseOrganizationProfiles(csv) {
 function parseOrganizationComments(csv) {
   return rowsFromCsv(csv)
     .map((row) => ({
-      organization: row.Organization || "",
+      organization: cleanText(row.Organization || ""),
       organizationSlug: slugify(row.Organization || ""),
       bill: normalizeBillCode(row.Bill || ""),
-      billLabel: row.Bill || "",
-      position: row.Position || "",
-      comment: row.Comment || "",
-      author: row.Author || "",
-      date: row.Date || "",
+      billLabel: cleanText(row.Bill || ""),
+      position: cleanText(row.Position || ""),
+      comment: cleanText(row.Comment || ""),
+      author: cleanText(row.Author || ""),
+      date: cleanText(row.Date || ""),
     }))
     .filter((comment) => comment.organization && comment.comment);
 }
@@ -120,18 +122,18 @@ function parseOrganizationComments(csv) {
 function parseOrganizationEndorsements(csv) {
   return rowsFromCsv(csv)
     .map((row) => ({
-      organization: row.Organization || "",
+      organization: cleanText(row.Organization || ""),
       organizationSlug: slugify(row.Organization || ""),
-      candidateName: row["Candidate Name"] || "",
+      candidateName: cleanText(row["Candidate Name"] || ""),
       candidateSlug: row["Candidate Slug"] || "",
       candidateSlugKey: slugify(row["Candidate Slug"] || row["Candidate Name"] || ""),
-      office: row.Office || "",
-      district: row.District || "",
-      electionYear: row["Election Year"] || "",
-      position: row.Position || "",
-      statement: row["Endorsement Statement"] || "",
-      date: row.Date || "",
-      status: row.Status || "",
+      office: cleanText(row.Office || ""),
+      district: cleanText(row.District || ""),
+      electionYear: cleanText(row["Election Year"] || ""),
+      position: cleanText(row.Position || ""),
+      statement: cleanText(row["Endorsement Statement"] || ""),
+      date: cleanText(row.Date || ""),
+      status: cleanText(row.Status || ""),
     }))
     .filter((endorsement) =>
       endorsement.organization &&
