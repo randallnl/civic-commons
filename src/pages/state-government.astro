@@ -6,6 +6,15 @@ import { getTrackedBills } from "../lib/trackedBills";
 
 let trackedBills = [];
 let trackerError = "";
+const governmentLevelImages = {
+  hero: organizationAssetUrl("Capital banner.png"),
+  local: organizationAssetUrl("town landscape.png"),
+  school: organizationAssetUrl("school building.png"),
+  county: organizationAssetUrl("capital buiulding.png"),
+  generalCourt: organizationAssetUrl("nh chamber.jpg"),
+  governor: organizationAssetUrl("nh seal.png"),
+  congress: organizationAssetUrl("white house.png"),
+};
 
 try {
   const billMap = await getTrackedBills();
@@ -22,6 +31,13 @@ try {
     .slice(0, 4);
 } catch (error) {
   trackerError = error?.message || "Unable to load tracked bills.";
+}
+
+function organizationAssetUrl(filename = "") {
+  return `/api/organization-assets/${String(filename)
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/")}`;
 }
 ---
 
@@ -42,15 +58,17 @@ try {
     <main class="page">
       <a class="back" href="/">Back home</a>
 
-      <section class="hero">
-        <p class="eyebrow">Civic Basics</p>
-        <h1>New Hampshire state government is closer to your daily life than it looks.</h1>
-        <p class="lede">
-          Your state representative and state senator vote on schools, housing,
-          taxes, healthcare, civil rights, environmental rules, and local
-          control. They are also much more accessible than most people realize.
-        </p>
-        <a class="primary-link" href="/my-state-rep">Find your representatives</a>
+      <section class="hero" style={`--hero-image: url("${governmentLevelImages.hero}")`}>
+        <div class="hero-overlay">
+          <p class="eyebrow">Civic Basics</p>
+          <h1>New Hampshire state government is closer to your daily life than it looks.</h1>
+          <p class="lede">
+            Your state representative and state senator vote on schools, housing,
+            taxes, healthcare, civil rights, environmental rules, and local
+            control. They are also much more accessible than most people realize.
+          </p>
+          <a class="primary-link" href="/my-state-rep">Find your representatives</a>
+        </div>
       </section>
 
       <section class="levels">
@@ -61,6 +79,7 @@ try {
 
         <div class="level-grid">
           <article>
+            <img class="level-photo" src={governmentLevelImages.local} alt="" loading="lazy" />
             <span>Local</span>
             <h3>Town and city government</h3>
             <p>
@@ -71,6 +90,7 @@ try {
           </article>
 
           <article>
+            <img class="level-photo" src={governmentLevelImages.school} alt="" loading="lazy" />
             <span>School</span>
             <h3>School districts</h3>
             <p>
@@ -80,6 +100,7 @@ try {
           </article>
 
           <article>
+            <img class="level-photo" src={governmentLevelImages.county} alt="" loading="lazy" />
             <span>County</span>
             <h3>County government</h3>
             <p>
@@ -89,6 +110,7 @@ try {
           </article>
 
           <article class="highlight">
+            <img class="level-photo" src={governmentLevelImages.generalCourt} alt="" loading="lazy" />
             <span>State</span>
             <h3>The General Court</h3>
             <p>
@@ -99,6 +121,7 @@ try {
           </article>
 
           <article>
+            <img class="level-photo" src={governmentLevelImages.governor} alt="" loading="lazy" />
             <span>Executive</span>
             <h3>Governor and Executive Council</h3>
             <p>
@@ -108,6 +131,7 @@ try {
           </article>
 
           <article>
+            <img class="level-photo" src={governmentLevelImages.congress} alt="" loading="lazy" />
             <span>Federal</span>
             <h3>Congress and federal agencies</h3>
             <p>
@@ -241,7 +265,27 @@ try {
   }
 
   .hero {
-    padding: 42px 0 34px;
+    align-items: end;
+    background:
+      linear-gradient(90deg, rgba(17, 24, 39, 0.82), rgba(17, 24, 39, 0.48)),
+      var(--hero-image) center / cover;
+    border: 2px solid #1f2933;
+    border-radius: 12px;
+    display: flex;
+    min-height: 440px;
+    overflow: hidden;
+  }
+
+  .hero-overlay {
+    padding: clamp(28px, 6vw, 56px);
+    width: min(980px, 100%);
+  }
+
+  .hero .eyebrow,
+  .hero h1,
+  .hero .lede {
+    color: white;
+    text-shadow: 0 2px 16px rgba(0, 0, 0, 0.36);
   }
 
   .eyebrow {
@@ -295,6 +339,12 @@ try {
     text-decoration: none;
   }
 
+  .hero .primary-link {
+    background: white;
+    border-color: white;
+    color: #1f2933;
+  }
+
   .levels,
   .focus-panel,
   .tracked-votes,
@@ -331,6 +381,16 @@ try {
     border: 1px solid #d1d5db;
     border-radius: 10px;
     padding: 18px;
+  }
+
+  .level-photo {
+    aspect-ratio: 16 / 9;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: block;
+    margin-bottom: 14px;
+    object-fit: cover;
+    width: 100%;
   }
 
   .level-grid article > span,
