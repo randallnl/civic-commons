@@ -330,6 +330,17 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
             stored by this website.
           </p>
         </form>
+
+        <div class="all-reps-link">
+          <div>
+            <strong>Want to browse the full legislature?</strong>
+            <p>
+              See all New Hampshire representatives with vote previews and
+              filters for town, county, district, or name.
+            </p>
+          </div>
+          <a href="/people">See all reps</a>
+        </div>
       </section>
 
       {lookupError && (
@@ -680,6 +691,39 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     color: #4b5563;
     line-height: 1.5;
     margin: 14px 0 0;
+  }
+
+  .all-reps-link {
+    align-items: center;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 16px;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    margin-top: 18px;
+    padding: 16px 18px;
+  }
+
+  .all-reps-link strong {
+    display: block;
+  }
+
+  .all-reps-link p {
+    color: #4b5563;
+    line-height: 1.45;
+    margin: 4px 0 0;
+  }
+
+  .all-reps-link a {
+    background: #1f2933;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    flex: 0 0 auto;
+    font-weight: 900;
+    padding: 12px 16px;
+    text-decoration: none;
   }
 
   .status-message {
@@ -1060,6 +1104,15 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
     button {
       width: 100%;
+    }
+
+    .all-reps-link {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .all-reps-link a {
+      text-align: center;
     }
 
     .ward-filter {

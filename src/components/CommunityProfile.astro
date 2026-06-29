@@ -11,6 +11,7 @@ import { profilePhotoUrl } from "../lib/photos";
 import { repName, repSlug } from "../lib/repsApi";
 import { cleanText, joinClean } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
+import { getTrackedBills, representativeGrade } from "../lib/trackedBills";
 
 const { community, meta = {}, error = "" } = Astro.props;
 
@@ -104,6 +105,13 @@ const districts = districtsFor();
 const candidates = candidatesFor();
 const heroCounty = countyForCommunity(community || {});
 const heroImage = countyImageUrl(heroCounty) || communityPlaceholder.src;
+let trackedBills = new Map();
+
+try {
+  trackedBills = await getTrackedBills();
+} catch (error) {
+  console.error(error?.message || "Unable to load tracked bills.");
+}
 ---
 
 <html lang="en">
@@ -195,6 +203,7 @@ const heroImage = countyImageUrl(heroCounty) || communityPlaceholder.src;
                   <div class="rep-list profile-preview-list">
                     {representatives.map((rep) => {
                       const photoUrl = profilePhotoUrl(rep.photo || rep.photo_url);
+                      const grade = representativeGrade(rep.voteHistory || [], trackedBills);
 
                       return (
                       <article>
@@ -207,9 +216,15 @@ const heroImage = countyImageUrl(heroCounty) || communityPlaceholder.src;
                           />
                         </a>
                         <div>
-                          <h3>
-                            <a href={`/people/${repSlug(rep)}`}>{cleanText(repName(rep))}</a>
-                          </h3>
+                          <div class="profile-preview-heading">
+                            <h3>
+                              <a href={`/people/${repSlug(rep)}`}>{cleanText(repName(rep))}</a>
+                            </h3>
+                            <span class:list={["mini-grade", grade.className]} title={grade.label}>
+                              <strong>{grade.letter}</strong>
+                              <small>Grade</small>
+                            </span>
+                          </div>
                           <p>{repMeta(rep)}</p>
                           {isFreeStater(rep) && (
                             <div class="mini-tags">
@@ -494,6 +509,66 @@ const heroImage = countyImageUrl(heroCounty) || communityPlaceholder.src;
     display: grid;
     gap: 12px;
     grid-template-columns: 64px 1fr;
+  }
+
+  .profile-preview-heading {
+    align-items: start;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+  }
+
+  .mini-grade {
+    border: 1px solid #1f2933;
+    border-radius: 10px;
+    box-shadow: 2px 2px 0 #1f2933;
+    color: #fefce8;
+    display: grid;
+    flex: 0 0 auto;
+    min-width: 48px;
+    padding: 5px 7px;
+    text-align: center;
+  }
+
+  .mini-grade strong {
+    font-size: 1.35rem;
+    font-weight: 950;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+
+  .mini-grade small {
+    color: #fefce8;
+    font-size: 0.56rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    margin: 2px 0 0;
+    text-transform: uppercase;
+  }
+
+  .grade-a {
+    background: #166534;
+  }
+
+  .grade-b {
+    background: #65a30d;
+  }
+
+  .grade-c {
+    background: #ca8a04;
+  }
+
+  .grade-d {
+    background: #ea580c;
+  }
+
+  .grade-f {
+    background: #b42318;
+  }
+
+  .grade-unknown {
+    background: #5b616e;
   }
 
   .mini-tags {

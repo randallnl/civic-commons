@@ -1,0 +1,384 @@
+---
+export const prerender = false;
+
+import RepresentativeCard from "../../components/RepresentativeCard.astro";
+import TopNav from "../../components/TopNav.astro";
+import { getRepresentatives, repName } from "../../lib/repsApi";
+import { cleanText } from "../../lib/text";
+import { getTrackedBills } from "../../lib/trackedBills";
+
+const filters = {
+  name: Astro.url.searchParams.get("name")?.trim() || "",
+  town: Astro.url.searchParams.get("town")?.trim() || "",
+  county: Astro.url.searchParams.get("county")?.trim() || "",
+  district: Astro.url.searchParams.get("district")?.trim() || "",
+};
+
+let representatives = [];
+let trackedBills = new Map();
+let loadError = "";
+
+try {
+  const [repData, tracker] = await Promise.all([
+    getRepresentatives({ limit: 600 }),
+    getTrackedBills(),
+  ]);
+
+  representatives = (repData.representatives || []).filter((rep) =>
+    matchesFilters(rep, filters),
+  );
+  trackedBills = tracker;
+} catch (error) {
+  loadError = error?.message || "Unable to load representatives.";
+}
+
+const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
+function matchesFilters(rep = {}, values = {}) {
+  return (
+    matchesText(repName(rep), values.name) &&
+    matchesText(locationText(rep), values.town) &&
+    matchesCounty(rep, values.county) &&
+    matchesDistrict(rep, values.district)
+  );
+}
+
+function matchesText(source = "", query = "") {
+  if (!query) return true;
+  return normalizeSearch(source).includes(normalizeSearch(query));
+}
+
+function matchesCounty(rep = {}, query = "") {
+  if (!query) return true;
+  const countyText = [
+    rep.county,
+    rep.countyName,
+    rep.county_name,
+    countyNameForCode(rep.countycode),
+    locationText(rep),
+  ].filter(Boolean).join(" ");
+
+  return matchesText(countyText, query);
+}
+
+function matchesDistrict(rep = {}, query = "") {
+  if (!query) return true;
+  const districtText = [
+    rep.district,
+    rep.raw_district,
+    rep.district_label,
+    rep.districtLabel,
+    districtLabel(rep),
+    locationText(rep),
+  ].filter(Boolean).join(" ");
+
+  return matchesText(districtText, query);
+}
+
+function locationText(rep = {}) {
+  const value =
+    rep.location_text ||
+    rep.locationText ||
+    rep.towns_represented ||
+    rep.townsRepresented ||
+    rep.towns ||
+    "";
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) =>
+        typeof item === "object" && item !== null
+          ? item.town || item.name || item.label || item.location_text || ""
+          : item,
+      )
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  return cleanText(value);
+}
+
+function legislativeBody(rep = {}) {
+  const value = String(rep.chamber || rep.legislativebody || rep.body || "").toLowerCase();
+  if (value === "h" || value === "house") return "House";
+  if (value === "s" || value === "senate") return "Senate";
+  return rep.chamber || "";
+}
+
+function districtLabel(rep = {}) {
+  const district = rep.district || rep.raw_district || "";
+  const body = legislativeBody(rep);
+  if (!district) return body;
+  if (body === "House") return `NH House District ${district}`;
+  if (body === "Senate") return `NH Senate District ${district}`;
+  return `District ${district}`;
+}
+
+function normalizeSearch(value = "") {
+  return cleanText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function countyNameForCode(code = "") {
+  const counties = {
+    "01": "Belknap",
+    "02": "Carroll",
+    "03": "Cheshire",
+    "04": "Coos",
+    "05": "Grafton",
+    "06": "Hillsborough",
+    "07": "Merrimack",
+    "08": "Rockingham",
+    "09": "Strafford",
+    "10": "Sullivan",
+  };
+
+  const normalized = String(code || "").padStart(2, "0");
+  return counties[normalized] || "";
+}
+---
+
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/NH%20DB%20Logo.png" />
+    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.png" />
+    <title>All Representatives | NH Deserves Better</title>
+    <meta
+      name="description"
+      content="Browse New Hampshire legislators by name, town, county, or district and preview their tracked bill votes."
+    />
+  </head>
+
+  <body>
+    <TopNav />
+    <main class="page">
+      <a class="back" href="/my-state-rep">Back to My State Rep</a>
+
+      <section class="hero">
+        <p class="eyebrow">Representative Directory</p>
+        <h1>Browse New Hampshire state legislators.</h1>
+        <p class="lede">
+          Search by name, town, county, or district to preview representative
+          profiles, vote grades, and recent tracked bill votes.
+        </p>
+      </section>
+
+      <form class="filter-panel" action="/people" method="get">
+        <div>
+          <label for="name">Name</label>
+          <input id="name" name="name" type="search" value={filters.name} placeholder="David Rochefort" />
+        </div>
+        <div>
+          <label for="town">Town</label>
+          <input id="town" name="town" type="search" value={filters.town} placeholder="Manchester" />
+        </div>
+        <div>
+          <label for="county">County</label>
+          <input id="county" name="county" type="search" value={filters.county} placeholder="Hillsborough" />
+        </div>
+        <div>
+          <label for="district">District</label>
+          <input id="district" name="district" type="search" value={filters.district} placeholder="NH House District 15" />
+        </div>
+        <div class="filter-actions">
+          <button type="submit">Filter reps</button>
+          {activeFilterCount > 0 && <a href="/people">Clear filters</a>}
+        </div>
+      </form>
+
+      <section class="results-heading">
+        <div>
+          <p class="eyebrow">Results</p>
+          <h2>{representatives.length} Representatives</h2>
+        </div>
+        <a class="secondary-link" href="/my-state-rep">Find only my reps</a>
+      </section>
+
+      {loadError ? (
+        <p class="status-message">{loadError}</p>
+      ) : representatives.length ? (
+        <div class="rep-grid">
+          {representatives.map((rep) => (
+            <RepresentativeCard rep={rep} trackedBills={trackedBills} />
+          ))}
+        </div>
+      ) : (
+        <p class="status-message">
+          No representatives matched those filters. Try a broader town, county,
+          district, or name search.
+        </p>
+      )}
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(body) {
+    margin: 0;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    background: #f7f4ee;
+    color: #1f2933;
+  }
+
+  .page {
+    margin: 0 auto;
+    padding: 40px 0 72px;
+    width: min(1120px, calc(100% - 32px));
+  }
+
+  .back,
+  a {
+    color: #1f2933;
+    font-weight: 850;
+  }
+
+  .hero {
+    padding: 42px 0 28px;
+  }
+
+  .eyebrow {
+    color: #6b4f2a;
+    font-size: 0.78rem;
+    font-weight: 950;
+    letter-spacing: 0.12em;
+    margin: 0 0 12px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    line-height: 0.95;
+    margin: 0;
+    max-width: 980px;
+  }
+
+  h2 {
+    font-size: clamp(1.7rem, 4vw, 2.65rem);
+    line-height: 1;
+    margin: 0;
+  }
+
+  .lede {
+    color: #4b5563;
+    font-size: clamp(1.12rem, 2.2vw, 1.35rem);
+    font-weight: 750;
+    line-height: 1.5;
+    margin: 22px 0 0;
+    max-width: 780px;
+  }
+
+  .filter-panel {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 16px;
+    box-shadow: 5px 5px 0 #1f2933;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 18px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    margin-bottom: 7px;
+    text-transform: uppercase;
+  }
+
+  input {
+    background: #fffaf1;
+    border: 1px solid #9ca3af;
+    border-radius: 999px;
+    box-sizing: border-box;
+    font: inherit;
+    min-width: 0;
+    padding: 12px 14px;
+    width: 100%;
+  }
+
+  button,
+  .secondary-link {
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    font: inherit;
+    font-weight: 900;
+    padding: 12px 16px;
+    text-decoration: none;
+  }
+
+  button {
+    background: #1f2933;
+    color: white;
+    cursor: pointer;
+  }
+
+  .secondary-link {
+    background: white;
+    color: #1f2933;
+  }
+
+  .filter-actions {
+    align-items: end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    grid-column: 1 / -1;
+  }
+
+  .filter-actions a {
+    padding: 12px 0;
+  }
+
+  .results-heading {
+    align-items: end;
+    display: flex;
+    gap: 18px;
+    justify-content: space-between;
+    margin: 34px 0 18px;
+  }
+
+  .rep-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .status-message {
+    color: #4b5563;
+    font-size: 1.08rem;
+    font-weight: 850;
+  }
+
+  @media (max-width: 900px) {
+    .filter-panel {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .rep-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 620px) {
+    .filter-panel,
+    .results-heading {
+      grid-template-columns: 1fr;
+    }
+
+    .filter-panel {
+      display: grid;
+    }
+
+    .results-heading {
+      align-items: start;
+      display: grid;
+    }
+  }
+</style>
