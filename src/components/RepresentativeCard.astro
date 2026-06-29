@@ -7,7 +7,7 @@ import { profilePhotoUrl } from "../lib/photos";
 import { cleanText } from "../lib/text";
 import {
   normalizeBillCode,
-  representativeGrade,
+  representativeGradeFor,
   representativeVoteImpact,
   representativeVoteStance,
   trackedBillForVote,
@@ -42,7 +42,7 @@ const voteHistory = Array.isArray(rep.voteHistory)
       .filter((vote) => trackedBillForVote(trackedBills, vote))
       .slice(0, 3)
   : [];
-const grade = representativeGrade(rep.voteHistory || [], trackedBills);
+const grade = representativeGradeFor(rep, trackedBills);
 
 function trackedBillFor(vote) {
   return trackedBillForVote(trackedBills, vote);

@@ -16,7 +16,7 @@ import { getOrganizations, organizationPath } from "../lib/organizationsApi";
 import {
   getTrackedBills,
   normalizeBillCode,
-  representativeGrade,
+  representativeGradeFor,
   representativeVoteStance,
   trackedBillForVote,
 } from "../lib/trackedBills";
@@ -440,7 +440,7 @@ function positionClass(position = "") {
               <li>No legislators returned yet.</li>
             ) : recentPeople.map((person) => {
               const photoUrl = profilePhotoUrl(person.photo || person.photo_url);
-              const grade = representativeGrade(person.voteHistory || [], trackedBills);
+              const grade = representativeGradeFor(person, trackedBills);
               const votes = trackedVotesFor(person, 3);
 
               return (

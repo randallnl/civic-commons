@@ -14,7 +14,7 @@ import { getSpotlightLegislators } from "../lib/spotlightTracker";
 import {
   normalizeBillCode,
   getTrackedBills,
-  representativeGrade,
+  representativeGradeFor,
   representativeVoteStance,
   trackedBillForVote,
 } from "../lib/trackedBills";
@@ -368,7 +368,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           <div class="sample-grid">
             {randomLegislators.map((rep) => {
               const photoUrl = profilePhotoUrl(rep.photo || rep.photo_url);
-              const grade = representativeGrade(rep.voteHistory || [], trackedBills);
+              const grade = representativeGradeFor(rep, trackedBills);
               const votes = trackedVotesFor(rep, 3);
 
               return (

@@ -3,11 +3,14 @@ export const prerender = false;
 
 import RepresentativeCard from "../../components/RepresentativeCard.astro";
 import TopNav from "../../components/TopNav.astro";
-import { getRepresentatives, repName } from "../../lib/repsApi";
+import { getRepresentative, getRepresentatives, repName } from "../../lib/repsApi";
 import { cleanText } from "../../lib/text";
 import { getTrackedBills } from "../../lib/trackedBills";
 
+const DETAIL_PREVIEW_LIMIT = 80;
+
 const filters = {
+  body: Astro.url.searchParams.get("body")?.trim() || "",
   name: Astro.url.searchParams.get("name")?.trim() || "",
   town: Astro.url.searchParams.get("town")?.trim() || "",
   county: Astro.url.searchParams.get("county")?.trim() || "",
@@ -20,13 +23,20 @@ let loadError = "";
 
 try {
   const [repData, tracker] = await Promise.all([
-    getRepresentatives({ limit: 600 }),
+    getRepresentatives({
+      body: filters.body,
+      q: filters.name || filters.town,
+      county: filters.county,
+      district: filters.district,
+      limit: 600,
+    }),
     getTrackedBills(),
   ]);
 
-  representatives = (repData.representatives || []).filter((rep) =>
-    matchesFilters(rep, filters),
-  );
+  const directoryReps = repData.representatives || [];
+  const filteredReps = directoryReps.filter((rep) => matchesFilters(rep, filters));
+
+  representatives = await hydrateVotePreviewDetails(filteredReps);
   trackedBills = tracker;
 } catch (error) {
   loadError = error?.message || "Unable to load representatives.";
@@ -36,11 +46,43 @@ const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
 function matchesFilters(rep = {}, values = {}) {
   return (
+    matchesBody(rep, values.body) &&
     matchesText(repName(rep), values.name) &&
     matchesText(locationText(rep), values.town) &&
     matchesCounty(rep, values.county) &&
     matchesDistrict(rep, values.district)
   );
+}
+
+function matchesBody(rep = {}, query = "") {
+  if (!query) return true;
+  const body = legislativeBody(rep).toLowerCase();
+  const normalized = normalizeSearch(query);
+  return body.includes(normalized);
+}
+
+async function hydrateVotePreviewDetails(reps = []) {
+  const previewReps = reps.slice(0, DETAIL_PREVIEW_LIMIT);
+  const hydrated = await Promise.all(
+    previewReps.map(async (rep) => {
+      const slugOrId = rep.personid || rep.id || rep.slug || repName(rep);
+      if (!slugOrId) return rep;
+
+      try {
+        const data = await getRepresentative(slugOrId);
+        return {
+          ...rep,
+          ...(data.representative || data.rep || data.person || data),
+          voteHistory: data.voteHistory || data.votes || data.representative?.voteHistory || rep.voteHistory || [],
+        };
+      } catch (error) {
+        console.error(error?.message || "Unable to hydrate representative vote preview.");
+        return rep;
+      }
+    }),
+  );
+
+  return [...hydrated, ...reps.slice(DETAIL_PREVIEW_LIMIT)];
 }
 
 function matchesText(source = "", query = "") {
@@ -168,6 +210,14 @@ function countyNameForCode(code = "") {
 
       <form class="filter-panel" action="/people" method="get">
         <div>
+          <label for="body">Body</label>
+          <select id="body" name="body">
+            <option value="" selected={!filters.body}>House and Senate</option>
+            <option value="house" selected={filters.body === "house"}>House</option>
+            <option value="senate" selected={filters.body === "senate"}>Senate</option>
+          </select>
+        </div>
+        <div>
           <label for="name">Name</label>
           <input id="name" name="name" type="search" value={filters.name} placeholder="David Rochefort" />
         </div>
@@ -279,7 +329,7 @@ function countyNameForCode(code = "") {
     box-shadow: 5px 5px 0 #1f2933;
     display: grid;
     gap: 14px;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     padding: 18px;
   }
 
@@ -292,7 +342,8 @@ function countyNameForCode(code = "") {
     text-transform: uppercase;
   }
 
-  input {
+  input,
+  select {
     background: #fffaf1;
     border: 1px solid #9ca3af;
     border-radius: 999px;

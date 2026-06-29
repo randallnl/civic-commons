@@ -7,7 +7,10 @@ export function repsApiBase() {
 export async function getRepresentatives({
   apiBase = repsApiBase(),
   q = "",
+  body = "",
   chamber = "",
+  county = "",
+  district = "",
   include = "",
   limit = 200,
   offset = 0,
@@ -15,7 +18,10 @@ export async function getRepresentatives({
 } = {}) {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
+  if (body) params.set("body", body);
   if (chamber) params.set("chamber", chamber);
+  if (county) params.set("county", county);
+  if (district) params.set("district", district);
   if (include) params.set("include", include);
   if (limit) params.set("limit", String(limit));
   if (offset) params.set("offset", String(offset));

@@ -11,7 +11,7 @@ import { profilePhotoUrl } from "../lib/photos";
 import { repName, repSlug } from "../lib/repsApi";
 import { cleanText, joinClean } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
-import { getTrackedBills, representativeGrade } from "../lib/trackedBills";
+import { getTrackedBills, representativeGradeFor } from "../lib/trackedBills";
 
 const { community, meta = {}, error = "" } = Astro.props;
 
@@ -203,7 +203,7 @@ try {
                   <div class="rep-list profile-preview-list">
                     {representatives.map((rep) => {
                       const photoUrl = profilePhotoUrl(rep.photo || rep.photo_url);
-                      const grade = representativeGrade(rep.voteHistory || [], trackedBills);
+                      const grade = representativeGradeFor(rep, trackedBills);
 
                       return (
                       <article>

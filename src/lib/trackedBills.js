@@ -91,6 +91,41 @@ export function representativeVoteImpact(vote = {}, trackedBill = {}) {
   return representativeVoteAnalysis(vote, trackedBill).impact;
 }
 
+export function gradeFromAlignmentPercent(value) {
+  if (value === null || value === undefined || value === "") return null;
+
+  const percentValue = Number(value);
+  if (!Number.isFinite(percentValue)) return null;
+
+  const normalizedPercent = percentValue > 1 ? percentValue / 100 : percentValue;
+  const letter =
+    normalizedPercent >= 0.9
+      ? "A"
+      : normalizedPercent >= 0.8
+        ? "B"
+        : normalizedPercent >= 0.7
+          ? "C"
+          : normalizedPercent >= 0.6
+            ? "D"
+            : "F";
+
+  return {
+    letter,
+    percent: normalizedPercent,
+    aligned: null,
+    total: null,
+    className: `grade-${letter.toLowerCase()}`,
+    label: `${Math.round(normalizedPercent * 100)}% aligned with the preferred stance`,
+  };
+}
+
+export function representativeGradeFor(rep = {}, trackedBills = new Map()) {
+  return (
+    gradeFromAlignmentPercent(rep.alignment_percent || rep.alignmentPercent) ||
+    representativeGrade(rep.voteHistory || [], trackedBills)
+  );
+}
+
 export function representativeGrade(votes = [], trackedBills = new Map()) {
   const scoredVotes = votes
     .map((vote) => {
