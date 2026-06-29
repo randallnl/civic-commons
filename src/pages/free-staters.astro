@@ -1,5 +1,14 @@
 ---
 import TopNav from "../components/TopNav.astro";
+
+const freeStateLogoUrl = organizationAssetUrl("freestateprojectlogo.png");
+
+function organizationAssetUrl(filename = "") {
+  return `/api/organization-assets/${String(filename)
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/")}`;
+}
 ---
 
 <html lang="en">
@@ -20,13 +29,18 @@ import TopNav from "../components/TopNav.astro";
       <a class="back" href="/">Back home</a>
 
       <section class="hero">
-        <p class="eyebrow">Civic Glossary</p>
-        <h1>What Are Free Staters?</h1>
-        <p class="lede">
-          The Free State Project is a political movement founded in 2001 with
-          the goal of encouraging thousands of libertarian-minded people to move
-          to New Hampshire and reshape state government.
-        </p>
+        <div class="hero-copy">
+          <p class="eyebrow">Civic Glossary</p>
+          <h1>What Are Free Staters?</h1>
+          <p class="lede">
+            The Free State Project is a political movement founded in 2001 with
+            the goal of encouraging thousands of libertarian-minded people to move
+            to New Hampshire and reshape state government.
+          </p>
+        </div>
+        <div class="hero-logo">
+          <img src={freeStateLogoUrl} alt="Free State Project logo" />
+        </div>
       </section>
 
       <article class="content-panel">
@@ -134,7 +148,30 @@ import TopNav from "../components/TopNav.astro";
   }
 
   .hero {
+    align-items: center;
+    display: grid;
+    gap: 28px;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
     padding: 40px 0 28px;
+  }
+
+  .hero-logo {
+    align-items: center;
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 12px;
+    box-shadow: 5px 5px 0 #1f2933;
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .hero-logo img {
+    display: block;
+    height: auto;
+    max-height: 180px;
+    object-fit: contain;
+    width: 100%;
   }
 
   .eyebrow {
@@ -221,6 +258,16 @@ import TopNav from "../components/TopNav.astro";
   }
 
   @media (max-width: 640px) {
+    .hero {
+      grid-template-columns: 1fr;
+    }
+
+    .hero-logo {
+      justify-self: start;
+      max-width: 220px;
+      padding: 18px;
+    }
+
     .content-panel {
       box-shadow: 4px 4px 0 #1f2933;
     }
