@@ -1,5 +1,6 @@
 ---
 const currentPath = Astro.url.pathname;
+const suggestHref = `/suggest-update?page=${encodeURIComponent(Astro.url.href)}`;
 
 const links = [
   { href: "/", label: "Home", match: (path) => path === "/" },
@@ -39,6 +40,8 @@ function isActive(link) {
         </a>
       ))}
     </nav>
+
+    <a class="suggest-link" href={suggestHref}>Suggest an update</a>
   </div>
 </header>
 
@@ -64,7 +67,8 @@ function isActive(link) {
   }
 
   .brand,
-  .nav-link {
+  .nav-link,
+  .suggest-link {
     color: #1f2933;
     text-decoration: none;
   }
@@ -105,13 +109,31 @@ function isActive(link) {
   }
 
   .nav-link:hover,
-  .nav-link.active {
+  .nav-link.active,
+  .suggest-link:hover {
     background: white;
     border-color: #1f2933;
   }
 
   .nav-link.active {
     box-shadow: 2px 2px 0 #1f2933;
+  }
+
+  .suggest-link {
+    background: #1f2933;
+    border: 1px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    flex: 0 0 auto;
+    font-size: 0.88rem;
+    font-weight: 900;
+    line-height: 1;
+    padding: 10px 12px;
+    white-space: nowrap;
+  }
+
+  .suggest-link:hover {
+    color: #1f2933;
   }
 
   @media (max-width: 720px) {
@@ -146,6 +168,12 @@ function isActive(link) {
       padding: 2px max(16px, calc(50vw - 560px)) 8px;
       scrollbar-width: none;
       width: 100%;
+    }
+
+    .suggest-link {
+      align-self: flex-start;
+      font-size: 0.82rem;
+      padding: 8px 10px;
     }
 
     nav::-webkit-scrollbar {
