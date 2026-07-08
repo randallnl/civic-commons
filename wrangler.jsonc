@@ -9,10 +9,29 @@
 		"directory": "./dist",
 		"binding": "ASSETS"
 	},
+	"routes": [
+		{
+			"pattern": "nhciviccommons.com",
+			"zone_name": "nhciviccommons.com",
+			"custom_domain": true
+		},
+		{
+			"pattern": "nhdeservesbetter.com",
+			"zone_name": "nhdeservesbetter.com",
+			"custom_domain": true
+		}
+	],
 	"r2_buckets": [
 		{
 			"binding": "organization-assets",
 			"bucket_name": "organization-assets"
+		}
+	],
+	"secrets_store_secrets": [
+		{
+			"binding": "MONDAY_API_KEY",
+			"store_id": "2b9ec8a0d6d742649ad4d3498815ca54",
+			"secret_name": "Central_Monday_API_TOKEN"
 		}
 	],
 	"observability": {
