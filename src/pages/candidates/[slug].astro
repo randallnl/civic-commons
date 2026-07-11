@@ -4,7 +4,6 @@ export const prerender = false;
 import TopNav from "../../components/TopNav.astro";
 import profileIcon from "../../assets/profile icon.png";
 import { currentAdminSession } from "../../lib/adminAuth";
-import { applyProfileEdit, getProfileEdit } from "../../lib/adminProfileEdits";
 import {
   candidateName,
   formatCandidateParty,
@@ -33,14 +32,11 @@ try {
   console.error(error?.message || "Unable to load candidate profile.");
 }
 
-let candidate = apiData?.candidate || apiData;
+const candidate = apiData?.candidate || apiData;
 
 if (!candidate?.filerEntityNumber && !candidate?.name) {
   return Astro.redirect("/404");
 }
-
-const candidateEdit = await getProfileEdit("candidate", slug);
-candidate = applyProfileEdit(candidate, candidateEdit);
 
 const name = candidateName(candidate);
 const portraitUrl = profilePhotoUrl(candidate.photoUrl);
@@ -202,14 +198,14 @@ function formatDate(value) {
             <p class="eyebrow">Admin</p>
             <h2>Edit Candidate Profile</h2>
             <p>
-              These edits are saved in D1 and override the API data shown on this
-              profile page.
+              These edits update the source candidate row in D1. Refresh after
+              saving to see the API-backed profile data.
             </p>
           </div>
 
           <form class="admin-edit-form" action="/api/admin/profile" method="post">
             <input type="hidden" name="entityType" value="candidate" />
-            <input type="hidden" name="entityKey" value={slug} />
+            <input type="hidden" name="entityKey" value={candidate.filerEntityNumber || slug} />
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
 
             <label>

@@ -1,7 +1,6 @@
 export const prerender = false;
 
 import { adminDb, requireAdmin } from "../../../lib/adminAuth";
-import { saveProfileEdit, slugifyProfile } from "../../../lib/adminProfileEdits";
 
 const CANDIDATE_FIELDS = [
   "name",
@@ -65,17 +64,12 @@ export async function POST({ request }) {
       if (!value && clearFields.has(field)) data[field] = "";
     }
 
-    await saveProfileEdit({
-      entityType,
-      entityKey,
-      displayName: data.name || "",
-      data,
-      updatedBy: auth.session?.email || "",
-    });
+    const sourceUpdate = await updateSourceProfile(entityType, entityKey, data);
 
-    await applyBestEffortBaseUpdate(entityType, entityKey, data);
-
-    return redirectWithMessage(redirectTo, "Profile edits saved.");
+    return redirectWithMessage(
+      redirectTo,
+      `Profile edits saved to source D1 tables. ${sourceUpdate.changed} row${sourceUpdate.changed === 1 ? "" : "s"} changed.`,
+    );
   } catch (error) {
     return redirectWithError(redirectTo, error?.message || "Unable to save profile edits.");
   }
@@ -90,36 +84,34 @@ function normalizeFieldValue(field, value) {
   return value;
 }
 
-async function applyBestEffortBaseUpdate(entityType, entityKey, data) {
+async function updateSourceProfile(entityType, entityKey, data) {
   const db = adminDb();
-  if (!db) return;
+  if (!db) throw new Error("D1 database binding is not configured.");
 
   if (entityType === "representative") {
-    await bestEffortUpdate(
-      db,
-      `UPDATE people
-       SET full_name = COALESCE(NULLIF(?, ''), full_name),
-           bio = COALESCE(NULLIF(?, ''), bio),
-           photo_url = COALESCE(NULLIF(?, ''), photo_url),
-           party = COALESCE(NULLIF(?, ''), party),
-           email = COALESCE(NULLIF(?, ''), email),
-           phone = COALESCE(NULLIF(?, ''), phone),
-           updated_at = datetime('now')
-       WHERE id = ? OR slug = ?`,
-      [
-        data.name || "",
-        data.notes || "",
-        data.photo || "",
-        data.party || "",
-        data.email || "",
-        data.phone || "",
-        numericId(entityKey),
-        slugifyProfile(entityKey),
-      ],
-    );
+    return updateRepresentativeSource(db, entityKey, data);
+  }
 
-    await bestEffortUpdate(
-      db,
+  if (entityType === "candidate") {
+    return updateCandidateSource(db, entityKey, data);
+  }
+
+  throw new Error("Unsupported profile type.");
+}
+
+async function updateRepresentativeSource(db, entityKey, data) {
+  const personid = numericId(entityKey);
+  if (!personid) throw new Error("A numeric legislator personid is required.");
+
+  let changed = 0;
+  const firstName = data.firstname || firstNameFromFullName(data.name);
+  const lastName = data.lastname || lastNameFromFullName(data.name);
+  const fullName = data.name || [firstName, lastName].filter(Boolean).join(" ");
+  const body = chamberToBody(data.chamber);
+  const district = data.raw_district || data.district || "";
+
+  changed += await runSourceUpdate(
+    db,
       `UPDATE d1_legislators
        SET firstname = COALESCE(NULLIF(?, ''), firstname),
            lastname = COALESCE(NULLIF(?, ''), lastname),
@@ -127,51 +119,143 @@ async function applyBestEffortBaseUpdate(entityType, entityKey, data) {
            party = COALESCE(NULLIF(?, ''), party),
            legislativebody = COALESCE(NULLIF(?, ''), legislativebody),
            district = COALESCE(NULLIF(?, ''), district),
-           emailaddress = COALESCE(NULLIF(?, ''), emailaddress)
+           emailaddress = COALESCE(NULLIF(?, ''), emailaddress),
+           is_free_stater = CASE
+             WHEN ? IS NULL THEN is_free_stater
+             ELSE ?
+           END
        WHERE personid = ?`,
       [
-        data.firstname || "",
-        data.lastname || "",
+        firstName,
+        lastName,
         data.middlename || "",
         data.party || "",
-        chamberToBody(data.chamber),
-        data.raw_district || data.district || "",
+        body,
+        district,
         data.email || "",
-        numericId(entityKey),
+        freeStaterValue(data),
+        freeStaterValue(data),
+        personid,
       ],
+    );
+
+  changed += await runSourceUpdate(
+    db,
+    `UPDATE people
+     SET full_name = COALESCE(NULLIF(?, ''), full_name),
+         bio = COALESCE(NULLIF(?, ''), bio),
+         photo_url = COALESCE(NULLIF(?, ''), photo_url),
+         party = COALESCE(NULLIF(?, ''), party),
+         email = COALESCE(NULLIF(?, ''), email),
+         phone = COALESCE(NULLIF(?, ''), phone),
+         updated_at = datetime('now')
+     WHERE id = ? OR slug = ?`,
+    [
+      fullName,
+      data.notes || "",
+      data.photo || "",
+      data.party || "",
+      data.email || "",
+      data.phone || "",
+      personid,
+      slugifyProfile(fullName || entityKey),
+    ],
+  );
+
+  if (data.photo) {
+    changed += await runSourceUpdate(
+      db,
+      `INSERT INTO d1_legislator_photos (
+         employeeno,
+         personid,
+         firstname,
+         lastname,
+         filename,
+         photo_url,
+         source,
+         updated_at
+       )
+       SELECT
+         employeeno,
+         personid,
+         firstname,
+         lastname,
+         ?,
+         ?,
+         'admin',
+         CURRENT_TIMESTAMP
+       FROM d1_legislators
+       WHERE personid = ?
+       ON CONFLICT(employeeno) DO UPDATE SET
+         personid = excluded.personid,
+         firstname = excluded.firstname,
+         lastname = excluded.lastname,
+         filename = excluded.filename,
+         photo_url = excluded.photo_url,
+         source = excluded.source,
+         updated_at = CURRENT_TIMESTAMP`,
+      [filenameFromUrl(data.photo), data.photo, personid],
     );
   }
 
-  if (entityType === "candidate") {
-    await bestEffortUpdate(
-      db,
-      `UPDATE people
-       SET full_name = COALESCE(NULLIF(?, ''), full_name),
-           photo_url = COALESCE(NULLIF(?, ''), photo_url),
-           email = COALESCE(NULLIF(?, ''), email),
-           website_url = COALESCE(NULLIF(?, ''), website_url),
-           party = COALESCE(NULLIF(?, ''), party),
-           updated_at = datetime('now')
-       WHERE id = ? OR slug = ?`,
-      [
-        data.name || "",
-        data.photoUrl || "",
-        data.candidateEmail || "",
-        data.candidateWebsite || "",
-        data.politicalParty || "",
-        numericId(entityKey),
-        slugifyProfile(entityKey),
-      ],
-    );
-  }
+  if (!changed) throw new Error("No matching legislator source row was updated.");
+  return { changed };
 }
 
-async function bestEffortUpdate(db, sql, params) {
-  try {
-    await db.prepare(sql).bind(...params).run();
-  } catch {
-    // The public API database schema can drift. The admin override remains saved.
-  }
+async function updateCandidateSource(db, entityKey, data) {
+  const firstName = data.candidateFirstName || firstNameFromFullName(data.name);
+  const lastName = data.candidateLastName || lastNameFromFullName(data.name);
+  const changed = await runSourceUpdate(
+    db,
+    `UPDATE candidates
+     SET candidate_first_name = COALESCE(NULLIF(?, ''), candidate_first_name),
+         candidate_last_name = COALESCE(NULLIF(?, ''), candidate_last_name),
+         political_party = COALESCE(NULLIF(?, ''), political_party),
+         office_type = COALESCE(NULLIF(?, ''), office_type),
+         office = COALESCE(NULLIF(?, ''), office),
+         county = COALESCE(NULLIF(?, ''), county),
+         district = COALESCE(NULLIF(?, ''), district),
+         candidate_email = COALESCE(NULLIF(?, ''), candidate_email),
+         candidate_website = COALESCE(NULLIF(?, ''), candidate_website),
+         photo_url = COALESCE(NULLIF(?, ''), photo_url),
+         election_year = COALESCE(?, election_year),
+         election_cycle = COALESCE(NULLIF(?, ''), election_cycle),
+         total_raised = COALESCE(?, total_raised),
+         total_spent = COALESCE(?, total_spent),
+         is_free_stater = CASE
+           WHEN ? IS NULL THEN is_free_stater
+           ELSE ?
+         END
+     WHERE filer_entity_number = ? OR slug = ?`,
+    [
+      firstName,
+      lastName,
+      data.politicalParty || "",
+      data.officeType || "",
+      data.office || "",
+      data.county || "",
+      data.district || "",
+      data.candidateEmail || "",
+      data.candidateWebsite || "",
+      data.photoUrl || "",
+      numberOrNull(data.electionYear),
+      data.electionCycle || "",
+      numberOrNull(data.totalRaised),
+      numberOrNull(data.totalSpent),
+      freeStaterValue(data),
+      freeStaterValue(data),
+      String(entityKey),
+      String(entityKey),
+    ],
+  );
+
+  if (!changed) throw new Error("No matching candidate source row was updated.");
+  return { changed };
+}
+
+async function runSourceUpdate(db, sql, params) {
+  const result = await db.prepare(sql).bind(...params).run();
+  return result.meta?.changes ?? result.changes ?? 0;
 }
 
 function chamberToBody(value = "") {
@@ -183,6 +267,45 @@ function chamberToBody(value = "") {
 function numericId(value = "") {
   const match = String(value).match(/\d+/);
   return match ? Number(match[0]) : null;
+}
+
+function slugifyProfile(value = "") {
+  return String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/['']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function numberOrNull(value) {
+  if (value === "" || value === undefined || value === null) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function freeStaterValue(data = {}) {
+  if (!Object.prototype.hasOwnProperty.call(data, "is_free_stater")) return null;
+  return data.is_free_stater ? 1 : 0;
+}
+
+function firstNameFromFullName(value = "") {
+  return String(value).trim().split(/\s+/).filter(Boolean)[0] || "";
+}
+
+function lastNameFromFullName(value = "") {
+  const parts = String(value).trim().split(/\s+/).filter(Boolean);
+  return parts.length > 1 ? parts.slice(1).join(" ") : "";
+}
+
+function filenameFromUrl(value = "") {
+  const text = String(value).trim();
+  try {
+    const url = new URL(text);
+    return decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() || text);
+  } catch {
+    return text.split("/").filter(Boolean).pop() || text;
+  }
 }
 
 function safeRedirectPath(value) {

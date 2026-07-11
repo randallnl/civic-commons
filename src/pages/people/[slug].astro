@@ -7,7 +7,6 @@ import TopNav from "../../components/TopNav.astro";
 import profileIcon from "../../assets/profile icon.png";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
-import { applyProfileEdit, getProfileEdit } from "../../lib/adminProfileEdits";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
 import { isFreeStater } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
@@ -34,16 +33,11 @@ try {
   console.error(error?.message || "Unable to load representative profile.");
 }
 
-let representative = apiData?.representative || null;
+const representative = apiData?.representative || null;
 
 if (!representative) {
   return Astro.redirect("/404");
 }
-
-const representativeEdit =
-  (await getProfileEdit("representative", representative.personid || representative.id || slug)) ||
-  (await getProfileEdit("representative", slug));
-representative = applyProfileEdit(representative, representativeEdit);
 
 const person = {
   id: representative?.personid || representative?.id,
@@ -387,8 +381,8 @@ function contactHref(type, value) {
             <p class="eyebrow">Admin</p>
             <h2>Edit Legislator Profile</h2>
             <p>
-              These edits are saved in D1 and override the API data shown on this
-              profile page.
+              These edits update the source legislator rows in D1. Refresh after
+              saving to see the API-backed profile data.
             </p>
           </div>
 
