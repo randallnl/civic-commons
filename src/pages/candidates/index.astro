@@ -12,6 +12,7 @@ const API_BASE = civicApiBase();
 const address = Astro.url.searchParams.get("address")?.trim() || "";
 const county = Astro.url.searchParams.get("county")?.trim() || "";
 const district = Astro.url.searchParams.get("district")?.trim() || "";
+const office = Astro.url.searchParams.get("office")?.trim() || "";
 const town = Astro.url.searchParams.get("town")?.trim() || "";
 const electionYear = "2026";
 
@@ -48,6 +49,7 @@ try {
     const data = await getCandidates({
       county,
       district,
+      office,
       electionYear,
       limit: 100,
     });
@@ -58,7 +60,9 @@ try {
   error = loadError?.message || "Unable to load candidates.";
 }
 
-const hasFilters = address || county || district || town;
+candidates = filterCandidatesByOffice(candidates, office);
+
+const hasFilters = address || county || district || office || town;
 const resultCount = meta.count ?? candidates.length;
 
 function candidatesFromLookup(data = {}) {
@@ -146,6 +150,18 @@ function looksLikeCandidate(value) {
   );
 }
 
+function filterCandidatesByOffice(items = [], selectedOffice = "") {
+  const officeFilter = selectedOffice.trim().toLowerCase();
+  if (!officeFilter) return items;
+
+  return items.filter((candidate) =>
+    String(candidate.office || "")
+      .trim()
+      .toLowerCase()
+      .includes(officeFilter),
+  );
+}
+
 function formatAddress(normalized = {}) {
   return [
     normalized.line1,
@@ -203,6 +219,10 @@ function formatAddress(normalized = {}) {
           <label>
             <span>District</span>
             <input type="text" name="district" value={district} placeholder="2" />
+          </label>
+          <label>
+            <span>Office</span>
+            <input type="text" name="office" value={office} placeholder="State Representative" />
           </label>
           <label>
             <span>Town</span>
@@ -308,7 +328,7 @@ function formatAddress(normalized = {}) {
   }
 
   .filters {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) 150px;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) 150px;
   }
 
   label {
