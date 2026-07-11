@@ -25,6 +25,22 @@
 		{
 			"binding": "organization-assets",
 			"bucket_name": "organization-assets"
+		},
+		{
+			"binding": "r2_bucket",
+			"bucket_name": "organization-assets"
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "d1_db",
+			"database_name": "nhdb",
+			"database_id": "e72f4c03-671f-47d5-8f70-a6792ba8f6c0"
+		}
+	],
+	"send_email": [
+		{
+			"name": "email_send"
 		}
 	],
 	"secrets_store_secrets": [
