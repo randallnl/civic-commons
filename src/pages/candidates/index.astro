@@ -15,6 +15,18 @@ const district = Astro.url.searchParams.get("district")?.trim() || "";
 const office = Astro.url.searchParams.get("office")?.trim() || "";
 const town = Astro.url.searchParams.get("town")?.trim() || "";
 const electionYear = "2026";
+const officeOptions = [
+  "State Representative",
+  "State Senate",
+  "Governor",
+  "Executive Council",
+  "County Commissioner",
+  "Sheriff",
+  "County Attorney",
+  "County Treasurer",
+  "Register of Deeds",
+  "Register of Probate",
+];
 
 let candidates = [];
 let meta = {};
@@ -222,7 +234,12 @@ function formatAddress(normalized = {}) {
           </label>
           <label>
             <span>Office</span>
-            <input type="text" name="office" value={office} placeholder="State Representative" />
+            <select name="office">
+              <option value="">All offices</option>
+              {officeOptions.map((option) => (
+                <option value={option} selected={office === option}>{option}</option>
+              ))}
+            </select>
           </label>
           <label>
             <span>Town</span>
@@ -345,6 +362,7 @@ function formatAddress(normalized = {}) {
   }
 
   input,
+  select,
   button {
     border: 2px solid #1f2933;
     border-radius: 8px;
