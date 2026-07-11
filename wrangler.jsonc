@@ -28,7 +28,7 @@
 		},
 		{
 			"binding": "r2_bucket",
-			"bucket_name": "organization-assets"
+			"bucket_name": "nhdeservesbetter-legislator-photos"
 		}
 	],
 	"d1_databases": [
