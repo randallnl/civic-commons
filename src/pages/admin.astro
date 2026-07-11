@@ -119,13 +119,28 @@ const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
               <p class="eyebrow">R2 Storage</p>
               <h2>Upload an image</h2>
               <p>
-                Uploads go to the bound R2 bucket. Use a filename/key that the
-                site can reference later.
+                Uploads go to the bound profile-photo R2 bucket. Add a profile
+                type and identifier to update D1 at the same time.
               </p>
             </div>
             <form class="stack-form" action="/api/admin/upload" method="post" enctype="multipart/form-data">
+              <label for="entityType">Update profile <span>Optional</span></label>
+              <select id="entityType" name="entityType">
+                <option value="">Just upload to R2</option>
+                <option value="representative">Legislator</option>
+                <option value="candidate">Candidate</option>
+              </select>
+
+              <label for="entityKey">Profile identifier <span>Optional</span></label>
+              <input
+                id="entityKey"
+                name="entityKey"
+                type="text"
+                placeholder="personid, employeeno, candidate filer number, or slug"
+              />
+
               <label for="key">R2 key</label>
-              <input id="key" name="key" type="text" placeholder="logos/example.png" required />
+              <input id="key" name="key" type="text" placeholder="legislators/11462-victoria-sullivan.jpg" />
 
               <label for="file">Image file</label>
               <input id="file" name="file" type="file" accept="image/*" required />
@@ -268,7 +283,8 @@ const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     background: #fffaf1;
     border: 1px solid #9ca3af;
     border-radius: 12px;

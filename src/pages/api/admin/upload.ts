@@ -1,18 +1,23 @@
 export const prerender = false;
 
-import { adminR2Bucket, requireAdmin } from "../../../lib/adminAuth";
+import { env } from "cloudflare:workers";
+import { adminDb, adminR2Bucket, requireAdmin } from "../../../lib/adminAuth";
 
 export async function POST({ request }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
+  let redirectTo = "/admin";
   try {
     const bucket = adminR2Bucket();
     if (!bucket) throw new Error("R2 bucket binding is not configured.");
 
     const form = await request.formData();
-    const key = sanitizeKey(form.get("key"));
+    const entityType = String(form.get("entityType") || "").trim();
+    const entityKey = String(form.get("entityKey") || "").trim();
+    redirectTo = safeRedirectPath(form.get("redirectTo")) || "/admin";
     const file = form.get("file");
+    const key = sanitizeKey(form.get("key")) || generatedKey(entityType, entityKey, file);
 
     if (!key) throw new Error("A valid R2 key is required.");
     if (!file || typeof file === "string" || !file.size) {
@@ -20,22 +25,29 @@ export async function POST({ request }) {
     }
 
     const contentType = file.type || contentTypeFor(key);
+    const publicUrl = publicPhotoUrl(key);
 
-    await bucket.put(key, file.stream(), {
+    await bucket.put(key, await file.arrayBuffer(), {
       httpMetadata: {
         contentType,
         cacheControl: "public, max-age=86400",
       },
     });
 
-    const url = new URL("/admin", request.url);
-    url.searchParams.set("message", `Uploaded ${key}`);
-    url.searchParams.set("imageUrl", `/api/organization-assets/${encodeAssetKey(key)}`);
-    return Response.redirect(url, 303);
+    const updateSummary = await updateProfilePhoto({
+      entityType,
+      entityKey,
+      key,
+      publicUrl,
+    });
+
+    const message = updateSummary
+      ? `Uploaded ${key} and updated ${updateSummary}.`
+      : `Uploaded ${key}.`;
+
+    return redirectWithMessage(request, redirectTo, message, publicUrl);
   } catch (error) {
-    const url = new URL("/admin", request.url);
-    url.searchParams.set("error", error?.message || "Unable to upload image.");
-    return Response.redirect(url, 303);
+    return redirectWithError(request, redirectTo, error?.message || "Unable to upload image.");
   }
 }
 
@@ -54,11 +66,171 @@ function sanitizeKey(value = "") {
   return key;
 }
 
+async function updateProfilePhoto({ entityType, entityKey, key, publicUrl }) {
+  if (!entityType && !entityKey) return "";
+  if (!["candidate", "representative"].includes(entityType)) {
+    throw new Error("Choose candidate or legislator before updating D1.");
+  }
+  if (!entityKey) throw new Error("A profile identifier is required to update D1.");
+
+  if (entityType === "candidate") {
+    return updateCandidatePhoto(entityKey, publicUrl);
+  }
+
+  return updateRepresentativePhoto(entityKey, key, publicUrl);
+}
+
+async function updateCandidatePhoto(entityKey, publicUrl) {
+  const db = adminDb();
+  if (!db) throw new Error("D1 database binding is not configured.");
+
+  const result = await db
+    .prepare(
+      `UPDATE candidates
+       SET photo_url = ?
+       WHERE filer_entity_number = ? OR slug = ?`,
+    )
+    .bind(publicUrl, String(entityKey), String(entityKey))
+    .run();
+
+  const changes = result.meta?.changes ?? result.changes ?? 0;
+  if (!changes) throw new Error("No matching candidate row was updated.");
+  return "candidate photo_url";
+}
+
+async function updateRepresentativePhoto(entityKey, key, publicUrl) {
+  const db = adminDb();
+  if (!db) throw new Error("D1 database binding is not configured.");
+
+  const numericKey = numericId(entityKey);
+  const slug = slugify(entityKey);
+  const legislator = await db
+    .prepare(
+      `SELECT personid, employeeno, firstname, lastname
+       FROM d1_legislators
+       WHERE personid = ?
+          OR employeeno = ?
+          OR LOWER(REPLACE(TRIM(firstname || '-' || lastname), ' ', '-')) = ?
+       LIMIT 1`,
+    )
+    .bind(numericKey, numericKey, slug)
+    .first();
+
+  if (!legislator) throw new Error("No matching legislator row was found.");
+
+  await db
+    .prepare(
+      `INSERT INTO d1_legislator_photos (
+        employeeno,
+        personid,
+        firstname,
+        lastname,
+        filename,
+        photo_url,
+        source,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, 'admin-upload', CURRENT_TIMESTAMP)
+      ON CONFLICT(employeeno) DO UPDATE SET
+        personid = excluded.personid,
+        firstname = excluded.firstname,
+        lastname = excluded.lastname,
+        filename = excluded.filename,
+        photo_url = excluded.photo_url,
+        source = excluded.source,
+        updated_at = CURRENT_TIMESTAMP`,
+    )
+    .bind(
+      legislator.employeeno,
+      legislator.personid,
+      legislator.firstname,
+      legislator.lastname,
+      key.split("/").pop(),
+      publicUrl,
+    )
+    .run();
+
+  await db
+    .prepare(
+      `UPDATE people
+       SET photo_url = ?, updated_at = datetime('now')
+       WHERE id = ? OR slug = ?`,
+    )
+    .bind(publicUrl, legislator.personid, slugify(`${legislator.firstname}-${legislator.lastname}`))
+    .run();
+
+  return "legislator photo tables";
+}
+
+function generatedKey(entityType, entityKey, file) {
+  if (!file || typeof file === "string") return "";
+  const filename = sanitizeFilename(file.name || "profile-photo");
+  const prefix = entityType === "candidate"
+    ? "candidates"
+    : entityType === "representative"
+      ? "legislators"
+      : "uploads";
+  const id = slugify(entityKey || "image");
+  return sanitizeKey(`${prefix}/${id}-${filename}`);
+}
+
+function publicPhotoUrl(key = "") {
+  const base =
+    stringBinding(env.PHOTO_PUBLIC_BASE) ||
+    stringBinding(env.PHOTOS_PUBLIC_BASE) ||
+    "https://photos.nhdeservesbetter.com";
+  return `${base.replace(/\/+$/, "")}/${encodeAssetKey(key)}`;
+}
+
+function stringBinding(binding) {
+  if (!binding || typeof binding !== "string") return "";
+  return binding.trim();
+}
+
 function encodeAssetKey(key = "") {
-  return key
-    .split("/")
-    .map((part) => encodeURIComponent(part))
-    .join("/");
+  return key.split("/").map((part) => encodeURIComponent(part)).join("/");
+}
+
+function sanitizeFilename(value = "") {
+  return String(value)
+    .trim()
+    .replace(/[/\\]/g, "-")
+    .replace(/[^a-zA-Z0-9._ -]+/g, "")
+    .replace(/\s+/g, " ")
+    .slice(0, 120);
+}
+
+function numericId(value = "") {
+  const match = String(value).match(/\d+/);
+  return match ? Number(match[0]) : null;
+}
+
+function slugify(value = "") {
+  return String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/['']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function safeRedirectPath(value) {
+  const path = String(value || "").trim();
+  if (!path.startsWith("/") || path.startsWith("//")) return "";
+  return path;
+}
+
+function redirectWithMessage(request, path, message, imageUrl = "") {
+  const url = new URL(path, request.url);
+  url.searchParams.set("message", message);
+  if (imageUrl) url.searchParams.set("imageUrl", imageUrl);
+  return Response.redirect(url, 303);
+}
+
+function redirectWithError(request, path, message) {
+  const url = new URL(path, request.url);
+  url.searchParams.set("error", message);
+  return Response.redirect(url, 303);
 }
 
 function contentTypeFor(key = "") {
