@@ -332,6 +332,25 @@ function formatDate(value) {
 
             <button type="submit">Upload Candidate Photo</button>
           </form>
+
+          <form class="admin-edit-form admin-remove-form" action="/api/admin/remove" method="post">
+            <input type="hidden" name="entityType" value="candidate" />
+            <input type="hidden" name="entityKey" value={candidate.filerEntityNumber || slug} />
+            <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+
+            <div class="section-heading compact-heading">
+              <p class="eyebrow">Remove</p>
+              <h2>Remove candidate from public results</h2>
+              <p>This deletes the candidate row from the source D1 table.</p>
+            </div>
+
+            <label class="confirm-remove">
+              <input name="confirmRemove" type="checkbox" value="yes" required />
+              I understand this will remove this candidate from the site.
+            </label>
+
+            <button class="danger-button" type="submit">Remove Candidate</button>
+          </form>
         </section>
       )}
 
@@ -594,6 +613,14 @@ function formatDate(value) {
     padding-top: 22px;
   }
 
+  .admin-remove-form {
+    background: #fff7f7;
+    border: 1px solid rgba(153, 27, 27, 0.28);
+    border-radius: 12px;
+    margin-top: 22px;
+    padding: 18px;
+  }
+
   .compact-heading {
     margin-bottom: 0;
   }
@@ -637,6 +664,25 @@ function formatDate(value) {
     font-weight: 900;
     justify-self: start;
     padding: 12px 16px;
+  }
+
+  .admin-edit-form .danger-button {
+    background: #991b1b;
+    border-color: #991b1b;
+  }
+
+  .admin-edit-form .confirm-remove {
+    align-items: center;
+    color: #7f1d1d;
+    display: flex;
+    font-weight: 900;
+    gap: 10px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .admin-edit-form .confirm-remove input {
+    width: auto;
   }
 
   .form-grid {
