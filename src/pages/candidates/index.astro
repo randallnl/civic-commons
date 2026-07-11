@@ -27,6 +27,19 @@ const officeOptions = [
   "Register of Deeds",
   "Register of Probate",
 ];
+const countyOptions = [
+  "Belknap",
+  "Carroll",
+  "Cheshire",
+  "Coos",
+  "Grafton",
+  "Hillsborough",
+  "Merrimack",
+  "Rockingham",
+  "Strafford",
+  "Sullivan",
+];
+const districtOptions = Array.from({ length: 50 }, (_, index) => String(index + 1));
 
 let candidates = [];
 let meta = {};
@@ -72,7 +85,7 @@ try {
   error = loadError?.message || "Unable to load candidates.";
 }
 
-candidates = filterCandidatesByOffice(candidates, office);
+candidates = prioritizeLegislativeCandidates(filterCandidatesByOffice(candidates, office));
 
 const hasFilters = address || county || district || office || town;
 const resultCount = meta.count ?? candidates.length;
@@ -174,6 +187,32 @@ function filterCandidatesByOffice(items = [], selectedOffice = "") {
   );
 }
 
+function prioritizeLegislativeCandidates(items = []) {
+  return [...items].sort((a, b) => {
+    const priorityDelta = officePriority(a.office) - officePriority(b.office);
+    if (priorityDelta) return priorityDelta;
+
+    return [
+      String(a.county || "").localeCompare(String(b.county || "")),
+      numericSortValue(a.district) - numericSortValue(b.district),
+      String(a.candidateLastName || a.name || "").localeCompare(String(b.candidateLastName || b.name || "")),
+      String(a.candidateFirstName || "").localeCompare(String(b.candidateFirstName || "")),
+    ].find((value) => value !== 0) || 0;
+  });
+}
+
+function officePriority(value = "") {
+  const officeName = String(value).trim().toLowerCase();
+  if (officeName === "state representative") return 0;
+  if (officeName === "state senate") return 1;
+  return 2;
+}
+
+function numericSortValue(value = "") {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 999;
+}
+
 function formatAddress(normalized = {}) {
   return [
     normalized.line1,
@@ -226,11 +265,23 @@ function formatAddress(normalized = {}) {
         <form class="filters" action="/candidates" method="get">
           <label>
             <span>County</span>
-            <input type="text" name="county" value={county} placeholder="Hillsborough" />
+            <select name="county">
+              <option value="">All counties</option>
+              {countyOptions.map((option) => (
+                <option value={option} selected={county.toLowerCase() === option.toLowerCase()}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             <span>District</span>
-            <input type="text" name="district" value={district} placeholder="2" />
+            <select name="district">
+              <option value="">All districts</option>
+              {districtOptions.map((option) => (
+                <option value={option} selected={district === option}>{option}</option>
+              ))}
+            </select>
           </label>
           <label>
             <span>Office</span>
