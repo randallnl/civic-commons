@@ -5,7 +5,11 @@ import { clearSessionCookie, destroyAdminSession } from "../../../lib/adminAuth"
 export async function POST({ request }) {
   await destroyAdminSession(request);
 
-  const response = Response.redirect(new URL("/admin?message=Signed%20out", request.url), 303);
-  response.headers.append("Set-Cookie", clearSessionCookie());
-  return response;
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: new URL("/admin?message=Signed%20out", request.url).toString(),
+      "Set-Cookie": clearSessionCookie(),
+    },
+  });
 }

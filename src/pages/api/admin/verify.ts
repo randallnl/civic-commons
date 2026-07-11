@@ -7,13 +7,23 @@ export async function GET({ request }) {
     const url = new URL(request.url);
     const token = url.searchParams.get("token") || "";
     const session = await consumeMagicLink(token);
-    const response = Response.redirect(new URL("/admin?message=Signed%20in", request.url), 303);
-
-    response.headers.append("Set-Cookie", sessionCookie(session.sessionToken));
-    return response;
+    return redirectWithCookie(
+      new URL("/admin?message=Signed%20in", request.url),
+      sessionCookie(session.sessionToken),
+    );
   } catch (error) {
     const url = new URL("/admin", request.url);
     url.searchParams.set("error", error?.message || "Unable to verify login link.");
     return Response.redirect(url, 303);
   }
+}
+
+function redirectWithCookie(url, cookie) {
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: url.toString(),
+      "Set-Cookie": cookie,
+    },
+  });
 }
