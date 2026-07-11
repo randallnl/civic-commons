@@ -5,12 +5,16 @@ const suggestHref = `/suggest-update?page=${encodeURIComponent(Astro.url.href)}`
 const links = [
   { href: "/", label: "Home", match: (path) => path === "/" },
   { href: "/my-state-rep", label: "My State Rep" },
-  { href: "/communities", label: "Communities" },
   { href: "/candidates", label: "Candidates" },
-  { href: "/organizations", label: "Organizations" },
   { href: "/bills", label: "Bills" },
-  { href: "/articles", label: "Articles" },
   { href: "/search", label: "Search" },
+];
+
+const exploreLinks = [
+  { href: "/communities", label: "Communities" },
+  { href: "/people", label: "Legislators" },
+  { href: "/organizations", label: "Organizations" },
+  { href: "/articles", label: "Articles" },
 ];
 
 const guideLinks = [
@@ -24,6 +28,7 @@ function isActive(link) {
   return currentPath === link.href || currentPath.startsWith(`${link.href}/`);
 }
 
+const isExploreActive = exploreLinks.some(isActive);
 const isGuidesActive = guideLinks.some(isActive);
 ---
 
@@ -44,6 +49,22 @@ const isGuidesActive = guideLinks.some(isActive);
           {link.label}
         </a>
       ))}
+      <details class:list={["nav-dropdown", isExploreActive && "active"]}>
+        <summary class="nav-link" aria-current={isExploreActive ? "page" : undefined}>
+          Explore
+        </summary>
+        <div class="dropdown-menu">
+          {exploreLinks.map((link) => (
+            <a
+              class:list={["dropdown-link", isActive(link) && "active"]}
+              href={link.href}
+              aria-current={isActive(link) ? "page" : undefined}
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      </details>
       <details class:list={["nav-dropdown", isGuidesActive && "active"]}>
         <summary class="nav-link" aria-current={isGuidesActive ? "page" : undefined}>
           Civic Guides
