@@ -6,6 +6,8 @@ import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import TopNav from "../../components/TopNav.astro";
 import profileIcon from "../../assets/profile icon.png";
 import { getArticles } from "../../lib/articlesApi";
+import { currentAdminSession } from "../../lib/adminAuth";
+import { applyProfileEdit, getProfileEdit } from "../../lib/adminProfileEdits";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
 import { isFreeStater } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
@@ -22,6 +24,9 @@ import {
 const { slug } = Astro.params;
 
 let apiData = null;
+const adminSession = await currentAdminSession(Astro.request);
+const message = Astro.url.searchParams.get("message") || "";
+const error = Astro.url.searchParams.get("error") || "";
 
 try {
   apiData = await getRepresentative(slug);
@@ -29,11 +34,16 @@ try {
   console.error(error?.message || "Unable to load representative profile.");
 }
 
-const representative = apiData?.representative || null;
+let representative = apiData?.representative || null;
 
 if (!representative) {
   return Astro.redirect("/404");
 }
+
+const representativeEdit =
+  (await getProfileEdit("representative", representative.personid || representative.id || slug)) ||
+  (await getProfileEdit("representative", slug));
+representative = applyProfileEdit(representative, representativeEdit);
 
 const person = {
   id: representative?.personid || representative?.id,
@@ -292,6 +302,9 @@ function contactHref(type, value) {
     <main class="page">
       <a class="back" href="/">Back home</a>
 
+      {error && <p class="status-message error">{error}</p>}
+      {message && <p class="status-message success">{message}</p>}
+
       <section class="profile-hero">
         <div class="portrait-card">
           {portraitUrl ? (
@@ -367,6 +380,119 @@ function contactHref(type, value) {
           <strong>{sourceLinks.length}</strong>
         </article>
       </section>
+
+      {adminSession && (
+        <section class="panel admin-edit-panel">
+          <div class="section-heading">
+            <p class="eyebrow">Admin</p>
+            <h2>Edit Legislator Profile</h2>
+            <p>
+              These edits are saved in D1 and override the API data shown on this
+              profile page.
+            </p>
+          </div>
+
+          <form class="admin-edit-form" action="/api/admin/profile" method="post">
+            <input type="hidden" name="entityType" value="representative" />
+            <input
+              type="hidden"
+              name="entityKey"
+              value={representative.personid || representative.id || slug}
+            />
+            <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+
+            <label>
+              Name
+              <input name="name" value={representative.name || person.full_name} />
+            </label>
+
+            <div class="form-grid">
+              <label>
+                First Name
+                <input name="firstname" value={representative.firstname || ""} />
+              </label>
+              <label>
+                Last Name
+                <input name="lastname" value={representative.lastname || ""} />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Middle Name
+                <input name="middlename" value={representative.middlename || ""} />
+              </label>
+              <label>
+                Party
+                <input name="party" value={representative.party || ""} />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Chamber
+                <select name="chamber">
+                  <option value="">No override</option>
+                  <option value="House" selected={representative.chamber === "House"}>House</option>
+                  <option value="Senate" selected={representative.chamber === "Senate"}>Senate</option>
+                </select>
+              </label>
+              <label>
+                Free Stater
+                <select name="is_free_stater">
+                  <option value="">No override</option>
+                  <option value="true" selected={representative.is_free_stater === true}>Yes</option>
+                  <option value="false" selected={representative.is_free_stater === false}>No</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                District Label
+                <input name="district" value={representative.district || ""} />
+              </label>
+              <label>
+                Raw District
+                <input name="raw_district" value={representative.raw_district || ""} />
+              </label>
+            </div>
+
+            <label>
+              Location Text
+              <input name="location_text" value={representative.location_text || ""} />
+            </label>
+
+            <label>
+              Towns Represented
+              <textarea name="towns_represented" rows="3">{parseTownsServed(representative.towns_represented).join(", ")}</textarea>
+            </label>
+
+            <div class="form-grid">
+              <label>
+                Email
+                <input name="email" type="email" value={representative.email || ""} />
+              </label>
+              <label>
+                Phone
+                <input name="phone" value={representative.phone || ""} />
+              </label>
+            </div>
+
+            <label>
+              Photo URL
+              <input name="photo" type="url" value={representative.photo || ""} />
+            </label>
+
+            <label>
+              Notes / Bio
+              <textarea name="notes" rows="5">{representative.notes || ""}</textarea>
+            </label>
+
+            <button type="submit">Save Legislator Edits</button>
+          </form>
+        </section>
+      )}
 
       <section class="content-grid">
         <div class="stack">
@@ -918,6 +1044,82 @@ function contactHref(type, value) {
     padding: 20px;
   }
 
+  .admin-edit-panel {
+    margin-bottom: 28px;
+  }
+
+  .status-message {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 12px;
+    box-shadow: 3px 3px 0 #1f2933;
+    font-weight: 900;
+    margin: 18px 0 0;
+    padding: 14px 16px;
+  }
+
+  .status-message.error {
+    background: #fee2e2;
+    color: #7f1d1d;
+  }
+
+  .status-message.success {
+    background: #dcfce7;
+    color: #14532d;
+  }
+
+  .admin-edit-form {
+    display: grid;
+    gap: 14px;
+  }
+
+  .admin-edit-form label {
+    color: #374151;
+    display: grid;
+    font-size: 0.78rem;
+    font-weight: 900;
+    gap: 7px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .admin-edit-form input,
+  .admin-edit-form select,
+  .admin-edit-form textarea {
+    background: #fffaf1;
+    border: 1px solid #9ca3af;
+    border-radius: 12px;
+    box-sizing: border-box;
+    color: #1f2933;
+    font: inherit;
+    letter-spacing: 0;
+    padding: 12px 13px;
+    text-transform: none;
+    width: 100%;
+  }
+
+  .admin-edit-form textarea {
+    resize: vertical;
+  }
+
+  .admin-edit-form button {
+    background: #1f2933;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+    justify-self: start;
+    padding: 12px 16px;
+  }
+
+  .form-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .section-heading h2 {
     font-size: 1.55rem;
     line-height: 1.1;
@@ -1138,7 +1340,8 @@ function contactHref(type, value) {
 
   @media (max-width: 860px) {
     .profile-hero,
-    .content-grid {
+    .content-grid,
+    .form-grid {
       grid-template-columns: 1fr;
     }
 

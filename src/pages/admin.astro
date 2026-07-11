@@ -69,6 +69,21 @@ const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
 
           <section class="panel">
             <div class="panel-heading">
+              <p class="eyebrow">Profiles</p>
+              <h2>Edit candidates and legislators</h2>
+              <p>
+                Open a candidate or legislator profile while signed in. An admin
+                editor appears on the page and saves structured updates to D1.
+              </p>
+            </div>
+            <div class="profile-actions">
+              <a href="/people">Find a legislator</a>
+              <a href="/candidates">Find a candidate</a>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
               <p class="eyebrow">D1 Database</p>
               <h2>Run a data update</h2>
               <p>
@@ -200,7 +215,8 @@ const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
   }
 
   .admin-grid .panel:nth-child(2),
-  .admin-grid .panel:nth-child(3) {
+  .admin-grid .panel:nth-child(3),
+  .admin-grid .panel:nth-child(4) {
     grid-column: 2;
   }
 
@@ -221,6 +237,19 @@ const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
 
   .panel-heading {
     margin-bottom: 18px;
+  }
+
+  .profile-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .profile-actions a {
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    padding: 10px 14px;
+    text-decoration: none;
   }
 
   label {
@@ -298,7 +327,8 @@ const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
     }
 
     .admin-grid .panel:nth-child(2),
-    .admin-grid .panel:nth-child(3) {
+    .admin-grid .panel:nth-child(3),
+    .admin-grid .panel:nth-child(4) {
       grid-column: auto;
     }
   }
