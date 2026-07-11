@@ -1,4 +1,3 @@
-import { EmailMessage } from "cloudflare:email";
 import { env } from "cloudflare:workers";
 import { bindingValue } from "./adminAuth";
 
@@ -29,27 +28,13 @@ export async function sendMagicLinkEmail({ to, link, expiresAt }) {
     <p>If you did not request this, you can ignore this email.</p>
   `;
 
-  const rawMessage = [
-    `From: ${from}`,
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    "MIME-Version: 1.0",
-    'Content-Type: multipart/alternative; boundary="nhdb-admin-boundary"',
-    "",
-    "--nhdb-admin-boundary",
-    'Content-Type: text/plain; charset="UTF-8"',
-    "",
-    text,
-    "",
-    "--nhdb-admin-boundary",
-    'Content-Type: text/html; charset="UTF-8"',
-    "",
+  await sender.send({
+    to,
+    from: { email: from, name: "NH Deserves Better" },
+    subject,
     html,
-    "",
-    "--nhdb-admin-boundary--",
-  ].join("\r\n");
-
-  await sender.send(new EmailMessage(from, to, rawMessage));
+    text,
+  });
 }
 
 function escapeHtml(value = "") {
