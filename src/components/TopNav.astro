@@ -5,21 +5,26 @@ const suggestHref = `/suggest-update?page=${encodeURIComponent(Astro.url.href)}`
 const links = [
   { href: "/", label: "Home", match: (path) => path === "/" },
   { href: "/my-state-rep", label: "My State Rep" },
-  { href: "/state-government", label: "State Gov" },
-  { href: "/how-bills-become-law", label: "Bill Process" },
   { href: "/communities", label: "Communities" },
   { href: "/candidates", label: "Candidates" },
   { href: "/organizations", label: "Organizations" },
-  { href: "/free-staters", label: "Free Staters" },
   { href: "/bills", label: "Bills" },
   { href: "/articles", label: "Articles" },
   { href: "/search", label: "Search" },
+];
+
+const guideLinks = [
+  { href: "/state-government", label: "State Government" },
+  { href: "/how-bills-become-law", label: "How Bills Become Law" },
+  { href: "/free-staters", label: "Free Staters" },
 ];
 
 function isActive(link) {
   if (link.match) return link.match(currentPath);
   return currentPath === link.href || currentPath.startsWith(`${link.href}/`);
 }
+
+const isGuidesActive = guideLinks.some(isActive);
 ---
 
 <header class="site-nav">
@@ -39,6 +44,22 @@ function isActive(link) {
           {link.label}
         </a>
       ))}
+      <details class:list={["nav-dropdown", isGuidesActive && "active"]}>
+        <summary class="nav-link" aria-current={isGuidesActive ? "page" : undefined}>
+          Civic Guides
+        </summary>
+        <div class="dropdown-menu">
+          {guideLinks.map((link) => (
+            <a
+              class:list={["dropdown-link", isActive(link) && "active"]}
+              href={link.href}
+              aria-current={isActive(link) ? "page" : undefined}
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      </details>
     </nav>
 
     <a class="suggest-link" href={suggestHref}>Suggest an update</a>
@@ -68,6 +89,7 @@ function isActive(link) {
 
   .brand,
   .nav-link,
+  .dropdown-link,
   .suggest-link {
     color: #1f2933;
     text-decoration: none;
@@ -102,6 +124,7 @@ function isActive(link) {
   .nav-link {
     border: 1px solid transparent;
     border-radius: 999px;
+    cursor: pointer;
     font-size: 0.9rem;
     font-weight: 850;
     line-height: 1;
@@ -110,13 +133,65 @@ function isActive(link) {
 
   .nav-link:hover,
   .nav-link.active,
+  .nav-dropdown.active > summary,
+  .nav-dropdown[open] > summary,
   .suggest-link:hover {
     background: white;
     border-color: #1f2933;
   }
 
-  .nav-link.active {
+  .nav-link.active,
+  .nav-dropdown.active > summary {
     box-shadow: 2px 2px 0 #1f2933;
+  }
+
+  .nav-dropdown {
+    position: relative;
+  }
+
+  .nav-dropdown summary {
+    align-items: center;
+    display: flex;
+    gap: 6px;
+    list-style: none;
+  }
+
+  .nav-dropdown summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .nav-dropdown summary::after {
+    content: "v";
+    font-size: 0.7rem;
+    line-height: 1;
+  }
+
+  .dropdown-menu {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 12px;
+    box-shadow: 3px 3px 0 #1f2933;
+    display: grid;
+    gap: 4px;
+    min-width: 220px;
+    padding: 8px;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 40;
+  }
+
+  .dropdown-link {
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 850;
+    padding: 10px 12px;
+    white-space: nowrap;
+  }
+
+  .dropdown-link:hover,
+  .dropdown-link.active {
+    background: #f7f4ee;
   }
 
   .suggest-link {
@@ -184,6 +259,15 @@ function isActive(link) {
       flex: 0 0 auto;
       font-size: 0.82rem;
       padding: 8px 10px;
+    }
+
+    .nav-dropdown {
+      flex: 0 0 auto;
+    }
+
+    .dropdown-menu {
+      left: 0;
+      right: auto;
     }
   }
 </style>
