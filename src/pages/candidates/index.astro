@@ -3,7 +3,7 @@ export const prerender = false;
 
 import CandidateCard from "../../components/CandidateCard.astro";
 import TopNav from "../../components/TopNav.astro";
-import { getCandidates } from "../../lib/candidatesApi";
+import { candidateOfficePriority, getCandidates, isLegislativeCandidate } from "../../lib/candidatesApi";
 import { enrichCandidatesWithLegislators } from "../../lib/candidateLegislators";
 import { civicApiBase, civicApiFetch } from "../../lib/civicApi";
 import { getTownCommunity } from "../../lib/communitiesApi";
@@ -19,15 +19,8 @@ const electionYear = "2026";
 const officeOptions = [
   "State Representative",
   "State Senate",
-  "Governor",
-  "Executive Council",
-  "County Commissioner",
-  "Sheriff",
-  "County Attorney",
-  "County Treasurer",
-  "Register of Deeds",
-  "Register of Probate",
 ];
+const selectedOffice = officeOptions.includes(office) ? office : "";
 const countyOptions = [
   "Belknap",
   "Carroll",
@@ -75,7 +68,7 @@ try {
     const data = await getDirectoryCandidates({
       county,
       district,
-      office,
+      office: selectedOffice,
       electionYear,
       limit: 100,
     });
@@ -86,13 +79,13 @@ try {
   error = loadError?.message || "Unable to load candidates.";
 }
 
-const visibleCandidates = office
-  ? filterCandidatesByOffice(candidates, office)
+const visibleCandidates = selectedOffice
+  ? filterCandidatesByOffice(candidates, selectedOffice)
   : filterLegislativeCandidates(candidates);
 candidates = prioritizeLegislativeCandidates(visibleCandidates);
 candidates = await enrichCandidatesWithLegislators(candidates);
 
-const hasFilters = address || county || district || office || town;
+const hasFilters = address || county || district || selectedOffice || town;
 const resultCount = candidates.length;
 
 async function getDirectoryCandidates({
@@ -240,12 +233,12 @@ function filterCandidatesByOffice(items = [], selectedOffice = "") {
 }
 
 function filterLegislativeCandidates(items = []) {
-  return items.filter((candidate) => officePriority(candidate.office) < 2);
+  return items.filter(isLegislativeCandidate);
 }
 
 function prioritizeLegislativeCandidates(items = []) {
   return [...items].sort((a, b) => {
-    const priorityDelta = officePriority(a.office) - officePriority(b.office);
+    const priorityDelta = candidateOfficePriority(a.office) - candidateOfficePriority(b.office);
     if (priorityDelta) return priorityDelta;
 
     return [
@@ -255,13 +248,6 @@ function prioritizeLegislativeCandidates(items = []) {
       String(a.candidateFirstName || "").localeCompare(String(b.candidateFirstName || "")),
     ].find((value) => value !== 0) || 0;
   });
-}
-
-function officePriority(value = "") {
-  const officeName = String(value).trim().toLowerCase();
-  if (officeName === "state representative") return 0;
-  if (officeName === "state senate") return 1;
-  return 2;
 }
 
 function numericSortValue(value = "") {
@@ -289,7 +275,7 @@ function formatAddress(normalized = {}) {
     <title>Candidates | NH Deserves Better</title>
     <meta
       name="description"
-      content="Browse New Hampshire candidates by address, district, county, and town."
+      content="Browse New Hampshire State Representative and State Senate candidates by address, district, county, and town."
     />
   </head>
 
@@ -299,11 +285,16 @@ function formatAddress(normalized = {}) {
       <a class="back" href="/">Back home</a>
 
       <section class="hero">
-        <p class="eyebrow">Candidates</p>
-        <h1>Browse candidates running in New Hampshire.</h1>
+        <p class="eyebrow">House and Senate Candidates</p>
+        <h1>Browse candidates for the New Hampshire Legislature.</h1>
+        <p class="lede">
+          NH Deserves Better focuses on State Representative and State Senate
+          races because those offices shape state law, local funding, public
+          services, and the daily civic decisions closest to most people.
+        </p>
 
         <form class="address-lookup" action="/candidates" method="get">
-          <label for="address">Find candidates for your address</label>
+          <label for="address">Find State House and State Senate candidates for your address</label>
 
           <div class="address-row">
             <input
@@ -314,7 +305,7 @@ function formatAddress(normalized = {}) {
               placeholder="72 Concord St, Manchester, NH"
               autocomplete="street-address"
             />
-            <button type="submit">Find Candidates</button>
+            <button type="submit">Find Legislative Candidates</button>
           </div>
         </form>
 
@@ -342,9 +333,9 @@ function formatAddress(normalized = {}) {
           <label>
             <span>Office</span>
             <select name="office">
-              <option value="">All offices</option>
+              <option value="">State House and Senate</option>
               {officeOptions.map((option) => (
-                <option value={option} selected={office === option}>{option}</option>
+                <option value={option} selected={selectedOffice === option}>{option}</option>
               ))}
             </select>
           </label>
@@ -362,7 +353,7 @@ function formatAddress(normalized = {}) {
         <section class="results">
           <div class="results-heading">
             <div>
-              <h2>{resultCount} Candidates</h2>
+              <h2>{resultCount} House and Senate Candidates</h2>
               {resultContext && <p>Showing matches for {resultContext}</p>}
             </div>
             {hasFilters && <a href="/candidates">Clear filters</a>}
@@ -375,7 +366,7 @@ function formatAddress(normalized = {}) {
               ))}
             </div>
           ) : (
-            <p class="status-message">No candidates found.</p>
+            <p class="status-message">No State House or State Senate candidates found.</p>
           )}
         </section>
       )}
@@ -423,6 +414,15 @@ function formatAddress(normalized = {}) {
     line-height: 0.95;
     margin: 0 0 24px;
     max-width: 920px;
+  }
+
+  .lede {
+    color: #4b5563;
+    font-size: clamp(1.08rem, 2vw, 1.25rem);
+    font-weight: 750;
+    line-height: 1.5;
+    margin: -8px 0 22px;
+    max-width: 780px;
   }
 
   .address-lookup,

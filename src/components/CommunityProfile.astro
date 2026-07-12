@@ -4,7 +4,7 @@ import communityPlaceholder from "../assets/community_profile_placeholder.png";
 import profileIcon from "../assets/profile icon.png";
 import { articlePublishDate, articleSourceName } from "../lib/articlesApi";
 import { enrichCandidatesWithLegislators } from "../lib/candidateLegislators";
-import { candidateName, candidatePath } from "../lib/candidatesApi";
+import { candidateName, candidatePath, isLegislativeCandidate } from "../lib/candidatesApi";
 import { isFreeStater } from "../lib/civicTags";
 import { countyForCommunity, countyImageUrl } from "../lib/communityImages";
 import { communityPath } from "../lib/communitiesApi";
@@ -62,7 +62,7 @@ function candidatesFor() {
     ...(community?.candidateSummary?.candidates || []),
     ...(community?.groups?.candidates?.senate || []),
     ...(community?.groups?.candidates?.house || []),
-  ]);
+  ]).filter(isLegislativeCandidate);
 }
 
 function bodyLabel() {
@@ -394,11 +394,11 @@ try {
               <section class="panel">
                 <div class="section-heading split-heading">
                   <div>
-                    <p class="eyebrow">Candidates</p>
-                    <h2>Current Candidates</h2>
+                    <p class="eyebrow">House and Senate Candidates</p>
+                    <h2>Current Legislative Candidates</h2>
                   </div>
                   <a class="section-action" href={allCandidatesHref}>
-                    See all candidates
+                    See all legislative candidates
                   </a>
                 </div>
 
@@ -452,11 +452,11 @@ try {
                     })}
                   </div>
                 ) : (
-                  <p class="empty">No candidates returned.</p>
+                  <p class="empty">No State House or State Senate candidates returned.</p>
                 )}
 
                 <a class="section-footer-action" href={allCandidatesHref}>
-                  See all candidates
+                  See all legislative candidates
                 </a>
               </section>
             </div>

@@ -104,8 +104,8 @@ const fallbackCommunityPreviews = [
     href: "/communities",
     meta: "Find your town",
     description:
-      "Start with your town profile to see the House districts, Senate district, candidates, legislators, and updates tied to where you live.",
-    stats: ["Towns", "Districts", "Local updates"],
+      "Start with your town profile to see the State House districts, State Senate district, legislative candidates, legislators, and updates tied to where you live.",
+    stats: ["Towns", "Legislative districts", "Local updates"],
   },
   {
     title: "County Profiles",
@@ -120,8 +120,8 @@ const fallbackCommunityPreviews = [
     href: "/communities",
     meta: "House and Senate",
     description:
-      "District profiles connect legislators, towns represented, candidates, and related coverage for a more specific civic picture.",
-    stats: ["Legislators", "Candidates", "Votes"],
+      "District profiles connect State Representatives, State Senators, towns represented, legislative candidates, and related coverage for a more specific civic picture.",
+    stats: ["Legislators", "Legislative candidates", "Votes"],
   },
 ];
 
@@ -192,7 +192,7 @@ function normalizeCommunityPreview(data = {}, fallbackCounty = "") {
     meta: `${towns.size || "Regional"} towns represented`,
     description:
       previewText(articles[0]?.preview?.title || articles[0]?.title || "", 135) ||
-      `Explore regional House districts, towns represented, legislators, candidates, and community updates for ${countyName} County.`,
+      `Explore regional House districts, towns represented, State Representatives, State Senators, legislative candidates, and community updates for ${countyName} County.`,
     stats: [
       `${communities.length || county.districtCount || 0} House districts`,
       `${uniqueRepresentatives(representatives)} legislators`,
@@ -319,10 +319,12 @@ function positionClass(position = "") {
         />
         <div class="hero-copy">
           <p class="eyebrow">Community-powered civic information</p>
-          <h1>Know who represents you and what's happening in your community.</h1>
+          <h1>Know your State Representatives, State Senator, and who wants the job next.</h1>
           <p class="lede">
-            NH Deserves Better is a public directory of elected officials, candidates,
-            legislative districts, bills, public testimony, and civic coverage.
+            NH Deserves Better is a public directory focused on New Hampshire
+            State Representatives, State Senators, and candidates for those
+            offices, with legislative districts, bills, testimony, and civic
+            coverage connected to them.
           </p>
         </div>
       </section>
@@ -333,7 +335,8 @@ function positionClass(position = "") {
           <h2>Start with an address. See the right districts.</h2>
           <p>
             The tool identifies ward-specific House districts, Senate districts,
-            legislator cards, contact details, and recent vote summaries.
+            State Representative and State Senator cards, contact details,
+            and recent vote summaries.
           </p>
           <a href="/my-state-rep">Open My State Rep</a>
         </div>
@@ -366,7 +369,7 @@ function positionClass(position = "") {
             <img class="step-photo" src={howToStepImages[0]} alt="" loading="lazy" />
             <div>
               <h3>Find your current representatives</h3>
-              <p>Use your address to see your Senate district, House districts, ward-specific representation, candidates, contact information, and vote summaries.</p>
+              <p>Use your address to see your State Senate district, State House districts, ward-specific representatives, candidates for those offices, contact information, and vote summaries.</p>
               <a href="/my-state-rep">Start with My State Rep</a>
             </div>
           </li>
@@ -376,7 +379,7 @@ function positionClass(position = "") {
             <img class="step-photo" src={howToStepImages[1]} alt="" loading="lazy" />
             <div>
               <h3>Understand your community profile</h3>
-              <p>Search for your town or county to open a local profile with the House districts, Senate districts, representatives, candidates, and community updates tied to that specific region.</p>
+              <p>Search for your town or county to open a local profile with State House districts, State Senate districts, legislators, legislative candidates, and community updates tied to that specific region.</p>
               <a href="/communities">Explore communities</a>
             </div>
           </li>
@@ -386,7 +389,7 @@ function positionClass(position = "") {
             <img class="step-photo" src={howToStepImages[2]} alt="" loading="lazy" />
             <div>
               <h3>Follow votes, bills, and testimony</h3>
-              <p>See how representatives voted on tracked bills, compare those votes to the preferred stance, and review remote testimony summaries.</p>
+              <p>See how State Representatives and State Senators voted on tracked bills, compare those votes to the preferred stance, and review public testimony summaries.</p>
               <a href="/bills">Track legislation</a>
             </div>
           </li>
@@ -396,7 +399,7 @@ function positionClass(position = "") {
             <img class="step-photo" src={howToStepImages[3]} alt="" loading="lazy" />
             <div>
               <h3>Read the local context</h3>
-              <p>Use articles and organizational comments to understand what is happening around a bill, town, district, or elected official.</p>
+              <p>Use articles and organizational comments to understand what is happening around a bill, town, district, State Representative, or State Senator.</p>
               <a href="/articles">Read articles</a>
             </div>
           </li>
@@ -408,7 +411,8 @@ function positionClass(position = "") {
           <h2>Next: Understand Your Community</h2>
           <p class="panel-intro">
             Start with a town or county profile to move from broad regional
-            context into the specific legislators, districts, candidates, and
+            context into the specific State House and State Senate districts,
+            legislators, legislative candidates, and
             updates connected to that place.
           </p>
           <div class="community-preview-grid">

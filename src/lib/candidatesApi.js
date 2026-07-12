@@ -110,3 +110,14 @@ export function partyClassName(party = "") {
   if (value.includes("libertarian")) return "party-libertarian";
   return "party-unknown";
 }
+
+export function candidateOfficePriority(value = "") {
+  const officeName = String(value).trim().toLowerCase();
+  if (officeName === "state representative") return 0;
+  if (officeName === "state senate" || officeName === "state senator") return 1;
+  return 2;
+}
+
+export function isLegislativeCandidate(candidate = {}) {
+  return candidateOfficePriority(candidate.office) < 2;
+}

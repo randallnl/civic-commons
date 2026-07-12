@@ -343,7 +343,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           <div>
             <strong>Want to browse the full legislature?</strong>
             <p>
-              See all New Hampshire representatives with vote previews and
+              See all New Hampshire State Representatives and State Senators with vote previews and
               filters for town, county, district, or name.
             </p>
           </div>
@@ -359,7 +359,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
       {address && !lookupError && allReps.length === 0 && allCandidates.length === 0 && (
         <div class="status-message" aria-live="polite">
-          No representatives or candidates found for that address.
+          No State Representatives, State Senators, or legislative candidates found for that address.
         </div>
       )}
 
@@ -456,7 +456,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
                       <label for="ward">Select your ward</label>
                       <p>
                         Some lookup results may be town-wide. Choose your ward
-                        to narrow House representatives and candidates.
+                        to narrow State House representatives and candidates.
                       </p>
                     </div>
                     <div class="ward-filter-controls">
@@ -554,10 +554,10 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
             {(senateCandidates.length > 0 || filteredHouseCandidates.length > 0) && (
               <section class="candidate-results">
                 <div class="group-header">
-                  <h2>2026 Candidates</h2>
+                  <h2>2026 Legislative Candidates</h2>
                   <p>
-                    Candidates returned for the same address lookup, grouped by
-                    legislative body.
+                    State House and State Senate candidates returned for the
+                    same address lookup, grouped by legislative body.
                   </p>
                 </div>
 
