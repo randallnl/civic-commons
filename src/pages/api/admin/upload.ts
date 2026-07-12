@@ -150,16 +150,7 @@ async function updateRepresentativePhoto(entityKey, key, publicUrl) {
     )
     .run();
 
-  await db
-    .prepare(
-      `UPDATE people
-       SET photo_url = ?, updated_at = datetime('now')
-       WHERE id = ? OR slug = ?`,
-    )
-    .bind(publicUrl, legislator.personid, slugify(`${legislator.firstname}-${legislator.lastname}`))
-    .run();
-
-  return "legislator photo tables";
+  return "d1_legislator_photos";
 }
 
 function generatedKey(entityType, entityKey, file) {

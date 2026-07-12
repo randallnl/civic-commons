@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import CommunityProfile from "../../../components/CommunityProfile.astro";
+import { getCandidates } from "../../../lib/candidatesApi";
 import { getCommunities, getCountyCommunity } from "../../../lib/communitiesApi";
 
 const { county = "" } = Astro.params;
@@ -12,17 +13,24 @@ let meta = {};
 let error = "";
 
 try {
-  const [data, senateData] = await Promise.all([
+  const countyName = titleCase(county);
+  const [data, senateData, candidateData] = await Promise.all([
     getCountyCommunity(county, { articleLimit }),
     getCommunities({ body: "senate", limit: 50, articleLimit }).catch(() => null),
+    getCandidates({ county: countyName, electionYear: 2026, limit: 100 }).catch(() => null),
   ]);
-  community = normalizeCountyProfile(data, county, senateData?.communities || []);
+  community = normalizeCountyProfile(
+    data,
+    county,
+    senateData?.communities || [],
+    candidateData?.candidates || [],
+  );
   meta = data.meta || {};
 } catch (loadError) {
   error = loadError?.message || "Unable to load county profile.";
 }
 
-function normalizeCountyProfile(data = {}, fallbackCounty = "", senateDistricts = []) {
+function normalizeCountyProfile(data = {}, fallbackCounty = "", senateDistricts = [], directoryCandidates = []) {
   const countyData =
     data.counties?.[0] ||
     data.county ||
@@ -56,6 +64,7 @@ function normalizeCountyProfile(data = {}, fallbackCounty = "", senateDistricts 
   const candidates = uniqueCandidates([
     ...(countyData.candidates || []),
     ...(data.candidates || []),
+    ...directoryCandidates,
     ...(countyData.candidateSummary?.candidates || []),
     ...(data.candidateSummary?.candidates || []),
     ...allDistricts.flatMap(candidatesFor),

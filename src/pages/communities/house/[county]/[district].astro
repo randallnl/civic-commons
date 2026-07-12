@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import CommunityProfile from "../../../../components/CommunityProfile.astro";
+import { getCandidates } from "../../../../lib/candidatesApi";
 import { getHouseCommunity } from "../../../../lib/communitiesApi";
 
 const { county = "", district = "" } = Astro.params;
@@ -12,14 +13,24 @@ let meta = {};
 let error = "";
 
 try {
-  const data = await getHouseCommunity(county, district, { articleLimit });
-  community = normalizeHouseProfile(data.community);
+  const countyName = titleCase(county);
+  const [data, candidateData] = await Promise.all([
+    getHouseCommunity(county, district, { articleLimit }),
+    getCandidates({
+      office: "State Representative",
+      county: countyName,
+      district,
+      electionYear: 2026,
+      limit: 100,
+    }).catch(() => null),
+  ]);
+  community = normalizeHouseProfile(data.community, candidateData?.candidates || []);
   meta = data.meta || {};
 } catch (loadError) {
   error = loadError?.message || "Unable to load community profile.";
 }
 
-function normalizeHouseProfile(community = {}) {
+function normalizeHouseProfile(community = {}, directoryCandidates = []) {
   const senators =
     community.senators ||
     community.senateRepresentatives ||
@@ -38,13 +49,36 @@ function normalizeHouseProfile(community = {}) {
       representatives.length ||
       community.representativeSummary?.count ||
       community.representativeCount,
-    candidates:
-      community.candidates ||
-      [
-        ...(community.groups?.candidates?.senate || []),
-        ...(community.groups?.candidates?.house || []),
-      ],
+    candidates: uniqueCandidates([
+      ...(community.candidates || []),
+      ...directoryCandidates,
+      ...(community.groups?.candidates?.senate || []),
+      ...(community.groups?.candidates?.house || []),
+    ]),
   };
+}
+
+function uniqueCandidates(candidates = []) {
+  const seen = new Set();
+
+  return candidates.filter((candidate) => {
+    if (!candidate || typeof candidate !== "object") return false;
+    const key = [
+      candidate.slug,
+      candidate.filerEntityNumber,
+      candidate.name,
+      candidate.candidateFirstName,
+      candidate.candidateLastName,
+      candidate.office,
+      candidate.district,
+    ]
+      .filter(Boolean)
+      .join("|");
+
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function titleCase(value = "") {

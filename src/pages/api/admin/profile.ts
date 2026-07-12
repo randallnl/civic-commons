@@ -106,7 +106,6 @@ async function updateRepresentativeSource(db, entityKey, data) {
   let changed = 0;
   const firstName = data.firstname || firstNameFromFullName(data.name);
   const lastName = data.lastname || lastNameFromFullName(data.name);
-  const fullName = data.name || [firstName, lastName].filter(Boolean).join(" ");
   const body = chamberToBody(data.chamber);
   const district = data.raw_district || data.district || "";
 
@@ -138,29 +137,6 @@ async function updateRepresentativeSource(db, entityKey, data) {
         personid,
       ],
     );
-
-  changed += await runSourceUpdate(
-    db,
-    `UPDATE people
-     SET full_name = COALESCE(NULLIF(?, ''), full_name),
-         bio = COALESCE(NULLIF(?, ''), bio),
-         photo_url = COALESCE(NULLIF(?, ''), photo_url),
-         party = COALESCE(NULLIF(?, ''), party),
-         email = COALESCE(NULLIF(?, ''), email),
-         phone = COALESCE(NULLIF(?, ''), phone),
-         updated_at = datetime('now')
-     WHERE id = ? OR slug = ?`,
-    [
-      fullName,
-      data.notes || "",
-      data.photo || "",
-      data.party || "",
-      data.email || "",
-      data.phone || "",
-      personid,
-      slugifyProfile(fullName || entityKey),
-    ],
-  );
 
   if (data.photo) {
     changed += await runSourceUpdate(
@@ -267,15 +243,6 @@ function chamberToBody(value = "") {
 function numericId(value = "") {
   const match = String(value).match(/\d+/);
   return match ? Number(match[0]) : null;
-}
-
-function slugifyProfile(value = "") {
-  return String(value)
-    .toLowerCase()
-    .trim()
-    .replace(/['']/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 function numberOrNull(value) {
