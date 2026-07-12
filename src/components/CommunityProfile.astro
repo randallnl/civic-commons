@@ -8,7 +8,7 @@ import { isFreeStater } from "../lib/civicTags";
 import { countyForCommunity, countyImageUrl } from "../lib/communityImages";
 import { communityPath } from "../lib/communitiesApi";
 import { profilePhotoUrl } from "../lib/photos";
-import { repName, repSlug } from "../lib/repsApi";
+import { getRepresentative, repName, repSlug } from "../lib/repsApi";
 import { cleanText, joinClean } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 import { getTrackedBills, representativeGradeFor } from "../lib/trackedBills";
@@ -106,6 +106,27 @@ function articleTitle(article = {}) {
 
 function articlePublisher(article = {}) {
   return articleSourceName(article);
+}
+
+async function hydrateRepresentativePreview(reps = []) {
+  return Promise.all(
+    reps.map(async (rep) => {
+      const slugOrId = rep.personid || rep.id || rep.slug || repName(rep);
+      if (!slugOrId) return rep;
+
+      try {
+        const data = await getRepresentative(slugOrId);
+        return {
+          ...rep,
+          ...(data.representative || data.rep || data.person || data),
+          voteHistory: data.voteHistory || data.votes || data.representative?.voteHistory || rep.voteHistory || [],
+        };
+      } catch (error) {
+        console.error(error?.message || "Unable to hydrate community representative preview.");
+        return rep;
+      }
+    }),
+  );
 }
 
 function uniqueRepresentatives(items = []) {
@@ -208,7 +229,9 @@ const representatives = representativesFor();
 const articles = await enrichArticlesWithPreviews(articlesFor(), { limit: 10 });
 const districts = districtsFor();
 const candidates = candidatesFor();
-const representativePreview = representatives.slice(0, PROFILE_PREVIEW_LIMIT);
+const representativePreview = await hydrateRepresentativePreview(
+  representatives.slice(0, PROFILE_PREVIEW_LIMIT),
+);
 const candidatePreview = candidates.slice(0, PROFILE_PREVIEW_LIMIT);
 const allRepresentativesHref = peopleDirectoryHref();
 const allCandidatesHref = candidateDirectoryHref();
@@ -359,6 +382,10 @@ try {
                 ) : (
                   <p class="empty">No representatives returned.</p>
                 )}
+
+                <a class="section-footer-action" href={allRepresentativesHref}>
+                  See all legislators
+                </a>
               </section>
 
               <section class="panel">
@@ -417,6 +444,10 @@ try {
                 ) : (
                   <p class="empty">No candidates returned.</p>
                 )}
+
+                <a class="section-footer-action" href={allCandidatesHref}>
+                  See all candidates
+                </a>
               </section>
             </div>
 
@@ -614,6 +645,25 @@ try {
   .section-action:hover {
     background: white;
     color: #1f2933;
+  }
+
+  .section-footer-action {
+    align-items: center;
+    background: #fffaf1;
+    border: 1px solid #1f2933;
+    border-radius: 8px;
+    display: flex;
+    font-size: 0.9rem;
+    font-weight: 900;
+    justify-content: center;
+    margin-top: 14px;
+    padding: 11px 12px;
+    text-decoration: none;
+  }
+
+  .section-footer-action:hover {
+    background: #1f2933;
+    color: white;
   }
 
   .rep-list article,
