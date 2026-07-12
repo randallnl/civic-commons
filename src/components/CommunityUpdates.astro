@@ -67,7 +67,16 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
     <div class="community-update-list">
       {updates.map((update) => (
         <article>
-          {update.photoUrl && <img src={update.photoUrl} alt="" loading="lazy" />}
+          {update.photoUrl && (
+            <button
+              class="community-photo-button"
+              type="button"
+              data-community-photo={update.photoUrl}
+              aria-label="Open community update photo"
+            >
+              <img src={update.photoUrl} alt="" loading="lazy" />
+            </button>
+          )}
           <div>
             <strong>{cleanText(update.displayName || "Community member")}</strong>
             {communityUpdateDate(update.createdAt) && (
@@ -81,7 +90,45 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
   ) : (
     <p class="empty">No approved community updates yet.</p>
   )}
+
+  <dialog class="community-photo-dialog" aria-label="Community update photo">
+    <form method="dialog">
+      <button type="submit" aria-label="Close photo preview">Close</button>
+    </form>
+    <img src="" alt="" />
+  </dialog>
 </section>
+
+<script>
+  document.querySelectorAll(".community-updates-panel").forEach((panel) => {
+    const dialog = panel.querySelector(".community-photo-dialog");
+    const preview = dialog?.querySelector("img");
+
+    if (!(dialog instanceof HTMLDialogElement) || !(preview instanceof HTMLImageElement)) {
+      return;
+    }
+
+    panel.querySelectorAll("[data-community-photo]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const photoUrl = button.getAttribute("data-community-photo");
+        if (!photoUrl) return;
+
+        preview.src = photoUrl;
+        dialog.showModal();
+      });
+    });
+
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) {
+        dialog.close();
+      }
+    });
+
+    dialog.addEventListener("close", () => {
+      preview.removeAttribute("src");
+    });
+  });
+</script>
 
 <style>
   .community-updates-panel {
@@ -153,15 +200,66 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
     padding: 14px;
   }
 
-  .community-update-list img {
+  .community-photo-button {
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    cursor: zoom-in;
+    display: block;
+    margin: 0 0 12px;
+    padding: 0;
+    width: 100%;
+  }
+
+  .community-photo-button:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 3px;
+  }
+
+  .community-photo-button img {
     aspect-ratio: 16 / 9;
     background: #ffffff;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     display: block;
-    margin-bottom: 12px;
     object-fit: contain;
     width: 100%;
+  }
+
+  .community-photo-dialog {
+    background: #111827;
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 24px 80px rgba(17, 24, 39, 0.35);
+    max-height: min(86vh, 820px);
+    max-width: min(92vw, 980px);
+    padding: 12px;
+  }
+
+  .community-photo-dialog::backdrop {
+    background: rgba(17, 24, 39, 0.72);
+  }
+
+  .community-photo-dialog form {
+    display: flex;
+    justify-content: end;
+    margin: 0 0 10px;
+  }
+
+  .community-photo-dialog button {
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #1f2933;
+    padding: 8px 12px;
+  }
+
+  .community-photo-dialog img {
+    background: #ffffff;
+    border-radius: 8px;
+    display: block;
+    max-height: calc(86vh - 68px);
+    max-width: calc(92vw - 24px);
+    object-fit: contain;
   }
 
   .community-update-list div {
