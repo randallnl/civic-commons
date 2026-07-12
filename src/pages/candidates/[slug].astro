@@ -214,13 +214,6 @@ function formatDate(value) {
         </div>
       </section>
 
-      <CommunityUpdates
-        entityType="candidate"
-        entityKey={candidateEntityKey}
-        entityName={name}
-        pageUrl={Astro.url.pathname}
-      />
-
       <section class="panel articles-panel">
         <div class="section-heading">
           <p class="eyebrow">Articles</p>
@@ -229,6 +222,13 @@ function formatDate(value) {
 
         <ArticleList articles={relatedArticles} emptyText="No related articles returned yet." />
       </section>
+
+      <CommunityUpdates
+        entityType="candidate"
+        entityKey={candidateEntityKey}
+        entityName={name}
+        pageUrl={Astro.url.pathname}
+      />
 
       {adminSession && (
         <section class="panel admin-edit-panel">

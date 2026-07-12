@@ -25,6 +25,44 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
     </p>
   </div>
 
+  <details class="community-update-disclosure">
+    <summary>
+      <span>Suggest a community update or add a photo</span>
+      <strong>+</strong>
+    </summary>
+
+    <form class="community-update-form" action="/api/community-updates" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="entityType" value={entityType} />
+      <input type="hidden" name="entityKey" value={entityKey} />
+      <input type="hidden" name="entityName" value={entityName} />
+      <input type="hidden" name="pageUrl" value={pageUrl} />
+      <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+
+      <label>
+        Comment
+        <textarea name="comment" rows="4" placeholder="Share a local observation, correction, or context."></textarea>
+      </label>
+
+      <div class="form-grid">
+        <label>
+          Name
+          <input name="displayName" autocomplete="name" placeholder="Community member" />
+        </label>
+        <label>
+          Email
+          <input name="email" type="email" autocomplete="email" placeholder="Used for moderation only" />
+        </label>
+      </div>
+
+      <label>
+        Photo
+        <input name="photo" type="file" accept="image/*" />
+      </label>
+
+      <button type="submit">Submit for Review</button>
+    </form>
+  </details>
+
   {updates.length ? (
     <div class="community-update-list">
       {updates.map((update) => (
@@ -43,42 +81,11 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
   ) : (
     <p class="empty">No approved community updates yet.</p>
   )}
-
-  <form class="community-update-form" action="/api/community-updates" method="post" enctype="multipart/form-data">
-    <input type="hidden" name="entityType" value={entityType} />
-    <input type="hidden" name="entityKey" value={entityKey} />
-    <input type="hidden" name="entityName" value={entityName} />
-    <input type="hidden" name="pageUrl" value={pageUrl} />
-    <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
-
-    <div class="form-grid">
-      <label>
-        Name
-        <input name="displayName" autocomplete="name" placeholder="Community member" />
-      </label>
-      <label>
-        Email
-        <input name="email" type="email" autocomplete="email" placeholder="Used for moderation only" />
-      </label>
-    </div>
-
-    <label>
-      Comment
-      <textarea name="comment" rows="4" placeholder="Share a local observation, correction, or context."></textarea>
-    </label>
-
-    <label>
-      Photo
-      <input name="photo" type="file" accept="image/*" />
-    </label>
-
-    <button type="submit">Submit for Review</button>
-  </form>
 </section>
 
 <style>
   .community-updates-panel {
-    margin-top: 24px;
+    margin-top: 0;
   }
 
   .section-heading p:not(.eyebrow) {
@@ -86,6 +93,51 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
     font-weight: 800;
     line-height: 1.5;
     margin: 8px 0 0;
+  }
+
+  .community-update-disclosure {
+    margin-top: 16px;
+  }
+
+  .community-update-disclosure summary {
+    align-items: center;
+    background: #fffaf1;
+    border: 1px solid #9ca3af;
+    border-radius: 12px;
+    box-sizing: border-box;
+    color: #4b5563;
+    cursor: pointer;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    list-style: none;
+    padding: 12px 14px;
+  }
+
+  .community-update-disclosure summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .community-update-disclosure summary span {
+    font-weight: 800;
+  }
+
+  .community-update-disclosure summary strong {
+    align-items: center;
+    background: #1f2933;
+    border-radius: 999px;
+    color: #ffffff;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 1rem;
+    height: 24px;
+    justify-content: center;
+    line-height: 1;
+    width: 24px;
+  }
+
+  .community-update-disclosure[open] summary strong {
+    transform: rotate(45deg);
   }
 
   .community-update-list {
@@ -134,11 +186,9 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
   }
 
   .community-update-form {
-    border-top: 1px solid #d1d5db;
     display: grid;
     gap: 14px;
-    margin-top: 18px;
-    padding-top: 18px;
+    padding-top: 14px;
   }
 
   .form-grid {

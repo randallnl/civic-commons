@@ -553,13 +553,6 @@ function contactHref(type, value) {
         </section>
       )}
 
-      <CommunityUpdates
-        entityType="representative"
-        entityKey={representativeEntityKey}
-        entityName={person.full_name}
-        pageUrl={Astro.url.pathname}
-      />
-
       <section class="content-grid">
         <div class="stack">
           <section class="panel">
@@ -687,6 +680,13 @@ function contactHref(type, value) {
               </p>
             )}
           </section>
+
+          <CommunityUpdates
+            entityType="representative"
+            entityKey={representativeEntityKey}
+            entityName={person.full_name}
+            pageUrl={Astro.url.pathname}
+          />
         </div>
 
         <aside class="stack">
