@@ -72,7 +72,7 @@ try {
     meta = data.meta || {};
     resultContext = data.town?.name || data.community?.name || town;
   } else {
-    const data = await getCandidates({
+    const data = await getDirectoryCandidates({
       county,
       district,
       office,
@@ -93,7 +93,54 @@ candidates = prioritizeLegislativeCandidates(visibleCandidates);
 candidates = await enrichCandidatesWithLegislators(candidates);
 
 const hasFilters = address || county || district || office || town;
-const resultCount = meta.count ?? candidates.length;
+const resultCount = candidates.length;
+
+async function getDirectoryCandidates({
+  county = "",
+  district = "",
+  office = "",
+  electionYear = "",
+  limit = 100,
+} = {}) {
+  if (office) {
+    return getCandidates({
+      county,
+      district,
+      office,
+      electionYear,
+      limit,
+    });
+  }
+
+  const [houseData, senateData] = await Promise.all([
+    getCandidates({
+      county,
+      district,
+      office: "State Representative",
+      electionYear,
+      limit,
+    }),
+    getCandidates({
+      county,
+      district,
+      office: "State Senate",
+      electionYear,
+      limit,
+    }),
+  ]);
+
+  const candidates = uniqueCandidates([
+    ...(houseData.candidates || []),
+    ...(senateData.candidates || []),
+  ]);
+
+  return {
+    candidates,
+    meta: {
+      count: candidates.length,
+    },
+  };
+}
 
 function candidatesFromLookup(data = {}) {
   const candidateGroups = data.groups?.candidates || {};

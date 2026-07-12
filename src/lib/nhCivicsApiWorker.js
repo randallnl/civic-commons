@@ -2630,8 +2630,14 @@ async function handleCandidates(request, env) {
   }
 
   if (district) {
-    where.push(`district = ?`);
-    binds.push(district);
+    const districtNumber = districtNumberFilter(district);
+    if (districtNumber !== null) {
+      where.push(`CAST(district AS INTEGER) = ?`);
+      binds.push(districtNumber);
+    } else {
+      where.push(`district = ?`);
+      binds.push(district);
+    }
   }
 
   if (party) {
