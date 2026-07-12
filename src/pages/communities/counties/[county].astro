@@ -46,6 +46,20 @@ function normalizeCountyProfile(data = {}, fallbackCounty = "", senateDistricts 
   );
 
   const allDistricts = uniqueDistricts([...matchedSenateDistricts, ...districts]);
+  const representatives = uniqueRepresentatives([
+    ...(countyData.representatives || []),
+    ...(countyData.reps || []),
+    ...(countyData.legislators || []),
+    ...(data.representatives || []),
+    ...allDistricts.flatMap(representativesFor),
+  ]);
+  const candidates = uniqueCandidates([
+    ...(countyData.candidates || []),
+    ...(data.candidates || []),
+    ...(countyData.candidateSummary?.candidates || []),
+    ...(data.candidateSummary?.candidates || []),
+    ...allDistricts.flatMap(candidatesFor),
+  ]);
 
   return {
     ...countyData,
@@ -56,13 +70,8 @@ function normalizeCountyProfile(data = {}, fallbackCounty = "", senateDistricts 
     representativeCount: countyData.representativeCount,
     townsRepresented: towns,
     districts: allDistricts,
-    representatives:
-      countyData.representatives ||
-      countyData.reps ||
-      countyData.legislators ||
-      data.representatives ||
-      [],
-    candidates: countyData.candidates || data.candidates || [],
+    representatives,
+    candidates,
     relatedArticles:
       countyData.relatedArticles ||
       countyData.articles ||
@@ -70,6 +79,19 @@ function normalizeCountyProfile(data = {}, fallbackCounty = "", senateDistricts 
       data.articles ||
       [],
   };
+}
+
+function representativesFor(community = {}) {
+  return community.representatives || community.reps || community.legislators || [];
+}
+
+function candidatesFor(community = {}) {
+  return [
+    ...(community.candidates || []),
+    ...(community.candidateSummary?.candidates || []),
+    ...(community.groups?.candidates?.senate || []),
+    ...(community.groups?.candidates?.house || []),
+  ];
 }
 
 function townsFor(community = {}) {
@@ -103,6 +125,41 @@ function uniqueDistricts(items = []) {
   return items.filter((item) => {
     const key = item.path || `${item.body || item.chamber}-${item.district}-${item.name}`;
     if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function uniqueRepresentatives(items = []) {
+  const seen = new Set();
+
+  return items.filter((rep) => {
+    if (!rep || typeof rep !== "object") return false;
+    const key = rep.personid || rep.id || rep.employeeno || `${rep.firstname || ""}-${rep.lastname || ""}-${rep.district || ""}`;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function uniqueCandidates(items = []) {
+  const seen = new Set();
+
+  return items.filter((candidate) => {
+    if (!candidate || typeof candidate !== "object") return false;
+    const key = [
+      candidate.slug,
+      candidate.filerEntityNumber,
+      candidate.name,
+      candidate.candidateFirstName,
+      candidate.candidateLastName,
+      candidate.office,
+      candidate.district,
+    ]
+      .filter(Boolean)
+      .join("|");
+
+    if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
   });

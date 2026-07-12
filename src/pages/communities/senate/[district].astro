@@ -13,10 +13,54 @@ let error = "";
 
 try {
   const data = await getSenateCommunity(district, { articleLimit });
-  community = data.community;
+  community = normalizeSenateProfile(data.community || data);
   meta = data.meta || {};
 } catch (loadError) {
   error = loadError?.message || "Unable to load community profile.";
+}
+
+function normalizeSenateProfile(community = {}) {
+  return {
+    ...community,
+    body: community.body || "S",
+    chamber: community.chamber || "Senate",
+    profileLabel: community.profileLabel || "Senate District",
+    representatives:
+      community.representatives ||
+      community.reps ||
+      community.legislators ||
+      community.senators ||
+      [],
+    candidates: uniqueCandidates([
+      ...(community.candidates || []),
+      ...(community.candidateSummary?.candidates || []),
+      ...(community.groups?.candidates?.senate || []),
+      ...(community.groups?.candidates?.house || []),
+    ]),
+  };
+}
+
+function uniqueCandidates(candidates = []) {
+  const seen = new Set();
+
+  return candidates.filter((candidate) => {
+    if (!candidate || typeof candidate !== "object") return false;
+    const key = [
+      candidate.slug,
+      candidate.filerEntityNumber,
+      candidate.name,
+      candidate.candidateFirstName,
+      candidate.candidateLastName,
+      candidate.office,
+      candidate.district,
+    ]
+      .filter(Boolean)
+      .join("|");
+
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 ---
 
