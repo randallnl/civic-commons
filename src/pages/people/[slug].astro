@@ -9,7 +9,13 @@ import profileIcon from "../../assets/profile icon.png";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
+import { candidateFilerForRepresentative } from "../../lib/candidateLegislatorLinks";
 import { candidateProfileForLegislator } from "../../lib/candidateLegislators";
+import {
+  candidateName,
+  getCandidates,
+  isLegislativeCandidate,
+} from "../../lib/candidatesApi";
 import { isFreeStater } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
 import { getRepresentative } from "../../lib/repsApi";
@@ -25,6 +31,8 @@ import {
 const { slug } = Astro.params;
 
 let apiData = null;
+let candidateOptions = [];
+let linkedCandidateFilerEntityNumber = "";
 const adminSession = await currentAdminSession(Astro.request);
 const message = Astro.url.searchParams.get("message") || "";
 const error = Astro.url.searchParams.get("error") || "";
@@ -112,6 +120,21 @@ if (representative?.towns_represented || representative?.location_text) {
 const sourceLinks = sourceUrlsToLinks(representative?.sourceUrls);
 const portraitUrl = profilePhotoUrl(person.photo_url);
 const currentCandidateProfile = await candidateProfileForLegislator(representative);
+if (adminSession) {
+  try {
+    const [candidateData, explicitCandidateId] = await Promise.all([
+      getCandidates({ electionYear: 2026, limit: 700 }),
+      candidateFilerForRepresentative(representative.personid || representative.id),
+    ]);
+    candidateOptions = (candidateData.candidates || []).filter(isLegislativeCandidate);
+    linkedCandidateFilerEntityNumber =
+      explicitCandidateId ||
+      currentCandidateProfile?.candidate?.filerEntityNumber ||
+      "";
+  } catch (error) {
+    console.error(error?.message || "Unable to load candidate link options.");
+  }
+}
 let relatedArticles =
   apiData?.relatedArticles ||
   representative?.relatedArticles ||
@@ -281,6 +304,16 @@ function contactHref(type, value) {
   if (type === "phone") return `tel:${value}`;
   return value;
 }
+
+function candidateOptionLabel(candidate = {}) {
+  return [
+    candidateName(candidate),
+    candidate.office,
+    candidate.county,
+    candidate.district ? `District ${candidate.district}` : "",
+    candidate.politicalParty,
+  ].filter(Boolean).join(" - ");
+}
 ---
 
 <html lang="en">
@@ -401,6 +434,7 @@ function contactHref(type, value) {
               value={representative.personid || representative.id || slug}
             />
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+            <input type="hidden" name="clearFields" value="linkedCandidateFilerEntityNumber" />
 
             <label>
               Name
@@ -447,6 +481,28 @@ function contactHref(type, value) {
                 </select>
               </label>
             </div>
+
+            <label>
+              Linked Candidate
+              <input
+                name="linkedCandidateFilerEntityNumber"
+                list="candidate-link-options"
+                value={linkedCandidateFilerEntityNumber}
+                placeholder="Start typing a candidate name, then select their filer number"
+              />
+              <small class="field-help">
+                Saves an explicit legislator-to-candidate link. Use the filer
+                entity number shown by the autocomplete option.
+              </small>
+            </label>
+            <datalist id="candidate-link-options">
+              {candidateOptions.map((candidate) => (
+                <option
+                  value={candidate.filerEntityNumber}
+                  label={candidateOptionLabel(candidate)}
+                />
+              ))}
+            </datalist>
 
             <div class="form-grid">
               <label>
@@ -1189,6 +1245,15 @@ function contactHref(type, value) {
 
   .admin-edit-form textarea {
     resize: vertical;
+  }
+
+  .field-help {
+    color: #6b7280;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.4;
+    text-transform: none;
   }
 
   .admin-edit-form button {

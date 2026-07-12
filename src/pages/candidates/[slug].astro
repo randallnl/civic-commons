@@ -7,6 +7,7 @@ import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import profileIcon from "../../assets/profile icon.png";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
+import { representativePersonIdForCandidate } from "../../lib/candidateLegislatorLinks";
 import {
   candidateName,
   formatCandidateParty,
@@ -16,6 +17,7 @@ import {
 import { enrichCandidateWithLegislator } from "../../lib/candidateLegislators";
 import { isFreeStater } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
+import { getRepresentatives, repName } from "../../lib/repsApi";
 import {
   endorsementsForCandidate,
   getOrganizations,
@@ -26,6 +28,8 @@ const { slug } = Astro.params;
 
 let apiData = null;
 let organizations = [];
+let legislatorOptions = [];
+let linkedRepresentativePersonId = "";
 const adminSession = await currentAdminSession(Astro.request);
 const message = Astro.url.searchParams.get("message") || "";
 const error = Astro.url.searchParams.get("error") || "";
@@ -67,6 +71,22 @@ const sourceLinks = [
   },
 ].filter(Boolean);
 
+if (adminSession) {
+  try {
+    const [repData, explicitPersonId] = await Promise.all([
+      getRepresentatives({ limit: 700 }),
+      representativePersonIdForCandidate(candidate.filerEntityNumber),
+    ]);
+    legislatorOptions = repData.representatives || [];
+    linkedRepresentativePersonId =
+      explicitPersonId ||
+      candidate.legislatorPersonId ||
+      "";
+  } catch (error) {
+    console.error(error?.message || "Unable to load legislator link options.");
+  }
+}
+
 try {
   organizations = await getOrganizations();
 } catch (error) {
@@ -105,6 +125,15 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function legislatorOptionLabel(rep = {}) {
+  return [
+    repName(rep),
+    rep.chamber || rep.legislativebody,
+    rep.district || rep.raw_district,
+    rep.party,
+  ].filter(Boolean).join(" - ");
 }
 ---
 
@@ -245,6 +274,7 @@ function formatDate(value) {
             <input type="hidden" name="entityType" value="candidate" />
             <input type="hidden" name="entityKey" value={candidate.filerEntityNumber || slug} />
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+            <input type="hidden" name="clearFields" value="linkedRepresentativePersonId" />
 
             <label>
               Name
@@ -276,6 +306,28 @@ function formatDate(value) {
                 </select>
               </label>
             </div>
+
+            <label>
+              Linked Legislator
+              <input
+                name="linkedRepresentativePersonId"
+                list="legislator-link-options"
+                value={linkedRepresentativePersonId}
+                placeholder="Start typing a legislator name, then select their personid"
+              />
+              <small class="field-help">
+                Saves an explicit candidate-to-legislator link. Use the numeric
+                personid shown by the autocomplete option.
+              </small>
+            </label>
+            <datalist id="legislator-link-options">
+              {legislatorOptions.map((rep) => (
+                <option
+                  value={rep.personid || rep.id}
+                  label={legislatorOptionLabel(rep)}
+                />
+              ))}
+            </datalist>
 
             <div class="form-grid">
               <label>
@@ -690,6 +742,15 @@ function formatDate(value) {
     padding: 12px 13px;
     text-transform: none;
     width: 100%;
+  }
+
+  .field-help {
+    color: #6b7280;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.4;
+    text-transform: none;
   }
 
   .admin-edit-form button {

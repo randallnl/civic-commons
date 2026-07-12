@@ -1,5 +1,10 @@
-import { candidateName, candidatePath, getCandidates } from "./candidatesApi";
-import { getRepresentatives, repName, repSlug } from "./repsApi";
+import { candidateName, candidatePath, getCandidate, getCandidates } from "./candidatesApi";
+import { getRepresentative, getRepresentatives, repName, repSlug } from "./repsApi";
+import {
+  candidateFilerForRepresentative,
+  candidateLegislatorLinks,
+  representativePersonIdForCandidate,
+} from "./candidateLegislatorLinks";
 
 export async function enrichCandidatesWithLegislators(candidates = []) {
   if (!candidates.length) return [];
@@ -13,7 +18,11 @@ export async function enrichCandidatesWithLegislators(candidates = []) {
     return candidates;
   }
 
-  return candidates.map((candidate) => attachLegislatorMatch(candidate, representatives));
+  const linksByCandidate = await candidateLinksByCandidate();
+
+  return candidates.map((candidate) =>
+    attachLegislatorMatch(candidate, representatives, linksByCandidate),
+  );
 }
 
 export async function enrichCandidateWithLegislator(candidate = {}) {
@@ -21,8 +30,25 @@ export async function enrichCandidateWithLegislator(candidate = {}) {
   if (!name) return candidate;
 
   try {
+    const linkedPersonId = await representativePersonIdForCandidate(candidate.filerEntityNumber);
+    if (linkedPersonId) {
+      try {
+        const linkedData = await getRepresentative(linkedPersonId);
+        return attachLegislatorMatch(
+          candidate,
+          [linkedData.representative || linkedData.rep || linkedData.person || linkedData],
+          new Map([[String(candidate.filerEntityNumber), Number(linkedPersonId)]]),
+        );
+      } catch (error) {
+        console.error(error?.message || "Unable to load linked legislator.");
+      }
+    }
+
     const data = await getRepresentatives({ q: name, limit: 25 });
-    return attachLegislatorMatch(candidate, data.representatives || []);
+    return attachLegislatorMatch(
+      candidate,
+      data.representatives || [],
+    );
   } catch (error) {
     console.error(error?.message || "Unable to load current legislator for candidate matching.");
     return candidate;
@@ -34,6 +60,24 @@ export async function candidateProfileForLegislator(rep = {}) {
   if (!name) return null;
 
   try {
+    const linkedCandidateId = await candidateFilerForRepresentative(rep.personid || rep.id);
+    if (linkedCandidateId) {
+      try {
+        const data = await getCandidate(linkedCandidateId);
+        const linkedMatch = data.candidate || data;
+
+        if (linkedMatch) {
+          return {
+            candidate: linkedMatch,
+            href: candidatePath(linkedMatch),
+            label: "Candidate Profile",
+          };
+        }
+      } catch (error) {
+        console.error(error?.message || "Unable to load linked candidate profile.");
+      }
+    }
+
     const data = await getCandidates({ q: name, electionYear: 2026, limit: 25 });
     const match = (data.candidates || [])
       .map((candidate) => ({ candidate, score: matchScore(candidate, rep) }))
@@ -53,8 +97,9 @@ export async function candidateProfileForLegislator(rep = {}) {
   }
 }
 
-export function attachLegislatorMatch(candidate = {}, representatives = []) {
-  const match = bestLegislatorMatch(candidate, representatives);
+export function attachLegislatorMatch(candidate = {}, representatives = [], linksByCandidate = new Map()) {
+  const match = linkedLegislatorMatch(candidate, representatives, linksByCandidate) ||
+    bestLegislatorMatch(candidate, representatives);
   if (!match) return candidate;
 
   return {
@@ -62,8 +107,35 @@ export function attachLegislatorMatch(candidate = {}, representatives = []) {
     currentLegislator: true,
     legislatorName: repName(match),
     legislatorPersonId: match.personid || match.id || "",
-    legislatorProfileUrl: `/people/${repSlug(match)}`,
+    legislatorProfileUrl: `/people/${repSlug(match) || match.personid || match.id}`,
     legislatorPhotoUrl: match.photo || match.photo_url || "",
+  };
+}
+
+async function candidateLinksByCandidate() {
+  try {
+    const links = await candidateLegislatorLinks();
+    return new Map(
+      links.map((link) => [
+        String(link.candidate_filer_entity_number),
+        Number(link.representative_personid),
+      ]),
+    );
+  } catch (error) {
+    console.error(error?.message || "Unable to load candidate-legislator links.");
+    return new Map();
+  }
+}
+
+function linkedLegislatorMatch(candidate = {}, representatives = [], linksByCandidate = new Map()) {
+  const linkedPersonId = linksByCandidate.get(String(candidate.filerEntityNumber || ""));
+  if (!linkedPersonId) return null;
+
+  return representatives.find((rep) =>
+    Number(rep.personid || rep.id) === Number(linkedPersonId),
+  ) || {
+    personid: linkedPersonId,
+    name: candidate.legislatorName || "",
   };
 }
 

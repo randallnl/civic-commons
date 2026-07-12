@@ -1,6 +1,10 @@
 export const prerender = false;
 
 import { adminDb, requireAdmin } from "../../../lib/adminAuth";
+import {
+  linkCandidateToLegislator,
+  linkLegislatorToCandidate,
+} from "../../../lib/candidateLegislatorLinks";
 
 const CANDIDATE_FIELDS = [
   "name",
@@ -19,6 +23,7 @@ const CANDIDATE_FIELDS = [
   "totalRaised",
   "totalSpent",
   "is_free_stater",
+  "linkedRepresentativePersonId",
 ];
 
 const REPRESENTATIVE_FIELDS = [
@@ -37,6 +42,7 @@ const REPRESENTATIVE_FIELDS = [
   "photo",
   "notes",
   "is_free_stater",
+  "linkedCandidateFilerEntityNumber",
 ];
 
 export async function POST({ request }) {
@@ -174,6 +180,15 @@ async function updateRepresentativeSource(db, entityKey, data) {
     );
   }
 
+  if (Object.prototype.hasOwnProperty.call(data, "linkedCandidateFilerEntityNumber")) {
+    const linkUpdate = await linkLegislatorToCandidate(
+      personid,
+      data.linkedCandidateFilerEntityNumber || "",
+      db,
+    );
+    changed += linkUpdate.changed || 0;
+  }
+
   if (!changed) throw new Error("No matching legislator source row was updated.");
   return { changed };
 }
@@ -181,7 +196,7 @@ async function updateRepresentativeSource(db, entityKey, data) {
 async function updateCandidateSource(db, entityKey, data) {
   const firstName = data.candidateFirstName || firstNameFromFullName(data.name);
   const lastName = data.candidateLastName || lastNameFromFullName(data.name);
-  const changed = await runSourceUpdate(
+  let changed = await runSourceUpdate(
     db,
     `UPDATE candidates
      SET candidate_first_name = COALESCE(NULLIF(?, ''), candidate_first_name),
@@ -224,6 +239,15 @@ async function updateCandidateSource(db, entityKey, data) {
       String(entityKey),
     ],
   );
+
+  if (Object.prototype.hasOwnProperty.call(data, "linkedRepresentativePersonId")) {
+    const linkUpdate = await linkCandidateToLegislator(
+      String(entityKey),
+      data.linkedRepresentativePersonId || "",
+      db,
+    );
+    changed += linkUpdate.changed || 0;
+  }
 
   if (!changed) throw new Error("No matching candidate source row was updated.");
   return { changed };
