@@ -5,15 +5,22 @@ export const prerender = false;
 
 export async function POST({ request }) {
   try {
-    const session = await requireAdmin(request);
+    const auth = await requireAdmin(request);
+    if (!auth.ok) return auth.response;
+
     const form = await request.formData();
     const id = Number(form.get("id"));
     const action = String(form.get("action") || "").trim();
     const redirectTo = String(form.get("redirectTo") || "/admin");
+    const manualLinks = {
+      bills: String(form.get("bills") || ""),
+      legislators: String(form.get("legislators") || ""),
+      candidates: String(form.get("candidates") || ""),
+    };
 
     if (!id) throw new Error("Article submission ID is required.");
 
-    await moderateArticleSubmission(id, action, session.email);
+    await moderateArticleSubmission(id, action, auth.session.email, manualLinks);
 
     const message =
       action === "approve"

@@ -208,6 +208,20 @@ if (session) {
                         <input type="hidden" name="id" value={submission.id} />
                         <input type="hidden" name="action" value="approve" />
                         <input type="hidden" name="redirectTo" value="/admin" />
+                        <div class="manual-link-fields">
+                          <label>
+                            Bills
+                            <input name="bills" placeholder="HB155, SB2" />
+                          </label>
+                          <label>
+                            Legislators
+                            <input name="legislators" placeholder="personid, employeeno, or name" />
+                          </label>
+                          <label>
+                            Candidates
+                            <input name="candidates" placeholder="filer number, slug, or name" />
+                          </label>
+                        </div>
                         <button type="submit">Approve</button>
                       </form>
                       <form action="/api/admin/article-submissions" method="post">
@@ -461,6 +475,19 @@ if (session) {
     margin: 0;
   }
 
+  .moderation-actions form:has(.manual-link-fields) {
+    display: grid;
+    flex: 1 1 100%;
+    gap: 12px;
+  }
+
+  .manual-link-fields {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
   .detected-relations {
     display: grid;
     gap: 8px;
@@ -576,9 +603,15 @@ if (session) {
       grid-template-columns: 1fr;
     }
 
+    .manual-link-fields {
+      grid-template-columns: 1fr;
+    }
+
     .admin-grid .panel:nth-child(2),
     .admin-grid .panel:nth-child(3),
-    .admin-grid .panel:nth-child(4) {
+    .admin-grid .panel:nth-child(4),
+    .admin-grid .panel:nth-child(5),
+    .admin-grid .panel:nth-child(6) {
       grid-column: auto;
     }
   }
