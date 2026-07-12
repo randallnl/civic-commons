@@ -105,6 +105,13 @@ function matchesCounty(rep = {}, query = "") {
 
 function matchesDistrict(rep = {}, query = "") {
   if (!query) return true;
+  const queryNumber = districtNumberFilter(query);
+  const repDistrictNumber = districtNumberFilter(rep.raw_district || rep.district);
+
+  if (queryNumber !== null && repDistrictNumber !== null) {
+    return queryNumber === repDistrictNumber;
+  }
+
   const districtText = [
     rep.district,
     rep.raw_district,
@@ -161,6 +168,13 @@ function normalizeSearch(value = "") {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+function districtNumberFilter(value = "") {
+  const match = String(value || "").match(/\d+/);
+  if (!match) return null;
+  const number = Number(match[0]);
+  return Number.isFinite(number) ? number : null;
 }
 
 function countyNameForCode(code = "") {

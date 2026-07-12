@@ -2960,8 +2960,14 @@ async function handleReps(request, env) {
   }
 
   if (district) {
-    where.push("CAST(r.district AS TEXT) = CAST(? AS TEXT)");
-    params.push(district);
+    const districtNumber = districtNumberFilter(district);
+    if (districtNumber !== null) {
+      where.push("CAST(r.district AS INTEGER) = ?");
+      params.push(districtNumber);
+    } else {
+      where.push("CAST(r.district AS TEXT) = CAST(? AS TEXT)");
+      params.push(district);
+    }
   }
 
   const whereSql = where.join("\n      AND ");
@@ -3066,6 +3072,15 @@ async function handleReps(request, env) {
       },
     },
   });
+}
+
+function districtNumberFilter(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const match = raw.match(/\d+/);
+  if (!match) return null;
+  const number = Number(match[0]);
+  return Number.isFinite(number) ? number : null;
 }
 
 async function handleAddressLookup(request, env) {
