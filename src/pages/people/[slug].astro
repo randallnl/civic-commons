@@ -8,6 +8,7 @@ import profileIcon from "../../assets/profile icon.png";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
+import { candidateProfileForLegislator } from "../../lib/candidateLegislators";
 import { isFreeStater } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
 import { getRepresentative } from "../../lib/repsApi";
@@ -108,6 +109,7 @@ if (representative?.towns_represented || representative?.location_text) {
 }
 const sourceLinks = sourceUrlsToLinks(representative?.sourceUrls);
 const portraitUrl = profilePhotoUrl(person.photo_url);
+const currentCandidateProfile = await candidateProfileForLegislator(representative);
 let relatedArticles =
   apiData?.relatedArticles ||
   representative?.relatedArticles ||
@@ -355,6 +357,9 @@ function contactHref(type, value) {
             )}
             {person.website_url && (
               <a href={contactHref("web", person.website_url)}>Website</a>
+            )}
+            {currentCandidateProfile && (
+              <a href={currentCandidateProfile.href}>{currentCandidateProfile.label}</a>
             )}
           </div>
         </div>

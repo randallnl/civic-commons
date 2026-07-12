@@ -10,6 +10,7 @@ import {
   getCandidate,
   partyClassName,
 } from "../../lib/candidatesApi";
+import { enrichCandidateWithLegislator } from "../../lib/candidateLegislators";
 import { isFreeStater } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
 import {
@@ -32,14 +33,16 @@ try {
   console.error(error?.message || "Unable to load candidate profile.");
 }
 
-const candidate = apiData?.candidate || apiData;
+let candidate = apiData?.candidate || apiData;
 
 if (!candidate?.filerEntityNumber && !candidate?.name) {
   return Astro.redirect("/404");
 }
 
+candidate = await enrichCandidateWithLegislator(candidate);
+
 const name = candidateName(candidate);
-const portraitUrl = profilePhotoUrl(candidate.photoUrl);
+const portraitUrl = profilePhotoUrl(candidate.photoUrl) || profilePhotoUrl(candidate.legislatorPhotoUrl);
 const officeParts = [
   candidate.office,
   candidate.county,
@@ -53,6 +56,10 @@ const sourceLinks = [
   candidate.candidateEmail && {
     href: `mailto:${candidate.candidateEmail}`,
     label: "Email Campaign",
+  },
+  candidate.legislatorProfileUrl && {
+    href: candidate.legislatorProfileUrl,
+    label: "Legislator Profile",
   },
 ].filter(Boolean);
 
@@ -133,6 +140,7 @@ function formatDate(value) {
             )}
             {candidate.officeType && <span class="meta-pill">{candidate.officeType}</span>}
             {candidate.electionYear && <span class="meta-pill">{candidate.electionYear}</span>}
+            {candidate.currentLegislator && <span class="meta-pill">Current Legislator</span>}
           </div>
 
           <p class="office-line">{officeParts.join(", ") || "Office not listed"}</p>

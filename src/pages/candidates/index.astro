@@ -4,6 +4,7 @@ export const prerender = false;
 import CandidateCard from "../../components/CandidateCard.astro";
 import TopNav from "../../components/TopNav.astro";
 import { getCandidates } from "../../lib/candidatesApi";
+import { enrichCandidatesWithLegislators } from "../../lib/candidateLegislators";
 import { civicApiBase, civicApiFetch } from "../../lib/civicApi";
 import { getTownCommunity } from "../../lib/communitiesApi";
 
@@ -86,6 +87,7 @@ try {
 }
 
 candidates = prioritizeLegislativeCandidates(filterCandidatesByOffice(candidates, office));
+candidates = await enrichCandidatesWithLegislators(candidates);
 
 const hasFilters = address || county || district || office || town;
 const resultCount = meta.count ?? candidates.length;

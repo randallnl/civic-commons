@@ -6,6 +6,7 @@ import RepresentativeCard from "../components/RepresentativeCard.astro";
 import TopNav from "../components/TopNav.astro";
 import profileIcon from "../assets/profile icon.png";
 import { getBillDetail, getBillSummaries } from "../lib/billsApi";
+import { enrichCandidatesWithLegislators } from "../lib/candidateLegislators";
 import { civicApiBase, civicApiFetch } from "../lib/civicApi";
 import { isFreeStater } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
@@ -94,11 +95,11 @@ const allCandidates = lookupData?.candidates?.length
       ...(candidateGroups.senate || []),
       ...(candidateGroups.house || []),
     ];
-const senateCandidates =
+let senateCandidates =
   candidateGroups.senate?.length
     ? candidateGroups.senate
     : allCandidates.filter((candidate) => isSenateCandidate(candidate));
-const houseCandidates =
+let houseCandidates =
   candidateGroups.house?.length
     ? candidateGroups.house
     : allCandidates.filter((candidate) => isHouseCandidate(candidate));
@@ -116,7 +117,7 @@ const ward = wardNumber ? `Ward ${wardNumber}` : "";
 const houseReps = isWardedCommunity && selectedWard
   ? houseRepsRaw.filter((rep) => representsWard(rep, selectedWard))
   : houseRepsRaw;
-const filteredHouseCandidates = isWardedCommunity && selectedWard
+let filteredHouseCandidates = isWardedCommunity && selectedWard
   ? houseCandidates.filter((candidate) => representsWard(candidate, selectedWard))
   : houseCandidates;
 const senateDistrict =
@@ -129,6 +130,13 @@ const houseDistricts = matchedDistricts
 
 if (lookupData && trackedBills.size) {
   await hydrateMissingBillSummaries(allReps, trackedBills, billSummaries);
+}
+
+if (lookupData) {
+  [senateCandidates, filteredHouseCandidates] = await Promise.all([
+    enrichCandidatesWithLegislators(senateCandidates),
+    enrichCandidatesWithLegislators(filteredHouseCandidates),
+  ]);
 }
 
 function shuffle(items = []) {

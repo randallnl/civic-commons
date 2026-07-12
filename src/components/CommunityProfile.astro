@@ -3,6 +3,7 @@ import TopNav from "./TopNav.astro";
 import communityPlaceholder from "../assets/community_profile_placeholder.png";
 import profileIcon from "../assets/profile icon.png";
 import { articlePublishDate, articleSourceName } from "../lib/articlesApi";
+import { enrichCandidatesWithLegislators } from "../lib/candidateLegislators";
 import { candidateName, candidatePath } from "../lib/candidatesApi";
 import { isFreeStater } from "../lib/civicTags";
 import { countyForCommunity, countyImageUrl } from "../lib/communityImages";
@@ -232,7 +233,9 @@ const candidates = candidatesFor();
 const representativePreview = await hydrateRepresentativePreview(
   representatives.slice(0, PROFILE_PREVIEW_LIMIT),
 );
-const candidatePreview = candidates.slice(0, PROFILE_PREVIEW_LIMIT);
+const candidatePreview = await enrichCandidatesWithLegislators(
+  candidates.slice(0, PROFILE_PREVIEW_LIMIT),
+);
 const allRepresentativesHref = peopleDirectoryHref();
 const allCandidatesHref = candidateDirectoryHref();
 const heroCounty = countyForCommunity(community || {});
@@ -402,7 +405,9 @@ try {
                 {candidates.length ? (
                   <div class="rep-list profile-preview-list">
                     {candidatePreview.map((candidate) => {
-                      const photoUrl = profilePhotoUrl(candidate.photoUrl || candidate.photo || candidate.photo_url);
+                      const photoUrl =
+                        profilePhotoUrl(candidate.photoUrl || candidate.photo || candidate.photo_url) ||
+                        profilePhotoUrl(candidate.legislatorPhotoUrl);
 
                       return (
                       <article>
@@ -425,6 +430,11 @@ try {
                               candidate.district && `District ${candidate.district}`,
                             ])}
                           </p>
+                          {candidate.legislatorProfileUrl && (
+                            <div class="profile-preview-actions">
+                              <a href={candidate.legislatorProfileUrl}>Legislator Profile</a>
+                            </div>
+                          )}
                           {isFreeStater(candidate) && (
                             <div class="mini-tags">
                               <a
@@ -773,6 +783,28 @@ try {
     flex-wrap: wrap;
     gap: 6px;
     margin-top: 8px;
+  }
+
+  .profile-preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .profile-preview-actions a {
+    background: white;
+    border: 1px solid #1f2933;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 900;
+    padding: 4px 8px;
+    text-decoration: none;
+  }
+
+  .profile-preview-actions a:hover {
+    background: #1f2933;
+    color: white;
   }
 
   .mini-tags a {

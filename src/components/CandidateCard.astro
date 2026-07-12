@@ -12,7 +12,7 @@ import { profilePhotoUrl } from "../lib/photos";
 const { candidate } = Astro.props;
 
 const name = candidateName(candidate);
-const photoUrl = profilePhotoUrl(candidate.photoUrl);
+const photoUrl = profilePhotoUrl(candidate.photoUrl) || profilePhotoUrl(candidate.legislatorPhotoUrl);
 const officeParts = [
   candidate.office,
   candidate.county,
@@ -26,6 +26,10 @@ const contactLinks = [
   candidate.candidateWebsite && {
     href: candidate.candidateWebsite,
     label: "Website",
+  },
+  candidate.legislatorProfileUrl && {
+    href: candidate.legislatorProfileUrl,
+    label: "Legislator Profile",
   },
 ].filter(Boolean);
 
@@ -69,6 +73,7 @@ function formatCurrency(value) {
         </a>
       )}
       {candidate.officeType && <span>{candidate.officeType}</span>}
+      {candidate.currentLegislator && <span>Current Legislator</span>}
     </div>
 
     <p class="office-line">{officeParts.join(", ") || "Office not listed"}</p>
