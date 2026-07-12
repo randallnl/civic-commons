@@ -86,7 +86,10 @@ try {
   error = loadError?.message || "Unable to load candidates.";
 }
 
-candidates = prioritizeLegislativeCandidates(filterCandidatesByOffice(candidates, office));
+const visibleCandidates = office
+  ? filterCandidatesByOffice(candidates, office)
+  : filterLegislativeCandidates(candidates);
+candidates = prioritizeLegislativeCandidates(visibleCandidates);
 candidates = await enrichCandidatesWithLegislators(candidates);
 
 const hasFilters = address || county || district || office || town;
@@ -187,6 +190,10 @@ function filterCandidatesByOffice(items = [], selectedOffice = "") {
       .toLowerCase()
       .includes(officeFilter),
   );
+}
+
+function filterLegislativeCandidates(items = []) {
+  return items.filter((candidate) => officePriority(candidate.office) < 2);
 }
 
 function prioritizeLegislativeCandidates(items = []) {
