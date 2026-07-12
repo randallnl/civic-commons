@@ -1,0 +1,196 @@
+---
+import {
+  communityUpdateDate,
+  getApprovedCommunityUpdates,
+} from "../lib/communityUpdates";
+import { cleanText } from "../lib/text";
+
+const {
+  entityType,
+  entityKey,
+  entityName,
+  pageUrl = Astro.url.pathname,
+} = Astro.props;
+
+const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
+---
+
+<section class="panel community-updates-panel">
+  <div class="section-heading">
+    <p class="eyebrow">Community Updates</p>
+    <h2>Community context</h2>
+    <p>
+      Share a local note or photo connected to this profile. Submissions are
+      reviewed before they appear publicly.
+    </p>
+  </div>
+
+  {updates.length ? (
+    <div class="community-update-list">
+      {updates.map((update) => (
+        <article>
+          {update.photoUrl && <img src={update.photoUrl} alt="" loading="lazy" />}
+          <div>
+            <strong>{cleanText(update.displayName || "Community member")}</strong>
+            {communityUpdateDate(update.createdAt) && (
+              <span>{communityUpdateDate(update.createdAt)}</span>
+            )}
+          </div>
+          {update.comment && <p>{cleanText(update.comment)}</p>}
+        </article>
+      ))}
+    </div>
+  ) : (
+    <p class="empty">No approved community updates yet.</p>
+  )}
+
+  <form class="community-update-form" action="/api/community-updates" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="entityType" value={entityType} />
+    <input type="hidden" name="entityKey" value={entityKey} />
+    <input type="hidden" name="entityName" value={entityName} />
+    <input type="hidden" name="pageUrl" value={pageUrl} />
+    <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+
+    <div class="form-grid">
+      <label>
+        Name
+        <input name="displayName" autocomplete="name" placeholder="Community member" />
+      </label>
+      <label>
+        Email
+        <input name="email" type="email" autocomplete="email" placeholder="Used for moderation only" />
+      </label>
+    </div>
+
+    <label>
+      Comment
+      <textarea name="comment" rows="4" placeholder="Share a local observation, correction, or context."></textarea>
+    </label>
+
+    <label>
+      Photo
+      <input name="photo" type="file" accept="image/*" />
+    </label>
+
+    <button type="submit">Submit for Review</button>
+  </form>
+</section>
+
+<style>
+  .community-updates-panel {
+    margin-top: 24px;
+  }
+
+  .section-heading p:not(.eyebrow) {
+    color: #4b5563;
+    font-weight: 800;
+    line-height: 1.5;
+    margin: 8px 0 0;
+  }
+
+  .community-update-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .community-update-list article {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  .community-update-list img {
+    aspect-ratio: 16 / 9;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: block;
+    margin-bottom: 12px;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  .community-update-list div {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  .community-update-list span {
+    color: #6b7280;
+    font-size: 0.8rem;
+    font-weight: 900;
+  }
+
+  .community-update-list p,
+  .empty {
+    color: #4b5563;
+    font-weight: 800;
+    line-height: 1.5;
+    margin: 8px 0 0;
+  }
+
+  .community-update-form {
+    border-top: 1px solid #d1d5db;
+    display: grid;
+    gap: 14px;
+    margin-top: 18px;
+    padding-top: 18px;
+  }
+
+  .form-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  label {
+    color: #374151;
+    display: grid;
+    font-size: 0.78rem;
+    font-weight: 900;
+    gap: 7px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  input,
+  textarea {
+    background: #fffaf1;
+    border: 1px solid #9ca3af;
+    border-radius: 12px;
+    box-sizing: border-box;
+    color: #1f2933;
+    font: inherit;
+    font-weight: 750;
+    letter-spacing: 0;
+    padding: 12px 13px;
+    text-transform: none;
+    width: 100%;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  button {
+    background: #1f2933;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+    justify-self: start;
+    padding: 12px 16px;
+  }
+
+  @media (max-width: 720px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

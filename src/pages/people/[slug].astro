@@ -3,6 +3,7 @@ export const prerender = false;
 
 import ArticleList from "../../components/ArticleList.astro";
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
+import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import TopNav from "../../components/TopNav.astro";
 import profileIcon from "../../assets/profile icon.png";
 import { getArticles } from "../../lib/articlesApi";
@@ -51,6 +52,7 @@ const person = {
   phone: representative?.phone || "",
   website_url: representative?.sourceUrls?.generalCourt || "",
 };
+const representativeEntityKey = representative?.personid || representative?.id || slug;
 
 const apiTerm = representativeToTerm(representative);
 const officeTerms = [{ ...apiTerm, status: "current" }];
@@ -550,6 +552,13 @@ function contactHref(type, value) {
           </form>
         </section>
       )}
+
+      <CommunityUpdates
+        entityType="representative"
+        entityKey={representativeEntityKey}
+        entityName={person.full_name}
+        pageUrl={Astro.url.pathname}
+      />
 
       <section class="content-grid">
         <div class="stack">

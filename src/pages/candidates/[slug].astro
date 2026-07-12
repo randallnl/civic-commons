@@ -2,7 +2,10 @@
 export const prerender = false;
 
 import TopNav from "../../components/TopNav.astro";
+import ArticleList from "../../components/ArticleList.astro";
+import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import profileIcon from "../../assets/profile icon.png";
+import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
 import {
   candidateName,
@@ -42,6 +45,7 @@ if (!candidate?.filerEntityNumber && !candidate?.name) {
 candidate = await enrichCandidateWithLegislator(candidate);
 
 const name = candidateName(candidate);
+const candidateEntityKey = candidate.filerEntityNumber || slug;
 const portraitUrl = profilePhotoUrl(candidate.photoUrl) || profilePhotoUrl(candidate.legislatorPhotoUrl);
 const officeParts = [
   candidate.office,
@@ -70,6 +74,19 @@ try {
 }
 
 const endorsements = endorsementsForCandidate(organizations, candidate, slug);
+let relatedArticles = [];
+
+try {
+  const articleData = await getArticles({
+    q: candidate.legislatorPersonId ? "" : name,
+    personid: candidate.legislatorPersonId || "",
+    include: "relations",
+    limit: 6,
+  });
+  relatedArticles = articleData.articles || [];
+} catch (error) {
+  console.error(error?.message || "Unable to load candidate articles.");
+}
 
 function formatCurrency(value) {
   const amount = Number(value || 0);
@@ -155,21 +172,6 @@ function formatDate(value) {
         </div>
       </section>
 
-      <section class="summary-strip">
-        <article>
-          <span>Total Raised</span>
-          <strong>{formatCurrency(candidate.totalRaised)}</strong>
-        </article>
-        <article>
-          <span>Total Spent</span>
-          <strong>{formatCurrency(candidate.totalSpent)}</strong>
-        </article>
-        <article>
-          <span>Filer Entity</span>
-          <strong>{candidate.filerEntityNumber || "Not listed"}</strong>
-        </article>
-      </section>
-
       <section class="panel">
         <p class="eyebrow">Ballot Details</p>
         <div class="detail-grid">
@@ -197,7 +199,35 @@ function formatDate(value) {
             <span>Election Year</span>
             <strong>{candidate.electionYear || "Not listed"}</strong>
           </div>
+          <div>
+            <span>Total Raised</span>
+            <strong>{formatCurrency(candidate.totalRaised)}</strong>
+          </div>
+          <div>
+            <span>Total Spent</span>
+            <strong>{formatCurrency(candidate.totalSpent)}</strong>
+          </div>
+          <div>
+            <span>Filer Entity</span>
+            <strong>{candidate.filerEntityNumber || "Not listed"}</strong>
+          </div>
         </div>
+      </section>
+
+      <CommunityUpdates
+        entityType="candidate"
+        entityKey={candidateEntityKey}
+        entityName={name}
+        pageUrl={Astro.url.pathname}
+      />
+
+      <section class="panel articles-panel">
+        <div class="section-heading">
+          <p class="eyebrow">Articles</p>
+          <h2>Related Coverage</h2>
+        </div>
+
+        <ArticleList articles={relatedArticles} emptyText="No related articles returned yet." />
       </section>
 
       {adminSession && (

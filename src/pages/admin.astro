@@ -3,12 +3,23 @@ export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
 import { currentAdminSession } from "../lib/adminAuth";
+import { communityUpdateDate, getPendingCommunityUpdates } from "../lib/communityUpdates";
+import { cleanText } from "../lib/text";
 
 const session = await currentAdminSession(Astro.request);
 const sent = Astro.url.searchParams.get("sent") === "1";
 const error = Astro.url.searchParams.get("error") || "";
 const message = Astro.url.searchParams.get("message") || "";
 const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
+let pendingCommunityUpdates = [];
+
+if (session) {
+  try {
+    pendingCommunityUpdates = await getPendingCommunityUpdates({ limit: 50 });
+  } catch (error) {
+    console.error(error?.message || "Unable to load pending community updates.");
+  }
+}
 ---
 
 <html lang="en">
@@ -81,6 +92,56 @@ const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
               <a href="/people">Find a legislator</a>
               <a href="/candidates">Find a candidate</a>
             </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Moderation</p>
+              <h2>Community updates</h2>
+              <p>
+                Review comments and photos before they appear on candidate and
+                legislator profile pages.
+              </p>
+            </div>
+
+            {pendingCommunityUpdates.length ? (
+              <div class="moderation-list">
+                {pendingCommunityUpdates.map((update) => (
+                  <article>
+                    <div class="moderation-topline">
+                      <strong>{cleanText(update.entityName || update.entityKey)}</strong>
+                      <span>{cleanText(update.entityType)}</span>
+                    </div>
+
+                    <p class="moderation-meta">
+                      Submitted by {cleanText(update.displayName)}
+                      {communityUpdateDate(update.createdAt) && ` on ${communityUpdateDate(update.createdAt)}`}
+                    </p>
+
+                    {update.pageUrl && <a href={update.pageUrl}>Open profile page</a>}
+                    {update.comment && <p>{cleanText(update.comment)}</p>}
+                    {update.photoUrl && <img src={update.photoUrl} alt="" loading="lazy" />}
+
+                    <div class="moderation-actions">
+                      <form action="/api/admin/community-updates" method="post">
+                        <input type="hidden" name="id" value={update.id} />
+                        <input type="hidden" name="action" value="approve" />
+                        <input type="hidden" name="redirectTo" value="/admin" />
+                        <button type="submit">Approve</button>
+                      </form>
+                      <form action="/api/admin/community-updates" method="post">
+                        <input type="hidden" name="id" value={update.id} />
+                        <input type="hidden" name="action" value="reject" />
+                        <input type="hidden" name="redirectTo" value="/admin" />
+                        <button class="secondary danger" type="submit">Reject</button>
+                      </form>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No community updates are waiting for review.</p>
+            )}
           </section>
 
           <section class="panel">
@@ -232,7 +293,8 @@ const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
 
   .admin-grid .panel:nth-child(2),
   .admin-grid .panel:nth-child(3),
-  .admin-grid .panel:nth-child(4) {
+  .admin-grid .panel:nth-child(4),
+  .admin-grid .panel:nth-child(5) {
     grid-column: 2;
   }
 
@@ -259,6 +321,67 @@ const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+  }
+
+  .moderation-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .moderation-list article {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  .moderation-topline,
+  .moderation-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+  }
+
+  .moderation-topline span {
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 950;
+    padding: 5px 8px;
+    text-transform: capitalize;
+  }
+
+  .moderation-meta,
+  .empty {
+    color: #4b5563;
+    font-weight: 800;
+  }
+
+  .moderation-list img {
+    aspect-ratio: 16 / 9;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: block;
+    margin-top: 12px;
+    object-fit: cover;
+    width: min(420px, 100%);
+  }
+
+  .moderation-actions {
+    justify-content: flex-start;
+    margin-top: 12px;
+  }
+
+  .moderation-actions form {
+    margin: 0;
+  }
+
+  .secondary.danger {
+    border-color: #991b1b;
+    color: #991b1b;
   }
 
   .profile-actions a {
