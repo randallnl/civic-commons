@@ -10,6 +10,7 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_updates (
   display_name TEXT,
   email TEXT,
   comment TEXT,
+  link_url TEXT,
   photo_url TEXT,
   status TEXT NOT NULL DEFAULT 'pending',
   reviewed_by TEXT,
@@ -24,6 +25,7 @@ export function communityUpdatesDb() {
 export async function ensureCommunityUpdatesTable(db = communityUpdatesDb()) {
   if (!db) throw new Error("D1 database binding is not configured.");
   await db.prepare(TABLE_SQL).run();
+  await addColumnIfMissing(db, "community_updates", "link_url", "TEXT");
   await db
     .prepare(
       `CREATE INDEX IF NOT EXISTS idx_community_updates_entity_status
@@ -41,7 +43,7 @@ export async function getApprovedCommunityUpdates(entityType, entityKey, { limit
   const result = await db
     .prepare(
       `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
-              comment, photo_url, created_at
+              comment, link_url, photo_url, created_at
        FROM community_updates
        WHERE entity_type = ?
          AND entity_key = ?
@@ -64,7 +66,7 @@ export async function getPendingCommunityUpdates({ limit = 25 } = {}) {
   const result = await db
     .prepare(
       `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
-              email, comment, photo_url, status, created_at
+              email, comment, link_url, photo_url, status, created_at
        FROM community_updates
        WHERE status = 'pending'
        ORDER BY created_at ASC
@@ -89,6 +91,7 @@ export function normalizeUpdate(update = {}) {
     pageUrl: update.page_url || update.pageUrl || "",
     displayName: cleanText(update.display_name || update.displayName || "Community member"),
     comment: cleanText(update.comment || ""),
+    linkUrl: update.link_url || update.linkUrl || "",
     photoUrl: update.photo_url || update.photoUrl || "",
     createdAt: update.created_at || update.createdAt || "",
   };
@@ -104,4 +107,12 @@ export function communityUpdateDate(value = "") {
     day: "numeric",
     year: "numeric",
   }).format(date);
+}
+
+async function addColumnIfMissing(db, table, column, definition) {
+  const columns = await db.prepare(`PRAGMA table_info(${table})`).all();
+  const hasColumn = (columns.results || []).some((row) => row.name === column);
+  if (hasColumn) return;
+
+  await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
 }

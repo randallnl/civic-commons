@@ -59,6 +59,11 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
         <input name="photo" type="file" accept="image/*" />
       </label>
 
+      <label>
+        Link
+        <input name="linkUrl" type="url" placeholder="https://example.com/context" />
+      </label>
+
       <button type="submit">Submit for Review</button>
     </form>
   </details>
@@ -84,6 +89,11 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
             )}
           </div>
           {update.comment && <p>{cleanText(update.comment)}</p>}
+          {update.linkUrl && (
+            <a class="community-update-link" href={update.linkUrl}>
+              Open linked context
+            </a>
+          )}
         </article>
       ))}
     </div>
@@ -282,6 +292,18 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
     font-weight: 800;
     line-height: 1.5;
     margin: 8px 0 0;
+  }
+
+  .community-update-link {
+    background: #ffffff;
+    border: 1px solid #9ca3af;
+    border-radius: 999px;
+    color: #1f2933;
+    display: inline-flex;
+    font-weight: 900;
+    margin-top: 12px;
+    padding: 8px 11px;
+    text-decoration: none;
   }
 
   .community-update-form {

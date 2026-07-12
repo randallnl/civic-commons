@@ -131,6 +131,7 @@ if (session) {
 
                     {update.pageUrl && <a href={update.pageUrl}>Open profile page</a>}
                     {update.comment && <p>{cleanText(update.comment)}</p>}
+                    {update.linkUrl && <a href={update.linkUrl}>Open submitted link</a>}
                     {update.photoUrl && <img src={update.photoUrl} alt="" loading="lazy" />}
 
                     <div class="moderation-actions">

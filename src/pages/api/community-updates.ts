@@ -16,6 +16,7 @@ export async function POST({ request }) {
     const displayName = String(form.get("displayName") || "").trim() || "Community member";
     const email = String(form.get("email") || "").trim();
     const comment = String(form.get("comment") || "").trim();
+    const linkUrl = normalizeLinkUrl(form.get("linkUrl"));
     const file = form.get("photo");
     redirectTo = safeRedirectPath(form.get("redirectTo")) || pageUrl || "/";
 
@@ -23,8 +24,8 @@ export async function POST({ request }) {
       throw new Error("Choose a candidate or legislator page.");
     }
     if (!entityKey) throw new Error("Profile identifier is required.");
-    if (!comment && (!file || typeof file === "string" || !file.size)) {
-      throw new Error("Add a comment or upload a photo.");
+    if (!comment && !linkUrl && (!file || typeof file === "string" || !file.size)) {
+      throw new Error("Add a comment, link, or photo.");
     }
 
     const photoUrl =
@@ -40,9 +41,9 @@ export async function POST({ request }) {
       .prepare(
         `INSERT INTO community_updates (
           entity_type, entity_key, entity_name, page_url, display_name,
-          email, comment, photo_url, status, created_at
+          email, comment, link_url, photo_url, status, created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)`,
       )
       .bind(
         entityType,
@@ -52,6 +53,7 @@ export async function POST({ request }) {
         displayName,
         email,
         comment,
+        linkUrl,
         photoUrl,
       )
       .run();
@@ -134,6 +136,22 @@ function safeRedirectPath(value) {
   const path = String(value || "").trim();
   if (!path.startsWith("/") || path.startsWith("//")) return "";
   return path;
+}
+
+function normalizeLinkUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  try {
+    const url = new URL(raw);
+    if (!["http:", "https:"].includes(url.protocol)) {
+      throw new Error("Only http or https links are supported.");
+    }
+    return url.toString();
+  } catch (error) {
+    if (error?.message?.includes("Only http")) throw error;
+    throw new Error("Add a valid link URL.");
+  }
 }
 
 function redirectWithMessage(request, path, message) {
