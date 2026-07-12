@@ -3,6 +3,7 @@ export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
 import { currentAdminSession } from "../lib/adminAuth";
+import { getProfileGaps } from "../lib/adminProfileGaps";
 import {
   articleSubmissionDate,
   getPendingArticleSubmissions,
@@ -15,8 +16,11 @@ const sent = Astro.url.searchParams.get("sent") === "1";
 const error = Astro.url.searchParams.get("error") || "";
 const message = Astro.url.searchParams.get("message") || "";
 const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
+const gapType = Astro.url.searchParams.get("gapType") || "all";
+const gapMissing = Astro.url.searchParams.get("gapMissing") || "any";
 let pendingCommunityUpdates = [];
 let pendingArticleSubmissions = [];
+let profileGaps = { results: [], counts: {} };
 
 if (session) {
   try {
@@ -29,6 +33,16 @@ if (session) {
     pendingArticleSubmissions = await getPendingArticleSubmissions({ limit: 50 });
   } catch (error) {
     console.error(error?.message || "Unable to load pending article submissions.");
+  }
+
+  try {
+    profileGaps = await getProfileGaps({
+      profileType: gapType,
+      missing: gapMissing,
+      limit: 100,
+    });
+  } catch (error) {
+    console.error(error?.message || "Unable to load profile gaps.");
   }
 }
 ---
@@ -103,6 +117,72 @@ if (session) {
               <a href="/people">Find a legislator</a>
               <a href="/candidates">Find a candidate</a>
             </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Profile Cleanup</p>
+              <h2>Missing profile info</h2>
+              <p>
+                Find candidates and legislators missing photos, emails, or
+                websites. Legislator websites are not currently stored in the
+                source D1 legislator table, so the website filter applies to
+                candidates.
+              </p>
+            </div>
+
+            <form class="gap-filters" action="/admin" method="get">
+              <label>
+                Profile type
+                <select name="gapType">
+                  <option value="all" selected={gapType === "all"}>All profiles</option>
+                  <option value="representative" selected={gapType === "representative"}>Legislators</option>
+                  <option value="candidate" selected={gapType === "candidate"}>Candidates</option>
+                </select>
+              </label>
+
+              <label>
+                Missing field
+                <select name="gapMissing">
+                  <option value="any" selected={gapMissing === "any"}>Any missing field</option>
+                  <option value="photo" selected={gapMissing === "photo"}>Photo</option>
+                  <option value="email" selected={gapMissing === "email"}>Email</option>
+                  <option value="website" selected={gapMissing === "website"}>Website</option>
+                </select>
+              </label>
+
+              <button type="submit">Filter</button>
+            </form>
+
+            <div class="gap-summary">
+              <span><strong>{profileGaps.counts.total || 0}</strong> Results</span>
+              <span><strong>{profileGaps.counts.representatives || 0}</strong> Legislators</span>
+              <span><strong>{profileGaps.counts.candidates || 0}</strong> Candidates</span>
+              <span><strong>{profileGaps.counts.missingPhoto || 0}</strong> Missing Photos</span>
+              <span><strong>{profileGaps.counts.missingEmail || 0}</strong> Missing Emails</span>
+              <span><strong>{profileGaps.counts.missingWebsite || 0}</strong> Missing Websites</span>
+            </div>
+
+            {profileGaps.results.length ? (
+              <div class="profile-gap-list">
+                {profileGaps.results.map((profile) => (
+                  <article>
+                    <div>
+                      <strong>{cleanText(profile.name || profile.key)}</strong>
+                      <p>{cleanText(profile.subtitle || profile.type)}</p>
+                    </div>
+                    <div class="missing-chips">
+                      {profile.missing.photo && <span>Missing photo</span>}
+                      {profile.missing.email && <span>Missing email</span>}
+                      {profile.missing.website && <span>Missing website</span>}
+                    </div>
+                    <a href={profile.profilePath}>Open profile</a>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No profiles match these missing-info filters.</p>
+            )}
           </section>
 
           <section class="panel">
@@ -390,7 +470,8 @@ if (session) {
   .admin-grid .panel:nth-child(3),
   .admin-grid .panel:nth-child(4),
   .admin-grid .panel:nth-child(5),
-  .admin-grid .panel:nth-child(6) {
+  .admin-grid .panel:nth-child(6),
+  .admin-grid .panel:nth-child(7) {
     grid-column: 2;
   }
 
@@ -417,6 +498,86 @@ if (session) {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+  }
+
+  .gap-filters {
+    align-items: end;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+    margin-bottom: 18px;
+  }
+
+  .gap-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .gap-summary span,
+  .missing-chips span {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #374151;
+    font-size: 0.78rem;
+    font-weight: 900;
+    padding: 7px 10px;
+  }
+
+  .gap-summary strong {
+    color: #1f2933;
+  }
+
+  .profile-gap-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .profile-gap-list article {
+    align-items: center;
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1.1fr) minmax(180px, 0.9fr) auto;
+    padding: 14px;
+  }
+
+  .profile-gap-list strong {
+    display: block;
+    font-size: 1.02rem;
+  }
+
+  .profile-gap-list p {
+    color: #4b5563;
+    font-size: 0.9rem;
+    font-weight: 750;
+    line-height: 1.35;
+    margin: 4px 0 0;
+  }
+
+  .profile-gap-list a {
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    padding: 9px 12px;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .missing-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .missing-chips span {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #7f1d1d;
   }
 
   .moderation-list {
@@ -607,11 +768,17 @@ if (session) {
       grid-template-columns: 1fr;
     }
 
+    .gap-filters,
+    .profile-gap-list article {
+      grid-template-columns: 1fr;
+    }
+
     .admin-grid .panel:nth-child(2),
     .admin-grid .panel:nth-child(3),
     .admin-grid .panel:nth-child(4),
     .admin-grid .panel:nth-child(5),
-    .admin-grid .panel:nth-child(6) {
+    .admin-grid .panel:nth-child(6),
+    .admin-grid .panel:nth-child(7) {
       grid-column: auto;
     }
   }
