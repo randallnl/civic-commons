@@ -3620,7 +3620,7 @@ async function hydrateArticles(env, articles) {
   for (const article of articles || []) {
     const article_id = article.article_id;
 
-    const [towns, legislators, issueAreas, impactTypes, bills] =
+    const [towns, legislators, candidates, issueAreas, impactTypes, bills] =
       await Promise.all([
         env.DB.prepare(`
           SELECT town
@@ -3647,6 +3647,25 @@ async function hydrateArticles(env, articles) {
             OR l.employeeno = al.employeeno
           WHERE al.article_id = ?
           ORDER BY legislator_name_raw
+        `).bind(article_id).all(),
+
+        env.DB.prepare(`
+          SELECT
+            ac.filer_entity_number,
+            ac.candidate_name_raw,
+            c.candidate_first_name,
+            c.candidate_last_name,
+            c.candidate_first_name || ' ' || c.candidate_last_name AS name,
+            c.office,
+            c.county,
+            c.district,
+            c.political_party,
+            c.slug
+          FROM d1_article_candidates ac
+          LEFT JOIN candidates c
+            ON c.filer_entity_number = ac.filer_entity_number
+          WHERE ac.article_id = ?
+          ORDER BY candidate_name_raw
         `).bind(article_id).all(),
 
         env.DB.prepare(`
@@ -3687,6 +3706,7 @@ async function hydrateArticles(env, articles) {
       ...article,
       towns: towns.results || [],
       legislators: legislators.results || [],
+      candidates: candidates.results || [],
       issueAreas: issueAreas.results || [],
       impactTypes: impactTypes.results || [],
       bills: bills.results || [],

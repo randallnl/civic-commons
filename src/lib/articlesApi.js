@@ -55,6 +55,32 @@ export async function getArticles({
   };
 }
 
+export async function getArticle(articleId, {
+  apiBase = articlesApiBase(),
+  runtimeEnv,
+} = {}) {
+  const response = await civicApiFetch(
+    `${apiBase}/articles/${encodeURIComponent(articleId)}`,
+    { runtimeEnv },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Unable to load article: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return {
+    ...data,
+    article: data.article ? normalizeArticle(data.article) : null,
+  };
+}
+
+export function articleDetailPath(article = {}) {
+  return article.article_id || article.articleId
+    ? `/articles/${encodeURIComponent(article.article_id || article.articleId)}`
+    : article.url || "/articles";
+}
+
 function normalizeArticle(article = {}) {
   return {
     ...article,
@@ -75,7 +101,14 @@ function normalizeArticle(article = {}) {
       "firstname",
       "lastname",
     ]),
+    candidates: cleanRelationList(article.candidates, [
+      "candidate_name_raw",
+      "name",
+      "candidate_first_name",
+      "candidate_last_name",
+    ]),
     issueAreas: cleanRelationList(article.issueAreas, ["issue_area", "name"]),
+    impactTypes: cleanRelationList(article.impactTypes, ["impact_type", "name"]),
   };
 }
 

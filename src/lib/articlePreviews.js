@@ -42,7 +42,7 @@ function normalizePreview(preview) {
   return Object.values(normalized).some(Boolean) ? normalized : null;
 }
 
-async function getArticlePreview(articleUrl, apiBase = previewApiBase()) {
+export async function getArticlePreview(articleUrl, apiBase = previewApiBase()) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5_000);
 

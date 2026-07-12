@@ -3,6 +3,10 @@ export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
 import { currentAdminSession } from "../lib/adminAuth";
+import {
+  articleSubmissionDate,
+  getPendingArticleSubmissions,
+} from "../lib/articleSubmissions";
 import { communityUpdateDate, getPendingCommunityUpdates } from "../lib/communityUpdates";
 import { cleanText } from "../lib/text";
 
@@ -12,12 +16,19 @@ const error = Astro.url.searchParams.get("error") || "";
 const message = Astro.url.searchParams.get("message") || "";
 const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
 let pendingCommunityUpdates = [];
+let pendingArticleSubmissions = [];
 
 if (session) {
   try {
     pendingCommunityUpdates = await getPendingCommunityUpdates({ limit: 50 });
   } catch (error) {
     console.error(error?.message || "Unable to load pending community updates.");
+  }
+
+  try {
+    pendingArticleSubmissions = await getPendingArticleSubmissions({ limit: 50 });
+  } catch (error) {
+    console.error(error?.message || "Unable to load pending article submissions.");
   }
 }
 ---
@@ -141,6 +152,75 @@ if (session) {
               </div>
             ) : (
               <p class="empty">No community updates are waiting for review.</p>
+            )}
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Moderation</p>
+              <h2>Submitted articles</h2>
+              <p>
+                Review suggested coverage and approve it into the article
+                database with automatically detected bills, people, and towns.
+              </p>
+            </div>
+
+            {pendingArticleSubmissions.length ? (
+              <div class="moderation-list">
+                {pendingArticleSubmissions.map((submission) => (
+                  <article>
+                    <div class="moderation-topline">
+                      <strong>{cleanText(submission.title || submission.url)}</strong>
+                      <span>{cleanText(submission.publisher || "Submitted article")}</span>
+                    </div>
+
+                    <p class="moderation-meta">
+                      Submitted
+                      {submission.submitterName && ` by ${cleanText(submission.submitterName)}`}
+                      {articleSubmissionDate(submission.createdAt) &&
+                        ` on ${articleSubmissionDate(submission.createdAt)}`}
+                    </p>
+
+                    <a href={submission.url}>Open original article</a>
+                    {submission.summary && <p>{cleanText(submission.summary)}</p>}
+
+                    <div class="detected-relations">
+                      <strong>Detected links</strong>
+                      <div>
+                        {(submission.scan.bills || []).map((bill) => (
+                          <span>{cleanText(bill.condensedbillno)}</span>
+                        ))}
+                        {(submission.scan.legislators || []).map((person) => (
+                          <span>{cleanText(person.name)}</span>
+                        ))}
+                        {(submission.scan.candidates || []).map((candidate) => (
+                          <span>{cleanText(candidate.name)}</span>
+                        ))}
+                        {(submission.scan.towns || []).map((town) => (
+                          <span>{cleanText(town.town)}</span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div class="moderation-actions">
+                      <form action="/api/admin/article-submissions" method="post">
+                        <input type="hidden" name="id" value={submission.id} />
+                        <input type="hidden" name="action" value="approve" />
+                        <input type="hidden" name="redirectTo" value="/admin" />
+                        <button type="submit">Approve</button>
+                      </form>
+                      <form action="/api/admin/article-submissions" method="post">
+                        <input type="hidden" name="id" value={submission.id} />
+                        <input type="hidden" name="action" value="reject" />
+                        <input type="hidden" name="redirectTo" value="/admin" />
+                        <button class="secondary danger" type="submit">Reject</button>
+                      </form>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No submitted articles are waiting for review.</p>
             )}
           </section>
 
@@ -294,7 +374,8 @@ if (session) {
   .admin-grid .panel:nth-child(2),
   .admin-grid .panel:nth-child(3),
   .admin-grid .panel:nth-child(4),
-  .admin-grid .panel:nth-child(5) {
+  .admin-grid .panel:nth-child(5),
+  .admin-grid .panel:nth-child(6) {
     grid-column: 2;
   }
 
@@ -377,6 +458,34 @@ if (session) {
 
   .moderation-actions form {
     margin: 0;
+  }
+
+  .detected-relations {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .detected-relations > strong {
+    color: #374151;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .detected-relations div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .detected-relations span {
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 900;
+    padding: 5px 8px;
   }
 
   .secondary.danger {

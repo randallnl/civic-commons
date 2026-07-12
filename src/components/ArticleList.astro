@@ -1,7 +1,7 @@
 ---
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
-import { articlePublishDate, articleSourceName } from "../lib/articlesApi";
+import { articleDetailPath, articlePublishDate, articleSourceName } from "../lib/articlesApi";
 
 const { articles = [], emptyText = "No articles found.", compact = false } = Astro.props;
 const previewArticles = await enrichArticlesWithPreviews(articles, { limit: compact ? 8 : 20 });
@@ -19,6 +19,9 @@ function relationLabels(article = {}) {
     ...(article.legislators || [])
       .map((person) => person.matched_name || person.legislator_name_raw)
       .filter(Boolean),
+    ...(article.candidates || [])
+      .map((candidate) => candidate.name || candidate.candidate_name_raw)
+      .filter(Boolean),
     ...(article.issueAreas || []).map((issue) => issue.issue_area).filter(Boolean),
   ].map(cleanText).slice(0, compact ? 4 : 8);
 }
@@ -29,7 +32,7 @@ function relationLabels(article = {}) {
     {previewArticles.map((article) => (
       <article class="article-card">
         {article.preview?.imageUrl && (
-          <a class="article-image" href={article.url} tabindex="-1" aria-hidden="true">
+          <a class="article-image" href={articleDetailPath(article)} tabindex="-1" aria-hidden="true">
             <img src={article.preview.imageUrl} alt="" loading="lazy" />
           </a>
         )}
@@ -41,7 +44,7 @@ function relationLabels(article = {}) {
         </div>
 
         <h3>
-          <a href={article.url}>{cleanText(article.preview?.title || article.title)}</a>
+          <a href={articleDetailPath(article)}>{cleanText(article.preview?.title || article.title)}</a>
         </h3>
 
         {(article.preview?.description || article.summary) && (
@@ -55,6 +58,7 @@ function relationLabels(article = {}) {
             ))}
           </div>
         )}
+        {article.url && <a class="source-link" href={article.url}>Original article</a>}
         </div>
       </article>
     ))}
@@ -136,6 +140,12 @@ function relationLabels(article = {}) {
   }
 
   .relation-chips {
+    margin-top: 12px;
+  }
+
+  .source-link {
+    display: inline-block;
+    font-size: 0.86rem;
     margin-top: 12px;
   }
 

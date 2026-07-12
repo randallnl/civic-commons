@@ -9,6 +9,8 @@ const q = Astro.url.searchParams.get("q")?.trim() || "";
 const bill = Astro.url.searchParams.get("bill")?.trim() || "";
 const town = Astro.url.searchParams.get("town")?.trim() || "";
 const personid = Astro.url.searchParams.get("personid")?.trim() || "";
+const submitted = Astro.url.searchParams.get("submitted") === "1";
+const submitError = Astro.url.searchParams.get("error") || "";
 
 let articles = [];
 let meta = {};
@@ -69,6 +71,54 @@ try {
             <input type="number" name="personid" value={personid} placeholder="11206" />
           </label>
           <button type="submit">Filter</button>
+        </form>
+      </section>
+
+      {submitted && (
+        <p class="status-message success">
+          Thanks. The article was submitted for review and will appear after moderation.
+        </p>
+      )}
+      {submitError && <p class="status-message error">{submitError}</p>}
+
+      <section class="panel submit-panel">
+        <div class="submit-heading">
+          <div>
+            <p class="eyebrow">Suggest Coverage</p>
+            <h2>Submit an article for review</h2>
+          </div>
+          <p>
+            We will scan submitted coverage for mentioned bills, legislators,
+            candidates, and communities before it is approved.
+          </p>
+        </div>
+
+        <form class="article-submit-form" action="/api/articles/submit" method="post">
+          <label class="url-field">
+            <span>Article URL</span>
+            <input type="url" name="url" placeholder="https://example.com/story" required />
+          </label>
+          <label>
+            <span>Title</span>
+            <input name="title" placeholder="Optional" />
+          </label>
+          <label>
+            <span>Source</span>
+            <input name="publisher" placeholder="Optional" />
+          </label>
+          <label class="summary-field">
+            <span>Summary or note</span>
+            <textarea name="summary" rows="3" placeholder="Optional context to help with review"></textarea>
+          </label>
+          <label>
+            <span>Your name</span>
+            <input name="submitterName" autocomplete="name" placeholder="Optional" />
+          </label>
+          <label>
+            <span>Email</span>
+            <input type="email" name="submitterEmail" autocomplete="email" placeholder="Used for moderation only" />
+          </label>
+          <button type="submit">Submit Article</button>
         </form>
       </section>
 
@@ -175,6 +225,69 @@ try {
     padding: 20px;
   }
 
+  .status-message {
+    margin: 0 0 18px;
+  }
+
+  .status-message.success {
+    border-color: #15803d;
+    box-shadow: 4px 4px 0 #15803d;
+  }
+
+  .status-message.error {
+    border-color: #991b1b;
+    box-shadow: 4px 4px 0 #991b1b;
+  }
+
+  .submit-panel {
+    margin-bottom: 20px;
+  }
+
+  .submit-heading {
+    align-items: end;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 0.48fr) minmax(0, 1fr);
+    margin-bottom: 16px;
+  }
+
+  .submit-heading h2 {
+    font-size: 1.45rem;
+    margin: 0;
+  }
+
+  .submit-heading p:not(.eyebrow) {
+    color: #4b5563;
+    font-weight: 800;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .article-submit-form {
+    align-items: end;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(220px, 1.4fr) minmax(160px, 0.8fr) minmax(140px, 0.7fr);
+  }
+
+  .url-field,
+  .summary-field {
+    grid-column: span 3;
+  }
+
+  textarea {
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font: inherit;
+    font-weight: 800;
+    letter-spacing: 0;
+    padding: 10px 12px;
+    resize: vertical;
+    text-transform: none;
+    width: 100%;
+  }
+
   .results-heading {
     align-items: center;
     display: flex;
@@ -189,8 +302,15 @@ try {
   }
 
   @media (max-width: 860px) {
-    .filters {
+    .filters,
+    .article-submit-form,
+    .submit-heading {
       grid-template-columns: 1fr;
+    }
+
+    .url-field,
+    .summary-field {
+      grid-column: auto;
     }
   }
 </style>

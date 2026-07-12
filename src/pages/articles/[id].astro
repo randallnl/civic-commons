@@ -1,0 +1,336 @@
+---
+export const prerender = false;
+
+import TopNav from "../../components/TopNav.astro";
+import { enrichArticlesWithPreviews } from "../../lib/articlePreviews";
+import {
+  articlePublishDate,
+  articleSourceName,
+  getArticle,
+} from "../../lib/articlesApi";
+import { billDetailPath } from "../../lib/billsApi";
+import { candidatePath } from "../../lib/candidatesApi";
+import { cleanText } from "../../lib/text";
+
+const { id } = Astro.params;
+
+let article = null;
+let error = "";
+
+try {
+  const data = await getArticle(id);
+  [article] = await enrichArticlesWithPreviews([data.article], { limit: 1 });
+} catch (loadError) {
+  error = loadError?.message || "Unable to load article.";
+}
+
+if (!article && !error) {
+  return Astro.redirect("/404");
+}
+
+const title = cleanText(article?.preview?.title || article?.title || "Article");
+const description = cleanText(article?.preview?.description || article?.summary || "");
+const source = article ? articleSourceName(article) : "";
+const published = article ? articlePublishDate(article) : "";
+
+function legislatorName(person = {}) {
+  return cleanText(person.matched_name || person.legislator_name_raw || person.name || "");
+}
+
+function legislatorPath(person = {}) {
+  const key = person.personid || person.employeeno || legislatorName(person);
+  return `/people/${encodeURIComponent(String(key))}`;
+}
+
+function candidateLabel(candidate = {}) {
+  return cleanText(candidate.name || candidate.candidate_name_raw || "");
+}
+
+function candidateProfilePath(candidate = {}) {
+  if (candidate.slug) return `/candidates/${encodeURIComponent(candidate.slug)}`;
+  return candidatePath({
+    filerEntityNumber: candidate.filer_entity_number,
+    candidateFirstName: candidate.candidate_first_name,
+    candidateLastName: candidate.candidate_last_name,
+  });
+}
+
+function townPath(town = {}) {
+  const townName = town.town || town.name || town;
+  return `/communities/towns/${encodeURIComponent(townName)}`;
+}
+---
+
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/NH%20DB%20Logo.png" />
+    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.png" />
+    <title>{title} | NH Deserves Better</title>
+    <meta name="description" content={description || "Civic article details and related New Hampshire entities."} />
+  </head>
+
+  <body>
+    <TopNav />
+    <main class="page">
+      <a class="back" href="/articles">Back to articles</a>
+
+      {error ? (
+        <p class="status-message">{error}</p>
+      ) : (
+        <>
+          <section class="article-hero">
+            <div class="article-copy">
+              <p class="eyebrow">Article Details</p>
+              <h1>{title}</h1>
+              <div class="article-meta">
+                {source && <span>Source: {source}</span>}
+                {published && <span>Published: {published}</span>}
+                {article.resource_type && <span>{cleanText(article.resource_type)}</span>}
+              </div>
+              {description && <p class="lede">{description}</p>}
+              {article.url && <a class="primary-link" href={article.url}>Read original article</a>}
+            </div>
+
+            {article.preview?.imageUrl && (
+              <img class="preview-image" src={article.preview.imageUrl} alt="" loading="lazy" />
+            )}
+          </section>
+
+          <section class="detail-grid">
+            <section class="panel">
+              <div class="section-heading">
+                <p class="eyebrow">Mentioned Bills</p>
+                <h2>Bills</h2>
+              </div>
+              {article.bills?.length ? (
+                <div class="relation-list">
+                  {article.bills.map((bill) => (
+                    <a href={billDetailPath(bill.condensedbillno, bill.sessionyear)}>
+                      <strong>{bill.condensedbillno}</strong>
+                      {bill.description && <span>{cleanText(bill.description)}</span>}
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p class="empty">No bill mentions are linked yet.</p>
+              )}
+            </section>
+
+            <section class="panel">
+              <div class="section-heading">
+                <p class="eyebrow">Mentioned People</p>
+                <h2>Legislators</h2>
+              </div>
+              {article.legislators?.length ? (
+                <div class="relation-list">
+                  {article.legislators.map((person) => (
+                    <a href={legislatorPath(person)}>
+                      <strong>{legislatorName(person)}</strong>
+                      <span>{[person.party, person.chamber].filter(Boolean).join(" · ")}</span>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p class="empty">No legislator mentions are linked yet.</p>
+              )}
+            </section>
+
+            <section class="panel">
+              <div class="section-heading">
+                <p class="eyebrow">Mentioned Candidates</p>
+                <h2>Candidates</h2>
+              </div>
+              {article.candidates?.length ? (
+                <div class="relation-list">
+                  {article.candidates.map((candidate) => (
+                    <a href={candidateProfilePath(candidate)}>
+                      <strong>{candidateLabel(candidate)}</strong>
+                      <span>{[candidate.office, candidate.county, candidate.district && `District ${candidate.district}`].filter(Boolean).join(" · ")}</span>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p class="empty">No candidate mentions are linked yet.</p>
+              )}
+            </section>
+
+            <section class="panel">
+              <div class="section-heading">
+                <p class="eyebrow">Community</p>
+                <h2>Towns and Topics</h2>
+              </div>
+              <div class="chip-list">
+                {(article.towns || []).map((town) => (
+                  <a href={townPath(town)}>{cleanText(town.town || town.name || town)}</a>
+                ))}
+                {(article.issueAreas || []).map((issue) => (
+                  <span>{cleanText(issue.issue_area || issue.name)}</span>
+                ))}
+                {(article.impactTypes || []).map((impact) => (
+                  <span>{cleanText(impact.impact_type || impact.name)}</span>
+                ))}
+              </div>
+              {!(article.towns?.length || article.issueAreas?.length || article.impactTypes?.length) && (
+                <p class="empty">No community or topic links are attached yet.</p>
+              )}
+            </section>
+          </section>
+        </>
+      )}
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(body) {
+    margin: 0;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    background: #f7f4ee;
+    color: #1f2933;
+  }
+
+  .page {
+    margin: 0 auto;
+    padding: 40px 0 72px;
+    width: min(1120px, calc(100% - 32px));
+  }
+
+  .back,
+  a {
+    color: #1f2933;
+    font-weight: 850;
+  }
+
+  .article-hero {
+    align-items: center;
+    display: grid;
+    gap: 28px;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+    padding: 42px 0 28px;
+  }
+
+  .eyebrow {
+    color: #6b4f2a;
+    font-size: 0.78rem;
+    font-weight: 950;
+    letter-spacing: 0.12em;
+    margin: 0 0 12px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(2.2rem, 5.2vw, 4.75rem);
+    letter-spacing: 0;
+    line-height: 0.98;
+    margin: 0;
+  }
+
+  h2 {
+    font-size: 1.55rem;
+    margin: 0;
+  }
+
+  .article-meta,
+  .chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .article-meta span,
+  .chip-list a,
+  .chip-list span {
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.8rem;
+    font-weight: 900;
+    padding: 6px 9px;
+    text-decoration: none;
+  }
+
+  .lede {
+    color: #4b5563;
+    font-size: 1.08rem;
+    font-weight: 750;
+    line-height: 1.55;
+    margin: 20px 0 0;
+  }
+
+  .primary-link {
+    background: #1f2933;
+    border-radius: 999px;
+    color: #ffffff;
+    display: inline-flex;
+    margin-top: 22px;
+    padding: 12px 16px;
+    text-decoration: none;
+  }
+
+  .preview-image {
+    aspect-ratio: 16 / 10;
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 10px;
+    box-shadow: 5px 5px 0 #1f2933;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  .detail-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panel,
+  .status-message {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 10px;
+    box-shadow: 4px 4px 0 #1f2933;
+    padding: 20px;
+  }
+
+  .section-heading {
+    margin-bottom: 14px;
+  }
+
+  .relation-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .relation-list a {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: grid;
+    gap: 4px;
+    padding: 12px;
+    text-decoration: none;
+  }
+
+  .relation-list span,
+  .empty {
+    color: #4b5563;
+    font-weight: 750;
+    line-height: 1.45;
+  }
+
+  .empty {
+    margin: 0;
+  }
+
+  @media (max-width: 820px) {
+    .article-hero,
+    .detail-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
