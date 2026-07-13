@@ -3,16 +3,22 @@ export const prerender = false;
 
 import CandidateCard from "../../components/CandidateCard.astro";
 import TopNav from "../../components/TopNav.astro";
-import { candidateOfficePriority, getCandidates, isLegislativeCandidate } from "../../lib/candidatesApi";
+import {
+  candidateName,
+  candidateOfficePriority,
+  getCandidates,
+  isLegislativeCandidate,
+} from "../../lib/candidatesApi";
 import { enrichCandidatesWithLegislators } from "../../lib/candidateLegislators";
 import { civicApiBase, civicApiFetch } from "../../lib/civicApi";
-import { getTownCommunity } from "../../lib/communitiesApi";
+import { getCommunities, getTownCommunity } from "../../lib/communitiesApi";
 
 const API_BASE = civicApiBase();
 
 const address = Astro.url.searchParams.get("address")?.trim() || "";
 const county = Astro.url.searchParams.get("county")?.trim() || "";
 const district = Astro.url.searchParams.get("district")?.trim() || "";
+const name = Astro.url.searchParams.get("name")?.trim() || "";
 const office = Astro.url.searchParams.get("office")?.trim() || "";
 const town = Astro.url.searchParams.get("town")?.trim() || "";
 const electionYear = "2026";
@@ -39,6 +45,8 @@ let candidates = [];
 let meta = {};
 let error = "";
 let resultContext = "";
+let nameOptions = [];
+let townOptions = [];
 
 try {
   if (address) {
@@ -66,6 +74,7 @@ try {
     resultContext = data.town?.name || data.community?.name || town;
   } else {
     const data = await getDirectoryCandidates({
+      q: name,
       county,
       district,
       office: selectedOffice,
@@ -82,13 +91,26 @@ try {
 const visibleCandidates = selectedOffice
   ? filterCandidatesByOffice(candidates, selectedOffice)
   : filterLegislativeCandidates(candidates);
-candidates = prioritizeLegislativeCandidates(visibleCandidates);
+candidates = prioritizeLegislativeCandidates(filterCandidatesByName(visibleCandidates, name));
 candidates = await enrichCandidatesWithLegislators(candidates);
 
-const hasFilters = address || county || district || selectedOffice || town;
+try {
+  nameOptions = await candidateNameOptions();
+} catch (optionsError) {
+  nameOptions = uniqueOptions(candidates.map(candidateName));
+}
+
+try {
+  townOptions = await communityTownOptions();
+} catch (optionsError) {
+  townOptions = town ? [town] : [];
+}
+
+const hasFilters = address || county || district || selectedOffice || town || name;
 const resultCount = candidates.length;
 
 async function getDirectoryCandidates({
+  q = "",
   county = "",
   district = "",
   office = "",
@@ -97,6 +119,7 @@ async function getDirectoryCandidates({
 } = {}) {
   if (office) {
     return getCandidates({
+      q,
       county,
       district,
       office,
@@ -107,6 +130,7 @@ async function getDirectoryCandidates({
 
   const [houseData, senateData] = await Promise.all([
     getCandidates({
+      q,
       county,
       district,
       office: "State Representative",
@@ -114,6 +138,7 @@ async function getDirectoryCandidates({
       limit,
     }),
     getCandidates({
+      q,
       county,
       district,
       office: "State Senate",
@@ -232,6 +257,15 @@ function filterCandidatesByOffice(items = [], selectedOffice = "") {
   );
 }
 
+function filterCandidatesByName(items = [], filter = "") {
+  const nameFilter = filter.trim().toLowerCase();
+  if (!nameFilter) return items;
+
+  return items.filter((candidate) =>
+    candidateName(candidate).toLowerCase().includes(nameFilter),
+  );
+}
+
 function filterLegislativeCandidates(items = []) {
   return items.filter(isLegislativeCandidate);
 }
@@ -264,6 +298,57 @@ function formatAddress(normalized = {}) {
   ]
     .filter(Boolean)
     .join(", ");
+}
+
+async function candidateNameOptions() {
+  const data = await getDirectoryCandidates({ electionYear, limit: 200 });
+  return uniqueOptions(
+    filterLegislativeCandidates(data.candidates || []).map(candidateName),
+  );
+}
+
+async function communityTownOptions() {
+  const data = await getCommunities({ body: "house", limit: 500, articleLimit: 0 });
+  return uniqueOptions(
+    (data.communities || []).flatMap((community) =>
+      townsFromValue(
+        community.townsRepresented ||
+          community.towns ||
+          community.towns_represented ||
+          community.communities_represented ||
+          [],
+      ),
+    ),
+  );
+}
+
+function townsFromValue(value = []) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) =>
+        typeof item === "object" && item !== null
+          ? item.town || item.name || item.label
+          : item,
+      )
+      .map(normalizeTownOption)
+      .filter(Boolean);
+  }
+
+  return String(value || "")
+    .split(/[,;|]/)
+    .map(normalizeTownOption)
+    .filter(Boolean);
+}
+
+function normalizeTownOption(value = "") {
+  return String(value || "")
+    .replace(/\s*-\s*Ward\s+\d+$/i, "")
+    .trim();
+}
+
+function uniqueOptions(values = []) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
 }
 ---
 
@@ -311,6 +396,20 @@ function formatAddress(normalized = {}) {
 
         <form class="filters" action="/candidates" method="get">
           <label>
+            <span>Name</span>
+            <input
+              type="search"
+              name="name"
+              value={name}
+              list="candidateNameOptions"
+              placeholder="Start typing a candidate"
+              autocomplete="off"
+            />
+            <datalist id="candidateNameOptions">
+              {nameOptions.map((option) => <option value={option} />)}
+            </datalist>
+          </label>
+          <label>
             <span>County</span>
             <select name="county">
               <option value="">All counties</option>
@@ -341,7 +440,17 @@ function formatAddress(normalized = {}) {
           </label>
           <label>
             <span>Town</span>
-            <input type="text" name="town" value={town} placeholder="Manchester" />
+            <input
+              type="search"
+              name="town"
+              value={town}
+              list="candidateTownOptions"
+              placeholder="Start typing a town"
+              autocomplete="off"
+            />
+            <datalist id="candidateTownOptions">
+              {townOptions.map((option) => <option value={option} />)}
+            </datalist>
           </label>
           <button type="submit">Filter</button>
         </form>
@@ -452,7 +561,7 @@ function formatAddress(normalized = {}) {
   }
 
   .filters {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) 150px;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) 150px;
   }
 
   label {
