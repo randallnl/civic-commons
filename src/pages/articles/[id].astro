@@ -9,8 +9,14 @@ import {
   articleSourceName,
   getArticle,
 } from "../../lib/articlesApi";
-import { billDetailPath } from "../../lib/billsApi";
-import { candidatePath } from "../../lib/candidatesApi";
+import { billDetailPath, getBills } from "../../lib/billsApi";
+import {
+  candidateName,
+  candidatePath,
+  getCandidates,
+  isLegislativeCandidate,
+} from "../../lib/candidatesApi";
+import { getRepresentatives, repName } from "../../lib/repsApi";
 import { cleanText } from "../../lib/text";
 
 const { id } = Astro.params;
@@ -20,6 +26,9 @@ let error = "";
 const adminSession = await currentAdminSession(Astro.request);
 const message = Astro.url.searchParams.get("message") || "";
 const actionError = Astro.url.searchParams.get("error") || "";
+let billOptions = [];
+let legislatorOptions = [];
+let candidateOptions = [];
 
 try {
   const data = await getArticle(id);
@@ -30,6 +39,22 @@ try {
 
 if (!article && !error) {
   return Astro.redirect("/404");
+}
+
+if (adminSession) {
+  try {
+    const [billData, repData, candidateData] = await Promise.all([
+      getBills({ limit: 300 }),
+      getRepresentatives({ limit: 700 }),
+      getCandidates({ electionYear: 2026, limit: 700 }),
+    ]);
+
+    billOptions = billData.bills || [];
+    legislatorOptions = repData.representatives || [];
+    candidateOptions = (candidateData.candidates || []).filter(isLegislativeCandidate);
+  } catch (optionError) {
+    console.error(optionError?.message || "Unable to load article link options.");
+  }
 }
 
 const title = cleanText(article?.preview?.title || article?.title || "Article");
@@ -62,6 +87,37 @@ function candidateProfilePath(candidate = {}) {
 function townPath(town = {}) {
   const townName = town.town || town.name || town;
   return `/communities/towns/${encodeURIComponent(townName)}`;
+}
+
+function billOptionValue(bill = {}) {
+  return bill.condensedbillno || bill.bill_number || "";
+}
+
+function billOptionLabel(bill = {}) {
+  return [
+    billOptionValue(bill),
+    cleanText(bill.name || bill.title || bill.description || ""),
+    bill.sessionyear || bill.year,
+  ].filter(Boolean).join(" - ");
+}
+
+function legislatorOptionLabel(rep = {}) {
+  return [
+    repName(rep),
+    rep.chamber || rep.legislativebody,
+    rep.district || rep.raw_district,
+    rep.party,
+  ].filter(Boolean).join(" - ");
+}
+
+function candidateOptionLabel(candidate = {}) {
+  return [
+    candidateName(candidate),
+    candidate.office,
+    candidate.county,
+    candidate.district ? `District ${candidate.district}` : "",
+    candidate.politicalParty,
+  ].filter(Boolean).join(" - ");
 }
 ---
 
@@ -191,9 +247,8 @@ function townPath(town = {}) {
                 <h2>Add article links</h2>
                 <p>
                   Add comma-separated bills, legislators, or candidates to this
-                  article. Legislators can use person ID, employee number, slug,
-                  or full name. Candidates can use filer number, slug, or full
-                  name.
+                  article. Start typing to choose from the dropdown options, or
+                  paste known IDs directly.
                 </p>
               </div>
 
@@ -203,16 +258,37 @@ function townPath(town = {}) {
 
                 <label>
                   Bills
-                  <input name="bills" placeholder="HB155, SB2" />
+                  <input name="bills" list="article-bill-options" placeholder="HB155, SB2" />
+                  <small class="field-help">Use bill codes from the dropdown; comma-separate multiple bills.</small>
                 </label>
                 <label>
                   Legislators
-                  <input name="legislators" placeholder="personid, employeeno, slug, or name" />
+                  <input name="legislators" list="article-legislator-options" placeholder="personid, employeeno, slug, or name" />
+                  <small class="field-help">Dropdown values use personid. Comma-separate multiple legislators.</small>
                 </label>
                 <label>
                   Candidates
-                  <input name="candidates" placeholder="filer number, slug, or name" />
+                  <input name="candidates" list="article-candidate-options" placeholder="filer number, slug, or name" />
+                  <small class="field-help">Dropdown values use filer entity numbers. Comma-separate multiple candidates.</small>
                 </label>
+
+                <datalist id="article-bill-options">
+                  {billOptions.map((bill) => (
+                    <option value={billOptionValue(bill)} label={billOptionLabel(bill)} />
+                  ))}
+                </datalist>
+
+                <datalist id="article-legislator-options">
+                  {legislatorOptions.map((rep) => (
+                    <option value={rep.personid || rep.id} label={legislatorOptionLabel(rep)} />
+                  ))}
+                </datalist>
+
+                <datalist id="article-candidate-options">
+                  {candidateOptions.map((candidate) => (
+                    <option value={candidate.filerEntityNumber} label={candidateOptionLabel(candidate)} />
+                  ))}
+                </datalist>
 
                 <button type="submit">Add Links</button>
               </form>
@@ -383,6 +459,15 @@ function townPath(town = {}) {
     padding: 11px 12px;
     text-transform: none;
     width: 100%;
+  }
+
+  .field-help {
+    color: #6b7280;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.35;
+    text-transform: none;
   }
 
   .admin-link-form button {
