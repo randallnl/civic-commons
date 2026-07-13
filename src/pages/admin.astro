@@ -28,6 +28,7 @@ const gapOfficeOptions = [
 let pendingCommunityUpdates = [];
 let pendingArticleSubmissions = [];
 let profileGaps = { results: [], counts: {} };
+let gapProfileLabel = "";
 
 if (session) {
   try {
@@ -53,6 +54,9 @@ if (session) {
   } catch (error) {
     console.error(error?.message || "Unable to load profile gaps.");
   }
+
+  gapProfileLabel = (profileGaps.nameOptions || [])
+    .find((option) => option.value === gapProfile)?.label || "";
 }
 ---
 
@@ -173,14 +177,20 @@ if (session) {
 
               <label>
                 Name
-                <select name="gapProfile">
-                  <option value="">All names</option>
+                <input
+                  id="gapProfileSearch"
+                  name="gapProfileSearch"
+                  list="gapProfileOptions"
+                  value={cleanText(gapProfileLabel)}
+                  placeholder="Start typing a name"
+                  autocomplete="off"
+                />
+                <input id="gapProfileValue" type="hidden" name="gapProfile" value={gapProfile} />
+                <datalist id="gapProfileOptions">
                   {(profileGaps.nameOptions || []).map((option) => (
-                    <option value={option.value} selected={gapProfile === option.value}>
-                      {cleanText(option.label)}
-                    </option>
+                    <option value={cleanText(option.label)} data-profile-value={option.value} />
                   ))}
-                </select>
+                </datalist>
               </label>
 
               <button type="submit">Filter</button>
@@ -426,6 +436,27 @@ if (session) {
         </div>
       )}
     </main>
+    <script>
+      const profileSearch = document.getElementById("gapProfileSearch");
+      const profileValue = document.getElementById("gapProfileValue");
+      const profileOptions = Array.from(
+        document.querySelectorAll("#gapProfileOptions option"),
+      );
+      const profileOptionMap = new Map(
+        profileOptions.map((option) => [
+          option.value,
+          option.dataset.profileValue || "",
+        ]),
+      );
+
+      function syncProfileFilterValue() {
+        if (!profileSearch || !profileValue) return;
+        profileValue.value = profileOptionMap.get(profileSearch.value) || "";
+      }
+
+      profileSearch?.addEventListener("input", syncProfileFilterValue);
+      profileSearch?.form?.addEventListener("submit", syncProfileFilterValue);
+    </script>
   </body>
 </html>
 
