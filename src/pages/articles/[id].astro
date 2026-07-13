@@ -268,8 +268,20 @@ function candidateOptionLabel(candidate = {}) {
                 </label>
                 <label>
                   Candidates
-                  <input name="candidates" list="article-candidate-options" placeholder="filer number, slug, or name" />
-                  <small class="field-help">Dropdown values use filer entity numbers. Comma-separate multiple candidates.</small>
+                  <select name="candidates">
+                    <option value="">Choose a candidate</option>
+                    {candidateOptions.map((candidate) => (
+                      <option value={candidate.filerEntityNumber}>
+                        {candidateOptionLabel(candidate)}
+                      </option>
+                    ))}
+                  </select>
+                  <small class="field-help">Dropdown values save the candidate filer entity number.</small>
+                </label>
+                <label>
+                  Candidate IDs
+                  <input name="candidateLinks" list="article-candidate-options" placeholder="filer number, slug, or name" />
+                  <small class="field-help">Optional: paste comma-separated candidate IDs or names.</small>
                 </label>
 
                 <datalist id="article-bill-options">
@@ -434,7 +446,7 @@ function candidateOptionLabel(candidate = {}) {
     align-items: end;
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
   }
 
   .admin-link-form label {
@@ -447,7 +459,8 @@ function candidateOptionLabel(candidate = {}) {
     text-transform: uppercase;
   }
 
-  .admin-link-form input {
+  .admin-link-form input,
+  .admin-link-form select {
     background: #fffaf1;
     border: 1px solid #9ca3af;
     border-radius: 12px;

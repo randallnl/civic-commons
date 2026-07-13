@@ -17,13 +17,21 @@ export async function POST({ request }) {
     await addManualArticleLinks(articleId, {
       bills: String(form.get("bills") || ""),
       legislators: String(form.get("legislators") || ""),
-      candidates: String(form.get("candidates") || ""),
+      candidates: joinedFormValues(form, ["candidates", "candidateLinks"]),
     });
 
     return redirectWithMessage(request, redirectTo, "Article links updated.");
   } catch (error) {
     return redirectWithError(request, redirectTo, error?.message || "Unable to update article links.");
   }
+}
+
+function joinedFormValues(form, names) {
+  return names
+    .flatMap((name) => form.getAll(name))
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join(", ");
 }
 
 function safeRedirectPath(value) {
