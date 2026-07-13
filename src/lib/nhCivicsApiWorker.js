@@ -2128,7 +2128,7 @@ async function getCandidatesForDistrictMappings(env, districts, electionYear) {
       conditions.push(`
         (
           c.office = 'State Representative'
-          AND cc.source_county_id = ?
+          AND c.source_county_id = ?
           AND c.district = ?
         )
       `);
@@ -2139,10 +2139,9 @@ async function getCandidatesForDistrictMappings(env, districts, electionYear) {
   if (!conditions.length) return [];
 
   const result = await env.DB.prepare(`
-    SELECT DISTINCT ${candidateSelectColumns("c")}
-    FROM candidates c
-    LEFT JOIN county_codes cc
-      ON LOWER(cc.name) = LOWER(c.county)
+    ${candidateBaseCte()}
+    SELECT DISTINCT ${candidateBaseSelectColumns()}
+    FROM candidate_base c
     WHERE c.election_year = ?
       AND (${conditions.map((condition) => `(${condition})`).join(" OR ")})
     ORDER BY
@@ -2604,45 +2603,45 @@ async function handleCandidates(request, env) {
     const search = `%${q}%`;
     where.push(`
       (
-        candidate_first_name LIKE ?
-        OR candidate_last_name LIKE ?
-        OR candidate_first_name || ' ' || candidate_last_name LIKE ?
-        OR slug LIKE ?
-        OR office LIKE ?
-        OR county LIKE ?
+        c.candidate_first_name LIKE ?
+        OR c.candidate_last_name LIKE ?
+        OR c.candidate_first_name || ' ' || c.candidate_last_name LIKE ?
+        OR c.slug LIKE ?
+        OR c.office LIKE ?
+        OR c.county LIKE ?
       )
     `);
     binds.push(search, search, search, search, search, search);
   }
 
   if (officeType) {
-    where.push(`LOWER(office_type) = LOWER(?)`);
+    where.push(`LOWER(c.office_type) = LOWER(?)`);
     binds.push(officeType);
   }
 
   if (office) {
-    where.push(`LOWER(office) = LOWER(?)`);
+    where.push(`LOWER(c.office) = LOWER(?)`);
     binds.push(office);
   }
 
   if (county) {
-    where.push(`LOWER(county) = LOWER(?)`);
+    where.push(`LOWER(c.county) = LOWER(?)`);
     binds.push(county);
   }
 
   if (district) {
     const districtNumber = districtNumberFilter(district);
     if (districtNumber !== null) {
-      where.push(`CAST(district AS INTEGER) = ?`);
+      where.push(`CAST(c.district AS INTEGER) = ?`);
       binds.push(districtNumber);
     } else {
-      where.push(`district = ?`);
+      where.push(`c.district = ?`);
       binds.push(district);
     }
   }
 
   if (party) {
-    where.push(`LOWER(political_party) = LOWER(?)`);
+    where.push(`LOWER(c.political_party) = LOWER(?)`);
     binds.push(party);
   }
 
@@ -2651,22 +2650,23 @@ async function handleCandidates(request, env) {
     if (!Number.isInteger(year)) {
       return json({ error: "electionYear must be a number." }, 400);
     }
-    where.push(`election_year = ?`);
+    where.push(`c.election_year = ?`);
     binds.push(year);
   }
 
   const result = await env.DB.prepare(`
-    SELECT ${candidateSelectColumns()}
-    FROM candidates
+    ${candidateBaseCte()}
+    SELECT ${candidateBaseSelectColumns()}
+    FROM candidate_base c
     WHERE ${where.join(" AND ")}
     ORDER BY
-      election_year DESC,
-      office_type,
-      office,
-      county,
-      CAST(COALESCE(district, '0') AS INTEGER),
-      candidate_last_name,
-      candidate_first_name
+      c.election_year DESC,
+      c.office_type,
+      c.office,
+      c.county,
+      CAST(COALESCE(c.district, '0') AS INTEGER),
+      c.candidate_last_name,
+      c.candidate_first_name
     LIMIT ?
     OFFSET ?
   `)
@@ -2701,13 +2701,15 @@ async function handleCandidateDetail(request, env) {
   }
 
   const candidate = await env.DB.prepare(`
-    SELECT ${candidateSelectColumns()}
-    FROM candidates
-    WHERE filer_entity_number = ?
-      OR slug = ?
+    ${candidateBaseCte()}
+    SELECT ${candidateBaseSelectColumns()}
+    FROM candidate_base c
+    WHERE c.filer_entity_number = ?
+      OR c.slug = ?
+      OR CAST(c.person_id AS TEXT) = ?
     LIMIT 1
   `)
-    .bind(identifier, identifier)
+    .bind(identifier, identifier, identifier)
     .first();
 
   if (!candidate) {
@@ -2717,7 +2719,7 @@ async function handleCandidateDetail(request, env) {
   return json({
     candidate: {
       ...formatCandidate(candidate),
-      personId: await unifiedPersonIdForCandidate(env, candidate),
+      personId: candidate.person_id || await unifiedPersonIdForCandidate(env, candidate),
     },
   });
 }
@@ -2745,22 +2747,21 @@ async function getCandidatesForAddressDistricts(
     if (!district.county || !district.district) continue;
 
     conditions.push(`
-      (
-        c.office = 'State Representative'
-        AND cc.source_county_id = ?
-        AND c.district = ?
-      )
-    `);
+        (
+          c.office = 'State Representative'
+          AND c.source_county_id = ?
+          AND c.district = ?
+        )
+      `);
     binds.push(district.county, String(district.district));
   }
 
   if (!conditions.length) return [];
 
   const result = await env.DB.prepare(`
-    SELECT DISTINCT ${candidateSelectColumns("c")}
-    FROM candidates c
-    LEFT JOIN county_codes cc
-      ON LOWER(cc.name) = LOWER(c.county)
+    ${candidateBaseCte()}
+    SELECT DISTINCT ${candidateBaseSelectColumns()}
+    FROM candidate_base c
     WHERE c.election_year = ?
       AND (${conditions.map((condition) => `(${condition})`).join(" OR ")})
     ORDER BY
@@ -2774,6 +2775,96 @@ async function getCandidatesForAddressDistricts(
     .all();
 
   return (result.results || []).map(formatCandidate);
+}
+
+function candidateBaseCte() {
+  return `
+    WITH active_legislator_roles AS (
+      SELECT *
+      FROM d1_person_legislator_roles
+      WHERE active = 1
+        AND session_year = 2026
+    ),
+    candidate_base AS (
+      SELECT
+        p.id AS person_id,
+        COALESCE(cr.filer_entity_number, p.filer_entity_number, CAST(p.id AS TEXT)) AS filer_entity_number,
+        p.firstname AS candidate_first_name,
+        p.lastname AS candidate_last_name,
+        COALESCE(NULLIF(cr.office_type, ''), 'General Court') AS office_type,
+        COALESCE(
+          NULLIF(cr.office, ''),
+          CASE
+            WHEN lr.legislativebody = 'S' THEN 'State Senate'
+            WHEN lr.legislativebody = 'H' THEN 'State Representative'
+            ELSE ''
+          END
+        ) AS office,
+        COALESCE(NULLIF(cr.county, ''), cc.name, '') AS county,
+        COALESCE(NULLIF(cr.district, ''), lr.district, '') AS district,
+        COALESCE(
+          NULLIF(cr.political_party, ''),
+          CASE
+            WHEN UPPER(p.party) = 'R' THEN 'Republican Party'
+            WHEN UPPER(p.party) = 'D' THEN 'Democratic Party'
+            ELSE p.party
+          END,
+          ''
+        ) AS political_party,
+        COALESCE(cr.election_year, 2026) AS election_year,
+        COALESCE(NULLIF(cr.election_cycle, ''), '2026 Election Cycle') AS election_cycle,
+        COALESCE(cr.total_raised, 0) AS total_raised,
+        COALESCE(cr.total_spent, 0) AS total_spent,
+        COALESCE(NULLIF(p.website_url, ''), c.candidate_website, '') AS candidate_website,
+        COALESCE(NULLIF(p.email, ''), c.candidate_email, '') AS candidate_email,
+        COALESCE(NULLIF(p.photo_url, ''), c.photo_url, '') AS photo_url,
+        p.slug AS slug,
+        p.is_free_stater AS is_free_stater,
+        cc.source_county_id AS source_county_id
+      FROM d1_people p
+      LEFT JOIN d1_person_candidate_roles cr
+        ON cr.person_id = p.id
+        AND cr.election_year = 2026
+      LEFT JOIN active_legislator_roles lr
+        ON lr.person_id = p.id
+      LEFT JOIN county_codes cc
+        ON cc.source_county_id = CAST(lr.countycode AS INTEGER)
+        OR LOWER(cc.name) = LOWER(cr.county)
+      LEFT JOIN candidates c
+        ON c.filer_entity_number = cr.filer_entity_number
+        OR c.filer_entity_number = p.filer_entity_number
+      WHERE p.is_2026_candidate = 1
+    )
+  `;
+}
+
+function candidateBaseSelectColumns(tableAlias = "c") {
+  const prefix = tableAlias ? `${tableAlias}.` : "";
+  return [
+    "person_id",
+    "filer_entity_number",
+    "candidate_first_name",
+    "candidate_last_name",
+    "office_type",
+    "office",
+    "county",
+    "district",
+    "political_party",
+    "election_year",
+    "election_cycle",
+    "total_raised",
+    "total_spent",
+    "candidate_website",
+    "candidate_email",
+    "photo_url",
+    "slug",
+    isFreeStaterSelectExpression(`${prefix}is_free_stater`),
+    "source_county_id",
+  ]
+    .map((column) =>
+      column.includes(" AS ") ? column : `${prefix}${column}`
+    )
+    .join(", ");
 }
 
 function candidateSelectColumns(tableAlias = "") {
@@ -2805,6 +2896,7 @@ function candidateSelectColumns(tableAlias = "") {
 
 function formatCandidate(candidate) {
   return {
+    personId: candidate.person_id || null,
     filerEntityNumber: candidate.filer_entity_number,
     candidateFirstName: candidate.candidate_first_name,
     candidateLastName: candidate.candidate_last_name,
