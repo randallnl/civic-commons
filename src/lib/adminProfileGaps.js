@@ -17,6 +17,7 @@ export function adminProfileGapsDb() {
 export async function getProfileGaps({
   profileType = "all",
   missing = "any",
+  office = "",
   limit = 75,
 } = {}) {
   const db = adminProfileGapsDb();
@@ -28,14 +29,15 @@ export async function getProfileGaps({
   const normalizedMissing = ["any", "photo", "email", "website"].includes(missing)
     ? missing
     : "any";
+  const normalizedOffice = normalizeOfficeFilter(office);
 
   const [representatives, candidates] = await Promise.all([
     normalizedType === "candidate"
       ? []
-      : getRepresentativeGaps(db, { missing: normalizedMissing, limit }),
+      : getRepresentativeGaps(db, { missing: normalizedMissing, office: normalizedOffice, limit }),
     normalizedType === "representative"
       ? []
-      : getCandidateGaps(db, { missing: normalizedMissing, limit }),
+      : getCandidateGaps(db, { missing: normalizedMissing, office: normalizedOffice, limit }),
   ]);
 
   const results = [...representatives, ...candidates]
@@ -55,8 +57,10 @@ export async function getProfileGaps({
   };
 }
 
-async function getRepresentativeGaps(db, { missing, limit }) {
+async function getRepresentativeGaps(db, { missing, office, limit }) {
   if (missing === "website") return [];
+  const bodyFilter = representativeBodyForOffice(office);
+  if (office && !bodyFilter) return [];
 
   const result = await db
     .prepare(
@@ -74,6 +78,7 @@ async function getRepresentativeGaps(db, { missing, limit }) {
        LEFT JOIN d1_legislator_photos p
          ON p.employeeno = l.employeeno
        WHERE l.active = 1
+         AND (? = '' OR l.legislativebody = ?)
          AND (
            ? = 'any'
            OR (? = 'photo' AND (
@@ -94,6 +99,8 @@ async function getRepresentativeGaps(db, { missing, limit }) {
        LIMIT ?`,
     )
     .bind(
+      bodyFilter,
+      bodyFilter,
       missing,
       missing,
       PHOTO_BASE_URLS[0],
@@ -126,7 +133,7 @@ async function getRepresentativeGaps(db, { missing, limit }) {
   });
 }
 
-async function getCandidateGaps(db, { missing, limit }) {
+async function getCandidateGaps(db, { missing, office, limit }) {
   const result = await db
     .prepare(
       `SELECT
@@ -142,7 +149,8 @@ async function getCandidateGaps(db, { missing, limit }) {
          photo_url,
          slug
        FROM candidates
-       WHERE (
+       WHERE (? = '' OR LOWER(TRIM(office)) = ?)
+       AND (
          ? = 'any'
          OR (? = 'photo' AND (
            photo_url IS NULL
@@ -165,6 +173,8 @@ async function getCandidateGaps(db, { missing, limit }) {
        LIMIT ?`,
     )
     .bind(
+      office,
+      office,
       missing,
       missing,
       PHOTO_BASE_URLS[0],
@@ -216,4 +226,15 @@ function emptyCounts() {
     missingEmail: 0,
     missingWebsite: 0,
   };
+}
+
+function normalizeOfficeFilter(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+function representativeBodyForOffice(office = "") {
+  if (!office) return "";
+  if (office === "state representative" || office === "house") return "H";
+  if (office === "state senate" || office === "state senator" || office === "senate") return "S";
+  return null;
 }

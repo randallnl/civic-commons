@@ -18,6 +18,12 @@ const message = Astro.url.searchParams.get("message") || "";
 const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
 const gapType = Astro.url.searchParams.get("gapType") || "all";
 const gapMissing = Astro.url.searchParams.get("gapMissing") || "any";
+const gapOffice = Astro.url.searchParams.get("gapOffice") || "";
+const gapOfficeOptions = [
+  { value: "", label: "All offices" },
+  { value: "State Representative", label: "State Representative" },
+  { value: "State Senate", label: "State Senate" },
+];
 let pendingCommunityUpdates = [];
 let pendingArticleSubmissions = [];
 let profileGaps = { results: [], counts: {} };
@@ -39,6 +45,7 @@ if (session) {
     profileGaps = await getProfileGaps({
       profileType: gapType,
       missing: gapMissing,
+      office: gapOffice,
       limit: 100,
     });
   } catch (error) {
@@ -148,6 +155,17 @@ if (session) {
                   <option value="photo" selected={gapMissing === "photo"}>Photo</option>
                   <option value="email" selected={gapMissing === "email"}>Email</option>
                   <option value="website" selected={gapMissing === "website"}>Website</option>
+                </select>
+              </label>
+
+              <label>
+                Office
+                <select name="gapOffice">
+                  {gapOfficeOptions.map((option) => (
+                    <option value={option.value} selected={gapOffice === option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </label>
 
