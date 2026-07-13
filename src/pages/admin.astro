@@ -10,6 +10,7 @@ import {
 } from "../lib/articleSubmissions";
 import { communityUpdateDate, getPendingCommunityUpdates } from "../lib/communityUpdates";
 import { cleanText } from "../lib/text";
+import { getPeopleLinkOptions } from "../lib/unifiedPeople";
 
 const session = await currentAdminSession(Astro.request);
 const sent = Astro.url.searchParams.get("sent") === "1";
@@ -35,6 +36,7 @@ let pendingCommunityUpdates = [];
 let pendingArticleSubmissions = [];
 let profileGaps = { results: [], counts: {} };
 let gapProfileLabel = "";
+let peopleOptions = [];
 
 if (session) {
   try {
@@ -47,6 +49,12 @@ if (session) {
     pendingArticleSubmissions = await getPendingArticleSubmissions({ limit: 50 });
   } catch (error) {
     console.error(error?.message || "Unable to load pending article submissions.");
+  }
+
+  try {
+    peopleOptions = await getPeopleLinkOptions({ limit: 900 });
+  } catch (error) {
+    console.error(error?.message || "Unable to load people link options.");
   }
 
   try {
@@ -337,6 +345,11 @@ function reviewDate(value = "") {
                 database with automatically detected bills, people, and towns.
               </p>
             </div>
+            <datalist id="articlePeopleModerationOptions">
+              {peopleOptions.map((person) => (
+                <option value={person.value} label={person.label} />
+              ))}
+            </datalist>
 
             {pendingArticleSubmissions.length ? (
               <div class="moderation-list">
@@ -386,12 +399,8 @@ function reviewDate(value = "") {
                             <input name="bills" placeholder="HB155, SB2" />
                           </label>
                           <label>
-                            Legislators
-                            <input name="legislators" placeholder="personid, employeeno, or name" />
-                          </label>
-                          <label>
-                            Candidates
-                            <input name="candidates" placeholder="filer number, slug, or name" />
+                            People
+                            <input name="people" list="articlePeopleModerationOptions" placeholder="person id, name, filer number, or GC id" />
                           </label>
                         </div>
                         <button type="submit">Approve</button>

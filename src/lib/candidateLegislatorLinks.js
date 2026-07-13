@@ -1,4 +1,5 @@
 import { adminDb } from "./adminAuth";
+import { syncCandidateLegislatorIdentity } from "./unifiedPeople";
 
 export async function ensureCandidateLegislatorLinkTable(db = adminDb()) {
   if (!db) return;
@@ -58,6 +59,8 @@ export async function linkCandidateToLegislator(candidateFilerEntityNumber, repr
     .bind(candidateId, personId)
     .run();
 
+  await syncCandidateLegislatorIdentity(candidateId, personId, db);
+
   return { changed: result.meta?.changes ?? result.changes ?? 0 };
 }
 
@@ -97,6 +100,8 @@ export async function linkLegislatorToCandidate(representativePersonId, candidat
     )
     .bind(candidateId, personId)
     .run();
+
+  await syncCandidateLegislatorIdentity(candidateId, personId, db);
 
   return { changed: result.meta?.changes ?? result.changes ?? 0 };
 }

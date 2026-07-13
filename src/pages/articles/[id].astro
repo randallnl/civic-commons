@@ -11,13 +11,10 @@ import {
 } from "../../lib/articlesApi";
 import { billDetailPath, getBills } from "../../lib/billsApi";
 import {
-  candidateName,
   candidatePath,
-  getCandidates,
-  isLegislativeCandidate,
 } from "../../lib/candidatesApi";
-import { getRepresentatives, repName } from "../../lib/repsApi";
 import { cleanText } from "../../lib/text";
+import { getPeopleLinkOptions } from "../../lib/unifiedPeople";
 
 const { id } = Astro.params;
 
@@ -27,8 +24,7 @@ const adminSession = await currentAdminSession(Astro.request);
 const message = Astro.url.searchParams.get("message") || "";
 const actionError = Astro.url.searchParams.get("error") || "";
 let billOptions = [];
-let legislatorOptions = [];
-let candidateOptions = [];
+let peopleOptions = [];
 
 try {
   const data = await getArticle(id);
@@ -43,15 +39,13 @@ if (!article && !error) {
 
 if (adminSession) {
   try {
-    const [billData, repData, candidateData] = await Promise.all([
+    const [billData, peopleData] = await Promise.all([
       getBills({ limit: 300 }),
-      getRepresentatives({ limit: 700 }),
-      getCandidates({ electionYear: 2026, limit: 700 }),
+      getPeopleLinkOptions({ limit: 900 }),
     ]);
 
     billOptions = billData.bills || [];
-    legislatorOptions = repData.representatives || [];
-    candidateOptions = (candidateData.candidates || []).filter(isLegislativeCandidate);
+    peopleOptions = peopleData || [];
   } catch (optionError) {
     console.error(optionError?.message || "Unable to load article link options.");
   }
@@ -101,24 +95,6 @@ function billOptionLabel(bill = {}) {
   ].filter(Boolean).join(" - ");
 }
 
-function legislatorOptionLabel(rep = {}) {
-  return [
-    repName(rep),
-    rep.chamber || rep.legislativebody,
-    rep.district || rep.raw_district,
-    rep.party,
-  ].filter(Boolean).join(" - ");
-}
-
-function candidateOptionLabel(candidate = {}) {
-  return [
-    candidateName(candidate),
-    candidate.office,
-    candidate.county,
-    candidate.district ? `District ${candidate.district}` : "",
-    candidate.politicalParty,
-  ].filter(Boolean).join(" - ");
-}
 ---
 
 <html lang="en">
@@ -246,9 +222,9 @@ function candidateOptionLabel(candidate = {}) {
                 <p class="eyebrow">Admin</p>
                 <h2>Add article links</h2>
                 <p>
-                  Add comma-separated bills, legislators, or candidates to this
-                  article. Start typing to choose from the dropdown options, or
-                  paste known IDs directly.
+                  Add comma-separated bills or people to this article. Start
+                  typing to choose from the dropdown options, or paste known
+                  IDs directly.
                 </p>
               </div>
 
@@ -262,26 +238,9 @@ function candidateOptionLabel(candidate = {}) {
                   <small class="field-help">Use bill codes from the dropdown; comma-separate multiple bills.</small>
                 </label>
                 <label>
-                  Legislators
-                  <input name="legislators" list="article-legislator-options" placeholder="personid, employeeno, slug, or name" />
-                  <small class="field-help">Dropdown values use personid. Comma-separate multiple legislators.</small>
-                </label>
-                <label>
-                  Candidates
-                  <select name="candidates">
-                    <option value="">Choose a candidate</option>
-                    {candidateOptions.map((candidate) => (
-                      <option value={candidate.filerEntityNumber}>
-                        {candidateOptionLabel(candidate)}
-                      </option>
-                    ))}
-                  </select>
-                  <small class="field-help">Dropdown values save the candidate filer entity number.</small>
-                </label>
-                <label>
-                  Candidate IDs
-                  <input name="candidateLinks" list="article-candidate-options" placeholder="filer number, slug, or name" />
-                  <small class="field-help">Optional: paste comma-separated candidate IDs or names.</small>
+                  People
+                  <input name="people" list="article-people-options" placeholder="person id, name, filer number, or GC id" />
+                  <small class="field-help">Use one field for legislators and candidates; comma-separate multiple people.</small>
                 </label>
 
                 <datalist id="article-bill-options">
@@ -290,15 +249,9 @@ function candidateOptionLabel(candidate = {}) {
                   ))}
                 </datalist>
 
-                <datalist id="article-legislator-options">
-                  {legislatorOptions.map((rep) => (
-                    <option value={rep.personid || rep.id} label={legislatorOptionLabel(rep)} />
-                  ))}
-                </datalist>
-
-                <datalist id="article-candidate-options">
-                  {candidateOptions.map((candidate) => (
-                    <option value={candidate.filerEntityNumber} label={candidateOptionLabel(candidate)} />
+                <datalist id="article-people-options">
+                  {peopleOptions.map((person) => (
+                    <option value={person.value} label={person.label} />
                   ))}
                 </datalist>
 
@@ -446,7 +399,7 @@ function candidateOptionLabel(candidate = {}) {
     align-items: end;
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+    grid-template-columns: minmax(180px, 0.7fr) minmax(260px, 1.3fr) auto;
   }
 
   .admin-link-form label {

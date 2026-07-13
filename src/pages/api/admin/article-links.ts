@@ -16,6 +16,7 @@ export async function POST({ request }) {
 
     await addManualArticleLinks(articleId, {
       bills: String(form.get("bills") || ""),
+      people: joinedFormValues(form, ["people", "personLinks"]),
       legislators: String(form.get("legislators") || ""),
       candidates: joinedFormValues(form, ["candidates", "candidateLinks"]),
     });

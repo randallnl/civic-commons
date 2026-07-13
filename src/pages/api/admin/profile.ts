@@ -6,6 +6,10 @@ import {
   linkCandidateToLegislator,
   linkLegislatorToCandidate,
 } from "../../../lib/candidateLegislatorLinks";
+import {
+  upsertPersonFromCandidate,
+  upsertPersonFromLegislator,
+} from "../../../lib/unifiedPeople";
 
 const CANDIDATE_FIELDS = [
   "name",
@@ -206,6 +210,8 @@ async function updateRepresentativeSource(db, entityKey, data) {
     changed += linkUpdate.changed || 0;
   }
 
+  await upsertPersonFromLegislator(personid, db);
+
   if (!changed) throw new Error("No matching legislator source row was updated.");
   return { changed };
 }
@@ -265,6 +271,8 @@ async function updateCandidateSource(db, entityKey, data) {
     );
     changed += linkUpdate.changed || 0;
   }
+
+  await upsertPersonFromCandidate(String(entityKey), db);
 
   if (!changed) throw new Error("No matching candidate source row was updated.");
   return { changed };

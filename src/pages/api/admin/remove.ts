@@ -1,6 +1,7 @@
 export const prerender = false;
 
 import { adminDb, requireAdmin } from "../../../lib/adminAuth";
+import { ensureUnifiedPeopleTables } from "../../../lib/unifiedPeople";
 
 export async function POST({ request }) {
   const auth = await requireAdmin(request);
@@ -37,6 +38,16 @@ async function removeSourceProfile(entityType, entityKey) {
   if (!db) throw new Error("D1 database binding is not configured.");
 
   if (entityType === "candidate") {
+    await ensureUnifiedPeopleTables(db);
+    const candidate = await db
+      .prepare(
+        `SELECT filer_entity_number
+         FROM candidates
+         WHERE filer_entity_number = ? OR slug = ?
+         LIMIT 1`,
+      )
+      .bind(String(entityKey), String(entityKey))
+      .first();
     const changed = await runSourceUpdate(
       db,
       `DELETE FROM candidates
@@ -45,6 +56,14 @@ async function removeSourceProfile(entityType, entityKey) {
     );
 
     if (!changed) throw new Error("No matching candidate source row was removed.");
+    await runSourceUpdate(
+      db,
+      `UPDATE d1_people
+       SET is_2026_candidate = 0,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE filer_entity_number = ?`,
+      [candidate?.filer_entity_number || String(entityKey)],
+    );
     return { changed, label: "Candidate" };
   }
 
@@ -60,6 +79,16 @@ async function removeSourceProfile(entityType, entityKey) {
   );
 
   if (!changed) throw new Error("No matching legislator source row was removed.");
+  await ensureUnifiedPeopleTables(db);
+  await runSourceUpdate(
+    db,
+    `UPDATE d1_people
+     SET is_current_legislator = 0,
+         is_2026_legislator = 0,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE gc_personid = ?`,
+    [personid],
+  );
   return { changed, label: "Legislator" };
 }
 

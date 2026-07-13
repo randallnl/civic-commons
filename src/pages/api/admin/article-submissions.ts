@@ -14,6 +14,7 @@ export async function POST({ request }) {
     const redirectTo = String(form.get("redirectTo") || "/admin");
     const manualLinks = {
       bills: String(form.get("bills") || ""),
+      people: String(form.get("people") || ""),
       legislators: String(form.get("legislators") || ""),
       candidates: String(form.get("candidates") || ""),
     };

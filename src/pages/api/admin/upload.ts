@@ -2,6 +2,10 @@ export const prerender = false;
 
 import { env } from "cloudflare:workers";
 import { adminDb, adminR2Bucket, requireAdmin } from "../../../lib/adminAuth";
+import {
+  upsertPersonFromCandidate,
+  upsertPersonFromLegislator,
+} from "../../../lib/unifiedPeople";
 
 export async function POST({ request }) {
   const auth = await requireAdmin(request);
@@ -95,6 +99,7 @@ async function updateCandidatePhoto(entityKey, publicUrl) {
 
   const changes = result.meta?.changes ?? result.changes ?? 0;
   if (!changes) throw new Error("No matching candidate row was updated.");
+  await upsertPersonFromCandidate(String(entityKey), db);
   return "candidate photo_url";
 }
 
@@ -150,6 +155,7 @@ async function updateRepresentativePhoto(entityKey, key, publicUrl) {
     )
     .run();
 
+  await upsertPersonFromLegislator(legislator.personid, db);
   return "d1_legislator_photos";
 }
 

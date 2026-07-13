@@ -1,6 +1,11 @@
 import { env } from "cloudflare:workers";
 import { getArticlePreview } from "./articlePreviews";
 import { cleanText } from "./text";
+import {
+  linkArticlePersonByPersonId,
+  linkArticlePersonByCandidate,
+  linkArticlePersonByLegislator,
+} from "./unifiedPeople";
 
 const FIRST_NAME_ALIASES = {
   anthony: ["tony"],
@@ -304,6 +309,7 @@ export function normalizeArticleSubmission(submission = {}) {
       bills: scan.bills || [],
       legislators: scan.legislators || [],
       candidates: scan.candidates || [],
+      people: scan.people || [],
       towns: scan.towns || [],
     },
     createdAt: submission.created_at || submission.createdAt || "",
@@ -435,13 +441,36 @@ async function scanBills(db, text) {
 }
 
 async function resolveManualArticleLinks(db, manualLinks = {}) {
-  const [bills, legislators, candidates] = await Promise.all([
+  const [bills, legislators, candidates, people] = await Promise.all([
     resolveManualBills(db, manualLinks.bills || manualLinks.billLinks || ""),
     resolveManualLegislators(db, manualLinks.legislators || manualLinks.legislatorLinks || ""),
     resolveManualCandidates(db, manualLinks.candidates || manualLinks.candidateLinks || ""),
+    resolveManualPeople(db, manualLinks.people || manualLinks.personLinks || ""),
   ]);
 
-  return { bills, legislators, candidates, towns: [] };
+  return {
+    bills,
+    legislators: dedupeBy(
+      [
+        ...legislators,
+        ...people
+          .filter((person) => person.personid || person.employeeno)
+          .map(personToLegislatorLink),
+      ],
+      (legislator) => legislator.personid || legislator.employeeno || legislator.name,
+    ),
+    candidates: dedupeBy(
+      [
+        ...candidates,
+        ...people
+          .filter((person) => person.filerEntityNumber || person.filer_entity_number)
+          .map(personToCandidateLink),
+      ],
+      (candidate) => candidate.filerEntityNumber || candidate.filer_entity_number || candidate.name,
+    ),
+    people,
+    towns: [],
+  };
 }
 
 async function insertArticleRelations(db, articleId, scan = {}) {
@@ -478,6 +507,7 @@ async function insertArticleRelations(db, articleId, scan = {}) {
         legislator.name || legislator.legislator_name_raw,
       )
       .run();
+    await linkArticlePersonByLegislator(articleId, legislator, db);
   }
 
   for (const candidate of scan.candidates || []) {
@@ -494,6 +524,11 @@ async function insertArticleRelations(db, articleId, scan = {}) {
         candidate.name || candidate.candidate_name_raw,
       )
       .run();
+    await linkArticlePersonByCandidate(articleId, candidate, db);
+  }
+
+  for (const person of scan.people || []) {
+    await linkArticlePersonByPersonId(articleId, person.personId || person.id, person.name || person.display_name, db);
   }
 
   for (const town of scan.towns || []) {
@@ -599,6 +634,92 @@ async function resolveManualCandidates(db, value = "") {
   }
 
   return dedupeBy(candidates, (candidate) => candidate.filerEntityNumber || candidate.filer_entity_number);
+}
+
+async function resolveManualPeople(db, value = "") {
+  const terms = splitManualValues(value);
+  const people = [];
+
+  for (const term of terms) {
+    const numeric = /^\d+$/.test(term) ? Number(term) : null;
+    const slug = slugify(term);
+    const person = numeric
+      ? await db
+          .prepare(
+            `SELECT id, gc_personid, employeeno, filer_entity_number, firstname, lastname,
+                    display_name, party, is_current_legislator, is_2026_candidate
+             FROM d1_people
+             WHERE id = ?
+                OR gc_personid = ?
+                OR employeeno = ?
+                OR filer_entity_number = ?
+             LIMIT 1`,
+          )
+          .bind(numeric, numeric, numeric, term)
+          .first()
+      : await db
+          .prepare(
+            `SELECT id, gc_personid, employeeno, filer_entity_number, firstname, lastname,
+                    display_name, party, is_current_legislator, is_2026_candidate
+             FROM d1_people
+             WHERE LOWER(COALESCE(slug, '')) = LOWER(?)
+                OR LOWER(display_name) = LOWER(?)
+                OR LOWER(firstname || ' ' || lastname) = LOWER(?)
+                OR filer_entity_number = ?
+             LIMIT 1`,
+          )
+          .bind(slug, term, term, term)
+          .first();
+
+    if (person) {
+      people.push(normalizeManualPerson(person));
+    }
+  }
+
+  return dedupeBy(people, (person) => person.personId);
+}
+
+function normalizeManualPerson(person = {}) {
+  const name = cleanText(person.display_name || `${person.firstname || ""} ${person.lastname || ""}`);
+  return {
+    ...person,
+    id: person.id,
+    personId: person.id,
+    personid: person.gc_personid || null,
+    employeeno: person.employeeno || null,
+    filerEntityNumber: person.filer_entity_number || "",
+    name,
+    legislator_name_raw: name,
+    candidate_name_raw: name,
+    candidate_first_name: person.firstname || "",
+    candidate_last_name: person.lastname || "",
+    isCurrentLegislator: Number(person.is_current_legislator) === 1,
+    is2026Candidate: Number(person.is_2026_candidate) === 1,
+  };
+}
+
+function personToLegislatorLink(person = {}) {
+  return {
+    personid: person.personid || person.gc_personid || null,
+    employeeno: person.employeeno || null,
+    firstname: person.firstname || "",
+    lastname: person.lastname || "",
+    party: person.party || "",
+    name: person.name || person.display_name || "",
+    legislator_name_raw: person.legislator_name_raw || person.name || person.display_name || "",
+  };
+}
+
+function personToCandidateLink(person = {}) {
+  return {
+    filer_entity_number: person.filerEntityNumber || person.filer_entity_number || "",
+    filerEntityNumber: person.filerEntityNumber || person.filer_entity_number || "",
+    candidate_first_name: person.firstname || person.candidate_first_name || "",
+    candidate_last_name: person.lastname || person.candidate_last_name || "",
+    political_party: person.party || "",
+    name: person.name || person.display_name || "",
+    candidate_name_raw: person.candidate_name_raw || person.name || person.display_name || "",
+  };
 }
 
 async function scanLegislators(db, text) {
@@ -749,6 +870,10 @@ function mergeArticleScans(...scans) {
     candidates: dedupeBy(
       scans.flatMap((scan) => scan?.candidates || []),
       (candidate) => candidate.filerEntityNumber || candidate.filer_entity_number || candidate.name,
+    ),
+    people: dedupeBy(
+      scans.flatMap((scan) => scan?.people || []),
+      (person) => person.personId || person.id || person.name,
     ),
     towns: dedupeBy(scans.flatMap((scan) => scan?.towns || []), (town) => town.town),
   };

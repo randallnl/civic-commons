@@ -1532,6 +1532,7 @@ async function handleRepProfile(request, env) {
   return json({
     representative: {
       ...legislator,
+      personId: await unifiedPersonIdForLegislator(env, legislator),
       sourceUrls: {
         generalCourt: buildGeneralCourtUrl(legislator),
         photo: legislator.photo || null,
@@ -2714,7 +2715,10 @@ async function handleCandidateDetail(request, env) {
   }
 
   return json({
-    candidate: formatCandidate(candidate),
+    candidate: {
+      ...formatCandidate(candidate),
+      personId: await unifiedPersonIdForCandidate(env, candidate),
+    },
   });
 }
 
@@ -2823,6 +2827,41 @@ function formatCandidate(candidate) {
     is_free_stater: candidate.is_free_stater || "no",
     isFreeStater: candidate.is_free_stater || "no",
   };
+}
+
+async function unifiedPersonIdForCandidate(env, candidate = {}) {
+  if (!candidate?.filer_entity_number) return null;
+  try {
+    const row = await env.DB.prepare(
+      `SELECT id
+       FROM d1_people
+       WHERE filer_entity_number = ?
+       LIMIT 1`,
+    )
+      .bind(candidate.filer_entity_number)
+      .first();
+    return row?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+async function unifiedPersonIdForLegislator(env, legislator = {}) {
+  if (!legislator?.personid && !legislator?.employeeno) return null;
+  try {
+    const row = await env.DB.prepare(
+      `SELECT id
+       FROM d1_people
+       WHERE gc_personid = ?
+          OR employeeno = ?
+       LIMIT 1`,
+    )
+      .bind(legislator.personid || null, legislator.employeeno || null)
+      .first();
+    return row?.id || null;
+  } catch {
+    return null;
+  }
 }
 
 async function getArticlesForLegislator(env, personid, employeeno, limit = 10) {
