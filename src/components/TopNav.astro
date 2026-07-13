@@ -34,6 +34,8 @@ const isGuidesActive = guideLinks.some(isActive);
 
 <header class="site-nav">
   <div class="nav-inner">
+    <a class="return-link" href="/" data-return-link hidden>Return</a>
+
     <a class="brand" href="/">
       <img src="/NH%20DB%20Logo.png" alt="" width="40" height="40" />
       <span>NH Deserves Better</span>
@@ -83,9 +85,39 @@ const isGuidesActive = guideLinks.some(isActive);
       </details>
     </nav>
 
-    <a class="suggest-link" href={suggestHref}>Suggest an update</a>
+    <div class="utility-links">
+      <a class="admin-link" href="/admin">Admin</a>
+      <a class="suggest-link" href={suggestHref}>Suggest an update</a>
+    </div>
   </div>
 </header>
+
+<script>
+  const returnLink = document.querySelector("[data-return-link]");
+  const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const storedCurrent = sessionStorage.getItem("nhdb_current_path") || "";
+  const storedPrevious = sessionStorage.getItem("nhdb_previous_path") || "";
+  let returnPath = "";
+
+  if (storedCurrent && storedCurrent !== currentPath) {
+    returnPath = storedCurrent;
+    sessionStorage.setItem("nhdb_previous_path", storedCurrent);
+  } else if (storedPrevious && storedPrevious !== currentPath) {
+    returnPath = storedPrevious;
+  }
+
+  sessionStorage.setItem("nhdb_current_path", currentPath);
+
+  if (
+    returnLink instanceof HTMLAnchorElement &&
+    returnPath &&
+    returnPath !== currentPath &&
+    returnPath.startsWith("/")
+  ) {
+    returnLink.href = returnPath;
+    returnLink.hidden = false;
+  }
+</script>
 
 <style>
   .site-nav {
@@ -109,8 +141,10 @@ const isGuidesActive = guideLinks.some(isActive);
   }
 
   .brand,
+  .return-link,
   .nav-link,
   .dropdown-link,
+  .admin-link,
   .suggest-link {
     color: #1f2933;
     text-decoration: none;
@@ -124,6 +158,30 @@ const isGuidesActive = guideLinks.some(isActive);
     font-weight: 950;
     min-height: 40px;
     white-space: nowrap;
+  }
+
+  .return-link {
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    flex: 0 0 auto;
+    font-size: 0.84rem;
+    font-weight: 900;
+    line-height: 1;
+    padding: 10px 11px;
+    white-space: nowrap;
+  }
+
+  .return-link::before {
+    content: "< ";
+  }
+
+  .return-link:hover {
+    background: white;
+    border-color: #1f2933;
+  }
+
+  .return-link[hidden] {
+    display: none;
   }
 
   .brand img {
@@ -215,12 +273,33 @@ const isGuidesActive = guideLinks.some(isActive);
     background: #f7f4ee;
   }
 
+  .utility-links {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  .admin-link {
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    font-size: 0.84rem;
+    font-weight: 900;
+    line-height: 1;
+    padding: 10px 11px;
+    white-space: nowrap;
+  }
+
+  .admin-link:hover {
+    background: white;
+    border-color: #1f2933;
+  }
+
   .suggest-link {
     background: #1f2933;
     border: 1px solid #1f2933;
     border-radius: 999px;
     color: white;
-    flex: 0 0 auto;
     font-size: 0.88rem;
     font-weight: 900;
     line-height: 1;
@@ -250,6 +329,11 @@ const isGuidesActive = guideLinks.some(isActive);
       min-height: 34px;
     }
 
+    .return-link {
+      font-size: 0.82rem;
+      padding: 8px 10px;
+    }
+
     .brand img {
       border-radius: 6px;
       height: 34px;
@@ -266,8 +350,13 @@ const isGuidesActive = guideLinks.some(isActive);
       width: 100%;
     }
 
-    .suggest-link {
+    .utility-links {
       align-self: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .admin-link,
+    .suggest-link {
       font-size: 0.82rem;
       padding: 8px 10px;
     }

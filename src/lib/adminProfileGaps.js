@@ -1,4 +1,9 @@
 import { env } from "cloudflare:workers";
+import {
+  profileReviewKey,
+  profileReviewMap,
+  RECENT_REVIEW_DAYS,
+} from "./adminProfileReviews";
 import { cleanText } from "./text";
 
 const PHOTO_BASE_PATTERNS = [
@@ -19,6 +24,7 @@ export async function getProfileGaps({
   missing = "any",
   office = "",
   profile = "",
+  review = "needs-review",
   limit = 75,
 } = {}) {
   const db = adminProfileGapsDb();
@@ -32,7 +38,11 @@ export async function getProfileGaps({
     : "any";
   const normalizedOffice = normalizeOfficeFilter(office);
   const normalizedProfile = String(profile || "").trim();
+  const normalizedReview = ["needs-review", "all", "recent"].includes(review)
+    ? review
+    : "needs-review";
   const queryLimit = Math.max(limit, 1000);
+  const reviews = await profileReviewMap(db);
 
   const [representatives, candidates] = await Promise.all([
     normalizedType === "candidate"
@@ -43,7 +53,11 @@ export async function getProfileGaps({
       : getCandidateGaps(db, { missing: normalizedMissing, office: normalizedOffice, limit: queryLimit }),
   ]);
 
-  const allResults = [...representatives, ...candidates]
+  const reviewedResults = [...representatives, ...candidates]
+    .map((item) => withReview(item, reviews))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const allResults = reviewedResults
+    .filter((item) => reviewMatches(item.review, normalizedReview))
     .sort((a, b) => a.name.localeCompare(b.name));
   const results = allResults
     .filter((item) => !normalizedProfile || profileOptionValue(item) === normalizedProfile)
@@ -57,11 +71,13 @@ export async function getProfileGaps({
     })),
     counts: {
       total: results.length,
-      representatives: representatives.length,
-      candidates: candidates.length,
+      representatives: results.filter((item) => item.type === "representative").length,
+      candidates: results.filter((item) => item.type === "candidate").length,
       missingPhoto: results.filter((item) => item.missing.photo).length,
       missingEmail: results.filter((item) => item.missing.email).length,
       missingWebsite: results.filter((item) => item.missing.website).length,
+      recentlyReviewed: reviewedResults.filter((item) => item.review?.isRecent).length,
+      recentReviewDays: RECENT_REVIEW_DAYS,
     },
   };
 }
@@ -234,6 +250,8 @@ function emptyCounts() {
     missingPhoto: 0,
     missingEmail: 0,
     missingWebsite: 0,
+    recentlyReviewed: 0,
+    recentReviewDays: RECENT_REVIEW_DAYS,
   };
 }
 
@@ -250,4 +268,17 @@ function representativeBodyForOffice(office = "") {
   if (office === "state representative" || office === "house") return "H";
   if (office === "state senate" || office === "state senator" || office === "senate") return "S";
   return null;
+}
+
+function withReview(item = {}, reviews = new Map()) {
+  return {
+    ...item,
+    review: reviews.get(profileReviewKey(item.type, item.key)) || null,
+  };
+}
+
+function reviewMatches(review, filter) {
+  if (filter === "all") return true;
+  if (filter === "recent") return Boolean(review?.isRecent);
+  return !review?.isRecent;
 }

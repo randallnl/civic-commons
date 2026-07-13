@@ -20,10 +20,16 @@ const gapType = Astro.url.searchParams.get("gapType") || "all";
 const gapMissing = Astro.url.searchParams.get("gapMissing") || "any";
 const gapOffice = Astro.url.searchParams.get("gapOffice") || "";
 const gapProfile = Astro.url.searchParams.get("gapProfile") || "";
+const gapReview = Astro.url.searchParams.get("gapReview") || "needs-review";
 const gapOfficeOptions = [
   { value: "", label: "All offices" },
   { value: "State Representative", label: "State Representative" },
   { value: "State Senate", label: "State Senate" },
+];
+const gapReviewOptions = [
+  { value: "needs-review", label: "Hide recently reviewed" },
+  { value: "all", label: "Include reviewed" },
+  { value: "recent", label: "Recently reviewed only" },
 ];
 let pendingCommunityUpdates = [];
 let pendingArticleSubmissions = [];
@@ -49,6 +55,7 @@ if (session) {
       missing: gapMissing,
       office: gapOffice,
       profile: gapProfile,
+      review: gapReview,
       limit: 100,
     });
   } catch (error) {
@@ -57,6 +64,17 @@ if (session) {
 
   gapProfileLabel = (profileGaps.nameOptions || [])
     .find((option) => option.value === gapProfile)?.label || "";
+}
+
+function reviewDate(value = "") {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
 }
 ---
 
@@ -176,6 +194,17 @@ if (session) {
               </label>
 
               <label>
+                Review status
+                <select name="gapReview">
+                  {gapReviewOptions.map((option) => (
+                    <option value={option.value} selected={gapReview === option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
                 Name
                 <input
                   id="gapProfileSearch"
@@ -203,6 +232,10 @@ if (session) {
               <span><strong>{profileGaps.counts.missingPhoto || 0}</strong> Missing Photos</span>
               <span><strong>{profileGaps.counts.missingEmail || 0}</strong> Missing Emails</span>
               <span><strong>{profileGaps.counts.missingWebsite || 0}</strong> Missing Websites</span>
+              <span>
+                <strong>{profileGaps.counts.recentlyReviewed || 0}</strong>
+                Reviewed in {profileGaps.counts.recentReviewDays || 30} days
+              </span>
             </div>
 
             {profileGaps.results.length ? (
@@ -217,8 +250,25 @@ if (session) {
                       {profile.missing.photo && <span>Missing photo</span>}
                       {profile.missing.email && <span>Missing email</span>}
                       {profile.missing.website && <span>Missing website</span>}
+                      {profile.review?.reviewedAt && (
+                        <span class="review-chip">Reviewed {reviewDate(profile.review.reviewedAt)}</span>
+                      )}
                     </div>
-                    <a href={profile.profilePath}>Open profile</a>
+                    <div class="gap-actions">
+                      <a href={profile.profilePath}>Open profile</a>
+                      <form action="/api/admin/profile" method="post">
+                        <input type="hidden" name="entityType" value={profile.type} />
+                        <input type="hidden" name="entityKey" value={profile.key} />
+                        <input type="hidden" name="profileAction" value="confirm-reviewed" />
+                        <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+                        <input
+                          type="hidden"
+                          name="reviewNote"
+                          value="Reviewed from profile cleanup; no photo, website, or email update found."
+                        />
+                        <button class="secondary compact-button" type="submit">Confirm reviewed</button>
+                      </form>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -567,7 +617,7 @@ if (session) {
     align-items: end;
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+    grid-template-columns: repeat(5, minmax(150px, 1fr)) auto;
     margin-bottom: 18px;
   }
 
@@ -609,6 +659,14 @@ if (session) {
     padding: 14px;
   }
 
+  .gap-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
   .profile-gap-list strong {
     display: block;
     font-size: 1.02rem;
@@ -631,6 +689,12 @@ if (session) {
     white-space: nowrap;
   }
 
+  .compact-button {
+    min-height: 0;
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+
   .missing-chips {
     display: flex;
     flex-wrap: wrap;
@@ -641,6 +705,12 @@ if (session) {
     background: #fee2e2;
     border-color: #fecaca;
     color: #7f1d1d;
+  }
+
+  .missing-chips .review-chip {
+    background: #ecfdf5;
+    border-color: #10b981;
+    color: #065f46;
   }
 
   .moderation-list {

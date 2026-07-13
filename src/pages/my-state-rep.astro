@@ -1082,16 +1082,24 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     border-radius: 999px;
     box-shadow: 2px 2px 0 #111827;
     color: white;
-    display: inline-block;
+    display: inline-flex;
     font-size: 0.74rem;
     font-weight: 900;
+    line-height: 1;
     margin-top: 8px;
     padding: 4px 8px;
     text-decoration: none;
+    width: fit-content;
+  }
+
+  .sample-copy > a.free-stater-pill {
+    color: white;
+    display: inline-flex;
   }
 
   .free-stater-pill:hover {
     background: #450a0a;
+    color: white;
   }
 
   .sample-tags {

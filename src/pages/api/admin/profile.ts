@@ -1,6 +1,7 @@
 export const prerender = false;
 
 import { adminDb, requireAdmin } from "../../../lib/adminAuth";
+import { markProfileReviewed } from "../../../lib/adminProfileReviews";
 import {
   linkCandidateToLegislator,
   linkLegislatorToCandidate,
@@ -54,6 +55,7 @@ export async function POST({ request }) {
     const form = await request.formData();
     const entityType = String(form.get("entityType") || "").trim();
     const entityKey = String(form.get("entityKey") || "").trim();
+    const profileAction = String(form.get("profileAction") || "save").trim();
     redirectTo = safeRedirectPath(form.get("redirectTo")) || "/admin";
     const clearFields = new Set(form.getAll("clearFields").map(String));
     const fields = entityType === "candidate" ? CANDIDATE_FIELDS : REPRESENTATIVE_FIELDS;
@@ -62,6 +64,21 @@ export async function POST({ request }) {
       throw new Error("Choose a candidate or legislator profile.");
     }
     if (!entityKey) throw new Error("Profile identifier is required.");
+
+    if (profileAction === "confirm-reviewed") {
+      await markProfileReviewed({
+        entityType,
+        entityKey,
+        reviewedBy: auth.session?.email || "",
+        reviewNote:
+          String(form.get("reviewNote") || "").trim() ||
+          "Reviewed for missing photo, website, or email; no update found.",
+      });
+      return redirectWithMessage(
+        redirectTo,
+        "Profile marked reviewed. It will be hidden from the default cleanup queue for 30 days.",
+      );
+    }
 
     const data = {};
     for (const field of fields) {

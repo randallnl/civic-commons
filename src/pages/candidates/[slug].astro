@@ -366,6 +366,11 @@ function legislatorOptionLabel(rep = {}) {
               Photo URL
               <input name="photoUrl" type="url" value={candidate.photoUrl || ""} />
             </label>
+            <input
+              type="hidden"
+              name="reviewNote"
+              value="Reviewed candidate profile for missing photo, website, or email; no update found."
+            />
 
             <div class="form-grid">
               <label>
@@ -389,7 +394,17 @@ function legislatorOptionLabel(rep = {}) {
               </label>
             </div>
 
-            <button type="submit">Save Candidate Edits</button>
+            <div class="admin-form-actions">
+              <button type="submit">Save Candidate Edits</button>
+              <button
+                class="secondary-button"
+                type="submit"
+                name="profileAction"
+                value="confirm-reviewed"
+              >
+                Confirm reviewed, no update found
+              </button>
+            </div>
           </form>
 
           <form
@@ -763,6 +778,17 @@ function legislatorOptionLabel(rep = {}) {
     font-weight: 900;
     justify-self: start;
     padding: 12px 16px;
+  }
+
+  .admin-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .admin-edit-form .secondary-button {
+    background: #fffaf1;
+    color: #1f2933;
   }
 
   .admin-edit-form .danger-button {
