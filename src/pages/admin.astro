@@ -241,7 +241,7 @@ function reviewDate(value = "") {
             {profileGaps.results.length ? (
               <div class="profile-gap-list">
                 {profileGaps.results.map((profile) => (
-                  <article>
+                  <article data-profile-gap-row>
                     <div>
                       <strong>{cleanText(profile.name || profile.key)}</strong>
                       <p>{cleanText(profile.subtitle || profile.type)}</p>
@@ -256,7 +256,7 @@ function reviewDate(value = "") {
                     </div>
                     <div class="gap-actions">
                       <a href={profile.profilePath}>Open profile</a>
-                      <form action="/api/admin/profile" method="post">
+                      <form action="/api/admin/profile" method="post" data-profile-review-form>
                         <input type="hidden" name="entityType" value={profile.type} />
                         <input type="hidden" name="entityKey" value={profile.key} />
                         <input type="hidden" name="profileAction" value="confirm-reviewed" />
@@ -506,6 +506,44 @@ function reviewDate(value = "") {
 
       profileSearch?.addEventListener("input", syncProfileFilterValue);
       profileSearch?.form?.addEventListener("submit", syncProfileFilterValue);
+
+      const reviewForms = document.querySelectorAll("[data-profile-review-form]");
+
+      reviewForms.forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const button = form.querySelector("button[type='submit']");
+          const row = form.closest("[data-profile-gap-row]");
+          const originalText = button?.textContent || "";
+
+          if (button) {
+            button.disabled = true;
+            button.textContent = "Saving...";
+          }
+
+          try {
+            const response = await fetch(form.action, {
+              method: "POST",
+              body: new FormData(form),
+              credentials: "same-origin",
+              redirect: "manual",
+            });
+
+            if (!response.ok && response.type !== "opaqueredirect") {
+              throw new Error("Unable to mark reviewed.");
+            }
+
+            row?.classList.add("is-reviewed");
+            window.setTimeout(() => row?.remove(), 180);
+          } catch (error) {
+            if (button) {
+              button.disabled = false;
+              button.textContent = originalText;
+            }
+            window.alert(error?.message || "Unable to mark reviewed.");
+          }
+        });
+      });
     </script>
   </body>
 </html>
@@ -657,6 +695,12 @@ function reviewDate(value = "") {
     gap: 12px;
     grid-template-columns: minmax(0, 1.1fr) minmax(180px, 0.9fr) auto;
     padding: 14px;
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+
+  .profile-gap-list article.is-reviewed {
+    opacity: 0;
+    transform: translateX(-8px);
   }
 
   .gap-actions {
