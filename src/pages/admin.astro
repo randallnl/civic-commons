@@ -19,6 +19,7 @@ const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
 const gapType = Astro.url.searchParams.get("gapType") || "all";
 const gapMissing = Astro.url.searchParams.get("gapMissing") || "any";
 const gapOffice = Astro.url.searchParams.get("gapOffice") || "";
+const gapProfile = Astro.url.searchParams.get("gapProfile") || "";
 const gapOfficeOptions = [
   { value: "", label: "All offices" },
   { value: "State Representative", label: "State Representative" },
@@ -46,6 +47,7 @@ if (session) {
       profileType: gapType,
       missing: gapMissing,
       office: gapOffice,
+      profile: gapProfile,
       limit: 100,
     });
   } catch (error) {
@@ -164,6 +166,18 @@ if (session) {
                   {gapOfficeOptions.map((option) => (
                     <option value={option.value} selected={gapOffice === option.value}>
                       {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Name
+                <select name="gapProfile">
+                  <option value="">All names</option>
+                  {(profileGaps.nameOptions || []).map((option) => (
+                    <option value={option.value} selected={gapProfile === option.value}>
+                      {cleanText(option.label)}
                     </option>
                   ))}
                 </select>
@@ -522,7 +536,7 @@ if (session) {
     align-items: end;
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
     margin-bottom: 18px;
   }
 

@@ -18,10 +18,11 @@ export async function getProfileGaps({
   profileType = "all",
   missing = "any",
   office = "",
+  profile = "",
   limit = 75,
 } = {}) {
   const db = adminProfileGapsDb();
-  if (!db) return { results: [], counts: emptyCounts() };
+  if (!db) return { results: [], counts: emptyCounts(), nameOptions: [] };
 
   const normalizedType = ["all", "representative", "candidate"].includes(profileType)
     ? profileType
@@ -30,22 +31,30 @@ export async function getProfileGaps({
     ? missing
     : "any";
   const normalizedOffice = normalizeOfficeFilter(office);
+  const normalizedProfile = String(profile || "").trim();
+  const queryLimit = Math.max(limit, 1000);
 
   const [representatives, candidates] = await Promise.all([
     normalizedType === "candidate"
       ? []
-      : getRepresentativeGaps(db, { missing: normalizedMissing, office: normalizedOffice, limit }),
+      : getRepresentativeGaps(db, { missing: normalizedMissing, office: normalizedOffice, limit: queryLimit }),
     normalizedType === "representative"
       ? []
-      : getCandidateGaps(db, { missing: normalizedMissing, office: normalizedOffice, limit }),
+      : getCandidateGaps(db, { missing: normalizedMissing, office: normalizedOffice, limit: queryLimit }),
   ]);
 
-  const results = [...representatives, ...candidates]
-    .sort((a, b) => a.name.localeCompare(b.name))
+  const allResults = [...representatives, ...candidates]
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const results = allResults
+    .filter((item) => !normalizedProfile || profileOptionValue(item) === normalizedProfile)
     .slice(0, limit);
 
   return {
     results,
+    nameOptions: allResults.map((item) => ({
+      value: profileOptionValue(item),
+      label: [item.name, item.subtitle].filter(Boolean).join(" - "),
+    })),
     counts: {
       total: results.length,
       representatives: representatives.length,
@@ -226,6 +235,10 @@ function emptyCounts() {
     missingEmail: 0,
     missingWebsite: 0,
   };
+}
+
+function profileOptionValue(item = {}) {
+  return [item.type, item.key].filter(Boolean).join(":");
 }
 
 function normalizeOfficeFilter(value = "") {
