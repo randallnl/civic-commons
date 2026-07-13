@@ -6,11 +6,45 @@ import { getOrganizations, organizationPath } from "../../lib/organizationsApi";
 
 let organizations = [];
 let error = "";
+const name = Astro.url.searchParams.get("name")?.trim() || "";
+const issue = Astro.url.searchParams.get("issue")?.trim() || "";
+const town = Astro.url.searchParams.get("town")?.trim() || "";
 
 try {
   organizations = await getOrganizations();
 } catch (loadError) {
   error = loadError?.message || "Unable to load organizations.";
+}
+
+const organizationOptions = organizations.map((organization) => organization.name).sort((a, b) =>
+  a.localeCompare(b),
+);
+const issueOptions = uniqueOptions(
+  organizations.flatMap((organization) => organization.issueAreas || []),
+);
+const townOptions = uniqueOptions(
+  organizations.flatMap((organization) => organization.towns || []),
+);
+const filteredOrganizations = organizations.filter((organization) =>
+  matchesFilter(organization.name, name) &&
+  matchesOption(organization.issueAreas || [], issue) &&
+  matchesOption(organization.towns || [], town),
+);
+const hasFilters = Boolean(name || issue || town);
+
+function uniqueOptions(values = []) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function matchesFilter(value = "", filter = "") {
+  if (!filter) return true;
+  return String(value || "").toLowerCase().includes(filter.toLowerCase());
+}
+
+function matchesOption(values = [], selected = "") {
+  if (!selected) return true;
+  return values.some((value) => String(value).toLowerCase() === selected.toLowerCase());
 }
 ---
 
@@ -22,7 +56,7 @@ try {
     <title>Organizations | NH Deserves Better</title>
     <meta
       name="description"
-      content="Browse NH Deserves Better partner organizations and their bill comments."
+      content="Browse advocacy organizations and organizations making comments on bills."
     />
   </head>
 
@@ -33,39 +67,91 @@ try {
 
       <section class="hero">
         <p class="eyebrow">Organizations</p>
-        <h1>Partner organizations and public comments.</h1>
+        <h1>Advocacy organizations and bill comments.</h1>
+        <p>
+          Browse organizations working on New Hampshire policy issues, plus the
+          comments they have published on tracked bills.
+        </p>
       </section>
 
       {error ? (
         <p class="status-message">{error}</p>
       ) : organizations.length ? (
-        <section class="org-grid" aria-label="Organizations">
-          {organizations.map((organization) => (
-            <article class="org-card">
-              <a class="logo-wrap" href={organizationPath(organization)}>
-                {organization.logoUrl ? (
-                  <img src={organization.logoUrl} alt={`${organization.name} logo`} loading="lazy" />
-                ) : (
-                  <span>{organization.name.slice(0, 1)}</span>
-                )}
-              </a>
+        <>
+          <form class="filters" method="get" action="/organizations">
+            <label>
+              <span>Name</span>
+              <input
+                type="search"
+                name="name"
+                value={name}
+                list="organizationNames"
+                placeholder="Start typing an organization"
+              />
+              <datalist id="organizationNames">
+                {organizationOptions.map((option) => <option value={option} />)}
+              </datalist>
+            </label>
 
-              <div class="org-copy">
-                <p class="eyebrow">{organization.type || "Organization"}</p>
-                <h2>
-                  <a href={organizationPath(organization)}>{organization.name}</a>
-                </h2>
-                {organization.shortDescription && <p>{organization.shortDescription}</p>}
+            <label>
+              <span>Issue</span>
+              <select name="issue">
+                <option value="">All issues</option>
+                {issueOptions.map((option) => (
+                  <option value={option} selected={option === issue}>{option}</option>
+                ))}
+              </select>
+            </label>
 
-                <div class="meta-row">
-                  {organization.serviceArea && <span>{organization.serviceArea}</span>}
-                  {organization.city && <span>{organization.city}, {organization.state}</span>}
-                  <span>{organization.comments.length} comments</span>
-                </div>
-              </div>
-            </article>
-          ))}
-        </section>
+            <label>
+              <span>Town</span>
+              <select name="town">
+                <option value="">All towns</option>
+                {townOptions.map((option) => (
+                  <option value={option} selected={option === town}>{option}</option>
+                ))}
+              </select>
+            </label>
+
+            <div class="filter-actions">
+              <button type="submit">Filter</button>
+              {hasFilters && <a href="/organizations">Clear</a>}
+            </div>
+          </form>
+
+          {filteredOrganizations.length ? (
+            <section class="org-grid" aria-label="Organizations">
+              {filteredOrganizations.map((organization) => (
+                <article class="org-card">
+                  <a class="logo-wrap" href={organizationPath(organization)}>
+                    {organization.logoUrl ? (
+                      <img src={organization.logoUrl} alt={`${organization.name} logo`} loading="lazy" />
+                    ) : (
+                      <span>{organization.name.slice(0, 1)}</span>
+                    )}
+                  </a>
+
+                  <div class="org-copy">
+                    <p class="eyebrow">{organization.type || "Organization"}</p>
+                    <h2>
+                      <a href={organizationPath(organization)}>{organization.name}</a>
+                    </h2>
+                    {organization.shortDescription && <p>{organization.shortDescription}</p>}
+
+                    <div class="meta-row">
+                      {organization.serviceArea && <span>{organization.serviceArea}</span>}
+                      {organization.city && <span>{organization.city}, {organization.state}</span>}
+                      {organization.issueAreas?.slice(0, 2).map((item) => <span>{item}</span>)}
+                      <span>{organization.comments.length} comments</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </section>
+          ) : (
+            <p class="status-message">No organizations matched those filters.</p>
+          )}
+        </>
       ) : (
         <p class="status-message">No organizations found.</p>
       )}
@@ -99,6 +185,15 @@ try {
     padding: 42px 0 28px;
   }
 
+  .hero p:not(.eyebrow) {
+    color: #4b5563;
+    font-size: 1.08rem;
+    font-weight: 800;
+    line-height: 1.55;
+    margin: 18px 0 0;
+    max-width: 780px;
+  }
+
   .eyebrow {
     color: #6b4f2a;
     font-size: 0.78rem;
@@ -113,6 +208,74 @@ try {
     line-height: 0.95;
     margin: 0;
     max-width: 940px;
+  }
+
+  .filters {
+    align-items: end;
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 #1f2933;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(220px, 1.2fr) minmax(160px, 0.8fr) minmax(160px, 0.8fr) auto;
+    margin: 0 0 22px;
+    padding: 16px;
+  }
+
+  .filters label {
+    display: grid;
+    gap: 7px;
+  }
+
+  .filters span {
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .filters input,
+  .filters select {
+    appearance: none;
+    background: #fffaf1;
+    border: 1px solid #9ca3af;
+    border-radius: 6px;
+    color: #1f2933;
+    font: inherit;
+    font-weight: 800;
+    min-height: 42px;
+    padding: 9px 10px;
+    width: 100%;
+  }
+
+  .filter-actions {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+  }
+
+  .filter-actions button,
+  .filter-actions a {
+    border-radius: 6px;
+    font-weight: 900;
+    min-height: 42px;
+    padding: 10px 12px;
+    text-decoration: none;
+  }
+
+  .filter-actions button {
+    background: #1f2933;
+    border: 2px solid #1f2933;
+    color: white;
+    cursor: pointer;
+  }
+
+  .filter-actions a {
+    align-items: center;
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    display: inline-flex;
   }
 
   .org-grid {
@@ -197,6 +360,7 @@ try {
   }
 
   @media (max-width: 860px) {
+    .filters,
     .org-grid,
     .org-card {
       grid-template-columns: 1fr;

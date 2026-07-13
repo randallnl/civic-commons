@@ -29,6 +29,18 @@ export async function getOrganizations({
     ...organization,
     comments: commentsForOrganization(comments, organization),
     endorsements: endorsementsForOrganization(endorsements, organization),
+  })).map((organization) => ({
+    ...organization,
+    issueAreas: uniqueList([
+      organization.issueArea,
+      ...organization.comments.flatMap((comment) => comment.issueAreas || []),
+    ]),
+    towns: uniqueList([
+      organization.city,
+      organization.town,
+      ...splitList(organization.serviceArea),
+      ...organization.comments.flatMap((comment) => comment.towns || []),
+    ]),
   }));
 }
 
@@ -92,8 +104,10 @@ function parseOrganizationProfiles(csv) {
         instagram: row.Instagram || "",
         bluesky: row.Bluesky || "",
         city: cleanText(row.City || ""),
+        town: cleanText(row.Town || ""),
         state: cleanText(row.State || ""),
         serviceArea: cleanText(row["Service Area"] || ""),
+        issueArea: cleanText(row["Issue Area"] || row.Issue || row.Issues || ""),
         logoUrl: organizationAssetUrl(row["Logo URL"] || ""),
         bannerImageUrl: organizationAssetUrl(row["Banner Image URL"] || ""),
         foundedYear: row["Founded Year"] || "",
@@ -112,6 +126,8 @@ function parseOrganizationComments(csv) {
       bill: normalizeBillCode(row.Bill || ""),
       billLabel: cleanText(row.Bill || ""),
       position: cleanText(row.Position || ""),
+      issueAreas: splitList(row["Issue Area"] || row.Issue || row.Issues || ""),
+      towns: splitList(row.Town || row.Towns || row.Community || row.Communities || ""),
       comment: cleanText(row.Comment || ""),
       author: cleanText(row.Author || ""),
       date: cleanText(row.Date || ""),
@@ -249,6 +265,19 @@ export function slugify(value = "") {
 
 export function normalizeBillCode(value = "") {
   return String(value).toUpperCase().replace(/\s+/g, "");
+}
+
+function splitList(value = "") {
+  return String(value || "")
+    .split(/[,;|]/)
+    .map((item) => cleanText(item).trim())
+    .filter(Boolean);
+}
+
+function uniqueList(values = []) {
+  return [...new Set(values.flatMap((value) => splitList(value)))].sort((a, b) =>
+    a.localeCompare(b),
+  );
 }
 
 function organizationAssetUrl(value = "") {
