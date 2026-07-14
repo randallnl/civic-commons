@@ -327,9 +327,14 @@ function previewText(value = "", length = 260) {
 
                     <div class:list={["vote-interpretation", stance.className]}>
                       <strong>Vote</strong>
-                      <span class:list={["legislator-vote-pill", stance.className]}>
+                      <a
+                        class:list={["legislator-vote-pill", stance.className]}
+                        href="/vote-interpretations"
+                        title="How do we determine this?"
+                        aria-label={`How do we determine this? ${stance.label}`}
+                      >
                         {stance.label}
-                      </span>
+                      </a>
                       {voteImpact && <p class="vote-impact">{cleanText(voteImpact)}</p>}
                     </div>
 
@@ -525,6 +530,7 @@ function previewText(value = "", length = 260) {
     line-height: 1.2;
     padding: 7px 10px;
     text-align: center;
+    text-decoration: none;
     width: 100%;
     white-space: normal;
   }

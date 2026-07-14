@@ -365,10 +365,15 @@ try {
                             <h3>
                               <a href={`/people/${repSlug(rep)}`}>{cleanText(repName(rep))}</a>
                             </h3>
-                            <span class:list={["mini-grade", grade.className]} title={grade.label}>
+                            <a
+                              class:list={["mini-grade", grade.className]}
+                              href="/vote-grades"
+                              title="How do we determine this?"
+                              aria-label={`How do we determine this? ${grade.label}`}
+                            >
                               <strong>{grade.letter}</strong>
                               <small>Grade</small>
-                            </span>
+                            </a>
                           </div>
                           <p>{repMeta(rep)}</p>
                           {isFreeStater(rep) && (
@@ -740,6 +745,7 @@ try {
     min-width: 48px;
     padding: 5px 7px;
     text-align: center;
+    text-decoration: none;
   }
 
   .mini-grade strong {

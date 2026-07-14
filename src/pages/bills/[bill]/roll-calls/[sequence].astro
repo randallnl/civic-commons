@@ -389,9 +389,14 @@ function slugify(value = "") {
                           )}
                         </div>
                       </div>
-                      <span class:list={["vote-pill", voteInterpretation.className]}>
+                      <a
+                        class:list={["vote-pill", voteInterpretation.className]}
+                        href="/vote-interpretations"
+                        title="How do we determine this?"
+                        aria-label={`How do we determine this? ${voteInterpretation.label}`}
+                      >
                         {voteInterpretation.label}
-                      </span>
+                      </a>
                     </div>
 
                     <div class="card-meta">
@@ -771,6 +776,7 @@ function slugify(value = "") {
     max-width: min(340px, 42vw);
     padding: 8px 10px;
     text-align: center;
+    text-decoration: none;
   }
 
   .vote-pill.yea,

@@ -530,10 +530,15 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
                         </a>
                       )}
                     </div>
-                    <span class:list={["mini-grade", grade.className]} title={grade.label}>
+                    <a
+                      class:list={["mini-grade", grade.className]}
+                      href="/vote-grades"
+                      title="How do we determine this?"
+                      aria-label={`How do we determine this? ${grade.label}`}
+                    >
                       <strong>{grade.letter}</strong>
                       <small>Grade</small>
-                    </span>
+                    </a>
                   </div>
                   {votes.length > 0 && (
                     <div class="person-vote-list">
@@ -1507,6 +1512,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     min-width: 70px;
     padding: 10px 11px;
     text-align: center;
+    text-decoration: none;
   }
 
   .list .mini-grade strong {

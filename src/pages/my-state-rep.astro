@@ -658,10 +658,15 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
                       )}
                     </div>
 
-                    <span class:list={["mini-grade", grade.className]} title={grade.label}>
+                    <a
+                      class:list={["mini-grade", grade.className]}
+                      href="/vote-grades"
+                      title="How do we determine this?"
+                      aria-label={`How do we determine this? ${grade.label}`}
+                    >
                       <strong>{grade.letter}</strong>
                       <small>Grade</small>
-                    </span>
+                    </a>
                   </div>
 
                   {votes.length > 0 && (
@@ -1382,6 +1387,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     min-width: 52px;
     padding: 7px 8px;
     text-align: center;
+    text-decoration: none;
   }
 
   .mini-grade strong {

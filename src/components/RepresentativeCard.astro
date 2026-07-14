@@ -77,10 +77,15 @@ function billSummaryFor(vote) {
     <div class="rep-main">
       <div class="rep-heading">
         <h3><a href={profileHref}>{name}</a></h3>
-        <div class:list={["rep-grade", grade.className]} title={grade.label}>
+        <a
+          class:list={["rep-grade", grade.className]}
+          href="/vote-grades"
+          title="How do we determine this?"
+          aria-label={`How do we determine this? ${grade.label}`}
+        >
           <span>{grade.letter}</span>
           <small>Grade</small>
-        </div>
+        </a>
       </div>
 
       <div class="rep-meta">
@@ -155,9 +160,14 @@ function billSummaryFor(vote) {
               </div>
               <div class="vote-copy">
                 <div class:list={["vote-interpretation", stance.className]}>
-                  <small class:list={["legislator-vote-pill", stance.className]}>
+                  <a
+                    class:list={["legislator-vote-pill", stance.className]}
+                    href="/vote-interpretations"
+                    title="How do we determine this?"
+                    aria-label={`How do we determine this? ${stance.label}`}
+                  >
                     {stance.label}
-                  </small>
+                  </a>
                   {voteImpact && <p class="vote-impact">{cleanText(voteImpact)}</p>}
                 </div>
               </div>
@@ -250,6 +260,7 @@ function billSummaryFor(vote) {
     min-width: 58px;
     padding: 6px 8px;
     text-align: center;
+    text-decoration: none;
   }
 
   .rep-grade span {
@@ -463,6 +474,7 @@ function billSummaryFor(vote) {
     box-sizing: border-box;
     display: block;
     text-align: center;
+    text-decoration: none;
     width: 100%;
   }
 

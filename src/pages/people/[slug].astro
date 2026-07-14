@@ -371,10 +371,15 @@ function candidateOptionLabel(candidate = {}) {
           </div>
 
           <div class="profile-grade-row">
-            <div class:list={["profile-grade", voteGrade.className]} title={voteGrade.label}>
+            <a
+              class:list={["profile-grade", voteGrade.className]}
+              href="/vote-grades"
+              title="How do we determine this?"
+              aria-label={`How do we determine this? ${voteGrade.label}`}
+            >
               <span>{voteGrade.letter}</span>
               <small>Vote Grade</small>
-            </div>
+            </a>
             <p>{voteGrade.label}</p>
           </div>
 
@@ -715,9 +720,14 @@ function candidateOptionLabel(candidate = {}) {
                         <div class="vote-copy">
                           <div class:list={["vote-interpretation", stance.className]}>
                             <strong>Representative Vote</strong>
-                            <span class:list={["legislator-vote-pill", stance.className]}>
+                            <a
+                              class:list={["legislator-vote-pill", stance.className]}
+                              href="/vote-interpretations"
+                              title="How do we determine this?"
+                              aria-label={`How do we determine this? ${stance.label}`}
+                            >
                               {stance.label}
-                            </span>
+                            </a>
                             {voteImpact && (
                               <p class="vote-impact">{voteImpact}</p>
                             )}
@@ -1064,6 +1074,7 @@ function candidateOptionLabel(candidate = {}) {
     min-width: 82px;
     padding: 10px 12px;
     text-align: center;
+    text-decoration: none;
   }
 
   .profile-grade span {
@@ -1495,6 +1506,7 @@ function candidateOptionLabel(candidate = {}) {
     line-height: 1.2;
     padding: 7px 10px;
     text-align: center;
+    text-decoration: none;
     width: 100%;
   }
 
