@@ -18,6 +18,18 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_updates (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`;
 
+const MENTIONS_TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_update_mentions (
+  update_id INTEGER NOT NULL,
+  personid INTEGER NOT NULL,
+  employeeno INTEGER,
+  name TEXT NOT NULL,
+  chamber TEXT,
+  party TEXT,
+  district TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(update_id, personid)
+)`;
+
 export function communityUpdatesDb() {
   return env.d1_db;
 }
@@ -25,11 +37,18 @@ export function communityUpdatesDb() {
 export async function ensureCommunityUpdatesTable(db = communityUpdatesDb()) {
   if (!db) throw new Error("D1 database binding is not configured.");
   await db.prepare(TABLE_SQL).run();
+  await db.prepare(MENTIONS_TABLE_SQL).run();
   await addColumnIfMissing(db, "community_updates", "link_url", "TEXT");
   await db
     .prepare(
       `CREATE INDEX IF NOT EXISTS idx_community_updates_entity_status
        ON community_updates(entity_type, entity_key, status, created_at)`,
+    )
+    .run();
+  await db
+    .prepare(
+      `CREATE INDEX IF NOT EXISTS idx_community_update_mentions_update
+       ON community_update_mentions(update_id)`,
     )
     .run();
 }
@@ -54,7 +73,7 @@ export async function getApprovedCommunityUpdates(entityType, entityKey, { limit
     .bind(entityType, String(entityKey), limit)
     .all();
 
-  return (result.results || []).map(normalizeUpdate);
+  return hydrateUpdateMentions((result.results || []).map(normalizeUpdate), db);
 }
 
 export async function getRecentApprovedCommunityUpdates({ limit = 6 } = {}) {
@@ -75,7 +94,7 @@ export async function getRecentApprovedCommunityUpdates({ limit = 6 } = {}) {
     .bind(limit)
     .all();
 
-  return (result.results || []).map(normalizeUpdate);
+  return hydrateUpdateMentions((result.results || []).map(normalizeUpdate), db);
 }
 
 export async function getPendingCommunityUpdates({ limit = 25 } = {}) {
@@ -96,7 +115,7 @@ export async function getPendingCommunityUpdates({ limit = 25 } = {}) {
     .bind(limit)
     .all();
 
-  return (result.results || []).map(normalizeUpdate);
+  return hydrateUpdateMentions((result.results || []).map(normalizeUpdate), db);
 }
 
 export function communityUpdateEntityKey(value = "") {
@@ -114,8 +133,115 @@ export function normalizeUpdate(update = {}) {
     comment: cleanText(update.comment || ""),
     linkUrl: update.link_url || update.linkUrl || "",
     photoUrl: update.photo_url || update.photoUrl || "",
+    mentions: Array.isArray(update.mentions) ? update.mentions : [],
     createdAt: update.created_at || update.createdAt || "",
   };
+}
+
+export async function saveCommunityUpdateMentions(updateId, comment = "", db = communityUpdatesDb()) {
+  if (!db || !updateId || !comment) return [];
+
+  await ensureCommunityUpdatesTable(db);
+  const mentions = await findLegislatorMentions(comment, db);
+
+  if (!mentions.length) return [];
+
+  const statements = mentions.map((mention) =>
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO community_update_mentions (
+          update_id, personid, employeeno, name, chamber, party, district
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        updateId,
+        mention.personid,
+        mention.employeeno || null,
+        mention.name,
+        mention.chamber,
+        mention.party || "",
+        mention.district || "",
+      ),
+  );
+
+  await db.batch(statements);
+  return mentions;
+}
+
+async function findLegislatorMentions(comment = "", db) {
+  const tags = [...String(comment || "").matchAll(/@([A-Za-z][A-Za-z.'-]+(?:\s+[A-Za-z][A-Za-z.'-]+){1,3})/g)]
+    .map((match) => cleanText(match[1]).toLowerCase())
+    .filter(Boolean);
+  const uniqueTags = [...new Set(tags)];
+  if (!uniqueTags.length) return [];
+
+  const result = await db
+    .prepare(
+      `SELECT personid, employeeno, firstname, lastname, party, legislativebody, district
+       FROM d1_legislators
+       WHERE active = 1
+       ORDER BY lastname, firstname`,
+    )
+    .all();
+
+  const mentions = [];
+  const seen = new Set();
+
+  for (const rep of result.results || []) {
+    const name = cleanText([rep.firstname, rep.lastname].filter(Boolean).join(" "));
+    const normalizedName = name.toLowerCase();
+    if (!uniqueTags.includes(normalizedName)) continue;
+    if (!rep.personid || seen.has(rep.personid)) continue;
+
+    seen.add(rep.personid);
+    mentions.push({
+      personid: rep.personid,
+      employeeno: rep.employeeno,
+      name,
+      chamber: rep.legislativebody === "S" ? "Senate" : "House",
+      party: rep.party || "",
+      district: rep.district || "",
+    });
+  }
+
+  return mentions;
+}
+
+async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
+  if (!updates.length || !db) return updates;
+  const ids = updates.map((update) => update.id).filter(Boolean);
+  if (!ids.length) return updates;
+
+  const result = await db
+    .prepare(
+      `SELECT update_id, personid, employeeno, name, chamber, party, district
+       FROM community_update_mentions
+       WHERE update_id IN (${ids.map(() => "?").join(", ")})
+       ORDER BY name`,
+    )
+    .bind(...ids)
+    .all();
+  const mentionsByUpdate = new Map();
+
+  for (const mention of result.results || []) {
+    const list = mentionsByUpdate.get(mention.update_id) || [];
+    list.push({
+      personid: mention.personid,
+      employeeno: mention.employeeno,
+      name: cleanText(mention.name),
+      chamber: cleanText(mention.chamber),
+      party: cleanText(mention.party),
+      district: cleanText(mention.district),
+      path: `/people/${encodeURIComponent(String(mention.personid))}`,
+    });
+    mentionsByUpdate.set(mention.update_id, list);
+  }
+
+  return updates.map((update) => ({
+    ...update,
+    mentions: mentionsByUpdate.get(update.id) || [],
+  }));
 }
 
 export function communityUpdateDate(value = "") {

@@ -2,7 +2,11 @@ export const prerender = false;
 
 import { env } from "cloudflare:workers";
 import { adminR2Bucket } from "../../lib/adminAuth";
-import { ensureCommunityUpdatesTable, communityUpdatesDb } from "../../lib/communityUpdates";
+import {
+  ensureCommunityUpdatesTable,
+  communityUpdatesDb,
+  saveCommunityUpdateMentions,
+} from "../../lib/communityUpdates";
 
 export async function POST({ request }) {
   let redirectTo = "/";
@@ -37,7 +41,7 @@ export async function POST({ request }) {
     if (!db) throw new Error("D1 database binding is not configured.");
     await ensureCommunityUpdatesTable(db);
 
-    await db
+    const result = await db
       .prepare(
         `INSERT INTO community_updates (
           entity_type, entity_key, entity_name, page_url, display_name,
@@ -57,6 +61,10 @@ export async function POST({ request }) {
         photoUrl,
       )
       .run();
+    const updateId = result.meta?.last_row_id || result.meta?.lastRowId || result.lastRowId;
+    if (updateId && comment) {
+      await saveCommunityUpdateMentions(updateId, comment, db);
+    }
 
     return redirectWithMessage(
       request,

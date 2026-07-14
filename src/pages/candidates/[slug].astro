@@ -56,6 +56,7 @@ const officeParts = [
   candidate.county,
   candidate.district ? `District ${candidate.district}` : "",
 ].filter(Boolean);
+const candidateRoles = uniqueCandidateRoles(candidate.candidateRoles?.length ? candidate.candidateRoles : [candidate]);
 const sourceLinks = [
   candidate.candidateWebsite && {
     href: candidate.candidateWebsite,
@@ -135,6 +136,33 @@ function legislatorOptionLabel(rep = {}) {
     rep.party,
   ].filter(Boolean).join(" - ");
 }
+
+function uniqueCandidateRoles(roles = []) {
+  const seen = new Set();
+
+  return roles.filter((role) => {
+    const key = [
+      role.filerEntityNumber,
+      role.office,
+      role.county,
+      role.district,
+      role.electionYear,
+    ]
+      .filter(Boolean)
+      .join("|");
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function roleOfficeLine(role = {}) {
+  return [
+    role.office,
+    role.county,
+    role.district ? `District ${role.district}` : "",
+  ].filter(Boolean).join(", ");
+}
 ---
 
 <html lang="en">
@@ -203,43 +231,35 @@ function legislatorOptionLabel(rep = {}) {
 
       <section class="panel">
         <p class="eyebrow">Ballot Details</p>
-        <div class="detail-grid">
-          <div>
-            <span>Office</span>
-            <strong>{candidate.office || "Not listed"}</strong>
-          </div>
-          <div>
-            <span>Office Type</span>
-            <strong>{candidate.officeType || "Not listed"}</strong>
-          </div>
-          <div>
-            <span>County</span>
-            <strong>{candidate.county || "Not listed"}</strong>
-          </div>
-          <div>
-            <span>District</span>
-            <strong>{candidate.district || "Not listed"}</strong>
-          </div>
-          <div>
-            <span>Party</span>
-            <strong>{candidate.politicalParty || "Not listed"}</strong>
-          </div>
-          <div>
-            <span>Election Year</span>
-            <strong>{candidate.electionYear || "Not listed"}</strong>
-          </div>
-          <div>
-            <span>Total Raised</span>
-            <strong>{formatCurrency(candidate.totalRaised)}</strong>
-          </div>
-          <div>
-            <span>Total Spent</span>
-            <strong>{formatCurrency(candidate.totalSpent)}</strong>
-          </div>
-          <div>
-            <span>Filer Entity</span>
-            <strong>{candidate.filerEntityNumber || "Not listed"}</strong>
-          </div>
+        <div class="role-list">
+          {candidateRoles.map((role) => (
+            <article class="role-card">
+              <div>
+                <span>Office</span>
+                <strong>{roleOfficeLine(role) || "Not listed"}</strong>
+              </div>
+              <div>
+                <span>Party</span>
+                <strong>{role.politicalParty || candidate.politicalParty || "Not listed"}</strong>
+              </div>
+              <div>
+                <span>Election Year</span>
+                <strong>{role.electionYear || candidate.electionYear || "Not listed"}</strong>
+              </div>
+              <div>
+                <span>Raised</span>
+                <strong>{formatCurrency(role.totalRaised)}</strong>
+              </div>
+              <div>
+                <span>Spent</span>
+                <strong>{formatCurrency(role.totalSpent)}</strong>
+              </div>
+              <div>
+                <span>Filer Entity</span>
+                <strong>{role.filerEntityNumber || "Not listed"}</strong>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -650,7 +670,8 @@ function legislatorOptionLabel(rep = {}) {
   }
 
   .summary-strip span,
-  .detail-grid span {
+  .detail-grid span,
+  .role-card span {
     color: #6b7280;
     display: block;
     font-size: 0.75rem;
@@ -672,14 +693,27 @@ function legislatorOptionLabel(rep = {}) {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .detail-grid div {
+  .role-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .detail-grid div,
+  .role-card {
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 12px;
+    display: grid;
+    gap: 10px;
     padding: 14px;
   }
 
-  .detail-grid strong {
+  .role-card {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .detail-grid strong,
+  .role-card strong {
     overflow-wrap: anywhere;
   }
 

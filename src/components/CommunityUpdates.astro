@@ -22,6 +22,39 @@ function linkHost(value = "") {
     return "";
   }
 }
+
+function mentionParts(comment = "", mentions = []) {
+  const text = cleanText(comment);
+  const activeMentions = mentions.filter((mention) => mention.name && mention.path);
+  if (!text || !activeMentions.length) return [{ text }];
+
+  const pattern = new RegExp(
+    `@(${activeMentions.map((mention) => escapeRegExp(mention.name)).join("|")})`,
+    "gi",
+  );
+  const parts = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(pattern)) {
+    if (match.index > lastIndex) {
+      parts.push({ text: text.slice(lastIndex, match.index) });
+    }
+    const name = cleanText(match[1]);
+    const mention = activeMentions.find((item) => item.name.toLowerCase() === name.toLowerCase());
+    parts.push({
+      text: `@${name}`,
+      href: mention?.path,
+    });
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) parts.push({ text: text.slice(lastIndex) });
+  return parts;
+}
+
+function escapeRegExp(value = "") {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 ---
 
 <section class="panel community-updates-panel">
@@ -103,7 +136,28 @@ function linkHost(value = "") {
                 <span>{communityUpdateDate(update.createdAt)}</span>
               )}
             </div>
-            {update.comment && <p>{cleanText(update.comment)}</p>}
+            {update.comment && (
+              <p>
+                {mentionParts(update.comment, update.mentions).map((part) =>
+                  part.href ? (
+                    <a class="comment-mention-link" href={part.href}>{part.text}</a>
+                  ) : (
+                    part.text
+                  ),
+                )}
+              </p>
+            )}
+            {update.mentions?.length > 0 && (
+              <div class="mention-list" aria-label="Tagged legislators">
+                <span>Tagged legislators</span>
+                {update.mentions.map((mention) => (
+                  <a href={mention.path}>
+                    {mention.name}
+                    {mention.chamber && <small>{mention.chamber}</small>}
+                  </a>
+                ))}
+              </div>
+            )}
             {update.linkUrl && (
               <a class="community-update-link" href={update.linkUrl}>
                 <span>Open linked context</span>
@@ -343,6 +397,47 @@ function linkHost(value = "") {
     font-weight: 800;
     line-height: 1.5;
     margin: 8px 0 0;
+  }
+
+  .comment-mention-link {
+    color: #1d4ed8;
+    font-weight: 950;
+  }
+
+  .mention-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 12px;
+  }
+
+  .mention-list > span {
+    color: #6b4f2a;
+    flex-basis: 100%;
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .mention-list a {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #93c5fd;
+    border-radius: 999px;
+    color: #1e3a8a;
+    display: inline-flex;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 900;
+    padding: 6px 9px;
+    text-decoration: none;
+  }
+
+  .mention-list small {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 900;
   }
 
   .community-update-link {

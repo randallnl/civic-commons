@@ -2769,13 +2769,40 @@ async function handleCandidateDetail(request, env) {
   if (!candidate) {
     return json({ error: "Candidate not found." }, 404);
   }
+  const personId = candidate.person_id || await unifiedPersonIdForCandidate(env, candidate);
+  const candidateRoles = personId
+    ? await getCandidateRolesForPerson(env, personId)
+    : [candidate];
 
   return json({
     candidate: {
       ...formatCandidate(candidate),
-      personId: candidate.person_id || await unifiedPersonIdForCandidate(env, candidate),
+      personId,
+      candidateRoles: candidateRoles.map(formatCandidateRole),
     },
   });
+}
+
+async function getCandidateRolesForPerson(env, personId) {
+  const result = await env.DB.prepare(`
+    ${candidateBaseCte()}
+    SELECT ${candidateBaseSelectColumns()}
+    FROM candidate_base c
+    WHERE c.person_id = ?
+    ORDER BY
+      c.election_year DESC,
+      CASE
+        WHEN c.office = 'State Representative' THEN 1
+        WHEN c.office = 'State Senate' THEN 2
+        ELSE 3
+      END,
+      c.county,
+      CAST(COALESCE(c.district, '0') AS INTEGER)
+  `)
+    .bind(personId)
+    .all();
+
+  return result.results || [];
 }
 
 async function getCandidatesForAddressDistricts(
@@ -2973,6 +3000,21 @@ function formatCandidate(candidate) {
     slug: candidate.slug,
     is_free_stater: candidate.is_free_stater || "no",
     isFreeStater: candidate.is_free_stater || "no",
+  };
+}
+
+function formatCandidateRole(candidate) {
+  return {
+    filerEntityNumber: candidate.filer_entity_number,
+    officeType: candidate.office_type,
+    office: candidate.office,
+    county: candidate.county,
+    district: candidate.district,
+    politicalParty: candidate.political_party,
+    electionYear: candidate.election_year,
+    electionCycle: candidate.election_cycle,
+    totalRaised: candidate.total_raised,
+    totalSpent: candidate.total_spent,
   };
 }
 

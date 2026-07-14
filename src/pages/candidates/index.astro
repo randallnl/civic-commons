@@ -207,18 +207,21 @@ function uniqueCandidates(items = []) {
   return items.filter((candidate) => {
     if (!looksLikeCandidate(candidate)) return false;
 
-    const key = [
-      candidate.slug,
-      candidate.filerEntityNumber,
-      candidate.name,
-      candidate.candidateFirstName,
-      candidate.candidateLastName,
-      candidate.office,
-      candidate.county,
-      candidate.district,
-    ]
-      .filter(Boolean)
-      .join("|");
+    const key =
+      candidate.personId || candidate.person_id
+        ? `person:${candidate.personId || candidate.person_id}`
+        : [
+            candidate.slug,
+            candidate.filerEntityNumber,
+            candidate.name,
+            candidate.candidateFirstName,
+            candidate.candidateLastName,
+            candidate.office,
+            candidate.county,
+            candidate.district,
+          ]
+            .filter(Boolean)
+            .join("|");
 
     if (seen.has(key)) return false;
     seen.add(key);

@@ -325,16 +325,18 @@ function positionClass(position = "") {
   return "neutral";
 }
 
-function billTitleOnly(trackedBill = {}, fallbackCode = "") {
+function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   const code = normalizeBillCode(trackedBill.code || fallbackCode);
   const name = cleanText(trackedBill.name || trackedBill.title || "");
   if (!name) return code;
 
-  return cleanText(
+  const title = cleanText(
     name
       .replace(new RegExp(`^${code}\\s*[:\\-–—]?\\s*`, "i"), "")
       .trim(),
   ) || name;
+
+  return [code, title].filter(Boolean).join(": ");
 }
 ---
 
@@ -686,7 +688,7 @@ function billTitleOnly(trackedBill = {}, fallbackCode = "") {
                 organizationComments.map((item) => {
                   const trackedBill = trackedBillForCode(item.bill || item.billLabel);
                   const billCode = trackedBill?.code || normalizeBillCode(item.bill || item.billLabel);
-                  const billTitle = billTitleOnly(trackedBill, billCode);
+                  const billTitle = billCommentTitle(trackedBill, billCode);
 
                   return (
                     <article class="comment-card">

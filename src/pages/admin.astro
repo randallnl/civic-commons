@@ -311,6 +311,17 @@ function reviewDate(value = "") {
 
                     {update.pageUrl && <a href={update.pageUrl}>Open profile page</a>}
                     {update.comment && <p>{cleanText(update.comment)}</p>}
+                    {update.mentions?.length > 0 && (
+                      <div class="moderation-mentions">
+                        <span>Tagged legislators</span>
+                        {update.mentions.map((mention) => (
+                          <a href={mention.path || `/people/${mention.personid}`}>
+                            {cleanText(mention.name)}
+                            {mention.chamber && <small>{cleanText(mention.chamber)}</small>}
+                          </a>
+                        ))}
+                      </div>
+                    )}
                     {update.linkUrl && <a href={update.linkUrl}>Open submitted link</a>}
                     {update.photoUrl && <img src={update.photoUrl} alt="" loading="lazy" />}
 
@@ -801,6 +812,42 @@ function reviewDate(value = "") {
   .empty {
     color: #4b5563;
     font-weight: 800;
+  }
+
+  .moderation-mentions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .moderation-mentions > span {
+    color: #374151;
+    flex-basis: 100%;
+    font-size: 0.78rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .moderation-mentions a {
+    align-items: center;
+    background: white;
+    border: 1px solid #93c5fd;
+    border-radius: 999px;
+    color: #1e3a8a;
+    display: inline-flex;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 900;
+    padding: 5px 8px;
+    text-decoration: none;
+  }
+
+  .moderation-mentions small {
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 900;
   }
 
   .moderation-list img {
