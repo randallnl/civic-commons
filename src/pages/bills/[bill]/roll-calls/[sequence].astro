@@ -39,6 +39,7 @@ const voteFilters = groupedVotes.map((group) => ({
   count: group.rows.length,
   key: filterKey(group.label),
 }));
+const countyFilters = groupByValue(votes, (vote) => cleanText(vote.county || ""));
 
 function groupVotes(voteRows = []) {
   const groups = new Map();
@@ -50,6 +51,20 @@ function groupVotes(voteRows = []) {
   }
 
   return [...groups].map(([label, rows]) => ({ label, rows }));
+}
+
+function groupByValue(rows = [], getValue) {
+  const groups = new Map();
+
+  for (const row of rows) {
+    const label = getValue(row);
+    if (!label) continue;
+    const key = filterKey(label);
+    if (!groups.has(key)) groups.set(key, { key, label, count: 0 });
+    groups.get(key).count += 1;
+  }
+
+  return [...groups.values()].sort((first, second) => first.label.localeCompare(second.label));
 }
 
 function formatDate(value) {
@@ -231,6 +246,16 @@ function slugify(value = "") {
                   <option value="I">Independent</option>
                 </select>
               </label>
+
+              <label>
+                <span>County</span>
+                <select data-county-filter>
+                  <option value="">All counties</option>
+                  {countyFilters.map((filter) => (
+                    <option value={filter.key}>{filter.label} ({filter.count})</option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             <div class="vote-list">
@@ -261,6 +286,7 @@ function slugify(value = "") {
                     data-vote-card
                     data-vote={filterKey(voteLabel)}
                     data-party={partyInitial(vote.party)}
+                    data-county={filterKey(vote.county || "")}
                     data-search={searchText}
                   >
                     <div class="card-main">
@@ -325,6 +351,7 @@ function slugify(value = "") {
     const searchInput = browser.querySelector("[data-vote-search]");
     const voteFilter = browser.querySelector("[data-vote-filter]");
     const partyFilter = browser.querySelector("[data-party-filter]");
+    const countyFilter = browser.querySelector("[data-county-filter]");
     const cards = Array.from(browser.querySelectorAll("[data-vote-card]"));
     const count = browser.querySelector("[data-visible-count]");
     const empty = browser.querySelector("[data-empty-state]");
@@ -333,13 +360,15 @@ function slugify(value = "") {
       const search = String(searchInput?.value || "").trim().toLowerCase();
       const vote = String(voteFilter?.value || "");
       const party = String(partyFilter?.value || "");
+      const county = String(countyFilter?.value || "");
       let visible = 0;
 
       cards.forEach((card) => {
         const matchesSearch = !search || card.dataset.search?.includes(search);
         const matchesVote = !vote || card.dataset.vote === vote;
         const matchesParty = !party || card.dataset.party === party;
-        const show = matchesSearch && matchesVote && matchesParty;
+        const matchesCounty = !county || card.dataset.county === county;
+        const show = matchesSearch && matchesVote && matchesParty && matchesCounty;
 
         card.hidden = !show;
         if (show) visible += 1;
@@ -352,6 +381,7 @@ function slugify(value = "") {
     searchInput?.addEventListener("input", applyFilters);
     voteFilter?.addEventListener("change", applyFilters);
     partyFilter?.addEventListener("change", applyFilters);
+    countyFilter?.addEventListener("change", applyFilters);
   });
 </script>
 
@@ -475,7 +505,7 @@ function slugify(value = "") {
   .filters {
     display: grid;
     gap: 12px;
-    grid-template-columns: minmax(220px, 1fr) 180px 180px;
+    grid-template-columns: minmax(220px, 1fr) 160px 160px 180px;
     margin-bottom: 18px;
   }
 
@@ -514,6 +544,10 @@ function slugify(value = "") {
     gap: 12px;
     padding: 16px;
     text-decoration: none;
+  }
+
+  .legislator-card[hidden] {
+    display: none;
   }
 
   .legislator-card a {
