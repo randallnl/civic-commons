@@ -3,6 +3,7 @@ import TopNav from "./TopNav.astro";
 import communityPlaceholder from "../assets/community_profile_placeholder.png";
 import profileIcon from "../assets/profile icon.png";
 import { articlePublishDate, articleSourceName } from "../lib/articlesApi";
+import { getBillSummaries } from "../lib/billsApi";
 import { enrichCandidatesWithLegislators } from "../lib/candidateLegislators";
 import { candidateName, candidatePath, isLegislativeCandidate } from "../lib/candidatesApi";
 import { isFreeStater } from "../lib/civicTags";
@@ -241,9 +242,13 @@ const allCandidatesHref = candidateDirectoryHref();
 const heroCounty = countyForCommunity(community || {});
 const heroImage = countyImageUrl(heroCounty) || communityPlaceholder.src;
 let trackedBills = new Map();
+let billSummaries = new Map();
 
 try {
-  trackedBills = await getTrackedBills();
+  [trackedBills, billSummaries] = await Promise.all([
+    getTrackedBills(),
+    getBillSummaries(),
+  ]);
 } catch (error) {
   console.error(error?.message || "Unable to load tracked bills.");
 }
@@ -343,7 +348,7 @@ try {
                   <div class="rep-list profile-preview-list">
                     {representativePreview.map((rep) => {
                       const photoUrl = profilePhotoUrl(rep.photo || rep.photo_url);
-                      const grade = representativeGradeFor(rep, trackedBills);
+                      const grade = representativeGradeFor(rep, trackedBills, billSummaries);
 
                       return (
                       <article>

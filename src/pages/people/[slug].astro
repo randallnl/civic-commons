@@ -86,6 +86,7 @@ let trackedVotes = voteHistory
 const voteGrade = representativeGradeFor(
   { ...representative, voteHistory },
   trackedBills,
+  billSummaries,
 );
 
 trackedVotes = await Promise.all(

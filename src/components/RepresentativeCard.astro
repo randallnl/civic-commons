@@ -42,7 +42,7 @@ const voteHistory = Array.isArray(rep.voteHistory)
       .filter((vote) => trackedBillForVote(trackedBills, vote))
       .slice(0, 3)
   : [];
-const grade = representativeGradeFor(rep, trackedBills);
+const grade = representativeGradeFor(rep, trackedBills, billSummaries);
 
 function trackedBillFor(vote) {
   return trackedBillForVote(trackedBills, vote);

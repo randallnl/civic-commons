@@ -71,7 +71,7 @@ export function representativeVoteStance(vote = {}, trackedBill = {}) {
 
   if (!analysis.voteStance || !analysis.preferredStance) {
     return {
-      label: `Voted: ${analysis.interpretation || vote.vote_label || vote.vote || "Not listed"}`,
+      label: `Voted: ${analysis.interpretation || displayVoteLabel(vote) || "Not listed"}`,
       className: "legislator-neutral",
     };
   }
@@ -79,7 +79,7 @@ export function representativeVoteStance(vote = {}, trackedBill = {}) {
   return {
     label: `Voted: ${analysis.interpretation || titleCase(analysis.voteStance)}`,
     className:
-      analysis.alignment === "neutral"
+      analysis.alignment === "neutral" || analysis.alignment === "partial"
         ? "legislator-neutral"
         : analysis.alignment === "aligned"
           ? "legislator-support"
@@ -119,45 +119,37 @@ export function gradeFromAlignmentPercent(value) {
   };
 }
 
-export function representativeGradeFor(rep = {}, trackedBills = new Map()) {
+export function representativeGradeFor(rep = {}, trackedBills = new Map(), billSummaries = new Map()) {
   return (
+    representativeGrade(rep.voteHistory || [], trackedBills, billSummaries) ||
     gradeFromAlignmentPercent(rep.alignment_percent || rep.alignmentPercent) ||
-    representativeGrade(rep.voteHistory || [], trackedBills)
+    unknownGrade()
   );
 }
 
-export function representativeGrade(votes = [], trackedBills = new Map()) {
+export function representativeGrade(votes = [], trackedBills = new Map(), billSummaries = new Map()) {
   const scoredVotes = votes
     .map((vote) => {
       const trackedBill = trackedBillForVote(trackedBills, vote);
       if (!trackedBill) return null;
-      return representativeVoteAnalysis(vote, trackedBill);
+      const billSummary = billSummaryForVote(billSummaries, vote);
+      return representativeVoteAnalysis(vote, {
+        ...billSummary,
+        ...trackedBill,
+      });
     })
-    .filter((analysis) => analysis?.alignment === "aligned" || analysis?.alignment === "misaligned");
+    .filter((analysis) => Number.isFinite(analysis?.score));
 
   if (!scoredVotes.length) {
-    return {
-      letter: "N/A",
-      percent: null,
-      aligned: 0,
-      total: 0,
-      className: "grade-unknown",
-      label: "No scored tracked votes",
-    };
+    return null;
   }
 
   const aligned = scoredVotes.filter((analysis) => analysis.alignment === "aligned").length;
-  const percent = aligned / scoredVotes.length;
-  const letter =
-    percent >= 0.9
-      ? "A"
-      : percent >= 0.8
-        ? "B"
-        : percent >= 0.7
-          ? "C"
-          : percent >= 0.6
-            ? "D"
-            : "F";
+  const missed = scoredVotes.filter((analysis) => analysis.alignment === "partial").length;
+  const percent =
+    scoredVotes.reduce((total, analysis) => total + analysis.score, 0) / scoredVotes.length;
+  const letter = letterGradeForAccountabilityPercent(percent);
+  const missedText = missed ? `, ${missed} missed or not voting` : "";
 
   return {
     letter,
@@ -165,37 +157,54 @@ export function representativeGrade(votes = [], trackedBills = new Map()) {
     aligned,
     total: scoredVotes.length,
     className: `grade-${letter.toLowerCase()}`,
-    label: `${aligned} of ${scoredVotes.length} aligned with the preferred stance`,
+    label: `${Math.round(percent * 100)}% accountability score across ${scoredVotes.length} tracked votes (${aligned} aligned${missedText})`,
   };
 }
 
 function representativeVoteAnalysis(vote = {}, trackedBill = {}) {
   const voteStance = normalizeVoteStance(vote);
-  const preferredStance = normalizePreferredStance(trackedBill.preferredStance);
+  const preferredStance = preferredStanceForBill(trackedBill);
+  const isNonVote = !voteStance && isDocumentedNonVote(vote);
   const interpretation =
     voteStance === "yea"
       ? trackedBill.yeaInterpretation
       : voteStance === "nay"
         ? trackedBill.nayInterpretation
-        : "";
+        : displayVoteLabel(vote);
   const impact =
     voteStance === "yea"
       ? trackedBill.yeaImpact
       : voteStance === "nay"
         ? trackedBill.nayImpact
         : "";
+  const alignment =
+    !preferredStance || preferredStance === "neutral"
+      ? "neutral"
+      : isNonVote
+        ? "partial"
+        : !voteStance
+          ? "neutral"
+          : voteStance === preferredStance
+            ? "aligned"
+            : "misaligned";
+  const score =
+    !preferredStance || preferredStance === "neutral"
+      ? null
+      : isNonVote
+        ? 0.6
+        : !voteStance
+          ? null
+          : voteStance === preferredStance
+            ? 1
+            : 0;
 
   return {
     voteStance,
     preferredStance,
     interpretation,
     impact,
-    alignment:
-      !voteStance || !preferredStance || preferredStance === "neutral"
-        ? "neutral"
-        : voteStance === preferredStance
-          ? "aligned"
-          : "misaligned",
+    alignment,
+    score,
   };
 }
 
@@ -272,7 +281,150 @@ function normalizePreferredStance(value = "") {
   if (["yea", "yes", "y", "support", "in support"].includes(stance)) return "yea";
   if (["nay", "no", "n", "oppose", "opposed", "against"].includes(stance)) return "nay";
   if (["neutral", "n/a", "na"].includes(stance)) return "neutral";
+  if (/\b(yea|yes|support|in support|ought to pass|otp)\b/.test(stance)) return "yea";
+  if (/\b(nay|no|oppose|opposed|against|itl|inexpedient)\b/.test(stance)) return "nay";
   return "";
+}
+
+function preferredStanceForBill(bill = {}) {
+  const documentedStance = normalizePreferredStance(
+    bill.preferredStance ||
+      bill.preferred_stance ||
+      bill.preferredVote ||
+      bill.preferred_vote ||
+      "",
+  );
+  if (documentedStance) return documentedStance;
+
+  return publicTestimonyPreferredStance(bill);
+}
+
+function publicTestimonyPreferredStance(bill = {}) {
+  const support = numericBillValue(bill, [
+    "support_count",
+    "supportCount",
+    "testimonySupport",
+    "testimony_support",
+    "support",
+  ]);
+  const oppose = numericBillValue(bill, [
+    "oppose_count",
+    "opposeCount",
+    "testimonyOppose",
+    "testimony_oppose",
+    "oppose",
+    "against",
+  ]);
+  const total = support + oppose;
+
+  if (!total || support === oppose) return "";
+
+  const margin = Math.abs(support - oppose) / total;
+  if (total < 50 && margin <= 0.25) return "neutral";
+  if (margin <= 0.1) return "neutral";
+
+  return support > oppose ? "yea" : "nay";
+}
+
+function numericBillValue(bill = {}, keys = []) {
+  for (const key of keys) {
+    const value = Number(bill[key]);
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+
+  return 0;
+}
+
+function billSummaryForVote(billSummaries = new Map(), vote = {}) {
+  if (!billSummaries) return null;
+
+  const code = normalizeBillCode(vote.condensedbillno || vote.bill_number || "");
+  if (!code) return null;
+
+  if (typeof billSummaries.get === "function") return billSummaries.get(code) || null;
+  return billSummaries[code] || billSummaries[code.toLowerCase()] || null;
+}
+
+function isDocumentedNonVote(vote = {}) {
+  const status = normalizedVoteDisplayValue(vote);
+  return [
+    "absent",
+    "present",
+    "other_not_voting",
+    "other_present_not_voting",
+    "other_not_counted",
+    "not voting",
+    "present not voting",
+    "not counted",
+    "excused",
+  ].includes(status);
+}
+
+function displayVoteLabel(vote = {}) {
+  const value = normalizedVoteDisplayValue(vote);
+  const labels = {
+    absent: "Absent",
+    present: "Present",
+    other_not_voting: "Not voting",
+    other_present_not_voting: "Present not voting",
+    other_not_counted: "Not counted",
+    unknown: "Unknown",
+    "not voting": "Not voting",
+    "present not voting": "Present not voting",
+    "not counted": "Not counted",
+    excused: "Excused",
+  };
+
+  if (labels[value]) return labels[value];
+  if (!value || ["n/a", "na"].includes(value)) return "";
+
+  return titleCase(value);
+}
+
+function normalizedVoteDisplayValue(vote = {}) {
+  const values = [
+    vote.vote_label,
+    vote.voteLabel,
+    vote.excuse,
+    vote.excuse_label,
+    vote.reason,
+    vote.not_voting_reason,
+    vote.vote,
+    vote.vote_code,
+  ];
+
+  for (const rawValue of values) {
+    const value = String(rawValue ?? "").trim();
+    const normalized = value.toLowerCase();
+    if (!value || ["n/a", "na", "not listed"].includes(normalized)) continue;
+    if (normalized === "3") return "absent";
+    if (normalized === "4") return "present";
+    if (normalized === "5") return "other_not_voting";
+    if (normalized === "6" || normalized === "7") return "other_present_not_voting";
+    if (normalized === "0") return "other_not_counted";
+    return normalized;
+  }
+
+  return "";
+}
+
+function letterGradeForAccountabilityPercent(percent) {
+  if (percent >= 0.85) return "A";
+  if (percent >= 0.7) return "B";
+  if (percent >= 0.5) return "C";
+  if (percent >= 0.35) return "D";
+  return "F";
+}
+
+function unknownGrade() {
+  return {
+    letter: "N/A",
+    percent: null,
+    aligned: 0,
+    total: 0,
+    className: "grade-unknown",
+    label: "No scored tracked votes",
+  };
 }
 
 function titleCase(value = "") {

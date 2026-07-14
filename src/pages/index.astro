@@ -6,7 +6,7 @@ import BillPositionSummary from "../components/BillPositionSummary.astro";
 import headingBanner from "../assets/heading_banner.png";
 import profileIcon from "../assets/profile icon.png";
 import { articleDetailPath, articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
-import { billDetailPath, getBills } from "../lib/billsApi";
+import { billDetailPath, getBills, getBillSummaries } from "../lib/billsApi";
 import { isFreeStater } from "../lib/civicTags";
 import { countyImageUrl } from "../lib/communityImages";
 import { getCountyCommunity } from "../lib/communitiesApi";
@@ -35,6 +35,7 @@ let organizationComments = [];
 let communityPreviews = [];
 let recentCommunityUpdates = [];
 let trackedBills = new Map();
+let billSummaries = new Map();
 const COMMUNITY_PREVIEW_COUNTIES = [
   "Hillsborough",
   "Merrimack",
@@ -55,6 +56,7 @@ try {
     billResult,
     repResult,
     trackedBillResult,
+    billSummaryResult,
     spotlightResult,
     organizationResult,
     communityResult,
@@ -64,6 +66,7 @@ try {
     getBills({ limit: 6 }),
     getRepresentatives({ limit: 8 }),
     getTrackedBills(),
+    getBillSummaries(),
     getSpotlightLegislators({ limit: 8 }),
     getOrganizations(),
     getHomepageCommunityPreviews(),
@@ -74,6 +77,7 @@ try {
   const billData = billResult.status === "fulfilled" ? billResult.value : {};
   const repData = repResult.status === "fulfilled" ? repResult.value : {};
   trackedBills = trackedBillResult.status === "fulfilled" ? trackedBillResult.value : new Map();
+  billSummaries = billSummaryResult.status === "fulfilled" ? billSummaryResult.value : new Map();
   const spotlightPeople = spotlightResult.status === "fulfilled" ? spotlightResult.value : [];
   const organizations = organizationResult.status === "fulfilled" ? organizationResult.value : [];
   communityPreviews = communityResult.status === "fulfilled" ? communityResult.value : [];
@@ -490,7 +494,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
               <li>No legislators returned yet.</li>
             ) : recentPeople.map((person) => {
               const photoUrl = profilePhotoUrl(person.photo || person.photo_url);
-              const grade = representativeGradeFor(person, trackedBills);
+              const grade = representativeGradeFor(person, trackedBills, billSummaries);
               const votes = trackedVotesFor(person, 3);
 
               return (

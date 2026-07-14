@@ -143,9 +143,7 @@ if (!address && hasDirectoryFilters) {
 if (lookupData || randomLegislators.length > 0 || directoryReps.length > 0) {
   try {
     trackedBills = await getTrackedBills();
-    if (lookupData) {
-      billSummaries = await getBillSummaries();
-    }
+    billSummaries = await getBillSummaries();
   } catch (error) {
     console.error(error?.message || "Unable to load bill summaries.");
   }
@@ -624,7 +622,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           <div class="sample-grid">
             {randomLegislators.map((rep) => {
               const photoUrl = profilePhotoUrl(rep.photo || rep.photo_url);
-              const grade = representativeGradeFor(rep, trackedBills);
+              const grade = representativeGradeFor(rep, trackedBills, billSummaries);
               const votes = trackedVotesFor(rep, 3);
 
               return (

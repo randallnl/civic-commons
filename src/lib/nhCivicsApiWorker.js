@@ -4502,7 +4502,12 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
           AND UPPER(COALESCE(rs.question_motion, '')) LIKE '%ITL%'
         THEN 'In Support'
 
-        ELSE 'N/A'
+        WHEN h.vote = 3 THEN 'Absent'
+        WHEN h.vote = 4 THEN 'Present'
+        WHEN h.vote = 5 THEN 'Not voting'
+        WHEN h.vote IN (6, 7) THEN 'Present not voting'
+        WHEN h.vote = 0 THEN 'Not counted'
+        ELSE 'Unknown'
       END AS vote_label,
 
       h.calendaritemid,
