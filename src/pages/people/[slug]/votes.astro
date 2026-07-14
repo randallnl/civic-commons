@@ -146,7 +146,68 @@ function voteActionFor(vote = {}) {
   );
 }
 
+function testimonyPositionForBill(bill = {}) {
+  const support = Number(bill?.support_count || bill?.supportCount || 0);
+  const oppose = Number(bill?.oppose_count || bill?.opposeCount || 0);
+
+  if (!Number.isFinite(support + oppose) || support + oppose === 0 || support === oppose) {
+    return "";
+  }
+
+  return support > oppose ? "support" : "oppose";
+}
+
+function inferredBillPosition(vote = {}, motion = "") {
+  const voteValue = String(vote.vote_code || vote.vote || vote.vote_label || "")
+    .trim()
+    .toLowerCase();
+  const isYea = ["1", "yea", "yes", "y"].includes(voteValue);
+  const isNay = ["2", "nay", "no", "n"].includes(voteValue);
+
+  if (!isYea && !isNay) return "";
+
+  const motionText = cleanText(motion).toLowerCase();
+  const motionOpposesBill =
+    /\bitl\b/.test(motionText) ||
+    motionText.includes("inexpedient to legislate") ||
+    motionText.includes("indefinitely postpone") ||
+    motionText.includes("postpone indefinitely");
+
+  if (motionOpposesBill) return isYea ? "oppose" : "support";
+  return isYea ? "support" : "oppose";
+}
+
+function titleCase(value = "") {
+  return String(value || "").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function testimonyVoteStanceFor(vote = {}) {
+  const bill = vote.billSummary || null;
+  if (!bill) return null;
+
+  const position = inferredBillPosition(vote, voteActionFor(vote));
+  if (!position) return null;
+
+  const testimony = testimonyPositionForBill(bill);
+  if (!testimony) {
+    return {
+      label: `Voted: ${displayVoteLabel(vote)}: ${titleCase(position)} - no clear testimony position`,
+      className: "legislator-neutral",
+    };
+  }
+
+  const aligned = position === testimony;
+  return {
+    label: `Voted: ${displayVoteLabel(vote)}: ${titleCase(position)} - ${
+      aligned ? "aligned with testimony position" : "not aligned with testimony position"
+    }`,
+    className: aligned ? "legislator-support" : "legislator-oppose",
+  };
+}
+
 function voteStanceFor(vote = {}) {
+  const testimonyStance = testimonyVoteStanceFor(vote);
+  if (testimonyStance) return testimonyStance;
   if (vote.trackedBill) return representativeVoteStance(vote, vote.trackedBill);
   if (vote.billSummary) return representativeVoteStance(vote, vote.billSummary);
   return {
@@ -460,6 +521,7 @@ function previewText(value = "", length = 260) {
     padding: 7px 10px;
     text-align: center;
     width: 100%;
+    white-space: normal;
   }
 
   .legislator-support {
