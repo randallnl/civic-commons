@@ -4,7 +4,7 @@ export const prerender = false;
 import TopNav from "../components/TopNav.astro";
 import headingBanner from "../assets/heading_banner.png";
 import profileIcon from "../assets/profile icon.png";
-import { articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
+import { articleDetailPath, articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
 import { isFreeStater } from "../lib/civicTags";
 import { countyImageUrl } from "../lib/communityImages";
@@ -548,12 +548,12 @@ function positionClass(position = "") {
               recentArticles.map((article) => (
                 <li class:list={["article-update", article.preview?.imageUrl && "has-image"]}>
                   {article.preview?.imageUrl && (
-                    <a class="article-thumb" href={article.url} tabindex="-1" aria-hidden="true">
+                    <a class="article-thumb" href={articleDetailPath(article)} tabindex="-1" aria-hidden="true">
                       <img src={article.preview.imageUrl} alt="" loading="lazy" />
                     </a>
                   )}
                   <div>
-                    <a href={article.url}>{cleanText(article.preview?.title || article.title)}</a>
+                    <a href={articleDetailPath(article)}>{cleanText(article.preview?.title || article.title)}</a>
                     <div class="article-meta-inline">
                       {articleSourceName(article) && <em>Source: {articleSourceName(article)}</em>}
                       {articlePublishDate(article) && <em>Published: {articlePublishDate(article)}</em>}
