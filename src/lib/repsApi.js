@@ -53,9 +53,14 @@ export async function getRepresentatives({
 
 export async function getRepresentative(slugOrId, {
   apiBase = repsApiBase(),
+  voteLimit = "",
   runtimeEnv,
 } = {}) {
-  const response = await civicApiFetch(`${apiBase}/reps/${encodeURIComponent(slugOrId)}`, {
+  const params = new URLSearchParams();
+  if (voteLimit) params.set("voteLimit", String(voteLimit));
+  const query = params.toString();
+
+  const response = await civicApiFetch(`${apiBase}/reps/${encodeURIComponent(slugOrId)}${query ? `?${query}` : ""}`, {
     runtimeEnv,
   });
 

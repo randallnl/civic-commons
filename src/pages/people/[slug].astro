@@ -61,6 +61,7 @@ const person = {
   website_url: representative?.sourceUrls?.generalCourt || "",
 };
 const representativeEntityKey = representative?.personid || representative?.id || slug;
+const trackedVotesHref = `/people/${slug}/votes`;
 
 const apiTerm = representativeToTerm(representative);
 const officeTerms = [{ ...apiTerm, status: "current" }];
@@ -406,10 +407,10 @@ function candidateOptionLabel(candidate = {}) {
           <span>Current Offices</span>
           <strong>{currentOfficeTerms.length}</strong>
         </article>
-        <article>
+        <a class="summary-card" href={trackedVotesHref}>
           <span>Tracked Votes</span>
           <strong>{trackedVotes.length}</strong>
-        </article>
+        </a>
         <article>
           <span>Sources</span>
           <strong>{sourceLinks.length}</strong>
@@ -655,9 +656,16 @@ function candidateOptionLabel(candidate = {}) {
           </section>
 
           <section class="panel">
-            <div class="section-heading">
-              <p class="eyebrow">Vote History</p>
-              <h2>Tracked Bill Votes</h2>
+            <div class="section-heading split-heading">
+              <div>
+                <p class="eyebrow">Vote History</p>
+                <h2>Tracked Bill Votes</h2>
+              </div>
+              {trackedVotes.length > 0 && (
+                <a class="section-action" href={trackedVotesHref}>
+                  See all tracked votes
+                </a>
+              )}
             </div>
 
             {trackedVotes.length ? (
@@ -1135,6 +1143,7 @@ function candidateOptionLabel(candidate = {}) {
   }
 
   .summary-strip article,
+  .summary-card,
   .panel {
     background: white;
     border: 2px solid #1f2933;
@@ -1142,8 +1151,15 @@ function candidateOptionLabel(candidate = {}) {
     box-shadow: 4px 4px 0 #1f2933;
   }
 
-  .summary-strip article {
+  .summary-strip article,
+  .summary-card {
+    color: inherit;
     padding: 18px;
+    text-decoration: none;
+  }
+
+  .summary-card:hover strong {
+    text-decoration: underline;
   }
 
   .summary-strip span,
@@ -1324,6 +1340,30 @@ function candidateOptionLabel(candidate = {}) {
     font-size: 1.55rem;
     line-height: 1.1;
     margin-bottom: 18px;
+  }
+
+  .split-heading {
+    align-items: start;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+  }
+
+  .section-action {
+    background: #1f2933;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    flex: 0 0 auto;
+    font-size: 0.86rem;
+    font-weight: 900;
+    line-height: 1;
+    padding: 10px 12px;
+    text-decoration: none;
+  }
+
+  .section-action:hover {
+    background: #374151;
   }
 
   .timeline-list,
@@ -1551,6 +1591,14 @@ function candidateOptionLabel(candidate = {}) {
 
     .summary-strip {
       grid-template-columns: 1fr;
+    }
+
+    .split-heading {
+      display: grid;
+    }
+
+    .section-action {
+      justify-self: start;
     }
 
     .vote-card-main {
