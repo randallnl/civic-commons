@@ -14,6 +14,10 @@ import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 import { getOrganizations, organizationPath } from "../lib/organizationsApi";
 import {
+  communityUpdateDate,
+  getRecentApprovedCommunityUpdates,
+} from "../lib/communityUpdates";
+import {
   getTrackedBills,
   normalizeBillCode,
   representativeGradeFor,
@@ -28,6 +32,7 @@ let recentBills = [];
 let recentPeople = [];
 let organizationComments = [];
 let communityPreviews = [];
+let recentCommunityUpdates = [];
 let trackedBills = new Map();
 const COMMUNITY_PREVIEW_COUNTIES = [
   "Hillsborough",
@@ -52,6 +57,7 @@ try {
     spotlightResult,
     organizationResult,
     communityResult,
+    communityUpdatesResult,
   ] = await Promise.allSettled([
     getArticles({ include: "relations", limit: 5 }),
     getBills({ limit: 6 }),
@@ -60,6 +66,7 @@ try {
     getSpotlightLegislators({ limit: 8 }),
     getOrganizations(),
     getHomepageCommunityPreviews(),
+    getRecentApprovedCommunityUpdates({ limit: 6 }),
   ]);
 
   const articleData = articleResult.status === "fulfilled" ? articleResult.value : {};
@@ -69,6 +76,7 @@ try {
   const spotlightPeople = spotlightResult.status === "fulfilled" ? spotlightResult.value : [];
   const organizations = organizationResult.status === "fulfilled" ? organizationResult.value : [];
   communityPreviews = communityResult.status === "fulfilled" ? communityResult.value : [];
+  recentCommunityUpdates = communityUpdatesResult.status === "fulfilled" ? communityUpdatesResult.value : [];
 
   recentArticles = articleData.articles || [];
   recentBills = billData.bills || [];
@@ -84,19 +92,6 @@ try {
 }
 
 recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
-
-const publicCommentPlaceholders = [
-  {
-    title: "Resident story collection",
-    description:
-      "A future space for residents to share how a tracked bill, local issue, or district decision affects their household.",
-  },
-  {
-    title: "Town-level comment prompts",
-    description:
-      "A future space for community-specific comments tied to town profiles, wards, and legislative districts.",
-  },
-];
 
 const fallbackCommunityPreviews = [
   {
@@ -163,8 +158,17 @@ function normalizeCommunityPreview(data = {}, fallbackCounty = "") {
   const communities = Array.isArray(rawCommunities) ? rawCommunities : [];
   const representatives = [
     ...(county.representatives || county.reps || county.legislators || []),
+    ...(county.representativeSummary?.representatives || []),
+    ...(county.representativeSummary?.reps || []),
+    ...(data.representatives || data.reps || data.legislators || []),
+    ...(data.representativeSummary?.representatives || []),
+    ...(data.representativeSummary?.reps || []),
     ...communities.flatMap((community) =>
-      community.representatives || community.reps || community.legislators || [],
+      [
+        ...(community.representatives || community.reps || community.legislators || []),
+        ...(community.representativeSummary?.representatives || []),
+        ...(community.representativeSummary?.reps || []),
+      ]
     ),
   ];
   const towns = new Set([
@@ -184,6 +188,17 @@ function normalizeCommunityPreview(data = {}, fallbackCounty = "") {
     ...communities.flatMap((community) => community.articles || community.relatedArticles || []),
   ].filter(Boolean);
   const countyName = county.name || county.county || fallbackCounty;
+  const representativeCount =
+    uniqueRepresentatives(representatives) ||
+    numberFromSummary(county.representativeSummary) ||
+    numberFromSummary(data.representativeSummary) ||
+    Number(county.representativeCount || data.representativeCount || 0);
+  const updateCount =
+    articles.length ||
+    Number(county.articleCount || county.updateCount || data.articleCount || data.updateCount || 0);
+  const districtCount =
+    communities.length ||
+    Number(county.districtCount || county.houseDistrictCount || data.districtCount || data.houseDistrictCount || 0);
 
   return {
     title: `${countyName} County`,
@@ -194,11 +209,24 @@ function normalizeCommunityPreview(data = {}, fallbackCounty = "") {
       previewText(articles[0]?.preview?.title || articles[0]?.title || "", 135) ||
       `Explore regional House districts, towns represented, State Representatives, State Senators, legislative candidates, and community updates for ${countyName} County.`,
     stats: [
-      `${communities.length || county.districtCount || 0} House districts`,
-      `${uniqueRepresentatives(representatives)} legislators`,
-      `${articles.length} updates`,
+      `${districtCount || "Regional"} House districts`,
+      `${representativeCount || "Current"} legislators`,
+      `${updateCount || "Recent"} updates`,
     ],
   };
+}
+
+function numberFromSummary(summary = {}) {
+  if (!summary || typeof summary !== "object") return 0;
+  return Number(
+    summary.count ||
+      summary.total ||
+      summary.representativeCount ||
+      summary.representativesCount ||
+      summary.legislatorCount ||
+      summary.legislatorsCount ||
+      0,
+  );
 }
 
 function townsFromValue(value = []) {
@@ -409,8 +437,8 @@ function positionClass(position = "") {
         </ol>
       </section>
 
-      <section class="content-grid">
-        <div>
+      <section class="homepage-stack">
+        <div class="homepage-panel">
           <h2>Next: Understand Your Community</h2>
           <p class="panel-intro">
             Start with a town or county profile to move from broad regional
@@ -440,9 +468,9 @@ function positionClass(position = "") {
           </a>
         </div>
 
-        <div>
+        <div class="homepage-panel">
           <h2>Representative Profiles</h2>
-          <ul class="list">
+          <ul class="list stacked-list">
             {recentPeople.length === 0 ? (
               <li>No legislators returned yet.</li>
             ) : recentPeople.map((person) => {
@@ -510,38 +538,38 @@ function positionClass(position = "") {
           </ul>
         </div>
 
-        <div>
+        <div class="homepage-panel">
           <h2>Then: Track Bills and Votes</h2>
-          <ul class="list">
+          <div class="bill-preview-grid">
             {recentBills.length === 0 ? (
-              <li>No bills added yet.</li>
+              <p class="empty-note">No bills added yet.</p>
             ) : (
               recentBills.map((bill) => {
                 const trackedBill = trackedBillFor(bill);
 
                 return (
-                  <li>
+                  <article class="bill-preview-card">
                     <a href={billDetailPath(bill.condensedbillno || bill.bill_number, bill.sessionyear || bill.session_year)}>
                       {trackedBill?.name || bill.condensedbillno || bill.bill_number}
                     </a>
-                    <span>
+                    <p>
                       {previewText(
                         trackedBill?.summary ||
                           bill.description ||
                           bill.title ||
                           "No tracker summary available yet.",
                       )}
-                    </span>
-                  </li>
+                    </p>
+                  </article>
                 );
               })
             )}
-          </ul>
+          </div>
         </div>
 
-        <div>
+        <div class="homepage-panel">
           <h2>Finally: Read Community Updates</h2>
-          <ul class="list">
+          <ul class="list stacked-list">
             {recentArticles.length === 0 ? (
               <li>No articles added yet.</li>
             ) : (
@@ -574,10 +602,52 @@ function positionClass(position = "") {
             )}
           </ul>
         </div>
-      </section>
 
-      <section class="community-comments">
-        <div class="section-intro">
+        <div class="homepage-panel">
+          <div class="section-intro">
+            <p class="eyebrow">Community Updates</p>
+            <h2>Recent profile updates from the community.</h2>
+            <p>
+              Approved community updates help add local context to legislator,
+              candidate, and bill profiles. These are submitted by residents
+              and reviewed before publication.
+            </p>
+          </div>
+
+          <div class="comment-list stacked-comment-list">
+            {recentCommunityUpdates.length ? (
+              recentCommunityUpdates.map((update) => (
+                <article class="comment-card community-update-card">
+                  <div class="comment-topline">
+                    <a href={update.pageUrl || update.linkUrl || "/articles"}>
+                      {update.entityName || "Community update"}
+                    </a>
+                    <span class="position-pill neutral">
+                      {cleanText(update.entityType || "Profile")}
+                    </span>
+                  </div>
+                  <p>{previewText(update.comment || update.linkUrl || "Community-submitted context.", 210)}</p>
+                  <div class="article-meta-inline">
+                    <em>{cleanText(update.displayName || "Community member")}</em>
+                    {communityUpdateDate(update.createdAt) && <em>{communityUpdateDate(update.createdAt)}</em>}
+                  </div>
+                  {update.linkUrl && (
+                    <a class="bill-comment-link" href={update.linkUrl}>Open submitted link</a>
+                  )}
+                </article>
+              ))
+            ) : (
+              <article class="comment-card placeholder">
+                <span>Community updates</span>
+                <strong>No approved updates yet</strong>
+                <p>Recent community updates to legislator, candidate, and bill profiles will appear here after review.</p>
+              </article>
+            )}
+          </div>
+        </div>
+
+        <div class="homepage-panel">
+          <div class="section-intro">
           <p class="eyebrow">Community Comments</p>
           <h2>Pair public experience with organized civic analysis.</h2>
           <p>
@@ -587,25 +657,9 @@ function positionClass(position = "") {
             help neighbors understand the local context behind votes,
             legislation, and public accountability.
           </p>
-        </div>
-
-        <div class="comment-columns">
-          <div>
-            <h3>Public comments</h3>
-            <div class="comment-list">
-              {publicCommentPlaceholders.map((item) => (
-                <article class="comment-card placeholder">
-                  <span>Coming soon</span>
-                  <strong>{item.title}</strong>
-                  <p>{item.description}</p>
-                </article>
-              ))}
-            </div>
           </div>
 
-          <div>
-            <h3>Organizational comments on tracked bills</h3>
-            <div class="comment-list">
+          <div class="comment-list stacked-comment-list">
               {organizationComments.length ? (
                 organizationComments.map((item) => {
                   const trackedBill = trackedBillForCode(item.bill || item.billLabel);
@@ -637,7 +691,6 @@ function positionClass(position = "") {
                   <p>Published organization comments for bills in the tracker will appear here automatically.</p>
                 </article>
               )}
-            </div>
           </div>
         </div>
       </section>
@@ -763,7 +816,7 @@ function positionClass(position = "") {
   .pathway,
   .rep-preview,
   .community-comments,
-  .content-grid > div,
+  .homepage-panel,
   .cta {
     background: rgba(255, 255, 255, 0.75);
     border: 2px solid #1f2933;
@@ -929,19 +982,67 @@ function positionClass(position = "") {
     text-decoration: underline;
   }
 
-  .content-grid {
+  .homepage-stack {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
     gap: 24px;
     margin: 40px 0;
   }
 
-  .content-grid > div {
+  .homepage-panel {
     padding: 24px;
   }
 
-  .content-grid h2 {
+  .homepage-panel h2 {
     margin-top: 0;
+  }
+
+  .stacked-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .stacked-list > li {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .bill-preview-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bill-preview-card,
+  .empty-note {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 16px;
+  }
+
+  .bill-preview-card {
+    display: grid;
+    gap: 8px;
+  }
+
+  .bill-preview-card a {
+    color: #1f2933;
+    font-weight: 900;
+    line-height: 1.25;
+    text-decoration: none;
+  }
+
+  .bill-preview-card a:hover {
+    text-decoration: underline;
+  }
+
+  .bill-preview-card p,
+  .empty-note {
+    color: #4b5563;
+    line-height: 1.5;
+    margin: 0;
   }
 
   .panel-intro {
@@ -1064,6 +1165,10 @@ function positionClass(position = "") {
     gap: 12px;
   }
 
+  .stacked-comment-list {
+    margin-top: 18px;
+  }
+
   .comment-card {
     background: #fffaf1;
     border: 1px solid #d1d5db;
@@ -1156,6 +1261,10 @@ function positionClass(position = "") {
   .list li {
     padding: 14px 0;
     border-top: 1px solid #d1d5db;
+  }
+
+  .list.stacked-list li {
+    border-top: 0;
   }
 
   .list li:first-child {
@@ -1404,8 +1513,7 @@ function positionClass(position = "") {
 
   @media (max-width: 900px) {
     .rep-preview,
-    .comment-columns,
-    .content-grid {
+    .comment-columns {
       grid-template-columns: 1fr 1fr;
     }
 
@@ -1414,7 +1522,7 @@ function positionClass(position = "") {
   @media (max-width: 600px) {
     .rep-preview,
     .comment-columns,
-    .content-grid {
+    .bill-preview-grid {
       grid-template-columns: 1fr;
     }
 

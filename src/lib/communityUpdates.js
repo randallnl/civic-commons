@@ -57,6 +57,27 @@ export async function getApprovedCommunityUpdates(entityType, entityKey, { limit
   return (result.results || []).map(normalizeUpdate);
 }
 
+export async function getRecentApprovedCommunityUpdates({ limit = 6 } = {}) {
+  const db = communityUpdatesDb();
+  if (!db) return [];
+
+  await ensureCommunityUpdatesTable(db);
+
+  const result = await db
+    .prepare(
+      `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
+              comment, link_url, photo_url, created_at
+       FROM community_updates
+       WHERE status = 'approved'
+       ORDER BY created_at DESC
+       LIMIT ?`,
+    )
+    .bind(limit)
+    .all();
+
+  return (result.results || []).map(normalizeUpdate);
+}
+
 export async function getPendingCommunityUpdates({ limit = 25 } = {}) {
   const db = communityUpdatesDb();
   if (!db) return [];
