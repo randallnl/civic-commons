@@ -2706,10 +2706,11 @@ async function handleCandidateDetail(request, env) {
     FROM candidate_base c
     WHERE c.filer_entity_number = ?
       OR c.slug = ?
+      OR c.legacy_slug = ?
       OR CAST(c.person_id AS TEXT) = ?
     LIMIT 1
   `)
-    .bind(identifier, identifier, identifier)
+    .bind(identifier, identifier, identifier, identifier)
     .first();
 
   if (!candidate) {
@@ -2819,6 +2820,7 @@ function candidateBaseCte() {
         COALESCE(NULLIF(p.email, ''), c.candidate_email, '') AS candidate_email,
         COALESCE(NULLIF(p.photo_url, ''), c.photo_url, '') AS photo_url,
         p.slug AS slug,
+        c.slug AS legacy_slug,
         p.is_free_stater AS is_free_stater,
         cc.source_county_id AS source_county_id
       FROM d1_people p

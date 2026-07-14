@@ -161,19 +161,45 @@ async function getRepresentativeGaps(db, { missing, office, limit }) {
 async function getCandidateGaps(db, { missing, office, limit }) {
   const result = await db
     .prepare(
-      `SELECT
-         filer_entity_number,
-         candidate_first_name,
-         candidate_last_name,
-         office,
-         county,
-         district,
-         political_party,
-         candidate_email,
-         candidate_website,
-         photo_url,
-         slug
-       FROM candidates
+      `WITH candidate_base AS (
+         SELECT
+           p.id AS person_id,
+           COALESCE(cr.filer_entity_number, p.filer_entity_number, c.filer_entity_number, CAST(p.id AS TEXT)) AS filer_entity_number,
+           p.firstname AS candidate_first_name,
+           p.lastname AS candidate_last_name,
+           COALESCE(
+             NULLIF(cr.office, ''),
+             CASE
+               WHEN lr.legislativebody = 'S' THEN 'State Senate'
+               WHEN lr.legislativebody = 'H' THEN 'State Representative'
+               ELSE ''
+             END
+           ) AS office,
+           COALESCE(NULLIF(cr.county, ''), cc.name, c.county, '') AS county,
+           COALESCE(NULLIF(cr.district, ''), lr.district, c.district, '') AS district,
+           COALESCE(NULLIF(cr.political_party, ''), c.political_party, p.party, '') AS political_party,
+           COALESCE(NULLIF(p.email, ''), c.candidate_email, '') AS candidate_email,
+           COALESCE(NULLIF(p.website_url, ''), c.candidate_website, '') AS candidate_website,
+           COALESCE(NULLIF(p.photo_url, ''), c.photo_url, '') AS photo_url,
+           COALESCE(NULLIF(p.slug, ''), c.slug, CAST(p.id AS TEXT)) AS slug
+         FROM d1_people p
+         LEFT JOIN d1_person_candidate_roles cr
+           ON cr.person_id = p.id
+           AND cr.election_year = 2026
+         LEFT JOIN d1_person_legislator_roles lr
+           ON lr.person_id = p.id
+           AND lr.active = 1
+           AND lr.session_year = 2026
+         LEFT JOIN county_codes cc
+           ON cc.source_county_id = CAST(lr.countycode AS INTEGER)
+           OR LOWER(cc.name) = LOWER(cr.county)
+         LEFT JOIN candidates c
+           ON c.filer_entity_number = cr.filer_entity_number
+           OR c.filer_entity_number = p.filer_entity_number
+         WHERE p.is_2026_candidate = 1
+       )
+       SELECT *
+       FROM candidate_base
        WHERE (? = '' OR LOWER(TRIM(office)) = ?)
        AND (
          ? = 'any'
