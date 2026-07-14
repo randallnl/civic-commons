@@ -83,6 +83,21 @@ function billTitle() {
   return trackedBill?.name || bill?.condensedbillno || billCode;
 }
 
+function bodyLabel(value = "") {
+  const body = String(value).trim().toUpperCase();
+  if (body === "H") return "House";
+  if (body === "S") return "Senate";
+  return cleanText(value || "Roll call");
+}
+
+function rollCallTitle(rollCall = {}) {
+  return cleanText(
+    rollCall.question_motion ||
+      [rollCall.title1, rollCall.title2].filter(Boolean).join(" ") ||
+      "Roll call vote",
+  );
+}
+
 function commentsForBill(organizations = [], code = "") {
   const normalizedCode = normalizeBillCode(code);
 
@@ -165,8 +180,15 @@ function commentsForBill(organizations = [], code = "") {
                       latestRollCall.sessionyear || bill.sessionyear,
                     )}
                   >
+                    <div class="roll-label-row">
+                      <span class="roll-badge">Latest roll call</span>
+                      <span class="roll-sequence">
+                        {bodyLabel(latestRollCall.legislativebody)}
+                        {latestRollCall.votesequencenumber && ` #${latestRollCall.votesequencenumber}`}
+                      </span>
+                    </div>
                     <div class="roll-topline">
-                      <strong>{latestRollCall.question_motion || "Roll call"}</strong>
+                      <strong>{rollCallTitle(latestRollCall)}</strong>
                       {latestRollCall.votedate && <span>{formatDate(latestRollCall.votedate)}</span>}
                     </div>
                     {(latestRollCall.title1 || latestRollCall.title2) && (
@@ -178,12 +200,13 @@ function commentsForBill(organizations = [], code = "") {
                       <span>Present {latestRollCall.present}</span>
                       <span>Absent {latestRollCall.absent}</span>
                     </div>
+                    <span class="roll-cta">View roll call history</span>
                   </a>
 
                   {previousRollCalls.length > 0 && (
                     <details class="roll-details">
                       <summary>
-                        <span>See previous updates</span>
+                        <span>See previous roll calls</span>
                         <small>{previousRollCalls.length} older roll call{previousRollCalls.length === 1 ? "" : "s"}</small>
                       </summary>
 
@@ -197,8 +220,15 @@ function commentsForBill(organizations = [], code = "") {
                               rollCall.sessionyear || bill.sessionyear,
                             )}
                           >
+                              <div class="roll-label-row">
+                                <span class="roll-badge secondary">Roll call</span>
+                                <span class="roll-sequence">
+                                  {bodyLabel(rollCall.legislativebody)}
+                                  {rollCall.votesequencenumber && ` #${rollCall.votesequencenumber}`}
+                                </span>
+                              </div>
                               <div class="roll-topline">
-                                <strong>{rollCall.question_motion || "Roll call"}</strong>
+                                <strong>{rollCallTitle(rollCall)}</strong>
                                 {rollCall.votedate && <span>{formatDate(rollCall.votedate)}</span>}
                               </div>
                               {(rollCall.title1 || rollCall.title2) && (
@@ -210,6 +240,7 @@ function commentsForBill(organizations = [], code = "") {
                                 <span>Present {rollCall.present}</span>
                                 <span>Absent {rollCall.absent}</span>
                               </div>
+                              <span class="roll-cta">View roll call history</span>
                           </a>
                         ))}
                       </div>
@@ -703,6 +734,62 @@ function commentsForBill(organizations = [], code = "") {
     border-color: #9ca3af;
   }
 
+  .roll-card {
+    transition:
+      box-shadow 140ms ease,
+      transform 140ms ease;
+  }
+
+  .roll-card:hover,
+  .roll-card:focus-visible {
+    box-shadow: 3px 3px 0 #1f2933;
+    transform: translate(-1px, -1px);
+  }
+
+  .roll-label-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .roll-badge,
+  .roll-sequence,
+  .roll-cta {
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.76rem;
+    font-weight: 950;
+    line-height: 1;
+    padding: 7px 9px;
+  }
+
+  .roll-badge {
+    background: #1f2933;
+    color: white;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .roll-badge.secondary {
+    background: #475569;
+  }
+
+  .roll-sequence {
+    background: white;
+    border: 1px solid #d1d5db;
+    color: #4b5563;
+  }
+
+  .roll-cta {
+    background: #1f2933;
+    color: white;
+    justify-self: start;
+    margin-top: 12px;
+  }
+
   .organization-comments-inline {
     border-top: 1px solid #d1d5db;
     margin-top: 16px;
@@ -780,6 +867,7 @@ function commentsForBill(organizations = [], code = "") {
   .roll-topline span {
     color: #4b5563;
     font-weight: 800;
+    white-space: nowrap;
   }
 
   .roll-list p,
