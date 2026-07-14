@@ -66,6 +66,38 @@ export function trackedBillForVote(bills = new Map(), vote = {}) {
   return bills.get(code) || null;
 }
 
+export function isVotingAction(vote = {}) {
+  const sequence = String(
+    vote.votesequencenumber ||
+      vote.vote_sequence ||
+      vote.voteSequence ||
+      vote.sequence ||
+      "",
+  ).trim();
+  const action = cleanText(
+    vote.action_text ||
+      vote.question_motion ||
+      vote.motion ||
+      vote.title1 ||
+      vote.title2 ||
+      vote.description ||
+      "",
+  ).trim();
+  const voteCode = String(vote.vote_code ?? vote.voteCode ?? "").trim();
+  const numericVoteCode = Number(voteCode);
+  const voteText = String(vote.vote || vote.vote_label || vote.voteLabel || "")
+    .trim()
+    .toLowerCase();
+  const hasVoteCode =
+    Number.isInteger(numericVoteCode) && numericVoteCode >= 0 && numericVoteCode <= 7;
+  const hasVoteText =
+    /\b(yea|yes|nay|no|absent|present|support|against|oppose|not voting|not counted)\b/.test(
+      voteText,
+    );
+
+  return Boolean(sequence && action && (hasVoteCode || hasVoteText));
+}
+
 export function representativeVoteStance(vote = {}, trackedBill = {}) {
   const analysis = representativeVoteAnalysis(vote, trackedBill);
 
@@ -130,6 +162,7 @@ export function representativeGradeFor(rep = {}, trackedBills = new Map(), billS
 export function representativeGrade(votes = [], trackedBills = new Map(), billSummaries = new Map()) {
   const scoredVotes = votes
     .map((vote) => {
+      if (!isVotingAction(vote)) return null;
       const trackedBill = trackedBillForVote(trackedBills, vote);
       if (!trackedBill) return null;
       const billSummary = billSummaryForVote(billSummaries, vote);

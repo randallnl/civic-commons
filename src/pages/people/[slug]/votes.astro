@@ -8,6 +8,7 @@ import { getRepresentative, repName } from "../../../lib/repsApi";
 import { cleanText } from "../../../lib/text";
 import {
   getTrackedBills,
+  isVotingAction,
   normalizeBillCode,
   representativeVoteImpact,
   representativeVoteStance,
@@ -45,7 +46,7 @@ if (!error && !representative) {
 const representativeName = repName(representative || {}) || "Representative";
 let votes = (apiData?.voteHistory || []).map((vote) =>
   normalizeVote(vote, trackedBills, billSummaries),
-);
+).filter(isVotingAction);
 const trackedVoteCount = votes.filter((vote) => vote.trackedBill).length;
 
 votes = await Promise.all(
@@ -72,9 +73,10 @@ function normalizeVote(vote = {}, bills = new Map(), summaries = new Map()) {
   return {
     ...vote,
     bill_number: billNumber,
-    title: vote.title || vote.description || "",
+    title: vote.title || vote.action_text || vote.question_motion || vote.description || "",
     vote_date: vote.vote_date || vote.statusdate || "",
-    motion: vote.motion || vote.question_motion || vote.description || "",
+    motion: vote.motion || vote.action_text || vote.question_motion || vote.description || "",
+    bill_status: vote.bill_status || "",
     vote_label: displayVoteLabel(vote),
     billSummary,
     trackedBill,
@@ -125,9 +127,21 @@ function billCodeFor(vote = {}) {
 function billTitleFor(vote = {}) {
   return (
     vote.trackedBill?.name ||
-    vote.billSummary?.description ||
-    vote.title ||
+    vote.billSummary?.name ||
+    vote.billSummary?.title ||
     billCodeFor(vote)
+  );
+}
+
+function voteActionFor(vote = {}) {
+  return cleanText(
+    vote.action_text ||
+      vote.question_motion ||
+      vote.motion ||
+      vote.title1 ||
+      vote.title2 ||
+      vote.description ||
+      "",
   );
 }
 
@@ -187,7 +201,8 @@ function previewText(value = "", length = 260) {
             <h1>{representativeName}</h1>
             <p>
               These are all votes currently returned for this legislator. Votes
-              connected to the bill tracker include tracker summaries,
+              are limited to bill actions with a documented roll-call action.
+              Votes connected to the bill tracker include tracker summaries,
               interpretations, and public testimony summary data where available.
             </p>
             <div class="hero-meta">
@@ -207,9 +222,9 @@ function previewText(value = "", length = 260) {
                 const summary =
                   vote.trackedBill?.summary ||
                   vote.billSummary?.summary ||
-                  vote.billSummary?.description ||
                   "";
                 const billCode = billCodeFor(vote);
+                const action = voteActionFor(vote);
 
                 return (
                   <article class="vote-bill-card">
@@ -235,6 +250,13 @@ function previewText(value = "", length = 260) {
 
                     {summary && <p>{previewText(summary)}</p>}
 
+                    {action && (
+                      <div class="vote-action">
+                        <strong>Voting action</strong>
+                        <span>{previewText(action, 180)}</span>
+                      </div>
+                    )}
+
                     <div class:list={["vote-interpretation", stance.className]}>
                       <strong>Vote</strong>
                       <span class:list={["legislator-vote-pill", stance.className]}>
@@ -252,8 +274,10 @@ function previewText(value = "", length = 260) {
                     )}
 
                     <div class="bill-meta">
-                      {vote.motion && <span>{cleanText(vote.motion)}</span>}
                       {vote.vote_date && <span>{formatDate(vote.vote_date)}</span>}
+                      {vote.votesequencenumber && (
+                        <span>Roll call {vote.votesequencenumber}</span>
+                      )}
                       {vote.trackedBill?.issueArea && (
                         <span>{cleanText(vote.trackedBill.issueArea)}</span>
                       )}
@@ -378,6 +402,30 @@ function previewText(value = "", length = 260) {
     color: #4b5563;
     line-height: 1.55;
     margin: 0 0 14px;
+  }
+
+  .vote-action {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    display: grid;
+    gap: 5px;
+    margin: 14px 0;
+    padding: 10px 12px;
+  }
+
+  .vote-action strong {
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .vote-action span {
+    color: #1f2933;
+    font-size: 0.94rem;
+    line-height: 1.45;
   }
 
   .vote-interpretation {

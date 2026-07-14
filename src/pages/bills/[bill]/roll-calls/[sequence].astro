@@ -4,7 +4,9 @@ export const prerender = false;
 import { billDetailPath, getRollCallVotes } from "../../../../lib/billsApi";
 import TopNav from "../../../../components/TopNav.astro";
 import profileIcon from "../../../../assets/profile icon.png";
+import { isFreeStater } from "../../../../lib/civicTags";
 import { profilePhotoUrl } from "../../../../lib/photos";
+import { cleanText } from "../../../../lib/text";
 import { getTrackedBills, normalizeBillCode } from "../../../../lib/trackedBills";
 
 const billCode = Astro.params.bill || "";
@@ -68,17 +70,49 @@ function partyClass(party = "") {
 }
 
 function partyLabel(party = "") {
-  if (party === "R") return "Republican";
-  if (party === "D") return "Democrat";
-  if (party === "I") return "Independent";
-  return party || "Party not listed";
+  const value = String(party || "").trim();
+  const lower = value.toLowerCase();
+  if (value === "R" || lower.includes("republican")) return "Republican";
+  if (value === "D" || lower.includes("democrat")) return "Democrat";
+  if (value === "I" || lower.includes("independent")) return "Independent";
+  return value || "Party not listed";
+}
+
+function partyInitial(party = "") {
+  const label = partyLabel(party);
+  if (label === "Republican") return "R";
+  if (label === "Democrat") return "D";
+  if (label === "Independent") return "I";
+  return String(party || "").trim().charAt(0).toUpperCase() || "";
 }
 
 function bodyLabel(value = "") {
   const body = String(value || "").trim().toUpperCase();
   if (body === "H") return "House";
   if (body === "S") return "Senate";
+  if (body === "HOUSE") return "House";
+  if (body === "SENATE") return "Senate";
   return value || "Legislator";
+}
+
+function districtLine(vote = {}) {
+  const party = partyInitial(vote.party);
+  const chamber = bodyLabel(vote.legislativebody || vote.chamber);
+  const district = vote.district || vote.raw_district || "";
+  const districtText =
+    chamber === "House"
+      ? `NH House District ${district || "not listed"}`
+      : chamber === "Senate"
+        ? `NH Senate District ${district || "not listed"}`
+        : district
+          ? `${chamber} District ${district}`
+          : chamber;
+
+  return [party, districtText].filter(Boolean).join(" - ");
+}
+
+function townsLine(vote = {}) {
+  return cleanText(vote.towns_represented || vote.townsRepresented || vote.location_text || "");
 }
 
 function filterKey(value = "") {
@@ -207,36 +241,54 @@ function slugify(value = "") {
                   partyLabel(vote.party),
                   vote.party,
                   vote.district,
+                  vote.raw_district,
                   vote.chamber,
+                  vote.location_text,
+                  vote.towns_represented,
                   voteLabel,
+                  isFreeStater(vote) ? "free stater" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")
                   .toLowerCase();
+                const href = personHref(vote);
+                const towns = townsLine(vote);
 
                 return (
-                  <a
+                  <article
                     class="legislator-card"
-                    href={personHref(vote)}
                     data-vote-card
                     data-vote={filterKey(voteLabel)}
                     data-party={vote.party || ""}
                     data-search={searchText}
                   >
                     <div class="card-main">
-                      <img
-                        class:list={["legislator-photo", !photoUrl && "fallback-photo"]}
-                        src={photoUrl || profileIcon.src}
-                        alt={photoUrl ? `Photo of ${vote.name}` : ""}
-                        loading="lazy"
-                      />
-                      <div>
-                        <strong>{vote.name || "Legislator not listed"}</strong>
-                        <p>
-                          {[bodyLabel(vote.legislativebody), vote.district && `District ${vote.district}`]
-                            .filter(Boolean)
-                            .join(" - ")}
-                        </p>
+                      <a class="photo-link" href={href}>
+                        <img
+                          class:list={["legislator-photo", !photoUrl && "fallback-photo"]}
+                          src={photoUrl || profileIcon.src}
+                          alt={photoUrl ? `Photo of ${vote.name}` : ""}
+                          loading="lazy"
+                        />
+                      </a>
+                      <div class="legislator-info">
+                        <strong>
+                          <a href={href}>{vote.name || "Legislator not listed"}</a>
+                        </strong>
+                        <p class="district-line">{districtLine(vote)}</p>
+                        {towns && <p class="towns-line"><em>{towns}</em></p>}
+                        <div class="tag-row">
+                          {isFreeStater(vote) && (
+                            <a
+                              class="free-stater-pill"
+                              href="/free-staters"
+                              title="What is a Free Stater?"
+                              aria-label="What is a Free Stater?"
+                            >
+                              Free Stater
+                            </a>
+                          )}
+                        </div>
                       </div>
                       <span class:list={["vote-pill", filterKey(voteLabel)]}>
                         {voteLabel}
@@ -247,10 +299,12 @@ function slugify(value = "") {
                       <span class:list={["party", partyClass(vote.party)]}>
                         {partyLabel(vote.party)}
                       </span>
+                      {vote.chamber && <span>{cleanText(vote.chamber)}</span>}
+                      {vote.county && <span>{cleanText(vote.county)} County</span>}
                       {vote.employeeno && <span>Employee #{vote.employeeno}</span>}
                       {vote.personid && <span>Person #{vote.personid}</span>}
                     </div>
-                  </a>
+                  </article>
                 );
               })}
             </div>
@@ -461,7 +515,12 @@ function slugify(value = "") {
     text-decoration: none;
   }
 
-  .legislator-card:hover strong {
+  .legislator-card a {
+    color: #1f2933;
+  }
+
+  .legislator-card:hover .legislator-info strong a,
+  .legislator-info strong a:hover {
     text-decoration: underline;
   }
 
@@ -483,6 +542,11 @@ function slugify(value = "") {
     width: 64px;
   }
 
+  .photo-link {
+    display: block;
+    line-height: 0;
+  }
+
   .fallback-photo {
     object-fit: cover;
   }
@@ -493,10 +557,49 @@ function slugify(value = "") {
     line-height: 1.15;
   }
 
-  .card-main p {
+  .legislator-info {
+    min-width: 0;
+  }
+
+  .legislator-info p {
     color: #4b5563;
     line-height: 1.45;
     margin: 6px 0 0;
+  }
+
+  .district-line {
+    font-weight: 850;
+  }
+
+  .towns-line {
+    color: #374151 !important;
+    font-weight: 750;
+  }
+
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .free-stater-pill {
+    background: #7f1d1d;
+    border: 1px solid #450a0a;
+    border-radius: 999px;
+    color: white !important;
+    display: inline-flex;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.04em;
+    padding: 5px 8px;
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .free-stater-pill:hover {
+    background: #991b1b;
+    text-decoration: underline;
   }
 
   .card-meta {

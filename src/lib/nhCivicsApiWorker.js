@@ -3703,15 +3703,20 @@ async function handleBillRollCall(request, env) {
         ELSE 'Unknown'
       END AS vote_label,
       COALESCE(p.display_name, l.firstname || ' ' || l.lastname, '') AS name,
-      COALESCE(p.party, l.party, '') AS party,
+      COALESCE(l.party, p.party, '') AS party,
       CASE l.legislativebody
         WHEN 'S' THEN 'Senate'
         WHEN 'H' THEN 'House'
         ELSE l.legislativebody
       END AS chamber,
-      COALESCE(l.district, '') AS district,
+      COALESCE(dm.district_label, l.district, '') AS district,
+      COALESCE(l.district, '') AS raw_district,
+      COALESCE(cc.name, '') AS county,
+      COALESCE(dm.communities_represented, l.city, '') AS location_text,
+      COALESCE(dm.communities_represented, l.city, '') AS towns_represented,
+      ${isFreeStaterSelectExpression("COALESCE(p.is_free_stater, l.is_free_stater)")},
       l.personid,
-      COALESCE(p.slug, '') AS slug,
+      COALESCE(p.slug, l.slug, '') AS slug,
       COALESCE(p.photo_url, lp.photo_url, '') AS photo
     FROM d1_rollcallhistory h
     LEFT JOIN d1_legislators l
@@ -3720,6 +3725,23 @@ async function handleBillRollCall(request, env) {
       ON p.employeeno = h.employeenumber
     LEFT JOIN d1_legislator_photos lp
       ON lp.employeeno = h.employeenumber
+    LEFT JOIN county_codes cc
+      ON CAST(l.countycode AS INTEGER) = cc.source_county_id
+    LEFT JOIN d1_district_mapping dm
+      ON (
+        (
+          l.legislativebody = 'H'
+          AND dm.body = 'H'
+          AND CAST(l.countycode AS INTEGER) = dm.county
+          AND CAST(l.district AS INTEGER) = dm.district
+        )
+        OR
+        (
+          l.legislativebody = 'S'
+          AND dm.body = 'S'
+          AND CAST(l.district AS INTEGER) = dm.district
+        )
+      )
     WHERE h.sessionyear = ?
       AND h.legislativebody = ?
       AND CAST(h.votesequencenumber AS TEXT) = ?
@@ -4635,9 +4657,9 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
       h.votesequencenumber,
       h.condensedbillno,
 
-      h.vote AS vote_code,
+      CAST(h.vote AS INTEGER) AS vote_code,
 
-      CASE h.vote
+      CASE CAST(h.vote AS INTEGER)
         WHEN 1 THEN 'yea'
         WHEN 2 THEN 'nay'
         WHEN 3 THEN 'absent'
@@ -4650,9 +4672,21 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
       END AS vote,
 
       rs.question_motion,
+      rs.title1,
+      rs.title2,
+      rs.votedate AS vote_date,
+      rs.yeas,
+      rs.nays,
+      rs.present,
+      rs.absent,
+      COALESCE(
+        NULLIF(TRIM(rs.question_motion), ''),
+        NULLIF(TRIM(rs.title1), ''),
+        NULLIF(TRIM(rs.title2), '')
+      ) AS action_text,
 
       CASE
-        WHEN h.vote = 1
+        WHEN CAST(h.vote AS INTEGER) = 1
           AND (
             UPPER(COALESCE(rs.question_motion, '')) LIKE '%OUGHT TO PASS%'
             OR UPPER(COALESCE(rs.question_motion, '')) LIKE '%OTPA%'
@@ -4660,7 +4694,7 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
           )
         THEN 'In Support'
 
-        WHEN h.vote = 2
+        WHEN CAST(h.vote AS INTEGER) = 2
           AND (
             UPPER(COALESCE(rs.question_motion, '')) LIKE '%OUGHT TO PASS%'
             OR UPPER(COALESCE(rs.question_motion, '')) LIKE '%OTPA%'
@@ -4668,25 +4702,30 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
           )
         THEN 'Against'
 
-        WHEN h.vote = 1
+        WHEN CAST(h.vote AS INTEGER) = 1
           AND UPPER(COALESCE(rs.question_motion, '')) LIKE '%ITL%'
         THEN 'Against'
 
-        WHEN h.vote = 2
+        WHEN CAST(h.vote AS INTEGER) = 2
           AND UPPER(COALESCE(rs.question_motion, '')) LIKE '%ITL%'
         THEN 'In Support'
 
-        WHEN h.vote = 3 THEN 'Absent'
-        WHEN h.vote = 4 THEN 'Present'
-        WHEN h.vote = 5 THEN 'Not voting'
-        WHEN h.vote IN (6, 7) THEN 'Present not voting'
-        WHEN h.vote = 0 THEN 'Not counted'
+        WHEN CAST(h.vote AS INTEGER) = 3 THEN 'Absent'
+        WHEN CAST(h.vote AS INTEGER) = 4 THEN 'Present'
+        WHEN CAST(h.vote AS INTEGER) = 5 THEN 'Not voting'
+        WHEN CAST(h.vote AS INTEGER) IN (6, 7) THEN 'Present not voting'
+        WHEN CAST(h.vote AS INTEGER) = 0 THEN 'Not counted'
         ELSE 'Unknown'
       END AS vote_label,
 
       h.calendaritemid,
       b.expandedbillno,
-      b.description,
+      COALESCE(
+        NULLIF(TRIM(rs.question_motion), ''),
+        NULLIF(TRIM(rs.title1), ''),
+        NULLIF(TRIM(rs.title2), '')
+      ) AS description,
+      b.description AS bill_status,
       b.statusdate,
       b.statusorder
     FROM d1_rollcallhistory h
@@ -4699,6 +4738,13 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
       AND b.condensedbillno = h.condensedbillno
       AND b.legislativebody = h.legislativebody
     WHERE h.employeenumber = ?
+      AND rs.votesequencenumber IS NOT NULL
+      AND CAST(h.vote AS INTEGER) IN (0, 1, 2, 3, 4, 5, 6, 7)
+      AND COALESCE(
+        NULLIF(TRIM(rs.question_motion), ''),
+        NULLIF(TRIM(rs.title1), ''),
+        NULLIF(TRIM(rs.title2), '')
+      ) IS NOT NULL
     ORDER BY h.sessionyear DESC, h.votesequencenumber DESC
     LIMIT ?
   `)

@@ -6,6 +6,7 @@ import { isFreeStater } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
 import { cleanText } from "../lib/text";
 import {
+  isVotingAction,
   normalizeBillCode,
   representativeGradeFor,
   representativeVoteImpact,
@@ -39,7 +40,7 @@ const profileHref = `/people/${slugify(name)}`;
 const photoUrl = profilePhotoUrl(rep.photo);
 const voteHistory = Array.isArray(rep.voteHistory)
   ? rep.voteHistory
-      .filter((vote) => trackedBillForVote(trackedBills, vote))
+      .filter((vote) => trackedBillForVote(trackedBills, vote) && isVotingAction(vote))
       .slice(0, 3)
   : [];
 const grade = representativeGradeFor(rep, trackedBills, billSummaries);
@@ -49,7 +50,7 @@ function trackedBillFor(vote) {
 }
 
 function billSummaryFor(vote) {
-  return billSummaries.get(normalizeBillCode(vote.condensedbillno));
+  return billSummaries.get(normalizeBillCode(vote.condensedbillno || vote.bill_number));
 }
 ---
 
@@ -139,7 +140,7 @@ function billSummaryFor(vote) {
           const billYear = billSummary?.sessionyear || vote.sessionyear;
           const stance = representativeVoteStance(vote, bill);
           const voteImpact = representativeVoteImpact(vote, bill);
-          const summary = bill?.summary || billSummary?.summary || billSummary?.description || "";
+          const summary = bill?.summary || billSummary?.summary || "";
 
           return (
             <div class="vote-item">
