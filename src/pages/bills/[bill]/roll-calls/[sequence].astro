@@ -658,6 +658,7 @@ function slugify(value = "") {
   }
 
   .party {
+    border-color: transparent !important;
     color: white !important;
   }
 
@@ -688,14 +689,18 @@ function slugify(value = "") {
     color: #1d4ed8;
   }
 
+  .card-meta .party.republican,
   .republican {
     background: #b42318;
   }
 
+  .card-meta .party.democrat,
   .democrat {
     background: #1d4ed8;
   }
 
+  .card-meta .party.independent,
+  .card-meta .party.unknown,
   .independent,
   .unknown {
     background: #5b616e;
