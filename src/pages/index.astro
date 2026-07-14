@@ -324,6 +324,18 @@ function positionClass(position = "") {
   if (value.includes("oppose") || value.includes("against")) return "oppose";
   return "neutral";
 }
+
+function billTitleOnly(trackedBill = {}, fallbackCode = "") {
+  const code = normalizeBillCode(trackedBill.code || fallbackCode);
+  const name = cleanText(trackedBill.name || trackedBill.title || "");
+  if (!name) return code;
+
+  return cleanText(
+    name
+      .replace(new RegExp(`^${code}\\s*[:\\-–—]?\\s*`, "i"), "")
+      .trim(),
+  ) || name;
+}
 ---
 
 <html lang="en">
@@ -674,13 +686,21 @@ function positionClass(position = "") {
                 organizationComments.map((item) => {
                   const trackedBill = trackedBillForCode(item.bill || item.billLabel);
                   const billCode = trackedBill?.code || normalizeBillCode(item.bill || item.billLabel);
+                  const billTitle = billTitleOnly(trackedBill, billCode);
 
                   return (
                     <article class="comment-card">
                       <div class="comment-topline">
-                        <a href={organizationPath(item.organization)}>
-                          {item.organization.name}
-                        </a>
+                        <div class="organization-comment-source">
+                          {item.organization.logoUrl && (
+                            <a class="organization-comment-logo" href={organizationPath(item.organization)} tabindex="-1" aria-hidden="true">
+                              <img src={item.organization.logoUrl} alt="" loading="lazy" />
+                            </a>
+                          )}
+                          <a href={organizationPath(item.organization)}>
+                            {item.organization.name}
+                          </a>
+                        </div>
                         {item.position && (
                           <span class:list={["position-pill", positionClass(item.position)]}>
                             {item.position}
@@ -688,7 +708,7 @@ function positionClass(position = "") {
                         )}
                       </div>
                       <a class="bill-comment-link" href={`/bills/${billCode}`}>
-                        {billCode}{trackedBill?.name ? `: ${trackedBill.name}` : ""}
+                        {billTitle}
                       </a>
                       <p>{previewText(item.comment, 190)}</p>
                     </article>
@@ -1263,6 +1283,34 @@ function positionClass(position = "") {
     display: flex;
     gap: 10px;
     justify-content: space-between;
+  }
+
+  .organization-comment-source {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .organization-comment-logo {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: inline-flex;
+    flex: 0 0 auto;
+    height: 42px;
+    justify-content: center;
+    overflow: hidden;
+    width: 42px;
+  }
+
+  .organization-comment-logo img {
+    display: block;
+    height: 100%;
+    object-fit: contain;
+    padding: 4px;
+    width: 100%;
   }
 
   .comment-topline a,

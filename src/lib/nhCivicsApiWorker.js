@@ -1740,8 +1740,15 @@ async function handleCommunityDetail(request, env) {
 }
 
 async function handleCommunityCounty(request, env) {
-  const parts = new URL(request.url).pathname.split("/").filter(Boolean);
+  const url = new URL(request.url);
+  const parts = url.pathname.split("/").filter(Boolean);
   const countySlug = decodeURIComponent(parts[2] || "");
+  const articleLimit = boundedNumber(
+    url.searchParams.get("articleLimit"),
+    3,
+    0,
+    25
+  );
 
   if (!countySlug) {
     return json({ error: "Use /communities/counties/{county}." }, 400);
@@ -1771,6 +1778,11 @@ async function handleCommunityCounty(request, env) {
       }
     }
   }
+  const relatedArticles = await getArticlesForCountyPreview(
+    env,
+    [...towns],
+    articleLimit
+  );
 
   const totalHouseCounties = await env.DB.prepare(`
     SELECT COUNT(DISTINCT LOWER(d.county)) AS total
@@ -1790,21 +1802,26 @@ async function handleCommunityCounty(request, env) {
           (total, count) => total + count,
           0
         ),
+        articleCount: relatedArticles.length,
         districts: districts.map((district) => ({
           name: `${county.name} ${district.district_number}`,
           body: "H",
           county: county.name,
           district: district.district_number,
+          representativeSummary: {
+            count: representativeCounts.get(district.district_number) || 0,
+          },
           path: `/communities/house/${slugifyPathPart(county.name)}/${
             district.district_number
           }`,
         })),
-        relatedArticles: [],
+        relatedArticles,
       },
     ],
     meta: {
       total: totalHouseCounties?.total || 0,
       body: "house",
+      articleLimit,
     },
   });
 }
@@ -2206,6 +2223,40 @@ async function getArticlesForTownPreview(env, townName, representatives, limit) 
     LIMIT ?
   `)
     .bind(...binds, limit)
+    .all();
+
+  return result.results || [];
+}
+
+async function getArticlesForCountyPreview(env, towns, limit) {
+  if (!limit) return [];
+
+  const normalizedTowns = [...new Set(
+    (towns || [])
+      .map((town) => normalizeCommunityText(town))
+      .filter(Boolean)
+  )];
+
+  if (!normalizedTowns.length) return [];
+
+  const result = await env.DB.prepare(`
+    SELECT DISTINCT
+      a.article_id,
+      a.title,
+      a.resource_type,
+      a.publisher,
+      a.url,
+      a.summary,
+      a.created_at,
+      a.updated_at
+    FROM d1_articles a
+    JOIN d1_article_towns at
+      ON at.article_id = a.article_id
+    WHERE LOWER(at.town) IN (${normalizedTowns.map(() => "?").join(", ")})
+    ORDER BY a.created_at DESC, a.title
+    LIMIT ?
+  `)
+    .bind(...normalizedTowns, limit)
     .all();
 
   return result.results || [];

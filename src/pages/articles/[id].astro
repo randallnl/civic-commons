@@ -13,7 +13,7 @@ import { billDetailPath, getBills } from "../../lib/billsApi";
 import {
   candidatePath,
 } from "../../lib/candidatesApi";
-import { cleanText } from "../../lib/text";
+import { cleanText, joinClean } from "../../lib/text";
 import { getPeopleLinkOptions } from "../../lib/unifiedPeople";
 
 const { id } = Astro.params;
@@ -76,6 +76,18 @@ function candidateProfilePath(candidate = {}) {
     candidateFirstName: candidate.candidate_first_name,
     candidateLastName: candidate.candidate_last_name,
   });
+}
+
+function legislatorMeta(person = {}) {
+  return joinClean([person.party, person.chamber]);
+}
+
+function candidateMeta(candidate = {}) {
+  return joinClean([
+    candidate.office,
+    candidate.county,
+    candidate.district && `District ${candidate.district}`,
+  ]);
 }
 
 function townPath(town = {}) {
@@ -166,7 +178,7 @@ function billOptionLabel(bill = {}) {
                   {article.legislators.map((person) => (
                     <a href={legislatorPath(person)}>
                       <strong>{legislatorName(person)}</strong>
-                      <span>{[person.party, person.chamber].filter(Boolean).join(" · ")}</span>
+                      <span>{legislatorMeta(person)}</span>
                     </a>
                   ))}
                 </div>
@@ -185,7 +197,7 @@ function billOptionLabel(bill = {}) {
                   {article.candidates.map((candidate) => (
                     <a href={candidateProfilePath(candidate)}>
                       <strong>{candidateLabel(candidate)}</strong>
-                      <span>{[candidate.office, candidate.county, candidate.district && `District ${candidate.district}`].filter(Boolean).join(" · ")}</span>
+                      <span>{candidateMeta(candidate)}</span>
                     </a>
                   ))}
                 </div>
