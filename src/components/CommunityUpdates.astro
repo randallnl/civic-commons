@@ -13,6 +13,15 @@ const {
 } = Astro.props;
 
 const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
+
+function linkHost(value = "") {
+  try {
+    const url = new URL(value);
+    return url.hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
 ---
 
 <section class="panel community-updates-panel">
@@ -73,29 +82,35 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
   {updates.length ? (
     <div class="community-update-list">
       {updates.map((update) => (
-        <article>
+        <article class:list={["community-update-card", update.photoUrl && "has-photo"]}>
           {update.photoUrl && (
-            <button
-              class="community-photo-button"
-              type="button"
-              data-community-photo={update.photoUrl}
-              aria-label="Open community update photo"
-            >
-              <img src={update.photoUrl} alt="" loading="lazy" />
-            </button>
+            <div class="community-update-media">
+              <button
+                class="community-photo-button"
+                type="button"
+                data-community-photo={update.photoUrl}
+                aria-label="Open community update photo"
+              >
+                <img src={update.photoUrl} alt="" loading="lazy" />
+              </button>
+              <span>Photo update</span>
+            </div>
           )}
-          <div>
-            <strong>{cleanText(update.displayName || "Community member")}</strong>
-            {communityUpdateDate(update.createdAt) && (
-              <span>{communityUpdateDate(update.createdAt)}</span>
+          <div class="community-update-copy">
+            <div class="community-update-meta">
+              <strong>{cleanText(update.displayName || "Community member")}</strong>
+              {communityUpdateDate(update.createdAt) && (
+                <span>{communityUpdateDate(update.createdAt)}</span>
+              )}
+            </div>
+            {update.comment && <p>{cleanText(update.comment)}</p>}
+            {update.linkUrl && (
+              <a class="community-update-link" href={update.linkUrl}>
+                <span>Open linked context</span>
+                {linkHost(update.linkUrl) && <small>{linkHost(update.linkUrl)}</small>}
+              </a>
             )}
           </div>
-          {update.comment && <p>{cleanText(update.comment)}</p>}
-          {update.linkUrl && (
-            <a class="community-update-link" href={update.linkUrl}>
-              Open linked context
-            </a>
-          )}
         </article>
       ))}
     </div>
@@ -205,11 +220,37 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
     margin-top: 16px;
   }
 
-  .community-update-list article {
+  .community-update-card {
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 12px;
+    display: grid;
+    gap: 14px;
     padding: 14px;
+  }
+
+  .community-update-card.has-photo {
+    align-items: stretch;
+    grid-template-columns: minmax(160px, 34%) minmax(0, 1fr);
+  }
+
+  .community-update-media {
+    display: grid;
+    gap: 8px;
+  }
+
+  .community-update-media span {
+    background: #e0f2fe;
+    border: 1px solid #7dd3fc;
+    border-radius: 999px;
+    color: #075985;
+    display: inline-flex;
+    font-size: 0.72rem;
+    font-weight: 950;
+    justify-self: start;
+    letter-spacing: 0.04em;
+    padding: 5px 8px;
+    text-transform: uppercase;
   }
 
   .community-photo-button {
@@ -234,8 +275,16 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
     border: 1px solid #d1d5db;
     border-radius: 8px;
     display: block;
-    object-fit: contain;
+    height: 100%;
+    min-height: 130px;
+    object-fit: cover;
     width: 100%;
+  }
+
+  .community-update-copy {
+    align-content: start;
+    display: grid;
+    min-width: 0;
   }
 
   .community-photo-dialog {
@@ -274,7 +323,7 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
     object-fit: contain;
   }
 
-  .community-update-list div {
+  .community-update-meta {
     align-items: center;
     display: flex;
     flex-wrap: wrap;
@@ -282,7 +331,7 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
     justify-content: space-between;
   }
 
-  .community-update-list span {
+  .community-update-meta span {
     color: #6b7280;
     font-size: 0.8rem;
     font-weight: 900;
@@ -302,10 +351,19 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
     border-radius: 999px;
     color: #1f2933;
     display: inline-flex;
+    gap: 8px;
+    align-items: center;
     font-weight: 900;
+    justify-self: start;
     margin-top: 12px;
     padding: 8px 11px;
     text-decoration: none;
+  }
+
+  .community-update-link small {
+    color: #6b7280;
+    font-size: 0.74rem;
+    font-weight: 900;
   }
 
   .community-update-form {
@@ -362,6 +420,10 @@ const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit
   }
 
   @media (max-width: 720px) {
+    .community-update-card.has-photo {
+      grid-template-columns: 1fr;
+    }
+
     .form-grid {
       grid-template-columns: 1fr;
     }

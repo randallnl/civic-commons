@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { getArticlePreview } from "./articlePreviews";
+import { ensureArticlePreviewColumns, getArticlePreview } from "./articlePreviews";
 import { cleanText } from "./text";
 import {
   linkArticlePersonByPersonId,
@@ -224,22 +224,41 @@ export async function moderateArticleSubmission(id, action, reviewer = "", manua
   const title = cleanText(submission.title || preview?.title || "Submitted article");
   const summary = cleanText(submission.summary || preview?.description || "");
   const publisher = cleanText(submission.publisher || domainFromUrl(submission.url));
+  const previewTitle = cleanText(preview?.title || title);
+  const previewDescription = cleanText(preview?.description || summary);
+  const previewImageUrl = cleanText(preview?.imageUrl || "");
 
+  await ensureArticlePreviewColumns(db);
   await db
     .prepare(
       `INSERT INTO d1_articles (
-         article_id, title, resource_type, publisher, url, summary, created_at, updated_at
+         article_id, title, resource_type, publisher, url, summary,
+         preview_title, preview_description, preview_image_url, preview_fetched_at,
+         created_at, updated_at
        )
-       VALUES (?, ?, 'Community Submitted', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       VALUES (?, ?, 'Community Submitted', ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
        ON CONFLICT(article_id) DO UPDATE SET
          title = excluded.title,
          resource_type = excluded.resource_type,
          publisher = excluded.publisher,
          url = excluded.url,
          summary = excluded.summary,
+         preview_title = excluded.preview_title,
+         preview_description = excluded.preview_description,
+         preview_image_url = excluded.preview_image_url,
+         preview_fetched_at = excluded.preview_fetched_at,
          updated_at = CURRENT_TIMESTAMP`,
     )
-    .bind(articleId, title, publisher, submission.url, summary)
+    .bind(
+      articleId,
+      title,
+      publisher,
+      submission.url,
+      summary,
+      previewTitle,
+      previewDescription,
+      previewImageUrl,
+    )
     .run();
 
   await insertArticleRelations(db, articleId, scan);

@@ -1,5 +1,7 @@
 // Vendored from randallnl/nh-civics-api so the site can run API queries directly
 // against its bound D1/R2 resources without calling a separate Worker.
+import { ensureArticlePreviewColumns } from "./articlePreviews";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -4183,6 +4185,7 @@ async function handleRepVotes(request, env) {
 }
 async function handleArticles(request, env) {
   const url = new URL(request.url);
+  await ensureArticlePreviewColumns(env.DB);
 
   const q = String(url.searchParams.get("q") || "").trim();
   const town = String(url.searchParams.get("town") || "").trim();
@@ -4204,6 +4207,10 @@ async function handleArticles(request, env) {
       a.publisher,
       a.url,
       a.summary,
+      a.preview_title,
+      a.preview_description,
+      a.preview_image_url,
+      a.preview_fetched_at,
       a.created_at,
       a.updated_at
     FROM d1_articles a
@@ -4309,6 +4316,8 @@ async function handleArticleDetail(request, env) {
     return json({ error: "Article ID is required." }, 400);
   }
 
+  await ensureArticlePreviewColumns(env.DB);
+
   const article = await env.DB.prepare(`
     SELECT
       article_id,
@@ -4317,6 +4326,10 @@ async function handleArticleDetail(request, env) {
       publisher,
       url,
       summary,
+      preview_title,
+      preview_description,
+      preview_image_url,
+      preview_fetched_at,
       created_at,
       updated_at
     FROM d1_articles

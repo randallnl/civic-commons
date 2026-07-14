@@ -82,6 +82,8 @@ export function articleDetailPath(article = {}) {
 }
 
 function normalizeArticle(article = {}) {
+  const preview = normalizeArticlePreview(article);
+
   return {
     ...article,
     title: cleanText(article.title),
@@ -109,7 +111,27 @@ function normalizeArticle(article = {}) {
     ]),
     issueAreas: cleanRelationList(article.issueAreas, ["issue_area", "name"]),
     impactTypes: cleanRelationList(article.impactTypes, ["impact_type", "name"]),
+    preview,
   };
+}
+
+function normalizeArticlePreview(article = {}) {
+  const preview =
+    article.preview && typeof article.preview === "object"
+      ? article.preview
+      : {
+          title: article.preview_title || article.previewTitle,
+          description: article.preview_description || article.previewDescription,
+          imageUrl: article.preview_image_url || article.previewImageUrl,
+        };
+
+  const normalized = {
+    title: cleanText(preview.title || ""),
+    description: cleanText(preview.description || ""),
+    imageUrl: cleanText(preview.imageUrl || ""),
+  };
+
+  return Object.values(normalized).some(Boolean) ? normalized : null;
 }
 
 export function articlePublishDate(article = {}) {

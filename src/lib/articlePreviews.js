@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { cleanText } from "./text";
 
 const DEFAULT_PREVIEW_API_BASE = "https://article-preview.randall-d53.workers.dev";
@@ -68,17 +69,88 @@ export async function getArticlePreview(articleUrl, apiBase = previewApiBase()) 
 export async function enrichArticlesWithPreviews(articles = [], { limit = 20 } = {}) {
   const articleList = Array.isArray(articles) ? articles : [];
   const previews = new Map();
-  const urls = [...new Set(articleList.slice(0, limit).map((article) => article?.url).filter(Boolean))];
+  const cachedArticles = articleList.slice(0, limit).filter((article) => cachedPreview(article));
+  const uncachedArticles = articleList
+    .slice(0, limit)
+    .filter((article) => article?.url && !cachedPreview(article));
+  const urls = [...new Set(uncachedArticles.map((article) => article.url))];
+
+  cachedArticles.forEach((article) => previews.set(article.url, cachedPreview(article)));
 
   // Keep the scraper responsive without opening a request for every article at once.
   for (let index = 0; index < urls.length; index += 6) {
     const batch = urls.slice(index, index + 6);
     const results = await Promise.all(batch.map((url) => getArticlePreview(url)));
-    batch.forEach((url, resultIndex) => previews.set(url, results[resultIndex]));
+    await Promise.all(
+      batch.map((url, resultIndex) => {
+        const preview = results[resultIndex];
+        previews.set(url, preview);
+        const article = uncachedArticles.find((item) => item.url === url);
+        return saveArticlePreview(article, preview);
+      }),
+    );
   }
 
   return articleList.map((article) => ({
     ...article,
-    preview: previews.get(article?.url) || null,
+    preview: previews.get(article?.url) || cachedPreview(article) || null,
   }));
+}
+
+export function cachedPreview(article = {}) {
+  return normalizePreview(
+    article.preview || {
+      title: article.preview_title || article.previewTitle,
+      description: article.preview_description || article.previewDescription,
+      imageUrl: article.preview_image_url || article.previewImageUrl,
+    },
+  );
+}
+
+async function saveArticlePreview(article = {}, preview = null) {
+  const db = env.d1_db;
+  const articleId = article?.article_id || article?.articleId;
+  const normalized = normalizePreview(preview);
+
+  if (!db || !articleId || !normalized) return;
+
+  try {
+    await ensureArticlePreviewColumns(db);
+    await db
+      .prepare(
+        `UPDATE d1_articles
+         SET preview_title = ?,
+             preview_description = ?,
+             preview_image_url = ?,
+             preview_fetched_at = CURRENT_TIMESTAMP
+         WHERE article_id = ?`,
+      )
+      .bind(
+        normalized.title,
+        normalized.description,
+        normalized.imageUrl,
+        String(articleId),
+      )
+      .run();
+  } catch (error) {
+    console.warn(`Unable to cache article preview: ${articleId}`, error?.message || error);
+  }
+}
+
+export async function ensureArticlePreviewColumns(db = env.d1_db) {
+  if (!db) return;
+
+  const columns = await db.prepare("PRAGMA table_info(d1_articles)").all();
+  const existing = new Set((columns.results || []).map((column) => column.name));
+
+  for (const [column, definition] of [
+    ["preview_title", "TEXT"],
+    ["preview_description", "TEXT"],
+    ["preview_image_url", "TEXT"],
+    ["preview_fetched_at", "TEXT"],
+  ]) {
+    if (!existing.has(column)) {
+      await db.prepare(`ALTER TABLE d1_articles ADD COLUMN ${column} ${definition}`).run();
+    }
+  }
 }

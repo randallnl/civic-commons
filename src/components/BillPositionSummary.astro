@@ -38,6 +38,8 @@ function testimonySentiment() {
 }
 
 const sentiment = testimonySentiment();
+const supportCount = Math.max(0, Number(counts.support || 0));
+const opposeCount = Math.max(0, Number(counts.oppose || 0));
 ---
 
 <div class:list={["position-summary", compact && "compact"]}>
@@ -46,6 +48,8 @@ const sentiment = testimonySentiment();
       <span class="summary-title">Public Testimony</span>
       <div class="summary-pills">
         <span class:list={["sentiment-pill", sentiment.className]}>{sentiment.label}</span>
+        <span class="count-pill support-count">{supportCount} Support</span>
+        <span class="count-pill oppose-count">{opposeCount} Oppose</span>
       </div>
     </>
   ) : (
@@ -80,7 +84,29 @@ const sentiment = testimonySentiment();
     text-align: center;
   }
 
-  .position-summary.compact .sentiment-pill {
+  .count-pill {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.78rem;
+    font-weight: 900;
+    padding: 6px 9px;
+    text-align: center;
+  }
+
+  .support-count {
+    border-color: #86efac;
+    color: #166534;
+  }
+
+  .oppose-count {
+    border-color: #fca5a5;
+    color: #991b1b;
+  }
+
+  .position-summary.compact .sentiment-pill,
+  .position-summary.compact .count-pill {
     font-size: 0.76rem;
     padding: 5px 8px;
   }
