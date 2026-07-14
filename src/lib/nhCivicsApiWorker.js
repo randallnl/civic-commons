@@ -268,6 +268,10 @@ export default {
     if (url.pathname.startsWith("/bills/") && url.pathname.endsWith("/testimony")) {
       return handleBillTestimony(request, env);
     }
+
+    if (url.pathname.includes("/roll-calls/")) {
+      return handleBillRollCall(request, env);
+    }
     
     if (url.pathname.startsWith("/bills/")) {
       return handleBillDetail(request, env);
@@ -3419,6 +3423,13 @@ function getBillNumberFromPath(pathname) {
   return normalizeBillNumber(parts[1]);
 }
 
+function getRollCallSequenceFromPath(pathname) {
+  const parts = pathname.split("/").filter(Boolean);
+  const rollCallIndex = parts.indexOf("roll-calls");
+  if (rollCallIndex === -1) return "";
+  return String(parts[rollCallIndex + 1] || "").trim();
+}
+
 function getSessionYear(url) {
   return Number(url.searchParams.get("sessionyear") || url.searchParams.get("year") || 2026);
 }
@@ -3577,6 +3588,166 @@ async function handleBillDetail(request, env) {
     links: {
       testimony: `/bills/${bill.condensedbillno}/testimony?sessionyear=${bill.sessionyear}`,
       articles: `/articles?bill=${bill.condensedbillno}&include=relations`,
+    },
+  });
+}
+
+async function handleBillRollCall(request, env) {
+  const url = new URL(request.url);
+  const billNumber = getBillNumberFromPath(url.pathname);
+  const sequence = getRollCallSequenceFromPath(url.pathname);
+  const sessionyear = getSessionYear(url);
+
+  if (!billNumber) {
+    return json({ error: "Bill number is required." }, 400);
+  }
+
+  if (!sequence) {
+    return json({ error: "Roll call sequence is required." }, 400);
+  }
+
+  const bill = await env.DB.prepare(`
+    SELECT
+      sessionyear,
+      legislationid,
+      condensedbillno,
+      expandedbillno,
+      legislativebody,
+      description,
+      statusdate,
+      statusorder,
+      testimony_count,
+      germane_count,
+      nongermane_count,
+      support_count,
+      oppose_count,
+      neutral_count
+    FROM d1_bills
+    WHERE sessionyear = ?
+      AND (
+        UPPER(condensedbillno) = ?
+        OR UPPER(expandedbillno) = ?
+      )
+    LIMIT 1
+  `)
+    .bind(sessionyear, billNumber, billNumber)
+    .first();
+
+  if (!bill) {
+    return json({ error: "Bill not found." }, 404);
+  }
+
+  const rollCall = await env.DB.prepare(`
+    SELECT
+      rs.sessionyear,
+      rs.legislativebody,
+      rs.votesequencenumber,
+      rs.votedate,
+      rs.condensedbillno,
+      rs.yeas,
+      rs.nays,
+      rs.present,
+      rs.absent,
+      rs.question_motion,
+      rs.title1,
+      rs.title2,
+      rs.verified,
+      rs.calendaritemid
+    FROM d1_rollcallsummary rs
+    WHERE rs.sessionyear = ?
+      AND UPPER(rs.condensedbillno) = ?
+      AND CAST(rs.votesequencenumber AS TEXT) = ?
+    ORDER BY
+      CASE rs.legislativebody
+        WHEN 'H' THEN 1
+        WHEN 'S' THEN 2
+        ELSE 3
+      END
+    LIMIT 1
+  `)
+    .bind(sessionyear, bill.condensedbillno, sequence)
+    .first();
+
+  if (!rollCall) {
+    return json({ error: "Roll call not found." }, 404);
+  }
+
+  const votes = await env.DB.prepare(`
+    SELECT
+      h.sessionyear,
+      h.legislativebody,
+      h.votesequencenumber,
+      h.condensedbillno,
+      h.employeenumber AS employeeno,
+      h.vote AS vote_code,
+      CASE CAST(h.vote AS INTEGER)
+        WHEN 1 THEN 'yea'
+        WHEN 2 THEN 'nay'
+        WHEN 3 THEN 'absent'
+        WHEN 4 THEN 'present'
+        WHEN 5 THEN 'other_not_voting'
+        WHEN 6 THEN 'other_present_not_voting'
+        WHEN 7 THEN 'other_present_not_voting'
+        WHEN 0 THEN 'other_not_counted'
+        ELSE 'unknown'
+      END AS vote,
+      CASE CAST(h.vote AS INTEGER)
+        WHEN 1 THEN 'Yea'
+        WHEN 2 THEN 'Nay'
+        WHEN 3 THEN 'Absent'
+        WHEN 4 THEN 'Present'
+        WHEN 5 THEN 'Not voting'
+        WHEN 6 THEN 'Present not voting'
+        WHEN 7 THEN 'Present not voting'
+        WHEN 0 THEN 'Not counted'
+        ELSE 'Unknown'
+      END AS vote_label,
+      COALESCE(p.display_name, l.firstname || ' ' || l.lastname, '') AS name,
+      COALESCE(p.party, l.party, '') AS party,
+      CASE l.legislativebody
+        WHEN 'S' THEN 'Senate'
+        WHEN 'H' THEN 'House'
+        ELSE l.legislativebody
+      END AS chamber,
+      COALESCE(l.district, '') AS district,
+      l.personid,
+      COALESCE(p.slug, '') AS slug
+    FROM d1_rollcallhistory h
+    LEFT JOIN d1_legislators l
+      ON l.employeeno = h.employeenumber
+    LEFT JOIN d1_people p
+      ON p.employeeno = h.employeenumber
+    WHERE h.sessionyear = ?
+      AND h.legislativebody = ?
+      AND CAST(h.votesequencenumber AS TEXT) = ?
+      AND UPPER(h.condensedbillno) = ?
+    ORDER BY
+      CASE CAST(h.vote AS INTEGER)
+        WHEN 1 THEN 1
+        WHEN 2 THEN 2
+        WHEN 4 THEN 3
+        WHEN 3 THEN 4
+        ELSE 5
+      END,
+      COALESCE(p.display_name, l.lastname || ', ' || l.firstname, '')
+  `)
+    .bind(
+      rollCall.sessionyear,
+      rollCall.legislativebody,
+      String(rollCall.votesequencenumber),
+      rollCall.condensedbillno,
+    )
+    .all();
+
+  return json({
+    bill,
+    rollCall,
+    votes: votes.results || [],
+    meta: {
+      sessionyear,
+      billNumber: bill.condensedbillno,
+      sequence: rollCall.votesequencenumber,
+      count: votes.results?.length || 0,
     },
   });
 }
