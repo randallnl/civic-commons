@@ -81,46 +81,56 @@ try {
       )}
       {submitError && <p class="status-message error">{submitError}</p>}
 
-      <section class="panel submit-panel">
-        <div class="submit-heading">
-          <div>
-            <p class="eyebrow">Suggest Coverage</p>
-            <h2>Submit an article for review</h2>
-          </div>
-          <p>
-            We will scan submitted coverage for mentioned bills, legislators,
-            candidates, and communities before it is approved.
-          </p>
-        </div>
+      <details class="submit-disclosure">
+        <summary>
+          <span>
+            <strong>Suggest coverage</strong>
+            <small>Submit an article for review</small>
+          </span>
+          <b>+</b>
+        </summary>
 
-        <form class="article-submit-form" action="/api/articles/submit" method="post">
-          <label class="url-field">
-            <span>Article URL</span>
-            <input type="url" name="url" placeholder="https://example.com/story" required />
-          </label>
-          <label>
-            <span>Title</span>
-            <input name="title" placeholder="Optional" />
-          </label>
-          <label>
-            <span>Source</span>
-            <input name="publisher" placeholder="Optional" />
-          </label>
-          <label class="summary-field">
-            <span>Summary or note</span>
-            <textarea name="summary" rows="3" placeholder="Optional context to help with review"></textarea>
-          </label>
-          <label>
-            <span>Your name</span>
-            <input name="submitterName" autocomplete="name" placeholder="Optional" />
-          </label>
-          <label>
-            <span>Email</span>
-            <input type="email" name="submitterEmail" autocomplete="email" placeholder="Used for moderation only" />
-          </label>
-          <button type="submit">Submit Article</button>
-        </form>
-      </section>
+        <section class="panel submit-panel">
+          <div class="submit-heading">
+            <div>
+              <p class="eyebrow">Suggest Coverage</p>
+              <h2>Submit an article for review</h2>
+            </div>
+            <p>
+              We will scan submitted coverage for mentioned bills, legislators,
+              candidates, and communities before it is approved.
+            </p>
+          </div>
+
+          <form class="article-submit-form" action="/api/articles/submit" method="post">
+            <label class="url-field">
+              <span>Article URL</span>
+              <input type="url" name="url" placeholder="https://example.com/story" required />
+            </label>
+            <label>
+              <span>Title</span>
+              <input name="title" placeholder="Optional" />
+            </label>
+            <label>
+              <span>Source</span>
+              <input name="publisher" placeholder="Optional" />
+            </label>
+            <label class="summary-field">
+              <span>Summary or note</span>
+              <textarea name="summary" rows="3" placeholder="Optional context to help with review"></textarea>
+            </label>
+            <label>
+              <span>Your name</span>
+              <input name="submitterName" autocomplete="name" placeholder="Optional" />
+            </label>
+            <label>
+              <span>Email</span>
+              <input type="email" name="submitterEmail" autocomplete="email" placeholder="Used for moderation only" />
+            </label>
+            <button type="submit">Submit Article</button>
+          </form>
+        </section>
+      </details>
 
       {error ? (
         <p class="status-message">{error}</p>
@@ -240,7 +250,77 @@ try {
   }
 
   .submit-panel {
+    border-top: 0;
     margin-bottom: 20px;
+    margin-top: 0;
+  }
+
+  .submit-disclosure {
+    margin-bottom: 20px;
+  }
+
+  .submit-disclosure summary {
+    align-items: center;
+    background: #fffaf1;
+    border: 1px solid #9ca3af;
+    border-radius: 8px;
+    color: #1f2933;
+    cursor: pointer;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    list-style: none;
+    padding: 12px 14px;
+  }
+
+  .submit-disclosure summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .submit-disclosure summary span {
+    display: grid;
+    gap: 2px;
+  }
+
+  .submit-disclosure summary strong {
+    font-size: 0.95rem;
+    line-height: 1.2;
+  }
+
+  .submit-disclosure summary small {
+    color: #6b7280;
+    font-size: 0.8rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .submit-disclosure summary b {
+    align-items: center;
+    background: #1f2933;
+    border-radius: 999px;
+    color: #ffffff;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 1rem;
+    height: 26px;
+    justify-content: center;
+    line-height: 1;
+    width: 26px;
+  }
+
+  .submit-disclosure[open] summary {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .submit-disclosure[open] summary b {
+    transform: rotate(45deg);
+  }
+
+  .submit-disclosure[open] .submit-panel {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    box-shadow: 4px 4px 0 #1f2933;
   }
 
   .submit-heading {
