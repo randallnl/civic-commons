@@ -2,6 +2,8 @@
 export const prerender = false;
 
 import CandidateCard from "../../components/CandidateCard.astro";
+import FilterBar from "../../components/FilterBar.astro";
+import PageHero from "../../components/PageHero.astro";
 import TopNav from "../../components/TopNav.astro";
 import {
   candidateName,
@@ -370,17 +372,13 @@ function uniqueOptions(values = []) {
   <body>
     <TopNav />
     <main class="page">
-      <a class="back" href="/">Back home</a>
-
-      <section class="hero">
-        <p class="eyebrow">House and Senate Candidates</p>
-        <h1>Browse candidates for the New Hampshire Legislature.</h1>
-        <p class="lede">
-          NH Deserves Better focuses on State Representative and State Senate
-          races because those offices shape state law, local funding, public
-          services, and the daily civic decisions closest to most people.
-        </p>
-
+      <PageHero
+        backHref="/"
+        backLabel="Back home"
+        eyebrow="House and Senate Candidates"
+        title="Browse candidates for the New Hampshire Legislature."
+        lede="NH Deserves Better focuses on State Representative and State Senate races because those offices shape state law, local funding, public services, and the daily civic decisions closest to most people."
+      >
         <form class="address-lookup" action="/candidates" method="get">
           <label for="address">Find State House and State Senate candidates for your address</label>
 
@@ -397,7 +395,11 @@ function uniqueOptions(values = []) {
           </div>
         </form>
 
-        <form class="filters" action="/candidates" method="get">
+        <FilterBar
+          action="/candidates"
+          submitLabel="Filter candidates"
+          clearHref={hasFilters ? "/candidates" : ""}
+        >
           <label>
             <span>Name</span>
             <input
@@ -455,9 +457,8 @@ function uniqueOptions(values = []) {
               {townOptions.map((option) => <option value={option} />)}
             </datalist>
           </label>
-          <button type="submit">Filter</button>
-        </form>
-      </section>
+        </FilterBar>
+      </PageHero>
 
       {error ? (
         <p class="status-message">{error}</p>
@@ -502,14 +503,9 @@ function uniqueOptions(values = []) {
     width: min(1120px, calc(100% - 32px));
   }
 
-  .back,
   a {
     color: #1f2933;
     font-weight: 800;
-  }
-
-  .hero {
-    padding: 42px 0 28px;
   }
 
   .eyebrow {
@@ -521,24 +517,7 @@ function uniqueOptions(values = []) {
     text-transform: uppercase;
   }
 
-  h1 {
-    font-size: clamp(2.6rem, 7vw, 5.25rem);
-    line-height: 0.95;
-    margin: 0 0 24px;
-    max-width: 920px;
-  }
-
-  .lede {
-    color: #4b5563;
-    font-size: clamp(1.08rem, 2vw, 1.25rem);
-    font-weight: 750;
-    line-height: 1.5;
-    margin: -8px 0 22px;
-    max-width: 780px;
-  }
-
-  .address-lookup,
-  .filters {
+  .address-lookup {
     background: white;
     border: 2px solid #1f2933;
     border-radius: 8px;
@@ -553,7 +532,7 @@ function uniqueOptions(values = []) {
   }
 
   .address-row,
-  .filters {
+  .address-lookup {
     align-items: end;
     display: grid;
     gap: 12px;
@@ -563,26 +542,16 @@ function uniqueOptions(values = []) {
     grid-template-columns: minmax(0, 1fr) 180px;
   }
 
-  .filters {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) 150px;
-  }
-
-  label {
-    display: grid;
-    gap: 6px;
-  }
-
-  label span {
-    color: #6b7280;
+  .address-lookup label {
+    color: #4b5563;
     font-size: 0.74rem;
-    font-weight: 900;
-    letter-spacing: 0.1em;
+    font-weight: 950;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
-  input,
-  select,
-  button {
+  .address-lookup input,
+  .address-lookup button {
     border: 2px solid #1f2933;
     border-radius: 8px;
     box-sizing: border-box;
@@ -593,7 +562,7 @@ function uniqueOptions(values = []) {
     width: 100%;
   }
 
-  button {
+  .address-lookup button {
     background: #1f2933;
     color: white;
     cursor: pointer;
@@ -637,7 +606,6 @@ function uniqueOptions(values = []) {
 
   @media (max-width: 900px) {
     .address-row,
-    .filters,
     .candidate-grid {
       grid-template-columns: 1fr;
     }

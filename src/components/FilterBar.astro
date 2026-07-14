@@ -1,0 +1,122 @@
+---
+const {
+  action = "",
+  method = "get",
+  submitLabel = "Filter",
+  clearHref = "",
+  clearLabel = "Clear filters",
+  columns = "auto",
+} = Astro.props;
+---
+
+<form
+  class:list={["nhdb-filter-bar", columns === "dense" && "dense", columns === "wide" && "wide"]}
+  action={action}
+  method={method}
+>
+  <div class="nhdb-filter-fields">
+    <slot />
+  </div>
+  <div class="nhdb-filter-actions">
+    <button type="submit">{submitLabel}</button>
+    {clearHref && <a href={clearHref}>{clearLabel}</a>}
+  </div>
+</form>
+
+<style>
+  .nhdb-filter-bar {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 10px;
+    box-shadow: 4px 4px 0 #1f2933;
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .nhdb-filter-fields {
+    align-items: end;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .nhdb-filter-bar.dense .nhdb-filter-fields {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
+
+  .nhdb-filter-bar.wide .nhdb-filter-fields {
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  }
+
+  :global(.nhdb-filter-bar label) {
+    color: #4b5563;
+    display: grid;
+    font-size: 0.74rem;
+    font-weight: 950;
+    gap: 6px;
+    letter-spacing: 0.08em;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  :global(.nhdb-filter-bar label > span) {
+    color: #6b7280;
+    font-size: 0.74rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  :global(.nhdb-filter-bar input),
+  :global(.nhdb-filter-bar select) {
+    background: #fffaf1;
+    border: 1px solid #9ca3af;
+    border-radius: 999px;
+    box-sizing: border-box;
+    color: #1f2933;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 750;
+    letter-spacing: 0;
+    min-height: 44px;
+    min-width: 0;
+    padding: 10px 13px;
+    text-transform: none;
+    width: 100%;
+  }
+
+  .nhdb-filter-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  button,
+  a {
+    border-radius: 999px;
+    font: inherit;
+    font-weight: 900;
+  }
+
+  button {
+    background: #1f2933;
+    border: 2px solid #1f2933;
+    color: white;
+    cursor: pointer;
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+
+  a {
+    color: #1f2933;
+    padding: 10px 0;
+  }
+
+  @media (max-width: 640px) {
+    .nhdb-filter-fields {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

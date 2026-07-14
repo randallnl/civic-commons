@@ -139,7 +139,7 @@ function filterKey(value = "") {
 }
 
 function personHref(vote = {}) {
-  return `/people/${vote.slug || slugify(vote.name)}`;
+  return `/people/${vote.personid || vote.id || slugify(vote.name)}`;
 }
 
 function slugify(value = "") {
@@ -283,10 +283,13 @@ function slugify(value = "") {
                 return (
                   <article
                     class="legislator-card"
+                    role="link"
+                    tabindex="0"
                     data-vote-card
                     data-vote={filterKey(voteLabel)}
                     data-party={partyInitial(vote.party)}
                     data-county={filterKey(vote.county || "")}
+                    data-profile-href={href}
                     data-search={searchText}
                   >
                     <div class="card-main">
@@ -382,6 +385,27 @@ function slugify(value = "") {
     voteFilter?.addEventListener("change", applyFilters);
     partyFilter?.addEventListener("change", applyFilters);
     countyFilter?.addEventListener("change", applyFilters);
+
+    cards.forEach((card) => {
+      function shouldUseCardLink(event) {
+        return !event.target?.closest?.("a, button, input, select, textarea");
+      }
+
+      card.addEventListener("click", (event) => {
+        if (!shouldUseCardLink(event)) return;
+        const href = card.dataset.profileHref;
+        if (href) window.location.href = href;
+      });
+
+      card.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        if (!shouldUseCardLink(event)) return;
+        const href = card.dataset.profileHref;
+        if (!href) return;
+        event.preventDefault();
+        window.location.href = href;
+      });
+    });
   });
 </script>
 
@@ -408,7 +432,7 @@ function slugify(value = "") {
   }
 
   .hero {
-    padding: 42px 0 24px;
+    padding: 28px 0 18px;
   }
 
   .eyebrow,
@@ -422,7 +446,7 @@ function slugify(value = "") {
   }
 
   h1 {
-    font-size: clamp(3rem, 9vw, 7rem);
+    font-size: clamp(2.35rem, 6vw, 4.75rem);
     line-height: 0.9;
     margin: 0 0 16px;
   }
@@ -540,6 +564,7 @@ function slugify(value = "") {
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 8px;
+    cursor: pointer;
     display: grid;
     gap: 12px;
     padding: 16px;
@@ -555,8 +580,14 @@ function slugify(value = "") {
   }
 
   .legislator-card:hover .legislator-info strong a,
+  .legislator-card:focus-visible .legislator-info strong a,
   .legislator-info strong a:hover {
     text-decoration: underline;
+  }
+
+  .legislator-card:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 3px;
   }
 
   .card-main {

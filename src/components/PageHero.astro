@@ -1,0 +1,67 @@
+---
+const {
+  eyebrow = "",
+  title = "",
+  lede = "",
+  backHref = "",
+  backLabel = "Back",
+  compact = false,
+} = Astro.props;
+---
+
+{backHref && <a class="nhdb-back-link" href={backHref}>{backLabel}</a>}
+
+<section class:list={["nhdb-page-hero", compact && "compact"]}>
+  {eyebrow && <p class="nhdb-eyebrow">{eyebrow}</p>}
+  {title && <h1>{title}</h1>}
+  {lede && <p class="nhdb-lede">{lede}</p>}
+  <slot />
+</section>
+
+<style>
+  .nhdb-back-link {
+    color: #1f2933;
+    display: inline-flex;
+    font-weight: 850;
+    margin-bottom: 22px;
+  }
+
+  .nhdb-page-hero {
+    padding: 24px 0 26px;
+  }
+
+  .nhdb-page-hero.compact {
+    padding-bottom: 18px;
+  }
+
+  .nhdb-eyebrow {
+    color: #6b4f2a;
+    font-size: 0.76rem;
+    font-weight: 950;
+    letter-spacing: 0.12em;
+    margin: 0 0 10px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    color: #1f2933;
+    font-size: clamp(2.1rem, 5vw, 4rem);
+    line-height: 0.98;
+    margin: 0;
+    max-width: 980px;
+  }
+
+  .nhdb-lede {
+    color: #4b5563;
+    font-size: clamp(1.02rem, 1.8vw, 1.22rem);
+    font-weight: 725;
+    line-height: 1.55;
+    margin: 16px 0 0;
+    max-width: 780px;
+  }
+
+  :global(.nhdb-page-hero .nhdb-filter-bar),
+  :global(.nhdb-page-hero form) {
+    margin-top: 18px;
+  }
+</style>

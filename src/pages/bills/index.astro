@@ -2,6 +2,8 @@
 export const prerender = false;
 
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
+import FilterBar from "../../components/FilterBar.astro";
+import PageHero from "../../components/PageHero.astro";
 import TopNav from "../../components/TopNav.astro";
 import { billDetailPath, getBills } from "../../lib/billsApi";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
@@ -62,13 +64,18 @@ function previewText(text = "", maxLength = 180) {
   <body>
     <TopNav />
     <main class="page">
-      <a class="back" href="/">Back home</a>
-
-      <section class="hero">
-        <p class="eyebrow">Tracked Bills</p>
-        <h1>Browse bills and public testimony.</h1>
-
-        <form class="filters" action="/bills" method="get">
+      <PageHero
+        backHref="/"
+        backLabel="Back home"
+        eyebrow="Tracked Bills"
+        title="Browse bills and public testimony."
+      >
+        <FilterBar
+          action="/bills"
+          submitLabel="Filter bills"
+          clearHref={q || year ? "/bills" : ""}
+          columns="dense"
+        >
           <label>
             <span>Search</span>
             <input
@@ -91,9 +98,8 @@ function previewText(text = "", maxLength = 180) {
             />
           </label>
 
-          <button type="submit">Filter</button>
-        </form>
-      </section>
+        </FilterBar>
+      </PageHero>
 
       {error && <p class="status-message">{error}</p>}
 
@@ -161,14 +167,9 @@ function previewText(text = "", maxLength = 180) {
     width: min(1120px, calc(100% - 32px));
   }
 
-  .back,
   a {
     color: #1f2933;
     font-weight: 800;
-  }
-
-  .hero {
-    padding: 42px 0 28px;
   }
 
   .eyebrow {
@@ -181,48 +182,10 @@ function previewText(text = "", maxLength = 180) {
   }
 
   h1 {
-    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    font-size: clamp(2.2rem, 5.5vw, 4.25rem);
     line-height: 0.95;
     margin: 0 0 24px;
     max-width: 900px;
-  }
-
-  .filters {
-    align-items: end;
-    display: grid;
-    gap: 12px;
-    grid-template-columns: minmax(0, 1fr) 140px auto;
-    max-width: 760px;
-  }
-
-  label {
-    display: grid;
-    gap: 6px;
-  }
-
-  label span {
-    color: #6b7280;
-    font-size: 0.78rem;
-    font-weight: 900;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  input,
-  button {
-    border: 2px solid #1f2933;
-    border-radius: 8px;
-    box-sizing: border-box;
-    font: inherit;
-    font-weight: 800;
-    min-height: 48px;
-    padding: 10px 12px;
-  }
-
-  button {
-    background: #1f2933;
-    color: white;
-    cursor: pointer;
   }
 
   .results-heading {
@@ -291,9 +254,4 @@ function previewText(text = "", maxLength = 180) {
     margin-top: 14px;
   }
 
-  @media (max-width: 640px) {
-    .filters {
-      grid-template-columns: 1fr;
-    }
-  }
 </style>

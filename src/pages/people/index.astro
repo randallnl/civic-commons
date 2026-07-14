@@ -2,6 +2,8 @@
 export const prerender = false;
 
 import RepresentativeCard from "../../components/RepresentativeCard.astro";
+import FilterBar from "../../components/FilterBar.astro";
+import PageHero from "../../components/PageHero.astro";
 import TopNav from "../../components/TopNav.astro";
 import { getRepresentative, getRepresentatives, repName } from "../../lib/repsApi";
 import { cleanText } from "../../lib/text";
@@ -211,47 +213,44 @@ function countyNameForCode(code = "") {
   <body>
     <TopNav />
     <main class="page">
-      <a class="back" href="/my-state-rep">Back to My State Rep</a>
-
-      <section class="hero">
-        <p class="eyebrow">Representative Directory</p>
-        <h1>Browse New Hampshire state legislators.</h1>
-        <p class="lede">
-          Search by name, town, county, or district to preview representative
-          profiles, vote grades, and recent tracked bill votes.
-        </p>
-      </section>
-
-      <form class="filter-panel" action="/people" method="get">
-        <div>
-          <label for="body">Body</label>
+      <PageHero
+        backHref="/my-state-rep"
+        backLabel="Back to My State Rep"
+        eyebrow="Representative Directory"
+        title="Browse New Hampshire state legislators."
+        lede="Search by name, town, county, or district to preview representative profiles, vote grades, and recent tracked bill votes."
+      >
+        <FilterBar
+          action="/people"
+          submitLabel="Filter reps"
+          clearHref={activeFilterCount > 0 ? "/people" : ""}
+        >
+          <label for="body">
+            <span>Body</span>
           <select id="body" name="body">
             <option value="" selected={!filters.body}>House and Senate</option>
             <option value="house" selected={filters.body === "house"}>House</option>
             <option value="senate" selected={filters.body === "senate"}>Senate</option>
           </select>
-        </div>
-        <div>
-          <label for="name">Name</label>
+          </label>
+          <label for="name">
+            <span>Name</span>
           <input id="name" name="name" type="search" value={filters.name} placeholder="David Rochefort" />
-        </div>
-        <div>
-          <label for="town">Town</label>
+          </label>
+          <label for="town">
+            <span>Town</span>
           <input id="town" name="town" type="search" value={filters.town} placeholder="Manchester" />
-        </div>
-        <div>
-          <label for="county">County</label>
+          </label>
+          <label for="county">
+            <span>County</span>
           <input id="county" name="county" type="search" value={filters.county} placeholder="Hillsborough" />
-        </div>
-        <div>
-          <label for="district">District</label>
+          </label>
+          <label for="district">
+            <span>District</span>
           <input id="district" name="district" type="search" value={filters.district} placeholder="NH House District 15" />
-        </div>
-        <div class="filter-actions">
-          <button type="submit">Filter reps</button>
-          {activeFilterCount > 0 && <a href="/people">Clear filters</a>}
-        </div>
-      </form>
+          </label>
+        </FilterBar>
+      </PageHero>
 
       <section class="results-heading">
         <div>
@@ -295,14 +294,9 @@ function countyNameForCode(code = "") {
     width: min(1120px, calc(100% - 32px));
   }
 
-  .back,
   a {
     color: #1f2933;
     font-weight: 850;
-  }
-
-  .hero {
-    padding: 42px 0 28px;
   }
 
   .eyebrow {
@@ -315,7 +309,7 @@ function countyNameForCode(code = "") {
   }
 
   h1 {
-    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    font-size: clamp(2.2rem, 5.5vw, 4.25rem);
     line-height: 0.95;
     margin: 0;
     max-width: 980px;
@@ -336,39 +330,6 @@ function countyNameForCode(code = "") {
     max-width: 780px;
   }
 
-  .filter-panel {
-    background: white;
-    border: 2px solid #1f2933;
-    border-radius: 16px;
-    box-shadow: 5px 5px 0 #1f2933;
-    display: grid;
-    gap: 14px;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    padding: 18px;
-  }
-
-  label {
-    display: block;
-    font-size: 0.78rem;
-    font-weight: 950;
-    letter-spacing: 0.08em;
-    margin-bottom: 7px;
-    text-transform: uppercase;
-  }
-
-  input,
-  select {
-    background: #fffaf1;
-    border: 1px solid #9ca3af;
-    border-radius: 999px;
-    box-sizing: border-box;
-    font: inherit;
-    min-width: 0;
-    padding: 12px 14px;
-    width: 100%;
-  }
-
-  button,
   .secondary-link {
     border: 2px solid #1f2933;
     border-radius: 999px;
@@ -378,27 +339,9 @@ function countyNameForCode(code = "") {
     text-decoration: none;
   }
 
-  button {
-    background: #1f2933;
-    color: white;
-    cursor: pointer;
-  }
-
   .secondary-link {
     background: white;
     color: #1f2933;
-  }
-
-  .filter-actions {
-    align-items: end;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    grid-column: 1 / -1;
-  }
-
-  .filter-actions a {
-    padding: 12px 0;
   }
 
   .results-heading {
@@ -422,23 +365,14 @@ function countyNameForCode(code = "") {
   }
 
   @media (max-width: 900px) {
-    .filter-panel {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .rep-grid {
       grid-template-columns: 1fr;
     }
   }
 
   @media (max-width: 620px) {
-    .filter-panel,
     .results-heading {
       grid-template-columns: 1fr;
-    }
-
-    .filter-panel {
-      display: grid;
     }
 
     .results-heading {
