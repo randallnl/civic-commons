@@ -88,6 +88,10 @@ function displayVoteLabel(vote = {}) {
   const rawLabel = cleanText(vote.vote_label || "");
   if (rawLabel && !["N/A", "NA"].includes(rawLabel.toUpperCase())) return rawLabel;
 
+  return displayRawVoteLabel(vote);
+}
+
+function displayRawVoteLabel(vote = {}) {
   const voteValue = String(vote.vote || vote.vote_code || "").trim().toLowerCase();
   const labels = {
     "1": "Yea",
@@ -189,16 +193,17 @@ function testimonyVoteStanceFor(vote = {}) {
   if (!position) return null;
 
   const testimony = testimonyPositionForBill(bill);
+  const rawVote = displayRawVoteLabel(vote);
   if (!testimony) {
     return {
-      label: `Voted: ${displayVoteLabel(vote)}: ${titleCase(position)} - no clear testimony position`,
+      label: `Voted: ${rawVote}: ${titleCase(position)} - no clear testimony position`,
       className: "legislator-neutral",
     };
   }
 
   const aligned = position === testimony;
   return {
-    label: `Voted: ${displayVoteLabel(vote)}: ${titleCase(position)} - ${
+    label: `Voted: ${rawVote}: ${titleCase(position)} - ${
       aligned ? "aligned with testimony position" : "not aligned with testimony position"
     }`,
     className: aligned ? "legislator-support" : "legislator-oppose",
