@@ -3847,11 +3847,17 @@ async function hydrateArticles(env, articles) {
               WHEN 'S' THEN 'Senate'
               WHEN 'H' THEN 'House'
               ELSE l.legislativebody
-            END AS chamber
+            END AS chamber,
+            l.district,
+            l.countycode,
+            l.emailaddress AS email,
+            COALESCE(lp.photo_url, '') AS photo
           FROM d1_article_legislators al
           LEFT JOIN d1_legislators l
             ON l.personid = al.personid
             OR l.employeeno = al.employeeno
+          LEFT JOIN d1_legislator_photos lp
+            ON lp.employeeno = l.employeeno
           WHERE al.article_id = ?
           ORDER BY legislator_name_raw
         `).bind(article_id).all(),
@@ -3867,6 +3873,9 @@ async function hydrateArticles(env, articles) {
             c.county,
             c.district,
             c.political_party,
+            c.candidate_website,
+            c.candidate_email,
+            c.photo_url,
             c.slug
           FROM d1_article_candidates ac
           LEFT JOIN candidates c

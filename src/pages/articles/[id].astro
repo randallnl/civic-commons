@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import TopNav from "../../components/TopNav.astro";
+import profileIcon from "../../assets/profile icon.png";
 import { enrichArticlesWithPreviews } from "../../lib/articlePreviews";
 import { currentAdminSession } from "../../lib/adminAuth";
 import {
@@ -15,6 +16,7 @@ import {
 } from "../../lib/candidatesApi";
 import { cleanText, joinClean } from "../../lib/text";
 import { getPeopleLinkOptions } from "../../lib/unifiedPeople";
+import { profilePhotoUrl } from "../../lib/photos";
 
 const { id } = Astro.params;
 
@@ -82,12 +84,33 @@ function legislatorMeta(person = {}) {
   return joinClean([person.party, person.chamber]);
 }
 
+function legislatorDistrict(person = {}) {
+  const district = person.district || person.raw_district || "";
+  if (!district) return "";
+  const chamber = String(person.chamber || "").toLowerCase();
+  if (chamber === "senate") return `NH Senate District ${district}`;
+  if (chamber === "house") return `NH House District ${district}`;
+  return `District ${district}`;
+}
+
 function candidateMeta(candidate = {}) {
   return joinClean([
     candidate.office,
     candidate.county,
     candidate.district && `District ${candidate.district}`,
   ]);
+}
+
+function candidateParty(candidate = {}) {
+  return cleanText(candidate.politicalParty || candidate.political_party || "");
+}
+
+function candidatePhoto(candidate = {}) {
+  return profilePhotoUrl(candidate.photoUrl || candidate.photo_url || candidate.photo);
+}
+
+function legislatorPhoto(person = {}) {
+  return profilePhotoUrl(person.photo || person.photo_url);
 }
 
 function townPath(town = {}) {
@@ -174,13 +197,26 @@ function billOptionLabel(bill = {}) {
                 <h2>Legislators</h2>
               </div>
               {article.legislators?.length ? (
-                <div class="relation-list">
-                  {article.legislators.map((person) => (
-                    <a href={legislatorPath(person)}>
-                      <strong>{legislatorName(person)}</strong>
-                      <span>{legislatorMeta(person)}</span>
-                    </a>
-                  ))}
+                <div class="person-relation-list">
+                  {article.legislators.map((person) => {
+                    const photoUrl = legislatorPhoto(person);
+
+                    return (
+                      <a class="person-relation-card" href={legislatorPath(person)}>
+                        <img
+                          class:list={[!photoUrl && "profile-icon"]}
+                          src={photoUrl || profileIcon.src}
+                          alt={photoUrl ? `Photo of ${legislatorName(person)}` : ""}
+                          loading="lazy"
+                        />
+                        <div>
+                          <strong>{legislatorName(person)}</strong>
+                          <span>{legislatorMeta(person)}</span>
+                          {legislatorDistrict(person) && <small>{legislatorDistrict(person)}</small>}
+                        </div>
+                      </a>
+                    );
+                  })}
                 </div>
               ) : (
                 <p class="empty">No legislator mentions are linked yet.</p>
@@ -193,13 +229,26 @@ function billOptionLabel(bill = {}) {
                 <h2>Candidates</h2>
               </div>
               {article.candidates?.length ? (
-                <div class="relation-list">
-                  {article.candidates.map((candidate) => (
-                    <a href={candidateProfilePath(candidate)}>
-                      <strong>{candidateLabel(candidate)}</strong>
-                      <span>{candidateMeta(candidate)}</span>
-                    </a>
-                  ))}
+                <div class="person-relation-list">
+                  {article.candidates.map((candidate) => {
+                    const photoUrl = candidatePhoto(candidate);
+
+                    return (
+                      <a class="person-relation-card" href={candidateProfilePath(candidate)}>
+                        <img
+                          class:list={[!photoUrl && "profile-icon"]}
+                          src={photoUrl || profileIcon.src}
+                          alt={photoUrl ? `Photo of ${candidateLabel(candidate)}` : ""}
+                          loading="lazy"
+                        />
+                        <div>
+                          <strong>{candidateLabel(candidate)}</strong>
+                          <span>{candidateMeta(candidate)}</span>
+                          {candidateParty(candidate) && <small>{candidateParty(candidate)}</small>}
+                        </div>
+                      </a>
+                    );
+                  })}
                 </div>
               ) : (
                 <p class="empty">No candidate mentions are linked yet.</p>
@@ -465,6 +514,11 @@ function billOptionLabel(bill = {}) {
     gap: 10px;
   }
 
+  .person-relation-list {
+    display: grid;
+    gap: 12px;
+  }
+
   .relation-list a {
     background: #fffaf1;
     border: 1px solid #d1d5db;
@@ -475,11 +529,68 @@ function billOptionLabel(bill = {}) {
     text-decoration: none;
   }
 
+  .person-relation-card {
+    align-items: stretch;
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    color: inherit;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 74px minmax(0, 1fr);
+    padding: 10px;
+    text-decoration: none;
+  }
+
+  .person-relation-card:hover strong {
+    text-decoration: underline;
+  }
+
+  .person-relation-card img {
+    aspect-ratio: 4 / 5;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    display: block;
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  .person-relation-card img.profile-icon {
+    object-fit: cover;
+  }
+
+  .person-relation-card > div {
+    align-content: center;
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .person-relation-card strong {
+    color: #1f2933;
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
   .relation-list span,
+  .person-relation-card span,
+  .person-relation-card small,
   .empty {
     color: #4b5563;
     font-weight: 750;
     line-height: 1.45;
+  }
+
+  .person-relation-card span {
+    font-size: 0.88rem;
+  }
+
+  .person-relation-card small {
+    color: #6b4f2a;
+    font-size: 0.78rem;
+    font-weight: 900;
   }
 
   .empty {
