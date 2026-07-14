@@ -40,6 +40,7 @@ const voteFilters = groupedVotes.map((group) => ({
   key: filterKey(group.label),
 }));
 const countyFilters = groupByValue(votes, (vote) => cleanText(vote.county || ""));
+const testimonyPosition = testimonyPositionForBill(bill);
 
 function groupVotes(voteRows = []) {
   const groups = new Map();
@@ -129,6 +130,71 @@ function districtLine(vote = {}) {
 
 function townsLine(vote = {}) {
   return cleanText(vote.towns_represented || vote.townsRepresented || vote.location_text || "");
+}
+
+function testimonyPositionForBill(bill = {}) {
+  const support = Number(bill?.support_count || bill?.supportCount || 0);
+  const oppose = Number(bill?.oppose_count || bill?.opposeCount || 0);
+
+  if (!Number.isFinite(support + oppose) || support + oppose === 0 || support === oppose) {
+    return "";
+  }
+
+  return support > oppose ? "support" : "oppose";
+}
+
+function inferredBillPosition(vote = {}, motion = "") {
+  const voteValue = String(vote.vote_code || vote.vote || vote.vote_label || "")
+    .trim()
+    .toLowerCase();
+  const isYea = ["1", "yea", "yes", "y"].includes(voteValue);
+  const isNay = ["2", "nay", "no", "n"].includes(voteValue);
+
+  if (!isYea && !isNay) return "";
+
+  const motionText = cleanText(motion).toLowerCase();
+  const motionOpposesBill =
+    /\bitl\b/.test(motionText) ||
+    motionText.includes("inexpedient to legislate") ||
+    motionText.includes("indefinitely postpone") ||
+    motionText.includes("postpone indefinitely");
+
+  if (motionOpposesBill) return isYea ? "oppose" : "support";
+  return isYea ? "support" : "oppose";
+}
+
+function rollCallVoteInterpretation(vote = {}, rollCall = {}, bill = {}) {
+  const voteLabel = vote.vote_label || vote.vote || "Not listed";
+  const motion = rollCall.question_motion || rollCall.title1 || rollCall.title2 || "";
+  const position = inferredBillPosition(vote, motion);
+  const testimony = testimonyPositionForBill(bill);
+
+  if (!position) {
+    return {
+      label: voteLabel,
+      className: "testimony-neutral",
+    };
+  }
+
+  if (!testimony) {
+    return {
+      label: `${voteLabel}: ${titleCase(position)} - no clear testimony position`,
+      className: "testimony-neutral",
+    };
+  }
+
+  const aligned = position === testimony;
+
+  return {
+    label: `${voteLabel}: ${titleCase(position)} - ${
+      aligned ? "aligned with testimony position" : "not aligned with testimony position"
+    }`,
+    className: aligned ? "aligned-with-testimony" : "not-aligned-with-testimony",
+  };
+}
+
+function titleCase(value = "") {
+  return String(value || "").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function filterKey(value = "") {
@@ -261,6 +327,7 @@ function slugify(value = "") {
             <div class="vote-list">
               {votes.map((vote) => {
                 const voteLabel = vote.vote_label || vote.vote || "Not listed";
+                const voteInterpretation = rollCallVoteInterpretation(vote, rollCall, bill);
                 const photoUrl = profilePhotoUrl(vote.photo);
                 const searchText = [
                   vote.name,
@@ -272,6 +339,8 @@ function slugify(value = "") {
                   vote.location_text,
                   vote.towns_represented,
                   voteLabel,
+                  voteInterpretation.label,
+                  testimonyPosition,
                   isFreeStater(vote) ? "free stater" : "",
                 ]
                   .filter(Boolean)
@@ -320,8 +389,8 @@ function slugify(value = "") {
                           )}
                         </div>
                       </div>
-                      <span class:list={["vote-pill", filterKey(voteLabel)]}>
-                        {voteLabel}
+                      <span class:list={["vote-pill", voteInterpretation.className]}>
+                        {voteInterpretation.label}
                       </span>
                     </div>
 
@@ -698,15 +767,20 @@ function slugify(value = "") {
     flex: 0 0 auto;
     font-size: 0.82rem;
     font-weight: 950;
+    line-height: 1.25;
+    max-width: min(340px, 42vw);
     padding: 8px 10px;
+    text-align: center;
   }
 
-  .vote-pill.yea {
+  .vote-pill.yea,
+  .vote-pill.aligned-with-testimony {
     background: #dcfce7;
     color: #166534;
   }
 
-  .vote-pill.nay {
+  .vote-pill.nay,
+  .vote-pill.not-aligned-with-testimony {
     background: #fee2e2;
     color: #991b1b;
   }
@@ -715,7 +789,8 @@ function slugify(value = "") {
   .vote-pill.not-voting,
   .vote-pill.present-not-voting,
   .vote-pill.not-counted,
-  .vote-pill.unknown {
+  .vote-pill.unknown,
+  .vote-pill.testimony-neutral {
     background: #dbeafe;
     color: #1d4ed8;
   }
@@ -769,6 +844,7 @@ function slugify(value = "") {
     .vote-pill {
       grid-column: 2;
       justify-self: start;
+      max-width: 100%;
     }
   }
 </style>
