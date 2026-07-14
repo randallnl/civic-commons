@@ -3711,12 +3711,15 @@ async function handleBillRollCall(request, env) {
       END AS chamber,
       COALESCE(l.district, '') AS district,
       l.personid,
-      COALESCE(p.slug, '') AS slug
+      COALESCE(p.slug, '') AS slug,
+      COALESCE(p.photo_url, lp.photo_url, '') AS photo
     FROM d1_rollcallhistory h
     LEFT JOIN d1_legislators l
       ON l.employeeno = h.employeenumber
     LEFT JOIN d1_people p
       ON p.employeeno = h.employeenumber
+    LEFT JOIN d1_legislator_photos lp
+      ON lp.employeeno = h.employeenumber
     WHERE h.sessionyear = ?
       AND h.legislativebody = ?
       AND CAST(h.votesequencenumber AS TEXT) = ?

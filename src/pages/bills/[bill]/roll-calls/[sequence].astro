@@ -3,6 +3,8 @@ export const prerender = false;
 
 import { billDetailPath, getRollCallVotes } from "../../../../lib/billsApi";
 import TopNav from "../../../../components/TopNav.astro";
+import profileIcon from "../../../../assets/profile icon.png";
+import { profilePhotoUrl } from "../../../../lib/photos";
 import { getTrackedBills, normalizeBillCode } from "../../../../lib/trackedBills";
 
 const billCode = Astro.params.bill || "";
@@ -30,6 +32,11 @@ try {
 }
 
 const groupedVotes = groupVotes(votes);
+const voteFilters = groupedVotes.map((group) => ({
+  label: group.label,
+  count: group.rows.length,
+  key: filterKey(group.label),
+}));
 
 function groupVotes(voteRows = []) {
   const groups = new Map();
@@ -58,6 +65,31 @@ function partyClass(party = "") {
   if (party === "D") return "democrat";
   if (party === "I") return "independent";
   return "unknown";
+}
+
+function partyLabel(party = "") {
+  if (party === "R") return "Republican";
+  if (party === "D") return "Democrat";
+  if (party === "I") return "Independent";
+  return party || "Party not listed";
+}
+
+function bodyLabel(value = "") {
+  const body = String(value || "").trim().toUpperCase();
+  if (body === "H") return "House";
+  if (body === "S") return "Senate";
+  return value || "Legislator";
+}
+
+function filterKey(value = "") {
+  return String(value || "not listed")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function personHref(vote = {}) {
+  return `/people/${vote.slug || slugify(vote.name)}`;
 }
 
 function slugify(value = "") {
@@ -126,27 +158,104 @@ function slugify(value = "") {
             </article>
           </section>
 
-          <section class="vote-groups">
-            {groupedVotes.map((group) => (
-              <section class="panel">
-                <div class="section-heading">
-                  <p class="eyebrow">{group.label}</p>
-                  <h2>{group.rows.length} Legislators</h2>
-                </div>
+          <section class="panel vote-browser" data-roll-call-browser>
+            <div class="section-heading split-heading">
+              <div>
+                <p class="eyebrow">Legislator Votes</p>
+                <h2>How each legislator voted</h2>
+              </div>
+              <span class="visible-count" data-visible-count>{votes.length} shown</span>
+            </div>
 
-                <div class="legislator-grid">
-                  {group.rows.map((vote) => (
-                    <a class="legislator-card" href={`/people/${slugify(vote.name)}`}>
-                      <strong>{vote.name}</strong>
-                      <span class:list={["party", partyClass(vote.party)]}>
-                        {vote.party || "N/A"}
-                      </span>
-                      <small>{vote.district || "District not listed"}</small>
-                    </a>
+            <div class="filters" aria-label="Filter roll call votes">
+              <label>
+                <span>Search</span>
+                <input
+                  type="search"
+                  placeholder="Name, party, district..."
+                  data-vote-search
+                />
+              </label>
+
+              <label>
+                <span>Vote</span>
+                <select data-vote-filter>
+                  <option value="">All votes ({votes.length})</option>
+                  {voteFilters.map((filter) => (
+                    <option value={filter.key}>{filter.label} ({filter.count})</option>
                   ))}
-                </div>
-              </section>
-            ))}
+                </select>
+              </label>
+
+              <label>
+                <span>Party</span>
+                <select data-party-filter>
+                  <option value="">All parties</option>
+                  <option value="R">Republican</option>
+                  <option value="D">Democrat</option>
+                  <option value="I">Independent</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="vote-list">
+              {votes.map((vote) => {
+                const voteLabel = vote.vote_label || vote.vote || "Not listed";
+                const photoUrl = profilePhotoUrl(vote.photo);
+                const searchText = [
+                  vote.name,
+                  partyLabel(vote.party),
+                  vote.party,
+                  vote.district,
+                  vote.chamber,
+                  voteLabel,
+                ]
+                  .filter(Boolean)
+                  .join(" ")
+                  .toLowerCase();
+
+                return (
+                  <a
+                    class="legislator-card"
+                    href={personHref(vote)}
+                    data-vote-card
+                    data-vote={filterKey(voteLabel)}
+                    data-party={vote.party || ""}
+                    data-search={searchText}
+                  >
+                    <div class="card-main">
+                      <img
+                        class:list={["legislator-photo", !photoUrl && "fallback-photo"]}
+                        src={photoUrl || profileIcon.src}
+                        alt={photoUrl ? `Photo of ${vote.name}` : ""}
+                        loading="lazy"
+                      />
+                      <div>
+                        <strong>{vote.name || "Legislator not listed"}</strong>
+                        <p>
+                          {[bodyLabel(vote.legislativebody), vote.district && `District ${vote.district}`]
+                            .filter(Boolean)
+                            .join(" - ")}
+                        </p>
+                      </div>
+                      <span class:list={["vote-pill", filterKey(voteLabel)]}>
+                        {voteLabel}
+                      </span>
+                    </div>
+
+                    <div class="card-meta">
+                      <span class:list={["party", partyClass(vote.party)]}>
+                        {partyLabel(vote.party)}
+                      </span>
+                      {vote.employeeno && <span>Employee #{vote.employeeno}</span>}
+                      {vote.personid && <span>Person #{vote.personid}</span>}
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+
+            <p class="empty" data-empty-state hidden>No legislators match those filters.</p>
           </section>
         </>
       ) : (
@@ -155,6 +264,41 @@ function slugify(value = "") {
     </main>
   </body>
 </html>
+
+<script>
+  document.querySelectorAll("[data-roll-call-browser]").forEach((browser) => {
+    const searchInput = browser.querySelector("[data-vote-search]");
+    const voteFilter = browser.querySelector("[data-vote-filter]");
+    const partyFilter = browser.querySelector("[data-party-filter]");
+    const cards = Array.from(browser.querySelectorAll("[data-vote-card]"));
+    const count = browser.querySelector("[data-visible-count]");
+    const empty = browser.querySelector("[data-empty-state]");
+
+    function applyFilters() {
+      const search = String(searchInput?.value || "").trim().toLowerCase();
+      const vote = String(voteFilter?.value || "");
+      const party = String(partyFilter?.value || "");
+      let visible = 0;
+
+      cards.forEach((card) => {
+        const matchesSearch = !search || card.dataset.search?.includes(search);
+        const matchesVote = !vote || card.dataset.vote === vote;
+        const matchesParty = !party || card.dataset.party === party;
+        const show = matchesSearch && matchesVote && matchesParty;
+
+        card.hidden = !show;
+        if (show) visible += 1;
+      });
+
+      if (count) count.textContent = `${visible} shown`;
+      if (empty) empty.hidden = visible !== 0;
+    }
+
+    searchInput?.addEventListener("input", applyFilters);
+    voteFilter?.addEventListener("change", applyFilters);
+    partyFilter?.addEventListener("change", applyFilters);
+  });
+</script>
 
 <style>
   :global(body) {
@@ -212,8 +356,7 @@ function slugify(value = "") {
 
   .hero-meta,
   .count-grid,
-  .vote-groups,
-  .legislator-grid {
+  .vote-list {
     display: grid;
     gap: 14px;
   }
@@ -257,27 +400,154 @@ function slugify(value = "") {
     margin: 0 0 14px;
   }
 
-  .legislator-grid {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  .split-heading {
+    align-items: start;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+  }
+
+  .visible-count {
+    background: #1f2933;
+    border-radius: 999px;
+    color: white;
+    flex: 0 0 auto;
+    font-size: 0.82rem;
+    font-weight: 950;
+    padding: 8px 11px;
+  }
+
+  .filters {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(220px, 1fr) 180px 180px;
+    margin-bottom: 18px;
+  }
+
+  .filters label {
+    color: #4b5563;
+    display: grid;
+    font-size: 0.76rem;
+    font-weight: 950;
+    gap: 7px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .filters input,
+  .filters select {
+    background: #fffaf1;
+    border: 1px solid #9ca3af;
+    border-radius: 12px;
+    box-sizing: border-box;
+    color: #1f2933;
+    font: inherit;
+    font-size: 0.95rem;
+    font-weight: 750;
+    letter-spacing: 0;
+    padding: 11px 12px;
+    text-transform: none;
+    width: 100%;
   }
 
   .legislator-card {
+    align-items: start;
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     display: grid;
-    gap: 8px;
-    padding: 14px;
+    gap: 12px;
+    padding: 16px;
     text-decoration: none;
   }
 
+  .legislator-card:hover strong {
+    text-decoration: underline;
+  }
+
+  .card-main {
+    align-items: start;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+  }
+
+  .legislator-photo {
+    aspect-ratio: 4 / 5;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    height: 80px;
+    object-fit: cover;
+    object-position: center top;
+    width: 64px;
+  }
+
+  .fallback-photo {
+    object-fit: cover;
+  }
+
+  .card-main strong {
+    display: block;
+    font-size: 1.15rem;
+    line-height: 1.15;
+  }
+
+  .card-main p {
+    color: #4b5563;
+    line-height: 1.45;
+    margin: 6px 0 0;
+  }
+
+  .card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .card-meta span,
   .party {
     border-radius: 999px;
-    color: white;
     font-size: 0.76rem;
     font-weight: 900;
-    justify-self: start;
     padding: 5px 8px;
+  }
+
+  .card-meta span {
+    background: white;
+    border: 1px solid #d1d5db;
+    color: #4b5563;
+  }
+
+  .party {
+    color: white !important;
+  }
+
+  .vote-pill {
+    border-radius: 999px;
+    flex: 0 0 auto;
+    font-size: 0.82rem;
+    font-weight: 950;
+    padding: 8px 10px;
+  }
+
+  .vote-pill.yea {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .vote-pill.nay {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .vote-pill.absent,
+  .vote-pill.not-voting,
+  .vote-pill.present-not-voting,
+  .vote-pill.not-counted,
+  .vote-pill.unknown {
+    background: #dbeafe;
+    color: #1d4ed8;
   }
 
   .republican {
@@ -301,6 +571,30 @@ function slugify(value = "") {
   @media (max-width: 760px) {
     .count-grid {
       grid-template-columns: repeat(2, 1fr);
+    }
+
+    .filters {
+      grid-template-columns: 1fr;
+    }
+
+    .split-heading,
+    .card-main {
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr);
+    }
+
+    .legislator-photo {
+      height: 70px;
+      width: 56px;
+    }
+
+    .visible-count {
+      justify-self: start;
+    }
+
+    .vote-pill {
+      grid-column: 2;
+      justify-self: start;
     }
   }
 </style>

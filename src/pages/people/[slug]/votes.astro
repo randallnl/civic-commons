@@ -43,16 +43,17 @@ if (!error && !representative) {
 }
 
 const representativeName = repName(representative || {}) || "Representative";
-let trackedVotes = (apiData?.voteHistory || [])
-  .map((vote) => normalizeVote(vote, trackedBills, billSummaries))
-  .filter((vote) => vote.trackedBill);
+let votes = (apiData?.voteHistory || []).map((vote) =>
+  normalizeVote(vote, trackedBills, billSummaries),
+);
+const trackedVoteCount = votes.filter((vote) => vote.trackedBill).length;
 
-trackedVotes = await Promise.all(
-  trackedVotes.map(async (vote) => {
+votes = await Promise.all(
+  votes.map(async (vote) => {
     if (vote.billSummary) return vote;
 
     try {
-      const detail = await getBillDetail(vote.trackedBill.code, {
+      const detail = await getBillDetail(vote.bill_number, {
         year: vote.sessionyear,
       });
       return { ...vote, billSummary: detail.bill };
@@ -74,10 +75,73 @@ function normalizeVote(vote = {}, bills = new Map(), summaries = new Map()) {
     title: vote.title || vote.description || "",
     vote_date: vote.vote_date || vote.statusdate || "",
     motion: vote.motion || vote.question_motion || vote.description || "",
-    vote_label: vote.vote_label || vote.vote || "Not listed",
+    vote_label: displayVoteLabel(vote),
     billSummary,
     trackedBill,
   };
+}
+
+function displayVoteLabel(vote = {}) {
+  const rawLabel = cleanText(vote.vote_label || "");
+  if (rawLabel && !["N/A", "NA"].includes(rawLabel.toUpperCase())) return rawLabel;
+
+  const voteValue = String(vote.vote || vote.vote_code || "").trim().toLowerCase();
+  const labels = {
+    "1": "Yea",
+    yea: "Yea",
+    yes: "Yea",
+    "2": "Nay",
+    nay: "Nay",
+    no: "Nay",
+    "3": "Absent",
+    absent: "Absent",
+    "4": "Present",
+    present: "Present",
+    "5": "Not voting",
+    other_not_voting: "Not voting",
+    "6": "Present not voting",
+    "7": "Present not voting",
+    other_present_not_voting: "Present not voting",
+    "0": "Not counted",
+    other_not_counted: "Not counted",
+  };
+
+  return labels[voteValue] || cleanText(vote.vote || "Not listed");
+}
+
+function voteClass(vote = {}) {
+  const label = String(vote.vote_label || vote.vote || "").toLowerCase();
+  if (label.includes("support") || label === "yea" || label === "yes") return "legislator-support";
+  if (label.includes("against") || label.includes("oppose") || label === "nay" || label === "no") {
+    return "legislator-oppose";
+  }
+  return "legislator-neutral";
+}
+
+function billCodeFor(vote = {}) {
+  return vote.trackedBill?.code || vote.bill_number || vote.condensedbillno || "Bill";
+}
+
+function billTitleFor(vote = {}) {
+  return (
+    vote.trackedBill?.name ||
+    vote.billSummary?.description ||
+    vote.title ||
+    billCodeFor(vote)
+  );
+}
+
+function voteStanceFor(vote = {}) {
+  if (vote.trackedBill) return representativeVoteStance(vote, vote.trackedBill);
+  return {
+    label: `Voted: ${displayVoteLabel(vote)}`,
+    className: voteClass(vote),
+  };
+}
+
+function voteImpactFor(vote = {}) {
+  if (!vote.trackedBill) return "";
+  return representativeVoteImpact(vote, vote.trackedBill);
 }
 
 function formatDate(value) {
@@ -102,10 +166,10 @@ function previewText(value = "", length = 260) {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="/NH%20DB%20Logo.png" />
     <link rel="apple-touch-icon" href="/NH%20DB%20Logo.png" />
-    <title>Tracked votes for {representativeName} | NH Deserves Better</title>
+    <title>Votes for {representativeName} | NH Deserves Better</title>
     <meta
       name="description"
-      content={`Tracked bill votes and public testimony summaries for ${representativeName}.`}
+      content={`Vote history and bill summaries for ${representativeName}.`}
     />
   </head>
 
@@ -119,46 +183,53 @@ function previewText(value = "", length = 260) {
       ) : (
         <>
           <section class="hero">
-            <p class="eyebrow">Tracked Vote History</p>
+            <p class="eyebrow">Vote History</p>
             <h1>{representativeName}</h1>
             <p>
-              These are the tracked bill votes currently returned for this
-              legislator. Each card includes the bill tracker summary, the
-              recorded vote, and public testimony summary data where available.
+              These are all votes currently returned for this legislator. Votes
+              connected to the bill tracker include tracker summaries,
+              interpretations, and public testimony summary data where available.
             </p>
             <div class="hero-meta">
-              <span>{trackedVotes.length} tracked votes</span>
+              <span>{votes.length} votes</span>
+              <span>{trackedVoteCount} tracked</span>
               {representative?.chamber && <span>{representative.chamber}</span>}
               {representative?.district && <span>{representative.district}</span>}
             </div>
           </section>
 
-          {trackedVotes.length ? (
+          {votes.length ? (
             <section class="vote-grid">
-              {trackedVotes.map((vote) => {
-                const stance = representativeVoteStance(vote, vote.trackedBill);
-                const voteImpact = representativeVoteImpact(vote, vote.trackedBill);
+              {votes.map((vote) => {
+                const stance = voteStanceFor(vote);
+                const voteImpact = voteImpactFor(vote);
                 const billYear = vote.billSummary?.sessionyear || vote.sessionyear;
                 const summary =
-                  vote.trackedBill.summary ||
+                  vote.trackedBill?.summary ||
                   vote.billSummary?.summary ||
                   vote.billSummary?.description ||
                   "";
+                const billCode = billCodeFor(vote);
 
                 return (
                   <article class="vote-bill-card">
                     <div class="bill-topline">
                       <strong>
-                        <a href={billDetailPath(vote.trackedBill.code, billYear)}>
-                          {vote.trackedBill.code}
+                        <a href={billDetailPath(billCode, billYear)}>
+                          {billCode}
                         </a>
                       </strong>
                       {billYear && <span>{billYear}</span>}
+                      {vote.trackedBill ? (
+                        <span class="tracker-pill">Tracked</span>
+                      ) : (
+                        <span>Untracked</span>
+                      )}
                     </div>
 
                     <h2>
-                      <a href={billDetailPath(vote.trackedBill.code, billYear)}>
-                        {vote.trackedBill.name || vote.title || vote.trackedBill.code}
+                      <a href={billDetailPath(billCode, billYear)}>
+                        {billTitleFor(vote)}
                       </a>
                     </h2>
 
@@ -172,12 +243,18 @@ function previewText(value = "", length = 260) {
                       {voteImpact && <p class="vote-impact">{cleanText(voteImpact)}</p>}
                     </div>
 
-                    {vote.billSummary && <BillPositionSummary bill={vote.billSummary} />}
+                    {vote.billSummary ? (
+                      <BillPositionSummary bill={vote.billSummary} />
+                    ) : (
+                      <div class="position-placeholder">
+                        Public testimony summary not available.
+                      </div>
+                    )}
 
                     <div class="bill-meta">
                       {vote.motion && <span>{cleanText(vote.motion)}</span>}
                       {vote.vote_date && <span>{formatDate(vote.vote_date)}</span>}
-                      {vote.trackedBill.issueArea && (
+                      {vote.trackedBill?.issueArea && (
                         <span>{cleanText(vote.trackedBill.issueArea)}</span>
                       )}
                     </div>
@@ -186,7 +263,7 @@ function previewText(value = "", length = 260) {
               })}
             </section>
           ) : (
-            <p class="status-message">No tracked votes were returned.</p>
+            <p class="status-message">No votes were returned.</p>
           )}
         </>
       )}
@@ -259,6 +336,12 @@ function previewText(value = "", length = 260) {
     font-size: 0.82rem;
     font-weight: 900;
     padding: 6px 9px;
+  }
+
+  .bill-topline .tracker-pill {
+    background: #dbeafe;
+    border-color: #60a5fa;
+    color: #1d4ed8;
   }
 
   .vote-grid {
@@ -347,6 +430,17 @@ function previewText(value = "", length = 260) {
   .vote-impact {
     font-weight: 500;
     margin: 0;
+  }
+
+  .position-placeholder {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    color: #4b5563;
+    font-size: 0.86rem;
+    font-weight: 850;
+    margin-top: 14px;
+    padding: 12px;
   }
 
   .bill-meta {
