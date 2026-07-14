@@ -8,6 +8,7 @@ import { getRepresentative, repName } from "../../../lib/repsApi";
 import { cleanText } from "../../../lib/text";
 import {
   getTrackedBills,
+  isKnownVote,
   isVotingAction,
   normalizeBillCode,
   representativeVoteImpact,
@@ -46,7 +47,7 @@ if (!error && !representative) {
 const representativeName = repName(representative || {}) || "Representative";
 let votes = (apiData?.voteHistory || []).map((vote) =>
   normalizeVote(vote, trackedBills, billSummaries),
-).filter(isVotingAction);
+).filter((vote) => isVotingAction(vote) && isKnownVote(vote));
 const trackedVoteCount = votes.filter((vote) => vote.trackedBill).length;
 
 votes = await Promise.all(
@@ -147,6 +148,7 @@ function voteActionFor(vote = {}) {
 
 function voteStanceFor(vote = {}) {
   if (vote.trackedBill) return representativeVoteStance(vote, vote.trackedBill);
+  if (vote.billSummary) return representativeVoteStance(vote, vote.billSummary);
   return {
     label: `Voted: ${displayVoteLabel(vote)}`,
     className: voteClass(vote),

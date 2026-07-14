@@ -4739,7 +4739,7 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
       AND b.legislativebody = h.legislativebody
     WHERE h.employeenumber = ?
       AND rs.votesequencenumber IS NOT NULL
-      AND CAST(h.vote AS INTEGER) IN (0, 1, 2, 3, 4, 5, 6, 7)
+      AND TRIM(CAST(h.vote AS TEXT)) IN ('0', '1', '2', '3', '4', '5', '6', '7')
       AND COALESCE(
         NULLIF(TRIM(rs.question_motion), ''),
         NULLIF(TRIM(rs.title1), ''),

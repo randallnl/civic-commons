@@ -98,6 +98,11 @@ export function isVotingAction(vote = {}) {
   return Boolean(sequence && action && (hasVoteCode || hasVoteText));
 }
 
+export function isKnownVote(vote = {}) {
+  const value = normalizedVoteDisplayValue(vote);
+  return Boolean(value && !["unknown", "not listed"].includes(value));
+}
+
 export function representativeVoteStance(vote = {}, trackedBill = {}) {
   const analysis = representativeVoteAnalysis(vote, trackedBill);
 

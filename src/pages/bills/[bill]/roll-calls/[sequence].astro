@@ -63,9 +63,10 @@ function formatDate(value) {
 }
 
 function partyClass(party = "") {
-  if (party === "R") return "republican";
-  if (party === "D") return "democrat";
-  if (party === "I") return "independent";
+  const initial = partyInitial(party);
+  if (initial === "R") return "republican";
+  if (initial === "D") return "democrat";
+  if (initial === "I") return "independent";
   return "unknown";
 }
 
@@ -259,7 +260,7 @@ function slugify(value = "") {
                     class="legislator-card"
                     data-vote-card
                     data-vote={filterKey(voteLabel)}
-                    data-party={vote.party || ""}
+                    data-party={partyInitial(vote.party)}
                     data-search={searchText}
                   >
                     <div class="card-main">
