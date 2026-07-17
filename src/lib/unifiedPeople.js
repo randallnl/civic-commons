@@ -154,6 +154,8 @@ export async function syncCandidateLegislatorIdentity(candidateFilerEntityNumber
   const candidate = await candidateRow(filer, db);
   if (!candidate) return { changed: 0 };
 
+  await mergeCandidatePersonIntoLegislatorPerson(personId, filer, personid, db);
+
   const result = await db
     .prepare(
       `UPDATE d1_people
@@ -177,6 +179,67 @@ export async function syncCandidateLegislatorIdentity(candidateFilerEntityNumber
 
   await upsertCandidateRole(personId, candidate, db);
   return { changed: result.meta?.changes ?? result.changes ?? 0 };
+}
+
+async function mergeCandidatePersonIntoLegislatorPerson(personId, filer, representativePersonId, db) {
+  const candidatePerson = await db
+    .prepare(
+      `SELECT id, gc_personid, employeeno
+       FROM d1_people
+       WHERE filer_entity_number = ?
+       LIMIT 1`,
+    )
+    .bind(filer)
+    .first();
+
+  if (!candidatePerson?.id || Number(candidatePerson.id) === Number(personId)) return;
+
+  const linkedGcPersonId = Number(candidatePerson.gc_personid || 0);
+  const linkedEmployeeNo = Number(candidatePerson.employeeno || 0);
+  const representativeId = Number(representativePersonId);
+  const belongsToAnotherLegislator =
+    (linkedGcPersonId && linkedGcPersonId !== representativeId) ||
+    (linkedEmployeeNo && linkedEmployeeNo !== representativeId);
+
+  if (belongsToAnotherLegislator) {
+    throw new Error(
+      "That candidate filer number is already linked to a different legislator profile.",
+    );
+  }
+
+  await db
+    .prepare(
+      `UPDATE d1_person_candidate_roles
+       SET person_id = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE person_id = ?`,
+    )
+    .bind(personId, candidatePerson.id)
+    .run();
+
+  await db
+    .prepare(
+      `UPDATE OR IGNORE d1_article_people
+       SET person_id = ?
+       WHERE person_id = ?`,
+    )
+    .bind(personId, candidatePerson.id)
+    .run();
+
+  await db
+    .prepare(
+      `DELETE FROM d1_article_people
+       WHERE person_id = ?`,
+    )
+    .bind(candidatePerson.id)
+    .run();
+
+  await db
+    .prepare(
+      `DELETE FROM d1_people
+       WHERE id = ?`,
+    )
+    .bind(candidatePerson.id)
+    .run();
 }
 
 export async function linkArticlePersonByLegislator(articleId, legislator = {}, db = adminDb()) {
