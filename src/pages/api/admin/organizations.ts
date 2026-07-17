@@ -30,33 +30,38 @@ export async function POST({ request }) {
 
     if (action === "save-comment") {
       const organizationSlug = String(form.get("organizationSlug") || "").trim();
-      const bill = String(form.get("bill") || "").trim();
+      const billSelections = selectedBillsFromForm(form);
       const photoUrl = await uploadCommentPhoto({
         file: form.get("photo"),
         organizationSlug,
-        bill,
+        bill: billSelections[0]?.code || "",
       });
 
-      const result = await saveOrganizationComment({
-        organizationName: form.get("organizationName"),
-        organizationSlug,
-        bill,
-        billLabel: form.get("billLabel"),
-        position: form.get("position"),
-        issueArea: form.get("issueArea"),
-        towns: form.get("towns"),
-        comment: form.get("comment"),
-        author: form.get("author"),
-        date: form.get("date"),
-        linkUrl: form.get("linkUrl"),
-        linkLabel: form.get("linkLabel"),
-        photoUrl,
-      });
+      if (!billSelections.length) throw new Error("At least one bill is required.");
+
+      const results = [];
+      for (const bill of billSelections) {
+        results.push(await saveOrganizationComment({
+          organizationName: form.get("organizationName"),
+          organizationSlug,
+          bill: bill.code,
+          billLabel: bill.label || bill.code,
+          position: form.get("position"),
+          issueArea: form.get("issueArea"),
+          towns: form.get("towns"),
+          comment: form.get("comment"),
+          author: form.get("author"),
+          date: form.get("date"),
+          linkUrl: form.get("linkUrl"),
+          linkLabel: form.get("linkLabel"),
+          photoUrl,
+        }));
+      }
 
       return redirectWithMessage(
         request,
         redirectTo,
-        `Organization comment saved for ${result.organizationSlug} on ${result.bill}.`,
+        `Organization comment saved for ${organizationSlug} on ${results.map((result) => result.bill).join(", ")}.`,
       );
     }
 
@@ -110,6 +115,38 @@ function redirectWithError(request, path, message) {
   const url = new URL(path, request.url);
   url.searchParams.set("error", message);
   return Response.redirect(url, 303);
+}
+
+function selectedBillsFromForm(form) {
+  const fromJson = String(form.get("billSelections") || "").trim();
+  if (fromJson) {
+    try {
+      const parsed = JSON.parse(fromJson);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item) => ({
+            code: normalizeBillCode(item.code || item.value || item.label || ""),
+            label: String(item.label || item.name || item.code || "").trim(),
+          }))
+          .filter((item) => item.code);
+      }
+    } catch (error) {
+      // Fall back to the visible comma-separated field below.
+    }
+  }
+
+  return String(form.get("billCodes") || form.get("bill") || "")
+    .split(/[,;|\n]/)
+    .map((value) => normalizeBillCode(value))
+    .filter(Boolean)
+    .map((code) => ({ code, label: code }));
+}
+
+function normalizeBillCode(value = "") {
+  const match = String(value || "").toUpperCase().match(/\b(?:HB|SB|CACR|HCR|HR|SR)\s*\d+[A-Z]?\b/);
+  return (match ? match[0] : String(value || ""))
+    .toUpperCase()
+    .replace(/\s+/g, "");
 }
 
 async function uploadCommentPhoto({ file, organizationSlug = "", bill = "" } = {}) {

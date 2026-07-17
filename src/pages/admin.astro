@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
+import { getBills, normalizeBillCodeForUrl } from "../lib/billsApi";
 import { currentAdminSession } from "../lib/adminAuth";
 import { getProfileGaps } from "../lib/adminProfileGaps";
 import {
@@ -50,6 +51,7 @@ let organizations = [];
 let organizationAdminData = [];
 let pendingOrganizationEndorsements = [];
 let candidateEndorsementOptions = [];
+let billCommentOptions = [];
 
 if (session) {
   try {
@@ -133,6 +135,29 @@ if (session) {
       });
   } catch (error) {
     console.error(error?.message || "Unable to load endorsement candidate options.");
+  }
+
+  try {
+    const billData = await getBills({ year: 2026, limit: 1000 });
+    billCommentOptions = (billData.bills || [])
+      .map((bill) => {
+        const code = normalizeBillCodeForUrl(bill.condensedbillno || bill.bill || bill.code || "");
+        const title = cleanText(bill.name || bill.title || bill.summary || "");
+        const label = [code, title].filter(Boolean).join(" | ");
+        return {
+          code,
+          label: label || code,
+          name: title,
+          year: String(bill.sessionyear || bill.year || 2026),
+        };
+      })
+      .filter((bill) => bill.code)
+      .filter((bill, index, bills) =>
+        bills.findIndex((item) => item.code === bill.code) === index,
+      )
+      .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+  } catch (error) {
+    console.error(error?.message || "Unable to load bill comment options.");
   }
 
   try {
@@ -642,6 +667,11 @@ function reviewDate(value = "") {
                 <option value={option.value} />
               ))}
             </datalist>
+            <datalist id="organizationCommentBillOptions">
+              {billCommentOptions.map((option) => (
+                <option value={option.label} />
+              ))}
+            </datalist>
 
             <form class="stack-form organization-admin-form" action="/api/admin/organizations" method="post">
               <input type="hidden" name="action" value="save" />
@@ -855,15 +885,35 @@ function reviewDate(value = "") {
                 </label>
               </div>
 
-              <div class="form-grid three">
+              <div class="bill-tagging">
                 <label>
-                  Bill code
-                  <input name="bill" placeholder="HB155" required />
+                  Find bill
+                  <input
+                    id="organizationCommentBillSearch"
+                    list="organizationCommentBillOptions"
+                    placeholder="Start typing HB155 or a bill title"
+                    autocomplete="off"
+                  />
                 </label>
-                <label>
-                  Bill label
-                  <input name="billLabel" placeholder="HB155: Optional title" />
-                </label>
+                <button class="secondary compact-button" type="button" id="organizationCommentAddBill">
+                  Add Bill
+                </button>
+              </div>
+
+              <label>
+                Selected bills
+                <input
+                  id="organizationCommentBillCodes"
+                  name="billCodes"
+                  placeholder="HB155, SB2"
+                  required
+                />
+                <input id="organizationCommentBillSelections" type="hidden" name="billSelections" />
+              </label>
+
+              <div class="selected-bill-list" id="organizationCommentSelectedBills"></div>
+
+              <div class="form-grid two">
                 <label>
                   Position
                   <select name="position">
@@ -1088,7 +1138,7 @@ function reviewDate(value = "") {
         </div>
       )}
     </main>
-    <script define:vars={{ organizationAdminData, candidateEndorsementOptions }}>
+    <script define:vars={{ organizationAdminData, candidateEndorsementOptions, billCommentOptions }}>
       const profileSearch = document.getElementById("gapProfileSearch");
       const profileValue = document.getElementById("gapProfileValue");
       const profileOptions = Array.from(
@@ -1154,6 +1204,11 @@ function reviewDate(value = "") {
       const organizationLogoKey = document.getElementById("organizationLogoKey");
       const organizationCommentSlug = document.getElementById("organizationCommentSlug");
       const organizationCommentName = document.getElementById("organizationCommentName");
+      const organizationCommentBillSearch = document.getElementById("organizationCommentBillSearch");
+      const organizationCommentAddBill = document.getElementById("organizationCommentAddBill");
+      const organizationCommentBillCodes = document.getElementById("organizationCommentBillCodes");
+      const organizationCommentBillSelections = document.getElementById("organizationCommentBillSelections");
+      const organizationCommentSelectedBills = document.getElementById("organizationCommentSelectedBills");
       const organizationMap = new Map();
 
       organizationAdminData.forEach((organization) => {
@@ -1224,6 +1279,12 @@ function reviewDate(value = "") {
         if (organizationCommentName) organizationCommentName.value = organization.name || "";
       }
 
+      function hydrateOrganizationCommentFromSlug() {
+        const organization = organizationMap.get(organizationCommentSlug?.value || "");
+        if (!organization) return;
+        hydrateOrganizationCommentForm(organization);
+      }
+
       function syncOrganizationLogoUploadFromFields() {
         const slugField = organizationForm?.elements?.slug;
         const nameField = organizationForm?.elements?.name;
@@ -1244,8 +1305,93 @@ function reviewDate(value = "") {
 
       organizationSearch?.addEventListener("change", hydrateOrganizationForm);
       organizationSearch?.addEventListener("input", hydrateOrganizationForm);
+      organizationCommentSlug?.addEventListener("change", hydrateOrganizationCommentFromSlug);
+      organizationCommentSlug?.addEventListener("input", hydrateOrganizationCommentFromSlug);
       organizationForm?.elements?.slug?.addEventListener("input", syncOrganizationLogoUploadFromFields);
       organizationForm?.elements?.name?.addEventListener("input", syncOrganizationLogoUploadFromFields);
+
+      const billOptionMap = new Map();
+      const selectedBills = [];
+
+      billCommentOptions.forEach((bill) => {
+        billOptionMap.set(bill.label, bill);
+        billOptionMap.set(bill.code, bill);
+      });
+
+      function normalizeBillInput(value = "") {
+        const match = String(value || "").toUpperCase().match(/\b(?:HB|SB|CACR|HCR|HR|SR)\s*\d+[A-Z]?\b/);
+        return (match ? match[0] : String(value || ""))
+          .toUpperCase()
+          .replace(/\s+/g, "");
+      }
+
+      function syncSelectedBillsFromText() {
+        const codes = String(organizationCommentBillCodes?.value || "")
+          .split(/[,;|\n]/)
+          .map(normalizeBillInput)
+          .filter(Boolean);
+        selectedBills.splice(0, selectedBills.length);
+        codes.forEach((code) => {
+          const option = billOptionMap.get(code) || { code, label: code };
+          selectedBills.push({
+            code,
+            label: option.label || code,
+            name: option.name || "",
+          });
+        });
+        renderSelectedBills();
+      }
+
+      function addSelectedBillFromSearch() {
+        const rawValue = organizationCommentBillSearch?.value || "";
+        const option = billOptionMap.get(rawValue);
+        const code = option?.code || normalizeBillInput(rawValue);
+        if (!code || selectedBills.some((bill) => bill.code === code)) return;
+        selectedBills.push({
+          code,
+          label: option?.label || code,
+          name: option?.name || "",
+        });
+        if (organizationCommentBillSearch) organizationCommentBillSearch.value = "";
+        renderSelectedBills();
+      }
+
+      function removeSelectedBill(code) {
+        const index = selectedBills.findIndex((bill) => bill.code === code);
+        if (index >= 0) selectedBills.splice(index, 1);
+        renderSelectedBills();
+      }
+
+      function renderSelectedBills() {
+        if (organizationCommentBillCodes) {
+          organizationCommentBillCodes.value = selectedBills.map((bill) => bill.code).join(", ");
+        }
+        if (organizationCommentBillSelections) {
+          organizationCommentBillSelections.value = JSON.stringify(selectedBills);
+        }
+        if (!organizationCommentSelectedBills) return;
+        organizationCommentSelectedBills.innerHTML = "";
+        selectedBills.forEach((bill) => {
+          const chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "selected-bill-chip";
+          chip.textContent = bill.name ? `${bill.code} - ${bill.name}` : bill.code;
+          chip.addEventListener("click", () => removeSelectedBill(bill.code));
+          organizationCommentSelectedBills.append(chip);
+        });
+      }
+
+      organizationCommentAddBill?.addEventListener("click", addSelectedBillFromSearch);
+      organizationCommentBillSearch?.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          addSelectedBillFromSearch();
+        }
+      });
+      organizationCommentBillCodes?.addEventListener("change", syncSelectedBillsFromText);
+      organizationCommentBillCodes?.form?.addEventListener("submit", () => {
+        if (!selectedBills.length) syncSelectedBillsFromText();
+      });
 
       const endorsementOrganizationSearch = document.getElementById("endorsementOrganizationSearch");
       const endorsementOrganizationName = document.getElementById("endorsementOrganizationName");
@@ -1472,6 +1618,34 @@ function reviewDate(value = "") {
     gap: 12px;
     grid-template-columns: minmax(0, 1fr) auto;
     padding: 12px;
+  }
+
+  .bill-tagging {
+    align-items: end;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .selected-bill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .selected-bill-chip {
+    background: #eef6ff;
+    border: 1px solid #93c5fd;
+    border-radius: 999px;
+    color: #1e3a8a;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 900;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    padding: 7px 10px;
+    text-align: left;
   }
 
   .form-grid {
@@ -1898,7 +2072,8 @@ function reviewDate(value = "") {
 
     .form-grid.two,
     .form-grid.three,
-    .organization-toolbar {
+    .organization-toolbar,
+    .bill-tagging {
       grid-template-columns: 1fr;
     }
   }
