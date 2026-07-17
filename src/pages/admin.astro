@@ -820,7 +820,12 @@ function reviewDate(value = "") {
               <button type="submit">Upload Organization Logo</button>
             </form>
 
-            <form class="stack-form organization-comment-form" action="/api/admin/organizations" method="post">
+            <form
+              class="stack-form organization-comment-form"
+              action="/api/admin/organizations"
+              method="post"
+              enctype="multipart/form-data"
+            >
               <input type="hidden" name="action" value="save-comment" />
               <input type="hidden" name="redirectTo" value="/admin#organizations-admin" />
 
@@ -889,6 +894,22 @@ function reviewDate(value = "") {
               <label>
                 Author or signer
                 <input name="author" placeholder="Executive Director, board, campaign, etc." />
+              </label>
+
+              <div class="form-grid two">
+                <label>
+                  Link label
+                  <input name="linkLabel" placeholder="Read the full statement" />
+                </label>
+                <label>
+                  Link URL
+                  <input name="linkUrl" type="url" placeholder="https://example.org/statement" />
+                </label>
+              </div>
+
+              <label>
+                Comment photo
+                <input name="photo" type="file" accept="image/*" />
               </label>
 
               <label>

@@ -267,6 +267,18 @@ function positionClass(position = "") {
 
                         <p>{comment.comment}</p>
 
+                        {comment.photoUrl && (
+                          <a class="comment-photo" href={comment.photoUrl}>
+                            <img src={comment.photoUrl} alt="" loading="lazy" />
+                          </a>
+                        )}
+
+                        {comment.linkUrl && (
+                          <a class="comment-link" href={comment.linkUrl}>
+                            {comment.linkLabel || "Read more"}
+                          </a>
+                        )}
+
                         <div class="comment-meta">
                           {comment.author && <span>{comment.author}</span>}
                           {comment.date && <span>{comment.date}</span>}
@@ -613,6 +625,35 @@ function positionClass(position = "") {
     font-weight: 900;
     gap: 10px;
     margin-top: 12px;
+  }
+
+  .comment-photo {
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: block;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+
+  .comment-photo img {
+    aspect-ratio: 16 / 9;
+    display: block;
+    height: auto;
+    object-fit: contain;
+    width: 100%;
+  }
+
+  .comment-link {
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.86rem;
+    font-weight: 900;
+    margin-top: 12px;
+    padding: 8px 11px;
+    text-decoration: none;
   }
 
   .link-list a {

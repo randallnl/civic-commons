@@ -1,5 +1,6 @@
 export const prerender = false;
 
+import { env } from "cloudflare:workers";
 import { requireAdmin } from "../../../lib/adminAuth";
 import {
   importOrganizationsFromSheets,
@@ -28,10 +29,18 @@ export async function POST({ request }) {
     }
 
     if (action === "save-comment") {
+      const organizationSlug = String(form.get("organizationSlug") || "").trim();
+      const bill = String(form.get("bill") || "").trim();
+      const photoUrl = await uploadCommentPhoto({
+        file: form.get("photo"),
+        organizationSlug,
+        bill,
+      });
+
       const result = await saveOrganizationComment({
         organizationName: form.get("organizationName"),
-        organizationSlug: form.get("organizationSlug"),
-        bill: form.get("bill"),
+        organizationSlug,
+        bill,
         billLabel: form.get("billLabel"),
         position: form.get("position"),
         issueArea: form.get("issueArea"),
@@ -39,6 +48,9 @@ export async function POST({ request }) {
         comment: form.get("comment"),
         author: form.get("author"),
         date: form.get("date"),
+        linkUrl: form.get("linkUrl"),
+        linkLabel: form.get("linkLabel"),
+        photoUrl,
       });
 
       return redirectWithMessage(
@@ -98,4 +110,66 @@ function redirectWithError(request, path, message) {
   const url = new URL(path, request.url);
   url.searchParams.set("error", message);
   return Response.redirect(url, 303);
+}
+
+async function uploadCommentPhoto({ file, organizationSlug = "", bill = "" } = {}) {
+  if (!file || typeof file === "string" || !file.size) return "";
+  const bucket = env["organization-assets"];
+  if (!bucket) throw new Error("Organization asset bucket is not configured.");
+
+  const key = [
+    "organizations",
+    "comments",
+    slugify(organizationSlug || "organization"),
+    `${slugify(bill || "bill")}-${Date.now()}-${sanitizeFilename(file.name || "comment-photo")}`,
+  ].join("/");
+
+  await bucket.put(key, await file.arrayBuffer(), {
+    httpMetadata: {
+      contentType: file.type || contentTypeFor(key),
+      cacheControl: "public, max-age=86400",
+    },
+  });
+
+  return `/api/organization-assets/${key
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/")}`;
+}
+
+function sanitizeFilename(value = "") {
+  return String(value)
+    .trim()
+    .replace(/[/\\]/g, "-")
+    .replace(/[^a-zA-Z0-9._ -]+/g, "")
+    .replace(/\s+/g, " ")
+    .slice(0, 120);
+}
+
+function slugify(value = "") {
+  return String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/['']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function contentTypeFor(key = "") {
+  const extension = key.split(".").pop()?.toLowerCase();
+  switch (extension) {
+    case "avif":
+      return "image/avif";
+    case "gif":
+      return "image/gif";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "webp":
+      return "image/webp";
+    default:
+      return "application/octet-stream";
+  }
 }

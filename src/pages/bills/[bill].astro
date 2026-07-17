@@ -314,6 +314,16 @@ function commentsForBill(organizations = [], code = "") {
                           <span class={positionClass(item.position)}>{item.position || "neutral"}</span>
                         </div>
                         <p>{item.comment}</p>
+                        {item.photoUrl && (
+                          <a class="organization-comment-photo" href={item.photoUrl}>
+                            <img src={item.photoUrl} alt="" loading="lazy" />
+                          </a>
+                        )}
+                        {item.linkUrl && (
+                          <a class="organization-comment-link" href={item.linkUrl}>
+                            {item.linkLabel || "Read more"}
+                          </a>
+                        )}
                       </article>
                     ))}
                   </div>
@@ -877,6 +887,36 @@ function commentsForBill(organizations = [], code = "") {
     color: #4b5563;
     line-height: 1.5;
     margin: 8px 0 0;
+  }
+
+  .organization-comment-photo {
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: block;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+
+  .organization-comment-photo img {
+    aspect-ratio: 16 / 9;
+    display: block;
+    height: auto;
+    object-fit: contain;
+    width: 100%;
+  }
+
+  .organization-comment-link {
+    align-items: center;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.86rem;
+    font-weight: 900;
+    margin-top: 12px;
+    padding: 8px 11px;
+    text-decoration: none;
   }
 
   .testimony-topline .support {

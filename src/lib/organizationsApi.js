@@ -61,6 +61,9 @@ export async function ensureOrganizationTables(db = organizationsDb()) {
         comment TEXT NOT NULL,
         author TEXT,
         date TEXT,
+        link_url TEXT,
+        link_label TEXT,
+        photo_url TEXT,
         status TEXT NOT NULL DEFAULT 'published',
         source TEXT NOT NULL DEFAULT 'admin',
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -69,6 +72,10 @@ export async function ensureOrganizationTables(db = organizationsDb()) {
       )`,
     )
     .run();
+
+  await ensureColumn(db, "organization_comments", "link_url", "TEXT");
+  await ensureColumn(db, "organization_comments", "link_label", "TEXT");
+  await ensureColumn(db, "organization_comments", "photo_url", "TEXT");
 
   await db
     .prepare(
@@ -259,9 +266,10 @@ export async function saveOrganizationComment(data = {}, {
     .prepare(
       `INSERT INTO organization_comments (
          organization_slug, organization_name, bill, bill_label, position,
-         issue_area, towns, comment, author, date, status, source, updated_at
+         issue_area, towns, comment, author, date, link_url, link_label,
+         photo_url, status, source, updated_at
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
        ON CONFLICT(organization_slug, bill, comment) DO UPDATE SET
          organization_name = excluded.organization_name,
          bill_label = excluded.bill_label,
@@ -270,6 +278,9 @@ export async function saveOrganizationComment(data = {}, {
          towns = excluded.towns,
          author = excluded.author,
          date = excluded.date,
+         link_url = excluded.link_url,
+         link_label = excluded.link_label,
+         photo_url = excluded.photo_url,
          status = excluded.status,
          source = excluded.source,
          updated_at = CURRENT_TIMESTAMP`,
@@ -285,6 +296,9 @@ export async function saveOrganizationComment(data = {}, {
       comment,
       cleanText(data.author || ""),
       cleanText(data.date || ""),
+      String(data.linkUrl || data.link_url || "").trim(),
+      cleanText(data.linkLabel || data.link_label || ""),
+      String(data.photoUrl || data.photo_url || "").trim(),
       status,
       source,
     )
@@ -722,6 +736,9 @@ function normalizeCommentRow(row = {}) {
     comment: cleanText(row.comment),
     author: cleanText(row.author),
     date: cleanText(row.date),
+    linkUrl: row.link_url || "",
+    linkLabel: cleanText(row.link_label),
+    photoUrl: organizationAssetUrl(row.photo_url || ""),
   };
 }
 
