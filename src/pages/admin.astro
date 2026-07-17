@@ -894,8 +894,9 @@ function reviewDate(value = "") {
               <p class="eyebrow">R2 Storage</p>
               <h2>Upload an image</h2>
               <p>
-                Uploads go to the bound profile-photo R2 bucket. Add a profile
-                type and identifier to update D1 at the same time.
+                Upload legislator and candidate photos, or organization logos.
+                Organization logos go to the organization-assets R2 bucket and
+                update the organization profile logo field.
               </p>
             </div>
             <form class="stack-form" action="/api/admin/upload" method="post" enctype="multipart/form-data">
@@ -904,6 +905,7 @@ function reviewDate(value = "") {
                 <option value="">Just upload to R2</option>
                 <option value="representative">Legislator</option>
                 <option value="candidate">Candidate</option>
+                <option value="organization-logo">Organization logo</option>
               </select>
 
               <label for="entityKey">Profile identifier <span>Optional</span></label>
@@ -911,11 +913,11 @@ function reviewDate(value = "") {
                 id="entityKey"
                 name="entityKey"
                 type="text"
-                placeholder="personid, employeeno, candidate filer number, or slug"
+                placeholder="personid, filer number, organization slug, or organization name"
               />
 
               <label for="key">R2 key</label>
-              <input id="key" name="key" type="text" placeholder="legislators/11462-victoria-sullivan.jpg" />
+              <input id="key" name="key" type="text" placeholder="organizations/logos/example-logo.png" />
 
               <label for="file">Image file</label>
               <input id="file" name="file" type="file" accept="image/*" required />

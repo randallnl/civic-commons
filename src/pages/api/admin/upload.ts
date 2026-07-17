@@ -3,6 +3,10 @@ export const prerender = false;
 import { env } from "cloudflare:workers";
 import { adminDb, adminR2Bucket, requireAdmin } from "../../../lib/adminAuth";
 import {
+  ensureOrganizationTables,
+  slugify as organizationSlugify,
+} from "../../../lib/organizationsApi";
+import {
   upsertPersonFromCandidate,
   upsertPersonFromLegislator,
 } from "../../../lib/unifiedPeople";
@@ -13,12 +17,12 @@ export async function POST({ request }) {
 
   let redirectTo = "/admin";
   try {
-    const bucket = adminR2Bucket();
-    if (!bucket) throw new Error("R2 bucket binding is not configured.");
-
     const form = await request.formData();
     const entityType = String(form.get("entityType") || "").trim();
     const entityKey = String(form.get("entityKey") || "").trim();
+    const bucket = uploadBucket(entityType);
+    if (!bucket) throw new Error("R2 bucket binding is not configured.");
+
     redirectTo = safeRedirectPath(form.get("redirectTo")) || "/admin";
     const file = form.get("file");
     const key = sanitizeKey(form.get("key")) || generatedKey(entityType, entityKey, file);
@@ -29,7 +33,7 @@ export async function POST({ request }) {
     }
 
     const contentType = file.type || contentTypeFor(key);
-    const publicUrl = publicPhotoUrl(key);
+    const publicUrl = publicAssetUrl(entityType, key);
 
     await bucket.put(key, await file.arrayBuffer(), {
       httpMetadata: {
@@ -72,13 +76,17 @@ function sanitizeKey(value = "") {
 
 async function updateProfilePhoto({ entityType, entityKey, key, publicUrl }) {
   if (!entityType && !entityKey) return "";
-  if (!["candidate", "representative"].includes(entityType)) {
-    throw new Error("Choose candidate or legislator before updating D1.");
+  if (!["candidate", "representative", "organization-logo"].includes(entityType)) {
+    throw new Error("Choose candidate, legislator, or organization logo before updating D1.");
   }
   if (!entityKey) throw new Error("A profile identifier is required to update D1.");
 
   if (entityType === "candidate") {
     return updateCandidatePhoto(entityKey, publicUrl);
+  }
+
+  if (entityType === "organization-logo") {
+    return updateOrganizationLogo(entityKey, key);
   }
 
   return updateRepresentativePhoto(entityKey, key, publicUrl);
@@ -108,7 +116,7 @@ async function updateRepresentativePhoto(entityKey, key, publicUrl) {
   if (!db) throw new Error("D1 database binding is not configured.");
 
   const numericKey = numericId(entityKey);
-  const slug = slugify(entityKey);
+  const slug = organizationSlugify(entityKey);
   const legislator = await db
     .prepare(
       `SELECT personid, employeeno, firstname, lastname
@@ -159,6 +167,27 @@ async function updateRepresentativePhoto(entityKey, key, publicUrl) {
   return "d1_legislator_photos";
 }
 
+async function updateOrganizationLogo(entityKey, key) {
+  const db = adminDb();
+  if (!db) throw new Error("D1 database binding is not configured.");
+  await ensureOrganizationTables(db);
+
+  const slug = slugify(entityKey);
+  const result = await db
+    .prepare(
+      `UPDATE organizations
+       SET logo_url = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE slug = ? OR LOWER(name) = LOWER(?)`,
+    )
+    .bind(key, slug, String(entityKey))
+    .run();
+
+  const changes = result.meta?.changes ?? result.changes ?? 0;
+  if (!changes) throw new Error("No matching organization row was updated.");
+  return "organization logo_url";
+}
+
 function generatedKey(entityType, entityKey, file) {
   if (!file || typeof file === "string") return "";
   const filename = sanitizeFilename(file.name || "profile-photo");
@@ -166,9 +195,25 @@ function generatedKey(entityType, entityKey, file) {
     ? "candidates"
     : entityType === "representative"
       ? "legislators"
+      : entityType === "organization-logo"
+        ? "organizations/logos"
       : "uploads";
   const id = slugify(entityKey || "image");
   return sanitizeKey(`${prefix}/${id}-${filename}`);
+}
+
+function uploadBucket(entityType) {
+  if (entityType === "organization-logo") {
+    return env["organization-assets"];
+  }
+  return adminR2Bucket();
+}
+
+function publicAssetUrl(entityType, key = "") {
+  if (entityType === "organization-logo") {
+    return `/api/organization-assets/${encodeAssetKey(key)}`;
+  }
+  return publicPhotoUrl(key);
 }
 
 function publicPhotoUrl(key = "") {
