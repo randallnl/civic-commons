@@ -663,11 +663,11 @@ function reviewDate(value = "") {
               <div class="form-grid two">
                 <label>
                   Name
-                  <input name="name" placeholder="Organization name" required />
+                  <input id="organizationAdminName" name="name" placeholder="Organization name" required />
                 </label>
                 <label>
                   Slug
-                  <input name="slug" list="organizationAdminOptions" placeholder="existing-or-new-slug" />
+                  <input id="organizationAdminSlug" name="slug" list="organizationAdminOptions" placeholder="existing-or-new-slug" />
                 </label>
               </div>
 
@@ -770,6 +770,54 @@ function reviewDate(value = "") {
               </label>
 
               <button type="submit">Save Organization Profile</button>
+            </form>
+
+            <form
+              class="stack-form organization-logo-upload-form"
+              action="/api/admin/upload"
+              method="post"
+              enctype="multipart/form-data"
+            >
+              <input type="hidden" name="entityType" value="organization-logo" />
+              <input type="hidden" name="redirectTo" value="/admin#organizations-admin" />
+
+              <div class="panel-heading compact-subheading">
+                <p class="eyebrow">Logo Upload</p>
+                <h3>Upload organization logo</h3>
+                <p>
+                  Upload a logo to organization-assets and update this
+                  organization profile's logo field.
+                </p>
+              </div>
+
+              <div class="form-grid two">
+                <label>
+                  Organization slug or name
+                  <input
+                    id="organizationLogoEntityKey"
+                    name="entityKey"
+                    list="organizationAdminOptions"
+                    placeholder="organization-slug"
+                    required
+                  />
+                </label>
+                <label>
+                  R2 key
+                  <input
+                    id="organizationLogoKey"
+                    name="key"
+                    type="text"
+                    placeholder="organizations/logos/example-logo.png"
+                  />
+                </label>
+              </div>
+
+              <label>
+                Logo file
+                <input name="file" type="file" accept="image/*" required />
+              </label>
+
+              <button type="submit">Upload Organization Logo</button>
             </form>
 
             <form class="stack-form endorsement-admin-form" action="/api/admin/endorsements" method="post">
@@ -997,6 +1045,8 @@ function reviewDate(value = "") {
       const organizationSearch = document.getElementById("organizationAdminSearch");
       const organizationProfileLink = document.getElementById("organizationAdminProfileLink");
       const organizationForm = document.querySelector(".organization-admin-form");
+      const organizationLogoEntityKey = document.getElementById("organizationLogoEntityKey");
+      const organizationLogoKey = document.getElementById("organizationLogoKey");
       const organizationMap = new Map();
 
       organizationAdminData.forEach((organization) => {
@@ -1047,10 +1097,35 @@ function reviewDate(value = "") {
           organizationProfileLink.href = organization.profilePath || "/organizations";
           organizationProfileLink.textContent = "Open selected profile";
         }
+
+        hydrateOrganizationLogoUpload(organization);
+      }
+
+      function hydrateOrganizationLogoUpload(organization) {
+        if (!organization) return;
+        const organizationKey = organization.slug || organization.name || "";
+        if (organizationLogoEntityKey) organizationLogoEntityKey.value = organizationKey;
+        if (organizationLogoKey && !organizationLogoKey.value) {
+          organizationLogoKey.placeholder = `organizations/logos/${organizationKey || "organization"}-logo.png`;
+        }
+      }
+
+      function syncOrganizationLogoUploadFromFields() {
+        const slugField = organizationForm?.elements?.slug;
+        const nameField = organizationForm?.elements?.name;
+        const organizationKey = slugField?.value || nameField?.value || "";
+        if (organizationLogoEntityKey && !organizationLogoEntityKey.value) {
+          organizationLogoEntityKey.value = organizationKey;
+        }
+        if (organizationLogoKey) {
+          organizationLogoKey.placeholder = `organizations/logos/${organizationKey || "organization"}-logo.png`;
+        }
       }
 
       organizationSearch?.addEventListener("change", hydrateOrganizationForm);
       organizationSearch?.addEventListener("input", hydrateOrganizationForm);
+      organizationForm?.elements?.slug?.addEventListener("input", syncOrganizationLogoUploadFromFields);
+      organizationForm?.elements?.name?.addEventListener("input", syncOrganizationLogoUploadFromFields);
 
       const endorsementOrganizationSearch = document.getElementById("endorsementOrganizationSearch");
       const endorsementOrganizationName = document.getElementById("endorsementOrganizationName");
