@@ -16,8 +16,7 @@ import {
 import {
   candidateName,
   candidateSlug,
-  getCandidates,
-  isLegislativeCandidate,
+  getLegislativeCandidates,
 } from "../lib/candidatesApi";
 import { cleanText } from "../lib/text";
 import { getPeopleLinkOptions } from "../lib/unifiedPeople";
@@ -108,14 +107,8 @@ if (session) {
   }
 
   try {
-    const candidateData = await getCandidates({
-      officeType: "General Court",
-      electionYear: 2026,
-      limit: 1000,
-    });
-    candidateEndorsementOptions = (candidateData.candidates || [])
-      .filter(isLegislativeCandidate)
-      .sort((a, b) => candidateName(a).localeCompare(candidateName(b)))
+    const candidates = await getLegislativeCandidates({ electionYear: 2026 });
+    candidateEndorsementOptions = candidates
       .map((candidate) => {
         const slug = candidateSlug(candidate);
         const name = candidateName(candidate);

@@ -5,8 +5,7 @@ import TopNav from "../../components/TopNav.astro";
 import {
   candidateName,
   candidateSlug,
-  getCandidates,
-  isLegislativeCandidate,
+  getLegislativeCandidates,
 } from "../../lib/candidatesApi";
 import { cleanText } from "../../lib/text";
 
@@ -16,14 +15,7 @@ const requestedCandidate = Astro.url.searchParams.get("candidate") || "";
 let candidates = [];
 
 try {
-  const data = await getCandidates({
-    officeType: "General Court",
-    electionYear: 2026,
-    limit: 1000,
-  });
-  candidates = (data.candidates || [])
-    .filter(isLegislativeCandidate)
-    .sort((a, b) => candidateName(a).localeCompare(candidateName(b)));
+  candidates = await getLegislativeCandidates({ electionYear: 2026 });
 } catch (error) {
   console.error(error?.message || "Unable to load candidate selector.");
 }
