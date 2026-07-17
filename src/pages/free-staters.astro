@@ -27,16 +27,36 @@ try {
 }
 
 try {
-  const [houseData, senateData, candidateData] = await Promise.all([
+  const [houseData, senateData, houseGradeData, senateGradeData, candidateData] = await Promise.all([
     getRepresentatives({ body: "house", include: "votes", limit: 500 }),
     getRepresentatives({ body: "senate", include: "votes", limit: 50 }),
+    getRepresentatives({ body: "house", limit: 500 }),
+    getRepresentatives({ body: "senate", limit: 50 }),
     getCandidates({ electionYear: 2026, limit: 800 }),
   ]);
+
+  const gradeLookup = new Map(
+    [
+      ...(houseGradeData.representatives || []),
+      ...(senateGradeData.representatives || []),
+    ].map((rep) => [repKey(rep), rep]),
+  );
 
   freeStaterLegislators = [
     ...(houseData.representatives || []),
     ...(senateData.representatives || []),
   ]
+    .map((rep) => {
+      const gradeRep = gradeLookup.get(repKey(rep));
+      return {
+        ...rep,
+        alignment_percent:
+          rep.alignment_percent ??
+          rep.alignmentPercent ??
+          gradeRep?.alignment_percent ??
+          gradeRep?.alignmentPercent,
+      };
+    })
     .filter(isFreeStater)
     .sort((a, b) => repName(a).localeCompare(repName(b)));
 
@@ -55,6 +75,16 @@ function organizationAssetUrl(filename = "") {
     .split("/")
     .map((part) => encodeURIComponent(part))
     .join("/")}`;
+}
+
+function repKey(rep = {}) {
+  return String(
+    rep.personid ||
+      rep.id ||
+      rep.employeeno ||
+      rep.slug ||
+      repName(rep),
+  ).toLowerCase();
 }
 ---
 
