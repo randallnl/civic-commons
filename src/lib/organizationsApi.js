@@ -76,6 +76,8 @@ export async function ensureOrganizationTables(db = organizationsDb()) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_slug TEXT NOT NULL,
         organization_name TEXT NOT NULL,
+        organization_website TEXT,
+        organization_email TEXT,
         candidate_name TEXT NOT NULL,
         candidate_slug TEXT,
         candidate_slug_key TEXT NOT NULL,
@@ -87,12 +89,23 @@ export async function ensureOrganizationTables(db = organizationsDb()) {
         date TEXT,
         status TEXT NOT NULL DEFAULT 'published',
         source TEXT NOT NULL DEFAULT 'admin',
+        submitter_name TEXT,
+        submitter_email TEXT,
+        reviewed_by TEXT,
+        reviewed_at TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(organization_slug, candidate_slug_key, position, statement)
       )`,
     )
     .run();
+
+  await ensureColumn(db, "organization_endorsements", "organization_website", "TEXT");
+  await ensureColumn(db, "organization_endorsements", "organization_email", "TEXT");
+  await ensureColumn(db, "organization_endorsements", "submitter_name", "TEXT");
+  await ensureColumn(db, "organization_endorsements", "submitter_email", "TEXT");
+  await ensureColumn(db, "organization_endorsements", "reviewed_by", "TEXT");
+  await ensureColumn(db, "organization_endorsements", "reviewed_at", "TEXT");
 }
 
 export async function getOrganizations({ includeUnapproved = false } = {}) {
@@ -246,6 +259,166 @@ export async function importOrganizationsFromSheets({
     organizations: organizations.length,
     comments: comments.length,
     endorsements: endorsements.length,
+  };
+}
+
+export async function getPendingOrganizationEndorsements({
+  db = organizationsDb(),
+  limit = 50,
+} = {}) {
+  if (!db) return [];
+  await ensureOrganizationTables(db);
+
+  const result = await db
+    .prepare(
+      `SELECT *
+       FROM organization_endorsements
+       WHERE status = 'pending'
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`,
+    )
+    .bind(Number(limit) || 50)
+    .all();
+
+  return (result.results || []).map(normalizeEndorsementRow);
+}
+
+export async function saveOrganizationEndorsement(data = {}, {
+  db = organizationsDb(),
+  status = "published",
+  source = "admin",
+} = {}) {
+  if (!db) throw new Error("D1 database binding is not configured.");
+  await ensureOrganizationTables(db);
+
+  const organizationName = cleanText(data.organizationName || data.organization || "");
+  const candidateNameValue = cleanText(data.candidateName || "");
+  if (!organizationName) throw new Error("Organization name is required.");
+  if (!candidateNameValue) throw new Error("Candidate name is required.");
+
+  const organizationSlug = slugify(data.organizationSlug || data.organization_slug || organizationName);
+  const candidateSlugValue = String(data.candidateSlug || data.candidate_slug || "").trim();
+  const candidateSlugKey = slugify(data.candidateSlugKey || data.candidate_slug_key || candidateSlugValue || candidateNameValue);
+  if (!organizationSlug || !candidateSlugKey) {
+    throw new Error("Organization and candidate identifiers are required.");
+  }
+
+  const result = await db
+    .prepare(
+      `INSERT INTO organization_endorsements (
+         organization_slug, organization_name, organization_website,
+         organization_email, candidate_name, candidate_slug, candidate_slug_key,
+         office, district, election_year, position, statement, date, status,
+         source, submitter_name, submitter_email, updated_at
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT(organization_slug, candidate_slug_key, position, statement) DO UPDATE SET
+         organization_name = excluded.organization_name,
+         organization_website = excluded.organization_website,
+         organization_email = excluded.organization_email,
+         candidate_name = excluded.candidate_name,
+         candidate_slug = excluded.candidate_slug,
+         office = excluded.office,
+         district = excluded.district,
+         election_year = excluded.election_year,
+         date = excluded.date,
+         status = excluded.status,
+         source = excluded.source,
+         submitter_name = excluded.submitter_name,
+         submitter_email = excluded.submitter_email,
+         updated_at = CURRENT_TIMESTAMP`,
+    )
+    .bind(
+      organizationSlug,
+      organizationName,
+      String(data.organizationWebsite || data.organization_website || "").trim(),
+      String(data.organizationEmail || data.organization_email || "").trim(),
+      candidateNameValue,
+      candidateSlugValue,
+      candidateSlugKey,
+      cleanText(data.office || ""),
+      cleanText(data.district || ""),
+      cleanText(data.electionYear || data.election_year || ""),
+      cleanText(data.position || "Endorsed"),
+      cleanText(data.statement || ""),
+      cleanText(data.date || ""),
+      status,
+      source,
+      cleanText(data.submitterName || data.submitter_name || ""),
+      String(data.submitterEmail || data.submitter_email || "").trim(),
+    )
+    .run();
+
+  if (status === "published") {
+    await ensureOrganizationProfileForEndorsement({
+      organizationSlug,
+      organizationName,
+      website: data.organizationWebsite || data.organization_website,
+      email: data.organizationEmail || data.organization_email,
+      db,
+    });
+  }
+
+  return {
+    organizationSlug,
+    candidateSlugKey,
+    changed: result.meta?.changes ?? result.changes ?? 0,
+  };
+}
+
+export async function saveOrganizationEndorsementSubmission(data = {}, options = {}) {
+  return saveOrganizationEndorsement(data, {
+    ...options,
+    status: "pending",
+    source: "community",
+  });
+}
+
+export async function moderateOrganizationEndorsement(id, action, {
+  db = organizationsDb(),
+  reviewedBy = "",
+} = {}) {
+  if (!db) throw new Error("D1 database binding is not configured.");
+  await ensureOrganizationTables(db);
+
+  const endorsementId = Number(id);
+  if (!endorsementId) throw new Error("Endorsement id is required.");
+  if (!["approve", "reject"].includes(action)) {
+    throw new Error("Choose approve or reject.");
+  }
+
+  const rowResult = await db
+    .prepare(`SELECT * FROM organization_endorsements WHERE id = ?`)
+    .bind(endorsementId)
+    .first();
+  if (!rowResult) throw new Error("No matching endorsement submission was found.");
+
+  const status = action === "approve" ? "published" : "rejected";
+  const result = await db
+    .prepare(
+      `UPDATE organization_endorsements
+       SET status = ?,
+           reviewed_by = ?,
+           reviewed_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+    )
+    .bind(status, cleanText(reviewedBy || ""), endorsementId)
+    .run();
+
+  if (status === "published") {
+    await ensureOrganizationProfileForEndorsement({
+      organizationSlug: rowResult.organization_slug,
+      organizationName: rowResult.organization_name,
+      website: rowResult.organization_website,
+      email: rowResult.organization_email,
+      db,
+    });
+  }
+
+  return {
+    status,
+    changed: result.meta?.changes ?? result.changes ?? 0,
   };
 }
 
@@ -490,6 +663,8 @@ function normalizeEndorsementRow(row = {}) {
     id: row.id,
     organization: cleanText(row.organization_name),
     organizationSlug: row.organization_slug,
+    organizationWebsite: row.organization_website || "",
+    organizationEmail: row.organization_email || "",
     candidateName: cleanText(row.candidate_name),
     candidateSlug: row.candidate_slug,
     candidateSlugKey: row.candidate_slug_key || slugify(row.candidate_slug || row.candidate_name),
@@ -500,6 +675,9 @@ function normalizeEndorsementRow(row = {}) {
     statement: cleanText(row.statement),
     date: cleanText(row.date),
     status: cleanText(row.status),
+    submitterName: cleanText(row.submitter_name),
+    submitterEmail: row.submitter_email || "",
+    createdAt: row.created_at || "",
   };
 }
 
@@ -620,6 +798,38 @@ function organizationAssetUrl(value = "") {
     .split("/")
     .map((part) => encodeURIComponent(part))
     .join("/")}`;
+}
+
+async function ensureColumn(db, table, column, type) {
+  const result = await db.prepare(`PRAGMA table_info(${table})`).all();
+  const columns = new Set((result.results || []).map((row) => row.name));
+  if (columns.has(column)) return;
+  await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
+}
+
+async function ensureOrganizationProfileForEndorsement({
+  organizationSlug,
+  organizationName,
+  website = "",
+  email = "",
+  db,
+}) {
+  if (!organizationName || !organizationSlug) return;
+  const existing = await db
+    .prepare(`SELECT slug FROM organizations WHERE slug = ?`)
+    .bind(organizationSlug)
+    .first();
+  if (existing) return;
+
+  await saveOrganizationProfile({
+    name: organizationName,
+    slug: organizationSlug,
+    type: "Advocacy organization",
+    website,
+    email,
+    approved: 1,
+    source: "endorsement",
+  }, db);
 }
 
 function splitList(value = "") {

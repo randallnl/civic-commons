@@ -9,7 +9,16 @@ import {
   getPendingArticleSubmissions,
 } from "../lib/articleSubmissions";
 import { communityUpdateDate, getPendingCommunityUpdates } from "../lib/communityUpdates";
-import { getOrganizations } from "../lib/organizationsApi";
+import {
+  getOrganizations,
+  getPendingOrganizationEndorsements,
+} from "../lib/organizationsApi";
+import {
+  candidateName,
+  candidateSlug,
+  getCandidates,
+  isLegislativeCandidate,
+} from "../lib/candidatesApi";
 import { cleanText } from "../lib/text";
 import { getPeopleLinkOptions } from "../lib/unifiedPeople";
 
@@ -39,6 +48,9 @@ let profileGaps = { results: [], counts: {} };
 let gapProfileLabel = "";
 let peopleOptions = [];
 let organizations = [];
+let organizationAdminData = [];
+let pendingOrganizationEndorsements = [];
+let candidateEndorsementOptions = [];
 
 if (session) {
   try {
@@ -61,8 +73,73 @@ if (session) {
 
   try {
     organizations = await getOrganizations({ includeUnapproved: true });
+    organizationAdminData = organizations.map((organization) => ({
+      name: organization.name || "",
+      slug: organization.slug || "",
+      type: organization.type || "",
+      issueArea: organization.issueArea || "",
+      shortDescription: organization.shortDescription || "",
+      mission: organization.mission || "",
+      website: organization.website || "",
+      email: organization.email || "",
+      phone: organization.phone || "",
+      city: organization.city || "",
+      town: organization.town || "",
+      state: organization.state || "NH",
+      serviceArea: organization.serviceArea || "",
+      logoUrl: organization.logoUrl || "",
+      bannerImageUrl: organization.bannerImageUrl || "",
+      facebook: organization.facebook || "",
+      instagram: organization.instagram || "",
+      bluesky: organization.bluesky || "",
+      foundedYear: organization.foundedYear || "",
+      approved: Boolean(organization.approved),
+      notes: organization.notes || "",
+      profilePath: `/organizations/${organization.slug}`,
+    }));
   } catch (error) {
     console.error(error?.message || "Unable to load organization admin options.");
+  }
+
+  try {
+    pendingOrganizationEndorsements = await getPendingOrganizationEndorsements({ limit: 50 });
+  } catch (error) {
+    console.error(error?.message || "Unable to load pending organization endorsements.");
+  }
+
+  try {
+    const candidateData = await getCandidates({
+      officeType: "General Court",
+      electionYear: 2026,
+      limit: 1000,
+    });
+    candidateEndorsementOptions = (candidateData.candidates || [])
+      .filter(isLegislativeCandidate)
+      .sort((a, b) => candidateName(a).localeCompare(candidateName(b)))
+      .map((candidate) => {
+        const slug = candidateSlug(candidate);
+        const name = candidateName(candidate);
+        const officeParts = [
+          candidate.office,
+          candidate.county,
+          candidate.district ? `District ${candidate.district}` : "",
+        ].filter(Boolean);
+        const label = [name, officeParts.join(" - ")].filter(Boolean).join(" | ");
+
+        return {
+          label,
+          value: label,
+          name,
+          slug,
+          office: candidate.office || "",
+          district: [candidate.county, candidate.district ? `District ${candidate.district}` : ""]
+            .filter(Boolean)
+            .join(", "),
+          electionYear: String(candidate.electionYear || 2026),
+        };
+      });
+  } catch (error) {
+    console.error(error?.message || "Unable to load endorsement candidate options.");
   }
 
   try {
@@ -150,7 +227,49 @@ function reviewDate(value = "") {
             </form>
           </section>
 
-          <section class="panel">
+          <section class="panel admin-toc">
+            <div class="panel-heading">
+              <p class="eyebrow">Admin Tools</p>
+              <h2>Work queue</h2>
+              <p>Start with moderation and profile cleanup, then use the data tools when you need to change source records.</p>
+            </div>
+
+            <div class="admin-metrics">
+              <a href="#community-updates">
+                <span>Community updates</span>
+                <strong>{pendingCommunityUpdates.length}</strong>
+              </a>
+              <a href="#article-submissions">
+                <span>Submitted articles</span>
+                <strong>{pendingArticleSubmissions.length}</strong>
+              </a>
+              <a href="#endorsement-submissions">
+                <span>Endorsements</span>
+                <strong>{pendingOrganizationEndorsements.length}</strong>
+              </a>
+              <a href="#profile-cleanup">
+                <span>Profile cleanup</span>
+                <strong>{profileGaps.counts.total || 0}</strong>
+              </a>
+              <a href="#organizations-admin">
+                <span>Organizations</span>
+                <strong>{organizations.length}</strong>
+              </a>
+            </div>
+
+            <nav class="admin-links" aria-label="Admin sections">
+              <a href="#profile-editing">Edit profiles</a>
+              <a href="#profile-cleanup">Profile cleanup</a>
+              <a href="#community-updates">Community updates</a>
+              <a href="#article-submissions">Submitted articles</a>
+              <a href="#endorsement-submissions">Endorsements</a>
+              <a href="#organizations-admin">Organizations</a>
+              <a href="#asset-upload">Image uploads</a>
+              <a href="#database-tools">D1 SQL</a>
+            </nav>
+          </section>
+
+          <section id="profile-editing" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Profiles</p>
               <h2>Edit candidates and legislators</h2>
@@ -166,7 +285,7 @@ function reviewDate(value = "") {
             </div>
           </section>
 
-          <section class="panel">
+          <section id="profile-cleanup" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Profile Cleanup</p>
               <h2>Missing profile info</h2>
@@ -293,7 +412,7 @@ function reviewDate(value = "") {
             )}
           </section>
 
-          <section class="panel">
+          <section id="community-updates" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Moderation</p>
               <h2>Community updates</h2>
@@ -355,7 +474,7 @@ function reviewDate(value = "") {
             )}
           </section>
 
-          <section class="panel">
+          <section id="article-submissions" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Moderation</p>
               <h2>Submitted articles</h2>
@@ -439,7 +558,66 @@ function reviewDate(value = "") {
             )}
           </section>
 
-          <section class="panel">
+          <section id="endorsement-submissions" class="panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Moderation</p>
+              <h2>Organization endorsements</h2>
+              <p>
+                Review community-submitted endorsements before they appear on
+                candidate profiles. Approving also creates a minimal
+                organization profile when needed.
+              </p>
+            </div>
+
+            {pendingOrganizationEndorsements.length ? (
+              <div class="moderation-list">
+                {pendingOrganizationEndorsements.map((endorsement) => (
+                  <article>
+                    <div class="moderation-topline">
+                      <strong>{cleanText(endorsement.organization)}</strong>
+                      <span>{cleanText(endorsement.position || "Endorsement")}</span>
+                    </div>
+
+                    <p class="moderation-meta">
+                      {cleanText(endorsement.candidateName)}
+                      {endorsement.office && ` - ${cleanText(endorsement.office)}`}
+                      {endorsement.district && ` - ${cleanText(endorsement.district)}`}
+                    </p>
+
+                    {endorsement.organizationWebsite && (
+                      <a href={endorsement.organizationWebsite}>Organization website</a>
+                    )}
+                    {endorsement.statement && <p>{cleanText(endorsement.statement)}</p>}
+                    {(endorsement.submitterName || endorsement.submitterEmail) && (
+                      <p class="moderation-meta">
+                        Submitted by {cleanText(endorsement.submitterName || "Unknown")}
+                        {endorsement.submitterEmail && ` (${endorsement.submitterEmail})`}
+                      </p>
+                    )}
+
+                    <div class="moderation-actions">
+                      <form action="/api/admin/endorsements" method="post">
+                        <input type="hidden" name="id" value={endorsement.id} />
+                        <input type="hidden" name="action" value="approve" />
+                        <input type="hidden" name="redirectTo" value="/admin#endorsement-submissions" />
+                        <button type="submit">Approve</button>
+                      </form>
+                      <form action="/api/admin/endorsements" method="post">
+                        <input type="hidden" name="id" value={endorsement.id} />
+                        <input type="hidden" name="action" value="reject" />
+                        <input type="hidden" name="redirectTo" value="/admin#endorsement-submissions" />
+                        <button class="secondary danger" type="submit">Reject</button>
+                      </form>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No organization endorsements are waiting for review.</p>
+            )}
+          </section>
+
+          <section id="organizations-admin" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Organizations</p>
               <h2>Create and update organization profiles</h2>
@@ -453,6 +631,11 @@ function reviewDate(value = "") {
             <form class="stack-form compact-action-form" action="/api/admin/organizations" method="post">
               <input type="hidden" name="action" value="import-sheets" />
               <input type="hidden" name="redirectTo" value="/admin" />
+              <p class="form-help">
+                Run this once after deployment, or again later if you need to
+                re-sync the legacy Google Sheet into D1. Existing D1 rows are
+                updated by slug.
+              </p>
               <button type="submit">Import Google Sheet to D1</button>
             </form>
 
@@ -461,10 +644,28 @@ function reviewDate(value = "") {
                 <option value={organization.slug} label={organization.name} />
               ))}
             </datalist>
+            <datalist id="endorsementCandidateOptions">
+              {candidateEndorsementOptions.map((option) => (
+                <option value={option.value} />
+              ))}
+            </datalist>
 
             <form class="stack-form organization-admin-form" action="/api/admin/organizations" method="post">
               <input type="hidden" name="action" value="save" />
               <input type="hidden" name="redirectTo" value="/admin" />
+
+              <div class="organization-toolbar">
+                <label>
+                  Load Existing Organization
+                  <input
+                    id="organizationAdminSearch"
+                    list="organizationAdminOptions"
+                    placeholder="Start typing a slug or organization name"
+                    autocomplete="off"
+                  />
+                </label>
+                <a id="organizationAdminProfileLink" class="secondary-link" href="/organizations">Open profile</a>
+              </div>
 
               <div class="form-grid two">
                 <label>
@@ -577,9 +778,88 @@ function reviewDate(value = "") {
 
               <button type="submit">Save Organization Profile</button>
             </form>
+
+            <form class="stack-form endorsement-admin-form" action="/api/admin/endorsements" method="post">
+              <input type="hidden" name="action" value="save" />
+              <input type="hidden" name="redirectTo" value="/admin#organizations-admin" />
+              <input id="endorsementCandidateSlug" type="hidden" name="candidateSlug" />
+              <input id="endorsementCandidateName" type="hidden" name="candidateName" />
+              <input id="endorsementCandidateOffice" type="hidden" name="office" />
+              <input id="endorsementCandidateDistrict" type="hidden" name="district" />
+              <input id="endorsementCandidateElectionYear" type="hidden" name="electionYear" value="2026" />
+
+              <div class="panel-heading compact-subheading">
+                <p class="eyebrow">Endorsements</p>
+                <h3>Add an organization endorsement</h3>
+                <p>
+                  Save a published endorsement directly to D1. Use the candidate
+                  selector so the endorsement links to the right profile.
+                </p>
+              </div>
+
+              <div class="form-grid two">
+                <label>
+                  Organization
+                  <input
+                    id="endorsementOrganizationSearch"
+                    name="organizationSlug"
+                    list="organizationAdminOptions"
+                    placeholder="Choose existing org slug or type a new one"
+                  />
+                </label>
+                <label>
+                  Organization name
+                  <input id="endorsementOrganizationName" name="organizationName" required />
+                </label>
+              </div>
+
+              <div class="form-grid two">
+                <label>
+                  Organization website
+                  <input id="endorsementOrganizationWebsite" name="organizationWebsite" type="url" />
+                </label>
+                <label>
+                  Organization email
+                  <input id="endorsementOrganizationEmail" name="organizationEmail" type="email" />
+                </label>
+              </div>
+
+              <label>
+                Candidate
+                <input
+                  id="endorsementCandidateSearch"
+                  list="endorsementCandidateOptions"
+                  placeholder="Start typing a candidate name"
+                  autocomplete="off"
+                  required
+                />
+              </label>
+
+              <div class="form-grid three">
+                <label>
+                  Position
+                  <select name="position">
+                    <option value="Endorsed">Endorsed</option>
+                    <option value="Recommended">Recommended</option>
+                    <option value="Opposed">Opposed</option>
+                    <option value="Supported">Supported</option>
+                  </select>
+                </label>
+                <label>
+                  Date
+                  <input name="date" type="date" />
+                </label>
+                <label>
+                  Short note
+                  <input name="statement" placeholder="Optional endorsement note" />
+                </label>
+              </div>
+
+              <button type="submit">Save Endorsement</button>
+            </form>
           </section>
 
-          <section class="panel">
+          <section id="database-tools" class="panel caution-panel">
             <div class="panel-heading">
               <p class="eyebrow">D1 Database</p>
               <h2>Run a data update</h2>
@@ -588,6 +868,11 @@ function reviewDate(value = "") {
                 be a JSON array, like <code>["HB699", 2025]</code>.
               </p>
             </div>
+            <details class="danger-disclosure">
+              <summary>
+                <span>Open SQL runner</span>
+                <strong>Advanced</strong>
+              </summary>
             <form class="stack-form" action="/api/admin/sql" method="post">
               <label for="sql">SQL</label>
               <textarea
@@ -608,9 +893,10 @@ function reviewDate(value = "") {
 
               <button type="submit">Run SQL</button>
             </form>
+            </details>
           </section>
 
-          <section class="panel">
+          <section id="asset-upload" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">R2 Storage</p>
               <h2>Upload an image</h2>
@@ -654,7 +940,7 @@ function reviewDate(value = "") {
         </div>
       )}
     </main>
-    <script>
+    <script define:vars={{ organizationAdminData, candidateEndorsementOptions }}>
       const profileSearch = document.getElementById("gapProfileSearch");
       const profileValue = document.getElementById("gapProfileValue");
       const profileOptions = Array.from(
@@ -712,6 +998,104 @@ function reviewDate(value = "") {
           }
         });
       });
+
+      const organizationSearch = document.getElementById("organizationAdminSearch");
+      const organizationProfileLink = document.getElementById("organizationAdminProfileLink");
+      const organizationForm = document.querySelector(".organization-admin-form");
+      const organizationMap = new Map();
+
+      organizationAdminData.forEach((organization) => {
+        organizationMap.set(organization.slug, organization);
+        organizationMap.set(organization.name, organization);
+      });
+
+      function setOrganizationField(name, value) {
+        const field = organizationForm?.elements?.[name];
+        if (!field) return;
+        if (field.type === "checkbox") {
+          field.checked = Boolean(value);
+          return;
+        }
+        field.value = value || "";
+      }
+
+      function hydrateOrganizationForm() {
+        if (!organizationSearch || !organizationForm) return;
+        const organization = organizationMap.get(organizationSearch.value);
+        if (!organization) return;
+
+        [
+          "name",
+          "slug",
+          "type",
+          "issueArea",
+          "shortDescription",
+          "mission",
+          "website",
+          "email",
+          "phone",
+          "city",
+          "town",
+          "state",
+          "serviceArea",
+          "logoUrl",
+          "bannerImageUrl",
+          "facebook",
+          "instagram",
+          "bluesky",
+          "foundedYear",
+          "notes",
+        ].forEach((fieldName) => setOrganizationField(fieldName, organization[fieldName]));
+        setOrganizationField("approved", organization.approved);
+
+        if (organizationProfileLink) {
+          organizationProfileLink.href = organization.profilePath || "/organizations";
+          organizationProfileLink.textContent = "Open selected profile";
+        }
+      }
+
+      organizationSearch?.addEventListener("change", hydrateOrganizationForm);
+      organizationSearch?.addEventListener("input", hydrateOrganizationForm);
+
+      const endorsementOrganizationSearch = document.getElementById("endorsementOrganizationSearch");
+      const endorsementOrganizationName = document.getElementById("endorsementOrganizationName");
+      const endorsementOrganizationWebsite = document.getElementById("endorsementOrganizationWebsite");
+      const endorsementOrganizationEmail = document.getElementById("endorsementOrganizationEmail");
+
+      function hydrateEndorsementOrganization() {
+        const organization = organizationMap.get(endorsementOrganizationSearch?.value || "");
+        if (!organization) return;
+        if (endorsementOrganizationName) endorsementOrganizationName.value = organization.name || "";
+        if (endorsementOrganizationWebsite) endorsementOrganizationWebsite.value = organization.website || "";
+        if (endorsementOrganizationEmail) endorsementOrganizationEmail.value = organization.email || "";
+      }
+
+      endorsementOrganizationSearch?.addEventListener("change", hydrateEndorsementOrganization);
+      endorsementOrganizationSearch?.addEventListener("input", hydrateEndorsementOrganization);
+
+      const endorsementCandidateSearch = document.getElementById("endorsementCandidateSearch");
+      const endorsementCandidateFields = {
+        slug: document.getElementById("endorsementCandidateSlug"),
+        name: document.getElementById("endorsementCandidateName"),
+        office: document.getElementById("endorsementCandidateOffice"),
+        district: document.getElementById("endorsementCandidateDistrict"),
+        electionYear: document.getElementById("endorsementCandidateElectionYear"),
+      };
+      const endorsementCandidateMap = new Map(
+        candidateEndorsementOptions.map((option) => [option.value, option]),
+      );
+
+      function syncEndorsementCandidate() {
+        const selected = endorsementCandidateMap.get(endorsementCandidateSearch?.value || "");
+        endorsementCandidateFields.slug.value = selected?.slug || "";
+        endorsementCandidateFields.name.value = selected?.name || "";
+        endorsementCandidateFields.office.value = selected?.office || "";
+        endorsementCandidateFields.district.value = selected?.district || "";
+        endorsementCandidateFields.electionYear.value = selected?.electionYear || "2026";
+      }
+
+      endorsementCandidateSearch?.addEventListener("input", syncEndorsementCandidate);
+      endorsementCandidateSearch?.form?.addEventListener("submit", syncEndorsementCandidate);
     </script>
   </body>
 </html>
@@ -764,6 +1148,12 @@ function reviewDate(value = "") {
     margin: 0;
   }
 
+  h3 {
+    font-size: clamp(1.12rem, 2vw, 1.45rem);
+    line-height: 1.1;
+    margin: 0;
+  }
+
   .lede,
   .panel-heading p,
   .asset-link,
@@ -785,14 +1175,62 @@ function reviewDate(value = "") {
     grid-template-columns: minmax(260px, 0.36fr) minmax(0, 1fr);
   }
 
-  .admin-grid .panel:nth-child(2),
-  .admin-grid .panel:nth-child(3),
-  .admin-grid .panel:nth-child(4),
-  .admin-grid .panel:nth-child(5),
-  .admin-grid .panel:nth-child(6),
-  .admin-grid .panel:nth-child(7),
-  .admin-grid .panel:nth-child(8) {
+  .admin-grid .panel:not(:first-child):not(.admin-toc) {
     grid-column: 2;
+  }
+
+  .admin-toc {
+    align-self: start;
+    position: sticky;
+    top: 18px;
+  }
+
+  .admin-metrics {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 16px 0;
+  }
+
+  .admin-metrics a {
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    display: grid;
+    gap: 6px;
+    padding: 12px;
+    text-decoration: none;
+  }
+
+  .admin-metrics span {
+    color: #4b5563;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .admin-metrics strong {
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .admin-links {
+    display: grid;
+    gap: 8px;
+  }
+
+  .admin-links a,
+  .secondary-link {
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.86rem;
+    font-weight: 900;
+    padding: 9px 11px;
+    text-align: center;
+    text-decoration: none;
   }
 
   .panel,
@@ -814,6 +1252,34 @@ function reviewDate(value = "") {
     border-bottom: 1px solid #d1d5db;
     margin-bottom: 18px;
     padding-bottom: 18px;
+  }
+
+  .compact-subheading {
+    border-top: 1px solid #d1d5db;
+    margin-top: 10px;
+    padding-top: 20px;
+  }
+
+  .form-help {
+    background: #eef6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    color: #1e3a8a;
+    font-weight: 800;
+    line-height: 1.45;
+    margin: 0;
+    padding: 11px 12px;
+  }
+
+  .organization-toolbar {
+    align-items: end;
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 12px;
   }
 
   .form-grid {
@@ -847,6 +1313,44 @@ function reviewDate(value = "") {
 
   .panel-heading {
     margin-bottom: 18px;
+  }
+
+  .caution-panel {
+    background: #fffaf1;
+  }
+
+  .danger-disclosure summary {
+    align-items: center;
+    background: white;
+    border: 1px solid #9ca3af;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    list-style: none;
+    padding: 12px 14px;
+  }
+
+  .danger-disclosure summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .danger-disclosure summary span {
+    font-weight: 900;
+  }
+
+  .danger-disclosure summary strong {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    border-radius: 999px;
+    color: #991b1b;
+    font-size: 0.74rem;
+    padding: 5px 8px;
+  }
+
+  .danger-disclosure .stack-form {
+    margin-top: 14px;
   }
 
   .profile-actions {
@@ -1190,18 +1694,17 @@ function reviewDate(value = "") {
       grid-template-columns: 1fr;
     }
 
-    .admin-grid .panel:nth-child(2),
-    .admin-grid .panel:nth-child(3),
-    .admin-grid .panel:nth-child(4),
-    .admin-grid .panel:nth-child(5),
-    .admin-grid .panel:nth-child(6),
-    .admin-grid .panel:nth-child(7),
-    .admin-grid .panel:nth-child(8) {
+    .admin-grid .panel:not(:first-child):not(.admin-toc) {
       grid-column: auto;
     }
 
+    .admin-toc {
+      position: static;
+    }
+
     .form-grid.two,
-    .form-grid.three {
+    .form-grid.three,
+    .organization-toolbar {
       grid-template-columns: 1fr;
     }
   }

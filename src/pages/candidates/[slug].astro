@@ -10,6 +10,7 @@ import { currentAdminSession } from "../../lib/adminAuth";
 import { representativePersonIdForCandidate } from "../../lib/candidateLegislatorLinks";
 import {
   candidateName,
+  candidateSlug,
   formatCandidateParty,
   getCandidate,
   partyClassName,
@@ -481,8 +482,13 @@ function roleOfficeLine(role = {}) {
 
       <section class="panel endorsements-panel">
         <div class="section-heading">
-          <p class="eyebrow">Endorsements</p>
-          <h2>Organizational Endorsements</h2>
+          <div>
+            <p class="eyebrow">Endorsements</p>
+            <h2>Organizational Endorsements</h2>
+          </div>
+          <a class="section-action" href={`/endorsements/submit?candidate=${encodeURIComponent(candidateSlug(candidate))}`}>
+            Submit an Endorsement
+          </a>
         </div>
 
         {endorsements.length ? (
@@ -667,6 +673,24 @@ function roleOfficeLine(role = {}) {
   .section-heading h2 {
     font-size: 1.45rem;
     margin: 0 0 16px;
+  }
+
+  .endorsements-panel .section-heading {
+    align-items: start;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+  }
+
+  .section-action {
+    background: #1f2933;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    flex: 0 0 auto;
+    font-size: 0.84rem;
+    padding: 9px 12px;
+    text-decoration: none;
   }
 
   .summary-strip span,
