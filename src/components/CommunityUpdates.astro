@@ -13,6 +13,7 @@ const {
 } = Astro.props;
 
 const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
+const hasInstagramEmbeds = updates.some((update) => instagramPreview(update.linkUrl));
 
 function linkHost(value = "") {
   try {
@@ -50,10 +51,18 @@ function instagramPreview(value = "") {
       label,
       handle,
       host,
+      permalink: instagramPermalink(url),
     };
   } catch {
     return null;
   }
+}
+
+function instagramPermalink(url) {
+  const cleanUrl = new URL(url.toString());
+  cleanUrl.search = "";
+  cleanUrl.hash = "";
+  return cleanUrl.toString();
 }
 
 function mentionParts(comment = "", mentions = []) {
@@ -193,18 +202,30 @@ function escapeRegExp(value = "") {
             )}
             {update.linkUrl && (
               instagramPreview(update.linkUrl) ? (
-                <a class="instagram-preview-card" href={update.linkUrl}>
-                  <span class="instagram-icon" aria-hidden="true">IG</span>
-                  <span>
-                    <strong>{instagramPreview(update.linkUrl)?.label}</strong>
-                    <small>
-                      {instagramPreview(update.linkUrl)?.handle
-                        ? `@${instagramPreview(update.linkUrl)?.handle}`
-                        : instagramPreview(update.linkUrl)?.host}
-                    </small>
-                  </span>
-                  <em>Open</em>
-                </a>
+                <div class="instagram-embed-wrap">
+                  <div class="instagram-preview-card">
+                    <span class="instagram-icon" aria-hidden="true">IG</span>
+                    <span>
+                      <strong>{instagramPreview(update.linkUrl)?.label}</strong>
+                      <small>
+                        {instagramPreview(update.linkUrl)?.handle
+                          ? `@${instagramPreview(update.linkUrl)?.handle}`
+                          : instagramPreview(update.linkUrl)?.host}
+                      </small>
+                    </span>
+                    <a href={instagramPreview(update.linkUrl)?.permalink || update.linkUrl}>Open</a>
+                  </div>
+                  <blockquote
+                    class="instagram-media"
+                    data-instgrm-captioned
+                    data-instgrm-permalink={instagramPreview(update.linkUrl)?.permalink}
+                    data-instgrm-version="14"
+                  >
+                    <a href={instagramPreview(update.linkUrl)?.permalink || update.linkUrl}>
+                      View this post on Instagram
+                    </a>
+                  </blockquote>
+                </div>
               ) : (
                 <a class="community-update-link" href={update.linkUrl}>
                   <span>Open linked context</span>
@@ -227,6 +248,8 @@ function escapeRegExp(value = "") {
     <img src="" alt="" />
   </dialog>
 </section>
+
+{hasInstagramEmbeds && <script async src="https://www.instagram.com/embed.js"></script>}
 
 <script>
   document.querySelectorAll(".community-updates-panel").forEach((panel) => {
@@ -509,6 +532,12 @@ function escapeRegExp(value = "") {
     font-weight: 900;
   }
 
+  .instagram-embed-wrap {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
   .instagram-preview-card {
     align-items: center;
     background:
@@ -520,7 +549,6 @@ function escapeRegExp(value = "") {
     display: grid;
     gap: 10px;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    margin-top: 12px;
     padding: 10px 12px;
     text-decoration: none;
   }
@@ -555,11 +583,31 @@ function escapeRegExp(value = "") {
     margin-top: 2px;
   }
 
-  .instagram-preview-card em {
+  .instagram-preview-card a {
     color: #db2777;
     font-size: 0.78rem;
-    font-style: normal;
     font-weight: 950;
+    text-decoration: none;
+  }
+
+  .instagram-media {
+    background: #ffffff;
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 0 1px rgba(0, 0, 0, 0.35), 0 4px 18px rgba(17, 24, 39, 0.12);
+    box-sizing: border-box;
+    margin: 0;
+    max-width: 540px;
+    min-width: 0;
+    overflow: hidden;
+    padding: 14px;
+    width: 100%;
+  }
+
+  .instagram-media a {
+    color: #3897f0;
+    font-weight: 900;
+    text-decoration: none;
   }
 
   .community-update-form {

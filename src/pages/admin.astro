@@ -9,6 +9,7 @@ import {
   getPendingArticleSubmissions,
 } from "../lib/articleSubmissions";
 import { communityUpdateDate, getPendingCommunityUpdates } from "../lib/communityUpdates";
+import { getOrganizations } from "../lib/organizationsApi";
 import { cleanText } from "../lib/text";
 import { getPeopleLinkOptions } from "../lib/unifiedPeople";
 
@@ -37,6 +38,7 @@ let pendingArticleSubmissions = [];
 let profileGaps = { results: [], counts: {} };
 let gapProfileLabel = "";
 let peopleOptions = [];
+let organizations = [];
 
 if (session) {
   try {
@@ -55,6 +57,12 @@ if (session) {
     peopleOptions = await getPeopleLinkOptions({ limit: 900 });
   } catch (error) {
     console.error(error?.message || "Unable to load people link options.");
+  }
+
+  try {
+    organizations = await getOrganizations({ includeUnapproved: true });
+  } catch (error) {
+    console.error(error?.message || "Unable to load organization admin options.");
   }
 
   try {
@@ -433,6 +441,146 @@ function reviewDate(value = "") {
 
           <section class="panel">
             <div class="panel-heading">
+              <p class="eyebrow">Organizations</p>
+              <h2>Create and update organization profiles</h2>
+              <p>
+                Organization profiles, bill comments, and endorsements now live
+                in D1. Import the existing Google Sheet once, then maintain
+                organization profile data here.
+              </p>
+            </div>
+
+            <form class="stack-form compact-action-form" action="/api/admin/organizations" method="post">
+              <input type="hidden" name="action" value="import-sheets" />
+              <input type="hidden" name="redirectTo" value="/admin" />
+              <button type="submit">Import Google Sheet to D1</button>
+            </form>
+
+            <datalist id="organizationAdminOptions">
+              {organizations.map((organization) => (
+                <option value={organization.slug} label={organization.name} />
+              ))}
+            </datalist>
+
+            <form class="stack-form organization-admin-form" action="/api/admin/organizations" method="post">
+              <input type="hidden" name="action" value="save" />
+              <input type="hidden" name="redirectTo" value="/admin" />
+
+              <div class="form-grid two">
+                <label>
+                  Name
+                  <input name="name" placeholder="Organization name" required />
+                </label>
+                <label>
+                  Slug
+                  <input name="slug" list="organizationAdminOptions" placeholder="existing-or-new-slug" />
+                </label>
+              </div>
+
+              <div class="form-grid two">
+                <label>
+                  Type
+                  <input name="type" placeholder="Advocacy organization" />
+                </label>
+                <label>
+                  Issue Area
+                  <input name="issueArea" placeholder="Housing, Labor, Education" />
+                </label>
+              </div>
+
+              <label>
+                Short Description
+                <textarea name="shortDescription" rows="2"></textarea>
+              </label>
+
+              <label>
+                Mission
+                <textarea name="mission" rows="4"></textarea>
+              </label>
+
+              <div class="form-grid three">
+                <label>
+                  Website
+                  <input name="website" type="url" />
+                </label>
+                <label>
+                  Email
+                  <input name="email" type="email" />
+                </label>
+                <label>
+                  Phone
+                  <input name="phone" />
+                </label>
+              </div>
+
+              <div class="form-grid three">
+                <label>
+                  City
+                  <input name="city" />
+                </label>
+                <label>
+                  Town
+                  <input name="town" />
+                </label>
+                <label>
+                  State
+                  <input name="state" value="NH" />
+                </label>
+              </div>
+
+              <label>
+                Service Area
+                <input name="serviceArea" placeholder="Manchester, Hillsborough County, statewide" />
+              </label>
+
+              <div class="form-grid two">
+                <label>
+                  Logo filename or URL
+                  <input name="logoUrl" placeholder="org-logo.png" />
+                </label>
+                <label>
+                  Banner filename or URL
+                  <input name="bannerImageUrl" placeholder="org-banner.png" />
+                </label>
+              </div>
+
+              <div class="form-grid three">
+                <label>
+                  Facebook
+                  <input name="facebook" />
+                </label>
+                <label>
+                  Instagram
+                  <input name="instagram" />
+                </label>
+                <label>
+                  Bluesky
+                  <input name="bluesky" />
+                </label>
+              </div>
+
+              <div class="form-grid two">
+                <label>
+                  Founded Year
+                  <input name="foundedYear" />
+                </label>
+                <label class="checkbox-label">
+                  <input name="approved" type="checkbox" value="1" checked />
+                  Approved for public display
+                </label>
+              </div>
+
+              <label>
+                Notes
+                <textarea name="notes" rows="3"></textarea>
+              </label>
+
+              <button type="submit">Save Organization Profile</button>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
               <p class="eyebrow">D1 Database</p>
               <h2>Run a data update</h2>
               <p>
@@ -642,7 +790,8 @@ function reviewDate(value = "") {
   .admin-grid .panel:nth-child(4),
   .admin-grid .panel:nth-child(5),
   .admin-grid .panel:nth-child(6),
-  .admin-grid .panel:nth-child(7) {
+  .admin-grid .panel:nth-child(7),
+  .admin-grid .panel:nth-child(8) {
     grid-column: 2;
   }
 
@@ -659,6 +808,41 @@ function reviewDate(value = "") {
   .stack-form {
     display: grid;
     gap: 14px;
+  }
+
+  .compact-action-form {
+    border-bottom: 1px solid #d1d5db;
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+  }
+
+  .form-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .form-grid.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-grid.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .checkbox-label {
+    align-content: center;
+    align-items: center;
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .checkbox-label input {
+    flex: 0 0 auto;
+    width: auto;
   }
 
   .panel-heading {
@@ -1011,8 +1195,14 @@ function reviewDate(value = "") {
     .admin-grid .panel:nth-child(4),
     .admin-grid .panel:nth-child(5),
     .admin-grid .panel:nth-child(6),
-    .admin-grid .panel:nth-child(7) {
+    .admin-grid .panel:nth-child(7),
+    .admin-grid .panel:nth-child(8) {
       grid-column: auto;
+    }
+
+    .form-grid.two,
+    .form-grid.three {
+      grid-template-columns: 1fr;
     }
   }
 </style>

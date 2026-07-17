@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import TopNav from "../../components/TopNav.astro";
+import { currentAdminSession } from "../../lib/adminAuth";
 import {
   getOrganization,
   normalizeBillCode,
@@ -11,6 +12,7 @@ const { slug = "" } = Astro.params;
 
 let organization = null;
 let error = "";
+const adminSession = await currentAdminSession(Astro.request);
 
 try {
   organization = await getOrganization(slug);
@@ -103,6 +105,135 @@ function positionClass(position = "") {
 
           <section class="content-grid">
             <div class="stack">
+              {adminSession && (
+                <section class="panel admin-edit-panel">
+                  <div class="section-heading">
+                    <p class="eyebrow">Admin</p>
+                    <h2>Edit Organization Profile</h2>
+                    <p>
+                      These edits save to D1 and become the source for public
+                      organization profiles going forward.
+                    </p>
+                  </div>
+
+                  <form class="admin-org-form" action="/api/admin/organizations" method="post">
+                    <input type="hidden" name="action" value="save" />
+                    <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+
+                    <div class="form-grid two">
+                      <label>
+                        Name
+                        <input name="name" value={organization.name} required />
+                      </label>
+                      <label>
+                        Slug
+                        <input name="slug" value={organization.slug} />
+                      </label>
+                    </div>
+
+                    <div class="form-grid two">
+                      <label>
+                        Type
+                        <input name="type" value={organization.type} />
+                      </label>
+                      <label>
+                        Issue Area
+                        <input name="issueArea" value={organization.issueArea} />
+                      </label>
+                    </div>
+
+                    <label>
+                      Short Description
+                      <textarea name="shortDescription" rows="2">{organization.shortDescription}</textarea>
+                    </label>
+
+                    <label>
+                      Mission
+                      <textarea name="mission" rows="4">{organization.mission}</textarea>
+                    </label>
+
+                    <div class="form-grid three">
+                      <label>
+                        Website
+                        <input name="website" type="url" value={organization.website} />
+                      </label>
+                      <label>
+                        Email
+                        <input name="email" type="email" value={organization.email} />
+                      </label>
+                      <label>
+                        Phone
+                        <input name="phone" value={organization.phone} />
+                      </label>
+                    </div>
+
+                    <div class="form-grid three">
+                      <label>
+                        City
+                        <input name="city" value={organization.city} />
+                      </label>
+                      <label>
+                        Town
+                        <input name="town" value={organization.town} />
+                      </label>
+                      <label>
+                        State
+                        <input name="state" value={organization.state || "NH"} />
+                      </label>
+                    </div>
+
+                    <label>
+                      Service Area
+                      <input name="serviceArea" value={organization.serviceArea} />
+                    </label>
+
+                    <div class="form-grid two">
+                      <label>
+                        Logo filename or URL
+                        <input name="logoUrl" value={organization.logoUrl} />
+                      </label>
+                      <label>
+                        Banner filename or URL
+                        <input name="bannerImageUrl" value={organization.bannerImageUrl} />
+                      </label>
+                    </div>
+
+                    <div class="form-grid three">
+                      <label>
+                        Facebook
+                        <input name="facebook" value={organization.facebook} />
+                      </label>
+                      <label>
+                        Instagram
+                        <input name="instagram" value={organization.instagram} />
+                      </label>
+                      <label>
+                        Bluesky
+                        <input name="bluesky" value={organization.bluesky} />
+                      </label>
+                    </div>
+
+                    <div class="form-grid two">
+                      <label>
+                        Founded Year
+                        <input name="foundedYear" value={organization.foundedYear} />
+                      </label>
+                      <label class="checkbox-label">
+                        <input name="approved" type="checkbox" value="1" checked={organization.approved} />
+                        Approved for public display
+                      </label>
+                    </div>
+
+                    <label>
+                      Notes
+                      <textarea name="notes" rows="3">{organization.notes}</textarea>
+                    </label>
+
+                    <button type="submit">Save Organization Profile</button>
+                  </form>
+                </section>
+              )}
+
               <section class="panel">
                 <div class="section-heading">
                   <p class="eyebrow">Profile</p>
@@ -325,6 +456,84 @@ function positionClass(position = "") {
     grid-template-columns: minmax(0, 1fr) minmax(300px, 0.38fr);
   }
 
+  .admin-edit-panel {
+    background: #f8fafc;
+  }
+
+  .admin-org-form {
+    display: grid;
+    gap: 14px;
+  }
+
+  .form-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .form-grid.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-grid.three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  label {
+    color: #374151;
+    display: grid;
+    font-size: 0.78rem;
+    font-weight: 950;
+    gap: 7px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  input,
+  textarea {
+    background: #fffaf1;
+    border: 1px solid #9ca3af;
+    border-radius: 12px;
+    box-sizing: border-box;
+    color: #1f2933;
+    font: inherit;
+    font-weight: 750;
+    letter-spacing: 0;
+    padding: 12px 13px;
+    text-transform: none;
+    width: 100%;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  .checkbox-label {
+    align-content: center;
+    align-items: center;
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .checkbox-label input {
+    width: auto;
+  }
+
+  button {
+    background: #1f2933;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+    justify-self: start;
+    padding: 12px 16px;
+  }
+
   .stack,
   .comment-list,
   .link-list {
@@ -427,6 +636,11 @@ function positionClass(position = "") {
   @media (max-width: 820px) {
     .content-grid,
     .hero-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .form-grid.two,
+    .form-grid.three {
       grid-template-columns: 1fr;
     }
 
