@@ -820,6 +820,90 @@ function reviewDate(value = "") {
               <button type="submit">Upload Organization Logo</button>
             </form>
 
+            <form class="stack-form organization-comment-form" action="/api/admin/organizations" method="post">
+              <input type="hidden" name="action" value="save-comment" />
+              <input type="hidden" name="redirectTo" value="/admin#organizations-admin" />
+
+              <div class="panel-heading compact-subheading">
+                <p class="eyebrow">Bill Stance</p>
+                <h3>Add organization comment on a bill</h3>
+                <p>
+                  Publish an organization stance or comment so it appears on
+                  bill profiles and the organization profile.
+                </p>
+              </div>
+
+              <div class="form-grid two">
+                <label>
+                  Organization slug
+                  <input
+                    id="organizationCommentSlug"
+                    name="organizationSlug"
+                    list="organizationAdminOptions"
+                    placeholder="organization-slug"
+                    required
+                  />
+                </label>
+                <label>
+                  Organization name
+                  <input id="organizationCommentName" name="organizationName" required />
+                </label>
+              </div>
+
+              <div class="form-grid three">
+                <label>
+                  Bill code
+                  <input name="bill" placeholder="HB155" required />
+                </label>
+                <label>
+                  Bill label
+                  <input name="billLabel" placeholder="HB155: Optional title" />
+                </label>
+                <label>
+                  Position
+                  <select name="position">
+                    <option value="Support">Support</option>
+                    <option value="Oppose">Oppose</option>
+                    <option value="Monitor">Monitor</option>
+                    <option value="Neutral">Neutral</option>
+                    <option value="Concern">Concern</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="form-grid three">
+                <label>
+                  Issue area
+                  <input name="issueArea" placeholder="Housing, Labor, Education" />
+                </label>
+                <label>
+                  Towns
+                  <input name="towns" placeholder="Manchester, Nashua, statewide" />
+                </label>
+                <label>
+                  Date
+                  <input name="date" type="date" />
+                </label>
+              </div>
+
+              <label>
+                Author or signer
+                <input name="author" placeholder="Executive Director, board, campaign, etc." />
+              </label>
+
+              <label>
+                Comment
+                <textarea
+                  name="comment"
+                  rows="5"
+                  placeholder="Paste or summarize the organization's public comment, stance, or testimony."
+                  required
+                ></textarea>
+              </label>
+
+              <button type="submit">Save Organization Comment</button>
+            </form>
+
             <form class="stack-form endorsement-admin-form" action="/api/admin/endorsements" method="post">
               <input type="hidden" name="action" value="save" />
               <input type="hidden" name="redirectTo" value="/admin#organizations-admin" />
@@ -1047,6 +1131,8 @@ function reviewDate(value = "") {
       const organizationForm = document.querySelector(".organization-admin-form");
       const organizationLogoEntityKey = document.getElementById("organizationLogoEntityKey");
       const organizationLogoKey = document.getElementById("organizationLogoKey");
+      const organizationCommentSlug = document.getElementById("organizationCommentSlug");
+      const organizationCommentName = document.getElementById("organizationCommentName");
       const organizationMap = new Map();
 
       organizationAdminData.forEach((organization) => {
@@ -1099,6 +1185,7 @@ function reviewDate(value = "") {
         }
 
         hydrateOrganizationLogoUpload(organization);
+        hydrateOrganizationCommentForm(organization);
       }
 
       function hydrateOrganizationLogoUpload(organization) {
@@ -1110,6 +1197,12 @@ function reviewDate(value = "") {
         }
       }
 
+      function hydrateOrganizationCommentForm(organization) {
+        if (!organization) return;
+        if (organizationCommentSlug) organizationCommentSlug.value = organization.slug || "";
+        if (organizationCommentName) organizationCommentName.value = organization.name || "";
+      }
+
       function syncOrganizationLogoUploadFromFields() {
         const slugField = organizationForm?.elements?.slug;
         const nameField = organizationForm?.elements?.name;
@@ -1119,6 +1212,12 @@ function reviewDate(value = "") {
         }
         if (organizationLogoKey) {
           organizationLogoKey.placeholder = `organizations/logos/${organizationKey || "organization"}-logo.png`;
+        }
+        if (organizationCommentSlug && !organizationCommentSlug.value) {
+          organizationCommentSlug.value = slugField?.value || "";
+        }
+        if (organizationCommentName && !organizationCommentName.value) {
+          organizationCommentName.value = nameField?.value || "";
         }
       }
 

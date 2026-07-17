@@ -3,6 +3,7 @@ export const prerender = false;
 import { requireAdmin } from "../../../lib/adminAuth";
 import {
   importOrganizationsFromSheets,
+  saveOrganizationComment,
   saveOrganizationProfile,
 } from "../../../lib/organizationsApi";
 
@@ -23,6 +24,27 @@ export async function POST({ request }) {
         request,
         redirectTo,
         `Imported ${result.organizations} organizations, ${result.comments} comments, and ${result.endorsements} endorsements into D1.`,
+      );
+    }
+
+    if (action === "save-comment") {
+      const result = await saveOrganizationComment({
+        organizationName: form.get("organizationName"),
+        organizationSlug: form.get("organizationSlug"),
+        bill: form.get("bill"),
+        billLabel: form.get("billLabel"),
+        position: form.get("position"),
+        issueArea: form.get("issueArea"),
+        towns: form.get("towns"),
+        comment: form.get("comment"),
+        author: form.get("author"),
+        date: form.get("date"),
+      });
+
+      return redirectWithMessage(
+        request,
+        redirectTo,
+        `Organization comment saved for ${result.organizationSlug} on ${result.bill}.`,
       );
     }
 

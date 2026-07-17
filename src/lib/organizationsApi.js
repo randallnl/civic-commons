@@ -230,6 +230,73 @@ export async function saveOrganizationProfile(data = {}, db = organizationsDb())
   };
 }
 
+export async function saveOrganizationComment(data = {}, {
+  db = organizationsDb(),
+  status = "published",
+  source = "admin",
+} = {}) {
+  if (!db) throw new Error("D1 database binding is not configured.");
+  await ensureOrganizationTables(db);
+
+  const organizationName = cleanText(data.organizationName || data.organization || "");
+  const organizationSlug = slugify(data.organizationSlug || data.organization_slug || organizationName);
+  const comment = cleanText(data.comment || "");
+  const bill = normalizeBillCode(data.bill || data.billCode || "");
+  const billLabel = cleanText(data.billLabel || data.bill_label || bill);
+
+  if (!organizationName) throw new Error("Organization name is required.");
+  if (!organizationSlug) throw new Error("Organization slug is required.");
+  if (!bill) throw new Error("Bill code is required.");
+  if (!comment) throw new Error("Organization comment is required.");
+
+  await ensureOrganizationProfileForComment({
+    organizationName,
+    organizationSlug,
+    db,
+  });
+
+  const result = await db
+    .prepare(
+      `INSERT INTO organization_comments (
+         organization_slug, organization_name, bill, bill_label, position,
+         issue_area, towns, comment, author, date, status, source, updated_at
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT(organization_slug, bill, comment) DO UPDATE SET
+         organization_name = excluded.organization_name,
+         bill_label = excluded.bill_label,
+         position = excluded.position,
+         issue_area = excluded.issue_area,
+         towns = excluded.towns,
+         author = excluded.author,
+         date = excluded.date,
+         status = excluded.status,
+         source = excluded.source,
+         updated_at = CURRENT_TIMESTAMP`,
+    )
+    .bind(
+      organizationSlug,
+      organizationName,
+      bill,
+      billLabel,
+      cleanText(data.position || ""),
+      cleanText(data.issueArea || data.issue_area || ""),
+      cleanText(data.towns || data.town || ""),
+      comment,
+      cleanText(data.author || ""),
+      cleanText(data.date || ""),
+      status,
+      source,
+    )
+    .run();
+
+  return {
+    organizationSlug,
+    bill,
+    changed: result.meta?.changes ?? result.changes ?? 0,
+  };
+}
+
 export async function importOrganizationsFromSheets({
   profileCsvUrl =
     import.meta.env.ORGANIZATIONS_PROFILE_CSV_URL || DEFAULT_PROFILE_CSV_URL,
@@ -829,6 +896,27 @@ async function ensureOrganizationProfileForEndorsement({
     email,
     approved: 1,
     source: "endorsement",
+  }, db);
+}
+
+async function ensureOrganizationProfileForComment({
+  organizationSlug,
+  organizationName,
+  db,
+}) {
+  if (!organizationName || !organizationSlug) return;
+  const existing = await db
+    .prepare(`SELECT slug FROM organizations WHERE slug = ?`)
+    .bind(organizationSlug)
+    .first();
+  if (existing) return;
+
+  await saveOrganizationProfile({
+    name: organizationName,
+    slug: organizationSlug,
+    type: "Advocacy organization",
+    approved: 1,
+    source: "organization-comment",
   }, db);
 }
 
