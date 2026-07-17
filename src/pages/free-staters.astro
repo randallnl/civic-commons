@@ -11,6 +11,13 @@ import { getRepresentatives, repName } from "../lib/repsApi";
 import { getTrackedBills } from "../lib/trackedBills";
 
 const freeStateLogoUrl = organizationAssetUrl("freestateprojectlogo.png");
+const filterName = cleanFilter(Astro.url.searchParams.get("q"));
+const filterType = cleanFilter(Astro.url.searchParams.get("type")) || "all";
+const filterBody = cleanFilter(Astro.url.searchParams.get("body")) || "all";
+const filterParty = cleanFilter(Astro.url.searchParams.get("party")) || "all";
+const filterCounty = cleanFilter(Astro.url.searchParams.get("county"));
+const filterDistrict = cleanFilter(Astro.url.searchParams.get("district"));
+const filterTown = cleanFilter(Astro.url.searchParams.get("town"));
 let trackedBills = new Map();
 let billSummaries = new Map();
 let freeStaterLegislators = [];
@@ -70,6 +77,22 @@ try {
   directoryError = error?.message || "Unable to load Free Stater directory.";
 }
 
+const countyOptions = uniqueOptions([
+  ...freeStaterLegislators.map(countyForRep),
+  ...freeStaterCandidates.map((candidate) => candidate.county),
+]);
+const districtOptions = uniqueOptions([
+  ...freeStaterLegislators.map(districtForRep),
+  ...freeStaterCandidates.map((candidate) => candidate.district && `District ${candidate.district}`),
+]);
+const townOptions = uniqueOptions([
+  ...freeStaterLegislators.flatMap(townsForRep),
+  ...freeStaterCandidates.flatMap(townsForCandidate),
+]);
+
+const filteredFreeStaterLegislators = freeStaterLegislators.filter(matchesLegislatorFilters);
+const filteredFreeStaterCandidates = freeStaterCandidates.filter(matchesCandidateFilters);
+
 function organizationAssetUrl(filename = "") {
   return `/api/organization-assets/${String(filename)
     .split("/")
@@ -85,6 +108,125 @@ function repKey(rep = {}) {
       rep.slug ||
       repName(rep),
   ).toLowerCase();
+}
+
+function cleanFilter(value = "") {
+  return String(value || "").trim();
+}
+
+function matchesLegislatorFilters(rep = {}) {
+  if (filterType === "candidates") return false;
+  if (!matchesText(repName(rep), filterName)) return false;
+  if (!matchesBody(bodyForRep(rep), filterBody)) return false;
+  if (!matchesParty(rep.party, filterParty)) return false;
+  if (!matchesText(countyForRep(rep), filterCounty)) return false;
+  if (!matchesText(districtForRep(rep), filterDistrict)) return false;
+  if (filterTown && !townsForRep(rep).some((town) => matchesText(town, filterTown))) return false;
+  return true;
+}
+
+function matchesCandidateFilters(candidate = {}) {
+  if (filterType === "legislators") return false;
+  if (!matchesText(candidateDisplayName(candidate), filterName)) return false;
+  if (!matchesBody(candidate.office, filterBody)) return false;
+  if (!matchesParty(candidate.politicalParty, filterParty)) return false;
+  if (!matchesText(candidate.county, filterCounty)) return false;
+  if (!matchesText(candidate.district && `District ${candidate.district}`, filterDistrict)) return false;
+  if (filterTown && !townsForCandidate(candidate).some((town) => matchesText(town, filterTown))) return false;
+  return true;
+}
+
+function candidateDisplayName(candidate = {}) {
+  return String(candidate.name || `${candidate.candidateFirstName || ""} ${candidate.candidateLastName || ""}`).trim();
+}
+
+function bodyForRep(rep = {}) {
+  const value = String(rep.chamber || rep.legislativebody || "").toLowerCase();
+  if (value.includes("senate") || value === "s") return "senate";
+  return "house";
+}
+
+function matchesBody(value = "", filter = "all") {
+  if (!filter || filter === "all") return true;
+  const normalized = String(value || "").toLowerCase();
+  if (filter === "house") return normalized.includes("house") || normalized.includes("representative");
+  if (filter === "senate") return normalized.includes("senate") || normalized.includes("senator");
+  return true;
+}
+
+function matchesParty(value = "", filter = "all") {
+  if (!filter || filter === "all") return true;
+  const normalized = String(value || "").toLowerCase();
+  if (filter === "republican") return normalized === "r" || normalized.includes("republican");
+  if (filter === "democrat") return normalized === "d" || normalized.includes("democrat");
+  if (filter === "independent") return normalized === "i" || normalized.includes("independent");
+  return normalized.includes(filter);
+}
+
+function countyForRep(rep = {}) {
+  return rep.county || rep.county_name || rep.countyName || countyNameFromDistrict(rep.raw_district || rep.district || "");
+}
+
+function countyNameFromDistrict(value = "") {
+  const prefix = String(value).trim().split(/\s+/)[0]?.toUpperCase();
+  const countyMap = {
+    BEL: "Belknap",
+    CAR: "Carroll",
+    CHE: "Cheshire",
+    COO: "Coos",
+    GRA: "Grafton",
+    HIL: "Hillsborough",
+    MER: "Merrimack",
+    ROC: "Rockingham",
+    STR: "Strafford",
+    SUL: "Sullivan",
+  };
+  return countyMap[prefix] || "";
+}
+
+function districtForRep(rep = {}) {
+  const district = rep.raw_district || rep.district || "";
+  if (!district) return "";
+  const body = bodyForRep(rep);
+  if (body === "senate") return `District ${district}`;
+  return String(district).toUpperCase().includes("DISTRICT")
+    ? String(district)
+    : `District ${district}`;
+}
+
+function townsForRep(rep = {}) {
+  return uniqueOptions([
+    ...splitList(rep.location_text),
+    ...splitList(rep.towns_represented),
+    ...splitList(rep.townsRepresented),
+  ]);
+}
+
+function townsForCandidate(candidate = {}) {
+  return uniqueOptions([
+    candidate.town,
+    candidate.city,
+    ...splitList(candidate.towns),
+    ...splitList(candidate.townsRepresented),
+  ]);
+}
+
+function splitList(value = "") {
+  if (Array.isArray(value)) return value.map(cleanFilter).filter(Boolean);
+  return String(value || "")
+    .split(/[,;|]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function matchesText(value = "", filter = "") {
+  if (!filter) return true;
+  return String(value || "").toLowerCase().includes(filter.toLowerCase());
+}
+
+function uniqueOptions(values = []) {
+  return [...new Set(values.flat().map(cleanFilter).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 }
 ---
 
@@ -216,13 +358,79 @@ function repKey(rep = {}) {
         <div class="directory-summary">
           <article>
             <span>Current Legislators</span>
-            <strong>{freeStaterLegislators.length}</strong>
+            <strong>{filteredFreeStaterLegislators.length}</strong>
+            <small>{freeStaterLegislators.length} total</small>
           </article>
           <article>
             <span>2026 Legislative Candidates</span>
-            <strong>{freeStaterCandidates.length}</strong>
+            <strong>{filteredFreeStaterCandidates.length}</strong>
+            <small>{freeStaterCandidates.length} total</small>
           </article>
         </div>
+
+        <form class="directory-filters" action="/free-staters#directory" method="get">
+          <label>
+            Name
+            <input name="q" value={filterName} placeholder="Search by name" />
+          </label>
+
+          <label>
+            Show
+            <select name="type">
+              <option value="all" selected={filterType === "all"}>Legislators and candidates</option>
+              <option value="legislators" selected={filterType === "legislators"}>Current legislators</option>
+              <option value="candidates" selected={filterType === "candidates"}>2026 candidates</option>
+            </select>
+          </label>
+
+          <label>
+            Body / office
+            <select name="body">
+              <option value="all" selected={filterBody === "all"}>House and Senate</option>
+              <option value="house" selected={filterBody === "house"}>House</option>
+              <option value="senate" selected={filterBody === "senate"}>Senate</option>
+            </select>
+          </label>
+
+          <label>
+            Party
+            <select name="party">
+              <option value="all" selected={filterParty === "all"}>All parties</option>
+              <option value="republican" selected={filterParty === "republican"}>Republican</option>
+              <option value="democrat" selected={filterParty === "democrat"}>Democrat</option>
+              <option value="independent" selected={filterParty === "independent"}>Independent</option>
+            </select>
+          </label>
+
+          <label>
+            County
+            <input name="county" value={filterCounty} list="freeStaterCountyOptions" placeholder="County" />
+            <datalist id="freeStaterCountyOptions">
+              {countyOptions.map((option) => <option value={option} />)}
+            </datalist>
+          </label>
+
+          <label>
+            District
+            <input name="district" value={filterDistrict} list="freeStaterDistrictOptions" placeholder="District" />
+            <datalist id="freeStaterDistrictOptions">
+              {districtOptions.map((option) => <option value={option} />)}
+            </datalist>
+          </label>
+
+          <label>
+            Town / city
+            <input name="town" value={filterTown} list="freeStaterTownOptions" placeholder="Town or city" />
+            <datalist id="freeStaterTownOptions">
+              {townOptions.map((option) => <option value={option} />)}
+            </datalist>
+          </label>
+
+          <div class="filter-actions">
+            <button type="submit">Apply Filters</button>
+            <a href="/free-staters#directory">Clear</a>
+          </div>
+        </form>
 
         <section class="directory-block">
           <div class="section-heading">
@@ -233,9 +441,9 @@ function repKey(rep = {}) {
             </p>
           </div>
 
-          {freeStaterLegislators.length ? (
+          {filteredFreeStaterLegislators.length ? (
             <div class="rep-card-list">
-              {freeStaterLegislators.map((rep) => (
+              {filteredFreeStaterLegislators.map((rep) => (
                 <RepresentativeCard
                   rep={rep}
                   trackedBills={trackedBills}
@@ -244,7 +452,7 @@ function repKey(rep = {}) {
               ))}
             </div>
           ) : (
-            <p class="empty">No current Free Stater legislators were returned.</p>
+            <p class="empty">No current Free Stater legislators match these filters.</p>
           )}
         </section>
 
@@ -257,14 +465,14 @@ function repKey(rep = {}) {
             </p>
           </div>
 
-          {freeStaterCandidates.length ? (
+          {filteredFreeStaterCandidates.length ? (
             <div class="candidate-card-list">
-              {freeStaterCandidates.map((candidate) => (
+              {filteredFreeStaterCandidates.map((candidate) => (
                 <CandidateCard candidate={candidate} />
               ))}
             </div>
           ) : (
-            <p class="empty">No Free Stater legislative candidates were returned.</p>
+            <p class="empty">No Free Stater legislative candidates match these filters.</p>
           )}
         </section>
       </section>
@@ -402,6 +610,75 @@ function repKey(rep = {}) {
     margin-top: 8px;
   }
 
+  .directory-summary small {
+    color: #6b7280;
+    display: block;
+    font-weight: 850;
+    margin-top: 6px;
+  }
+
+  .directory-filters {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 12px;
+    box-shadow: 4px 4px 0 #1f2933;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 18px;
+  }
+
+  .directory-filters label {
+    color: #374151;
+    display: grid;
+    font-size: 0.78rem;
+    font-weight: 950;
+    gap: 7px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .directory-filters input,
+  .directory-filters select {
+    border: 1px solid #9ca3af;
+    border-radius: 10px;
+    color: #1f2933;
+    font: inherit;
+    font-size: 0.96rem;
+    font-weight: 750;
+    letter-spacing: 0;
+    padding: 10px 11px;
+    text-transform: none;
+    width: 100%;
+  }
+
+  .filter-actions {
+    align-items: end;
+    display: flex;
+    gap: 10px;
+  }
+
+  .filter-actions button,
+  .filter-actions a {
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    font: inherit;
+    font-weight: 950;
+    padding: 10px 13px;
+    text-decoration: none;
+  }
+
+  .filter-actions button {
+    background: #1f2933;
+    color: white;
+    cursor: pointer;
+  }
+
+  .filter-actions a {
+    background: white;
+    color: #1f2933;
+  }
+
   .directory-block {
     display: grid;
     gap: 18px;
@@ -503,8 +780,19 @@ function repKey(rep = {}) {
     }
 
     .directory-summary,
+    .directory-filters,
     .candidate-card-list {
       grid-template-columns: 1fr;
+    }
+
+    .filter-actions {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .filter-actions a,
+    .filter-actions button {
+      text-align: center;
     }
   }
 </style>
