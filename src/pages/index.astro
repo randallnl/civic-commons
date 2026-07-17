@@ -291,6 +291,35 @@ function previewText(text = "", maxLength = 150) {
   return `${normalized.slice(0, maxLength).trim()}...`;
 }
 
+function instagramPreview(value = "") {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, "").toLowerCase();
+    if (!["instagram.com", "instagr.am"].includes(host)) return null;
+
+    const parts = url.pathname.split("/").filter(Boolean);
+    const first = parts[0]?.toLowerCase() || "";
+    const labels = {
+      p: "Instagram post",
+      reel: "Instagram reel",
+      reels: "Instagram reel",
+      tv: "Instagram video",
+      stories: "Instagram story",
+    };
+    const label = labels[first] || "Instagram profile";
+    const handle =
+      first === "stories"
+        ? parts[1]
+        : labels[first]
+          ? ""
+          : parts[0] || "";
+
+    return { label, handle, host };
+  } catch {
+    return null;
+  }
+}
+
 function legislativeBody(person = {}) {
   const value = String(person.chamber || person.legislativebody || person.body || "").toLowerCase();
   if (value === "h" || value === "house") return "House";
@@ -664,7 +693,22 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
                       {communityUpdateDate(update.createdAt) && <em>{communityUpdateDate(update.createdAt)}</em>}
                     </div>
                     {update.linkUrl && (
-                      <a class="bill-comment-link" href={update.linkUrl}>Open submitted link</a>
+                      instagramPreview(update.linkUrl) ? (
+                        <a class="instagram-preview-card compact" href={update.linkUrl}>
+                          <span class="instagram-icon" aria-hidden="true">IG</span>
+                          <span>
+                            <strong>{instagramPreview(update.linkUrl)?.label}</strong>
+                            <small>
+                              {instagramPreview(update.linkUrl)?.handle
+                                ? `@${instagramPreview(update.linkUrl)?.handle}`
+                                : instagramPreview(update.linkUrl)?.host}
+                            </small>
+                          </span>
+                          <em>Open</em>
+                        </a>
+                      ) : (
+                        <a class="bill-comment-link" href={update.linkUrl}>Open submitted link</a>
+                      )
                     )}
                   </div>
                 </article>
@@ -1336,6 +1380,62 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
   .bill-comment-link:hover {
     text-decoration: underline;
+  }
+
+  .instagram-preview-card {
+    align-items: center;
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #f97316, #db2777, #7c3aed) border-box;
+    border: 2px solid transparent;
+    border-radius: 14px;
+    color: #1f2933;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: 10px 12px;
+    text-decoration: none;
+  }
+
+  .instagram-preview-card.compact {
+    margin-top: 2px;
+  }
+
+  .instagram-icon {
+    align-items: center;
+    background: linear-gradient(135deg, #f97316, #db2777, #7c3aed);
+    border-radius: 10px;
+    color: #ffffff;
+    display: inline-flex;
+    font-size: 0.74rem;
+    font-weight: 950;
+    height: 34px;
+    justify-content: center;
+    width: 34px;
+  }
+
+  .instagram-preview-card strong,
+  .instagram-preview-card small {
+    display: block;
+  }
+
+  .instagram-preview-card strong {
+    font-size: 0.92rem;
+    line-height: 1.2;
+  }
+
+  .instagram-preview-card small {
+    color: #6b7280;
+    font-size: 0.76rem;
+    font-weight: 900;
+    margin-top: 2px;
+  }
+
+  .instagram-preview-card em {
+    color: #db2777;
+    font-size: 0.76rem;
+    font-style: normal;
+    font-weight: 950;
   }
 
   .position-pill {

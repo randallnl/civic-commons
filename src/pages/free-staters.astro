@@ -1,7 +1,54 @@
 ---
+export const prerender = false;
+
+import CandidateCard from "../components/CandidateCard.astro";
+import RepresentativeCard from "../components/RepresentativeCard.astro";
 import TopNav from "../components/TopNav.astro";
+import { getBillSummaries } from "../lib/billsApi";
+import { getCandidates, isLegislativeCandidate } from "../lib/candidatesApi";
+import { isFreeStater } from "../lib/civicTags";
+import { getRepresentatives, repName } from "../lib/repsApi";
+import { getTrackedBills } from "../lib/trackedBills";
 
 const freeStateLogoUrl = organizationAssetUrl("freestateprojectlogo.png");
+let trackedBills = new Map();
+let billSummaries = new Map();
+let freeStaterLegislators = [];
+let freeStaterCandidates = [];
+let directoryError = "";
+
+try {
+  [trackedBills, billSummaries] = await Promise.all([
+    getTrackedBills(),
+    getBillSummaries(),
+  ]);
+} catch (error) {
+  console.error(error?.message || "Unable to load vote context.");
+}
+
+try {
+  const [houseData, senateData, candidateData] = await Promise.all([
+    getRepresentatives({ body: "house", include: "votes", limit: 500 }),
+    getRepresentatives({ body: "senate", include: "votes", limit: 50 }),
+    getCandidates({ electionYear: 2026, limit: 800 }),
+  ]);
+
+  freeStaterLegislators = [
+    ...(houseData.representatives || []),
+    ...(senateData.representatives || []),
+  ]
+    .filter(isFreeStater)
+    .sort((a, b) => repName(a).localeCompare(repName(b)));
+
+  freeStaterCandidates = (candidateData.candidates || [])
+    .filter((candidate) => isLegislativeCandidate(candidate) && isFreeStater(candidate))
+    .sort((a, b) =>
+      String(a.name || `${a.candidateFirstName || ""} ${a.candidateLastName || ""}`)
+        .localeCompare(String(b.name || `${b.candidateFirstName || ""} ${b.candidateLastName || ""}`)),
+    );
+} catch (error) {
+  directoryError = error?.message || "Unable to load Free Stater directory.";
+}
 
 function organizationAssetUrl(filename = "") {
   return `/api/organization-assets/${String(filename)
@@ -121,6 +168,76 @@ function organizationAssetUrl(filename = "") {
           </p>
         </section>
       </article>
+
+      <section class="directory-section" id="directory">
+        <div class="directory-heading">
+          <p class="eyebrow">Directory</p>
+          <h2>Free Stater Legislators and Candidates</h2>
+          <p>
+            These are current New Hampshire state legislators and 2026
+            legislative candidates marked with a Free Stater designation in the
+            site data. Open a profile to see districts, contact details, votes,
+            articles, and community updates.
+          </p>
+        </div>
+
+        {directoryError && <p class="status-message">{directoryError}</p>}
+
+        <div class="directory-summary">
+          <article>
+            <span>Current Legislators</span>
+            <strong>{freeStaterLegislators.length}</strong>
+          </article>
+          <article>
+            <span>2026 Legislative Candidates</span>
+            <strong>{freeStaterCandidates.length}</strong>
+          </article>
+        </div>
+
+        <section class="directory-block">
+          <div class="section-heading">
+            <h3>Current Legislators</h3>
+            <p>
+              Profiles include district information, contact details, vote
+              grades, and recent tracked bill votes where available.
+            </p>
+          </div>
+
+          {freeStaterLegislators.length ? (
+            <div class="rep-card-list">
+              {freeStaterLegislators.map((rep) => (
+                <RepresentativeCard
+                  rep={rep}
+                  trackedBills={trackedBills}
+                  billSummaries={billSummaries}
+                />
+              ))}
+            </div>
+          ) : (
+            <p class="empty">No current Free Stater legislators were returned.</p>
+          )}
+        </section>
+
+        <section class="directory-block">
+          <div class="section-heading">
+            <h3>2026 Legislative Candidates</h3>
+            <p>
+              Candidate profiles include office, district, party, fundraising,
+              links, and any connected legislator profile.
+            </p>
+          </div>
+
+          {freeStaterCandidates.length ? (
+            <div class="candidate-card-list">
+              {freeStaterCandidates.map((candidate) => (
+                <CandidateCard candidate={candidate} />
+              ))}
+            </div>
+          ) : (
+            <p class="empty">No Free Stater legislative candidates were returned.</p>
+          )}
+        </section>
+      </section>
     </main>
   </body>
 </html>
@@ -138,7 +255,7 @@ function organizationAssetUrl(filename = "") {
   .page {
     margin: 0 auto;
     padding: 40px 0 80px;
-    width: min(960px, calc(100% - 32px));
+    width: min(1120px, calc(100% - 32px));
   }
 
   .back,
@@ -208,6 +325,89 @@ function organizationAssetUrl(filename = "") {
     padding: clamp(22px, 4vw, 40px);
   }
 
+  .directory-section {
+    display: grid;
+    gap: 24px;
+    margin-top: 34px;
+  }
+
+  .directory-heading {
+    max-width: 860px;
+  }
+
+  .directory-heading h2 {
+    margin-bottom: 12px;
+  }
+
+  .directory-summary {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .directory-summary article,
+  .directory-block,
+  .status-message,
+  .empty {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 12px;
+    box-shadow: 4px 4px 0 #1f2933;
+    padding: 18px;
+  }
+
+  .directory-summary span {
+    color: #6b7280;
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .directory-summary strong {
+    display: block;
+    font-size: 2.6rem;
+    line-height: 1;
+    margin-top: 8px;
+  }
+
+  .directory-block {
+    display: grid;
+    gap: 18px;
+  }
+
+  .directory-block + .directory-block,
+  .directory-section section + section {
+    border-top: 2px solid #1f2933;
+    padding-top: 18px;
+  }
+
+  .section-heading h3 {
+    font-size: clamp(1.55rem, 3vw, 2.15rem);
+    line-height: 1.05;
+    margin: 0 0 8px;
+  }
+
+  .section-heading p,
+  .empty,
+  .status-message {
+    color: #4b5563;
+    font-weight: 750;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .rep-card-list,
+  .candidate-card-list {
+    display: grid;
+    gap: 18px;
+  }
+
+  .candidate-card-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   section + section {
     border-top: 1px solid #d1d5db;
     padding-top: 28px;
@@ -270,6 +470,11 @@ function organizationAssetUrl(filename = "") {
 
     .content-panel {
       box-shadow: 4px 4px 0 #1f2933;
+    }
+
+    .directory-summary,
+    .candidate-card-list {
+      grid-template-columns: 1fr;
     }
   }
 </style>
