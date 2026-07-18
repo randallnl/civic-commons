@@ -1,5 +1,59 @@
 ---
 import TopNav from "../components/TopNav.astro";
+
+const interpretationSteps = [
+  {
+    step: "1",
+    title: "Read the raw vote",
+    text: "We preserve the actual recorded vote first: Yea, Nay, Absent, Present, Not voting, or another documented status.",
+  },
+  {
+    step: "2",
+    title: "Read the motion",
+    text: "The motion tells us what the vote was acting on. A passage motion and an ITL motion can make the same raw vote mean opposite things for the bill.",
+  },
+  {
+    step: "3",
+    title: "Infer bill position",
+    text: "The raw vote plus the motion becomes a plain-language bill position, usually Support, Oppose, or a documented non-vote.",
+  },
+  {
+    step: "4",
+    title: "Compare to testimony",
+    text: "When online testimony clearly leans support or oppose, vote cards say whether the legislator aligned with that online testimony position.",
+  },
+];
+
+const examples = [
+  {
+    title: "Regular Passage Motion",
+    motion: "Ought to Pass",
+    yea: "Yea = Support",
+    nay: "Nay = Oppose",
+    className: "support-example",
+  },
+  {
+    title: "ITL / Kill Motion",
+    motion: "Inexpedient to Legislate",
+    yea: "Yea = Oppose",
+    nay: "Nay = Support",
+    className: "oppose-example",
+  },
+  {
+    title: "Documented Non-Vote",
+    motion: "Roll call vote",
+    yea: "Absent / Present = documented non-vote",
+    nay: "Shown separately from yes/no votes",
+    className: "neutral-example",
+  },
+];
+
+const referenceLinks = [
+  { href: "/vote-grades", label: "How letter grades work", text: "See how these interpreted vote positions feed online-testimony alignment grades." },
+  { href: "/bills", label: "Browse bills", text: "Review bill summaries, testimony counts, roll calls, and organizational comments." },
+  { href: "/people", label: "Browse legislators", text: "Search State Representatives and State Senators and inspect their voting records." },
+  { href: "/my-state-rep", label: "Find your reps", text: "Look up your current legislators and preview vote alignment." },
+];
 ---
 
 <html lang="en">
@@ -26,66 +80,92 @@ import TopNav from "../components/TopNav.astro";
           A recorded vote is not always as simple as “yea means support” and
           “nay means oppose.” The meaning depends on the motion being voted on.
           Vote labels translate the raw vote into the position that vote had on
-          the bill.
+          the bill, then compare that position with online testimony when a
+          clear testimony position is available.
         </p>
+        <div class="hero-actions">
+          <a href="/vote-grades">How grades use this</a>
+          <a href="/bills">Browse bill records</a>
+        </div>
       </section>
 
-      <section class="panel">
-        <h2>Raw Vote First</h2>
-        <p>
-          Vote cards show the actual recorded vote first, such as Yea, Nay,
-          Absent, or Present not voting. Then they explain what that vote meant
-          in context.
-        </p>
+      <section class="graphic-panel">
+        <div>
+          <p class="eyebrow">The Basic Idea</p>
+          <h2>A vote label is raw vote plus context.</h2>
+          <p>
+            Vote cards start with the actual vote, then explain whether that
+            vote supported or opposed the bill. That interpreted position is
+            what gets compared to online testimony.
+          </p>
+        </div>
+        <div class="formula" aria-label="Vote label formula">
+          <span>Raw vote</span>
+          <strong>+</strong>
+          <span>Motion context</span>
+          <strong>=</strong>
+          <span>Bill position</span>
+        </div>
       </section>
 
-      <section class="grid">
-        <article class="panel">
-          <h2>Regular Passage Motions</h2>
-          <p>
-            For ordinary passage motions, a yea vote is generally treated as
-            support for the bill and a nay vote is generally treated as
-            opposition to the bill.
-          </p>
-        </article>
+      <section class="workflow" aria-label="Vote interpretation workflow">
+        {interpretationSteps.map((item) => (
+          <article class="workflow-card">
+            <span>{item.step}</span>
+            <h2>{item.title}</h2>
+            <p>{item.text}</p>
+          </article>
+        ))}
+      </section>
 
-        <article class="panel">
-          <h2>ITL and Kill Motions</h2>
-          <p>
-            Some motions are about stopping a bill, such as Inexpedient to
-            Legislate, often abbreviated ITL. In those cases, a yea vote usually
-            opposes the bill, while a nay vote usually supports keeping the bill
-            alive.
-          </p>
-        </article>
+      <section class="examples">
+        {examples.map((example) => (
+          <article class:list={["example-card", example.className]}>
+            <p class="eyebrow">{example.title}</p>
+            <h2>{example.motion}</h2>
+            <div class="vote-equation">
+              <strong>{example.yea}</strong>
+              <strong>{example.nay}</strong>
+            </div>
+          </article>
+        ))}
+      </section>
 
-        <article class="panel">
-          <h2>Tracked Bills</h2>
+      <section class="panel example-panel">
+        <div>
+          <p class="eyebrow">What You’ll See On Cards</p>
+          <h2>Example label</h2>
           <p>
-            When a bill is in the bill tracker, the tracker can provide specific
-            yea and nay interpretations. Those are used when available because
-            they are more precise than a general rule.
+            If online testimony overwhelmingly supports a bill, and the vote was
+            on an ITL motion, a legislator who voted nay may be shown as:
+            <em> Voted: Nay: Support - aligned with online testimony.</em>
           </p>
-        </article>
+        </div>
+        <a href="/vote-grades">See how this affects grades</a>
+      </section>
 
-        <article class="panel">
-          <h2>Testimony Alignment</h2>
-          <p>
-            When testimony data is available, vote cards compare the inferred
-            vote position with the public testimony position. That is why a card
-            might say “Nay: Support - aligned with testimony position.”
-          </p>
-        </article>
+      <section class="references">
+        <div class="section-heading">
+          <p class="eyebrow">References</p>
+          <h2>Where to check the record</h2>
+        </div>
+        <div class="reference-grid">
+          {referenceLinks.map((link) => (
+            <a class="reference-card" href={link.href}>
+              <strong>{link.label}</strong>
+              <span>{link.text}</span>
+            </a>
+          ))}
+        </div>
       </section>
 
       <section class="panel note">
         <h2>Why Labels May Change</h2>
         <p>
-          Vote labels can improve as bill tracker data, testimony data, and roll
-          call details become more complete. The raw recorded vote is preserved
-          so visitors can always see the underlying action.
+          Vote labels can improve as bill data, motion text, testimony counts,
+          and roll-call details become more complete. The raw recorded vote is
+          preserved so visitors can always see the underlying action.
         </p>
-        <a href="/vote-grades">How letter grades work</a>
       </section>
     </main>
   </body>
@@ -115,6 +195,26 @@ import TopNav from "../components/TopNav.astro";
 
   .hero {
     padding: 28px 0 18px;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+  }
+
+  .hero-actions a,
+  .example-panel a {
+    background: #2563eb;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    box-shadow: 3px 3px 0 #1f2933;
+    color: white;
+    display: inline-flex;
+    font-weight: 950;
+    padding: 10px 14px;
+    text-decoration: none;
   }
 
   .eyebrow {
@@ -148,13 +248,7 @@ import TopNav from "../components/TopNav.astro";
     max-width: 760px;
   }
 
-  .grid {
-    display: grid;
-    gap: 16px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: 16px;
-  }
-
+  .graphic-panel,
   .panel {
     background: white;
     border: 2px solid #1f2933;
@@ -163,18 +257,188 @@ import TopNav from "../components/TopNav.astro";
     padding: 20px;
   }
 
+  .graphic-panel {
+    align-items: center;
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+    margin-top: 10px;
+  }
+
+  .graphic-panel h2 {
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    line-height: 1;
+  }
+
+  .formula {
+    display: grid;
+    gap: 10px;
+  }
+
+  .formula span {
+    background: #eef6ff;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    color: #1e3a8a;
+    font-weight: 950;
+    padding: 12px 14px;
+    text-align: center;
+  }
+
+  .formula strong {
+    color: #b42318;
+    font-size: 1.7rem;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .workflow {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 16px;
+  }
+
+  .workflow-card,
+  .example-card {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 #1f2933;
+    padding: 18px;
+  }
+
+  .workflow-card {
+    display: grid;
+    gap: 10px;
+  }
+
+  .workflow-card span {
+    align-items: center;
+    background: #b42318;
+    border-radius: 999px;
+    color: white;
+    display: inline-flex;
+    font-size: 1.15rem;
+    font-weight: 950;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
+  }
+
+  .workflow-card h2 {
+    font-size: 1.05rem;
+    margin: 0;
+  }
+
+  .workflow-card p {
+    font-size: 0.92rem;
+  }
+
+  .examples {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 16px;
+  }
+
+  .example-card h2 {
+    font-size: 1.15rem;
+  }
+
+  .vote-equation {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .vote-equation strong {
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    padding: 9px 10px;
+    text-align: center;
+  }
+
+  .support-example {
+    background: #dcfce7;
+  }
+
+  .oppose-example {
+    background: #fee2e2;
+  }
+
+  .neutral-example {
+    background: #dbeafe;
+  }
+
+  .example-panel {
+    align-items: center;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin-top: 16px;
+  }
+
+  .references {
+    margin-top: 16px;
+  }
+
+  .section-heading {
+    margin-bottom: 12px;
+  }
+
+  .reference-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .reference-card {
+    background: #eef6ff;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 3px 3px 0 #1f2933;
+    color: #1f2933;
+    display: grid;
+    gap: 8px;
+    min-height: 126px;
+    padding: 14px;
+    text-decoration: none;
+  }
+
+  .reference-card span {
+    color: #4b5563;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
   .note {
     margin-top: 16px;
   }
 
-  .note a {
-    display: inline-block;
-    margin-top: 14px;
+  @media (max-width: 900px) {
+    .graphic-panel,
+    .example-panel {
+      grid-template-columns: 1fr;
+    }
+
+    .workflow,
+    .examples,
+    .reference-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (max-width: 720px) {
-    .grid {
+    .workflow,
+    .examples,
+    .reference-grid {
       grid-template-columns: 1fr;
+    }
+
+    .example-panel a {
+      justify-content: center;
     }
   }
 </style>
