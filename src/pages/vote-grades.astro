@@ -1,5 +1,44 @@
 ---
 import TopNav from "../components/TopNav.astro";
+
+const gradeScale = [
+  { letter: "A", range: "85-100%", label: "Strong alignment", className: "grade-a" },
+  { letter: "B", range: "70-84%", label: "Often aligned", className: "grade-b" },
+  { letter: "C", range: "50-69%", label: "Mixed record", className: "grade-c" },
+  { letter: "D", range: "35-49%", label: "Often misaligned", className: "grade-d" },
+  { letter: "F", range: "0-34%", label: "Low alignment", className: "grade-f" },
+];
+
+const workflowSteps = [
+  {
+    step: "1",
+    title: "Start with online testimony",
+    text: "For each bill, we compare Support and Oppose testimony submitted online. If the testimony is too close or too small to infer a direction, that bill is not scored for the grade.",
+  },
+  {
+    step: "2",
+    title: "Interpret the vote",
+    text: "A yea or nay vote is translated into support or opposition to the bill. Motions like ITL are handled differently because voting yea on ITL means voting to kill the bill.",
+  },
+  {
+    step: "3",
+    title: "Score alignment",
+    text: "Aligned votes receive full credit. Misaligned votes receive no credit. Documented non-votes, such as absent or present-not-voting, receive partial accountability credit.",
+  },
+  {
+    step: "4",
+    title: "Convert to a letter",
+    text: "The average score becomes a percentage, and that percentage is converted to a letter grade so patterns are easier to scan.",
+  },
+];
+
+const referenceLinks = [
+  { href: "/vote-interpretations", label: "How vote labels work", text: "See how yea, nay, ITL, support, oppose, and testimony alignment labels are interpreted." },
+  { href: "/bills", label: "Browse bills", text: "Review bill summaries, online testimony counts, organizational comments, and roll-call links." },
+  { href: "/people", label: "Browse legislators", text: "Search current State Representatives and State Senators and compare vote records." },
+  { href: "/my-state-rep", label: "Find your reps", text: "Look up the legislators who represent your address and preview their grades." },
+  { href: "/communities", label: "Explore communities", text: "Connect towns, districts, legislators, candidates, articles, and local updates." },
+];
 ---
 
 <html lang="en">
@@ -10,7 +49,7 @@ import TopNav from "../components/TopNav.astro";
     <title>How Vote Grades Work | NH Deserves Better</title>
     <meta
       name="description"
-      content="How NH Deserves Better calculates legislator vote grades from tracked bills, public testimony, and documented votes."
+      content="How NH Deserves Better calculates legislator vote grades from online testimony alignment, voting actions, and documented non-votes."
     />
   </head>
 
@@ -25,58 +64,111 @@ import TopNav from "../components/TopNav.astro";
         <p>
           Vote grades are meant to be a plain-language accountability signal,
           not the whole story. They help visitors quickly understand how often a
-          legislator's recorded votes line up with the public-interest position
-          we can determine from the bill tracker and public testimony.
+          legislator's recorded votes line up with the position inferred from
+          online public testimony.
         </p>
+        <div class="hero-actions">
+          <a href="/people">See legislator grades</a>
+          <a href="/vote-interpretations">Vote label guide</a>
+        </div>
       </section>
 
-      <section class="panel">
-        <h2>The Basic Idea</h2>
-        <p>
-          Legislators start from a middle baseline. Recorded votes can move the
-          grade up or down depending on whether they align with the preferred
-          stance for a bill. Missed or documented non-votes receive partial
-          credit rather than being treated the same as a clearly aligned vote.
-        </p>
+      <section class="graphic-panel">
+        <div>
+          <p class="eyebrow">The Basic Idea</p>
+          <h2>Grades compare votes to online testimony.</h2>
+          <p>
+            When online testimony clearly leans support or oppose, we treat that
+            as the public testimony position for scoring. Then we compare each
+            legislator's vote to that position.
+          </p>
+        </div>
+        <div class="formula" aria-label="Vote grade formula">
+          <span>Online testimony</span>
+          <strong>+</strong>
+          <span>Voting action</span>
+          <strong>=</strong>
+          <span>Alignment score</span>
+        </div>
       </section>
 
-      <section class="grid">
-        <article class="panel">
-          <h2>What We Score</h2>
+      <section class="workflow" aria-label="Vote grade workflow">
+        {workflowSteps.map((item) => (
+          <article class="workflow-card">
+            <span>{item.step}</span>
+            <h2>{item.title}</h2>
+            <p>{item.text}</p>
+          </article>
+        ))}
+      </section>
+
+      <section class="split">
+        <article class="panel score-panel">
+          <p class="eyebrow">Scoring</p>
+          <h2>How each vote moves the score</h2>
+          <div class="score-row aligned">
+            <strong>Aligned vote</strong>
+            <span>1.0 point</span>
+          </div>
+          <div class="score-row partial">
+            <strong>Documented non-vote</strong>
+            <span>0.6 points</span>
+          </div>
+          <div class="score-row misaligned">
+            <strong>Misaligned vote</strong>
+            <span>0 points</span>
+          </div>
           <p>
-            Grades use voting actions with documented vote data. When a bill is
-            in our tracker, the tracker can provide the preferred stance and the
-            interpretation of yea and nay votes.
+            Votes are only scored when we have both a voting action and a clear
+            online testimony position. If testimony is neutral, divided, or
+            missing, that bill can still appear elsewhere, but it does not drive
+            the grade.
           </p>
         </article>
 
-        <article class="panel">
-          <h2>Public Testimony</h2>
-          <p>
-            When a tracker stance is not available, public testimony can help
-            infer the community position. Support and opposition counts are used
-            as context, especially on vote cards and roll-call views.
-          </p>
-        </article>
-
-        <article class="panel">
-          <h2>Non-Votes</h2>
-          <p>
-            If a legislator is absent, present but not voting, or otherwise has
-            a documented non-vote, the grade reflects that as partial
-            accountability. Missing a vote matters, but it is displayed
-            differently from voting against the preferred stance.
-          </p>
-        </article>
-
-        <article class="panel">
+        <article class="panel grade-scale">
+          <p class="eyebrow">Scale</p>
           <h2>Letter Scale</h2>
-          <p>
-            The percentage score is converted into a familiar letter grade:
-            higher alignment produces A or B grades, middle scores produce C or
-            D grades, and low alignment produces an F.
-          </p>
+          {gradeScale.map((grade) => (
+            <div class="grade-row">
+              <span class:list={["grade-badge", grade.className]}>{grade.letter}</span>
+              <div>
+                <strong>{grade.range}</strong>
+                <small>{grade.label}</small>
+              </div>
+            </div>
+          ))}
         </article>
+      </section>
+
+      <section class="panel example-panel">
+        <div>
+          <p class="eyebrow">Example</p>
+          <h2>Why motions matter</h2>
+          <p>
+            A vote label is not always enough by itself. If the motion is
+            <strong> Inexpedient to Legislate </strong> or <strong>ITL</strong>,
+            a yea vote supports killing the bill, while a nay vote supports
+            keeping the bill alive. That is why vote cards may say something
+            like: <em>Voted: Nay: Support - aligned with online testimony.</em>
+          </p>
+        </div>
+        <a href="/vote-interpretations">Read the vote interpretation guide</a>
+      </section>
+
+      <section class="references">
+        <div class="section-heading">
+          <p class="eyebrow">References</p>
+          <h2>Where to check the underlying data</h2>
+        </div>
+        <div class="reference-grid">
+          {referenceLinks.map((link) => (
+            <a class="reference-card" href={link.href}>
+              <strong>{link.label}</strong>
+              <span>{link.text}</span>
+            </a>
+          ))}
+        </div>
       </section>
 
       <section class="panel note">
@@ -84,9 +176,10 @@ import TopNav from "../components/TopNav.astro";
         <p>
           New Hampshire has a very large legislature. A simple grade helps make
           patterns easier to see, but it should be read alongside the underlying
-          bill summaries, vote explanations, testimony, and roll-call records.
+          bill summaries, vote explanations, testimony counts, and roll-call
+          records. It is a starting point for accountability, not a substitute
+          for reading the record.
         </p>
-        <a href="/vote-interpretations">How vote labels work</a>
       </section>
     </main>
   </body>
@@ -116,6 +209,26 @@ import TopNav from "../components/TopNav.astro";
 
   .hero {
     padding: 28px 0 18px;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+  }
+
+  .hero-actions a,
+  .example-panel a {
+    background: #2563eb;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    box-shadow: 3px 3px 0 #1f2933;
+    color: white;
+    display: inline-flex;
+    font-weight: 950;
+    padding: 10px 14px;
+    text-decoration: none;
   }
 
   .eyebrow {
@@ -156,6 +269,7 @@ import TopNav from "../components/TopNav.astro";
     margin-top: 16px;
   }
 
+  .graphic-panel,
   .panel {
     background: white;
     border: 2px solid #1f2933;
@@ -164,18 +278,270 @@ import TopNav from "../components/TopNav.astro";
     padding: 20px;
   }
 
+  .graphic-panel {
+    align-items: center;
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+    margin-top: 10px;
+  }
+
+  .graphic-panel h2 {
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    line-height: 1;
+  }
+
+  .formula {
+    display: grid;
+    gap: 10px;
+  }
+
+  .formula span {
+    background: #eef6ff;
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    color: #1e3a8a;
+    font-weight: 950;
+    padding: 12px 14px;
+    text-align: center;
+  }
+
+  .formula strong {
+    color: #b42318;
+    font-size: 1.7rem;
+    line-height: 1;
+    text-align: center;
+  }
+
+  .workflow {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 16px;
+  }
+
+  .workflow-card {
+    background: white;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 4px 4px 0 #1f2933;
+    display: grid;
+    gap: 10px;
+    padding: 18px;
+    position: relative;
+  }
+
+  .workflow-card span {
+    align-items: center;
+    background: #b42318;
+    border-radius: 999px;
+    color: white;
+    display: inline-flex;
+    font-size: 1.15rem;
+    font-weight: 950;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
+  }
+
+  .workflow-card h2 {
+    font-size: 1.05rem;
+    margin: 0;
+  }
+
+  .workflow-card p {
+    font-size: 0.92rem;
+  }
+
+  .split {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
+    margin-top: 16px;
+  }
+
+  .score-panel {
+    display: grid;
+    gap: 12px;
+  }
+
+  .score-row {
+    align-items: center;
+    border: 2px solid #1f2933;
+    border-radius: 12px;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    padding: 12px;
+  }
+
+  .score-row span {
+    border-radius: 999px;
+    color: white;
+    font-weight: 950;
+    padding: 7px 10px;
+  }
+
+  .score-row.aligned {
+    background: #dcfce7;
+  }
+
+  .score-row.aligned span {
+    background: #166534;
+  }
+
+  .score-row.partial {
+    background: #fef9c3;
+  }
+
+  .score-row.partial span {
+    background: #ca8a04;
+  }
+
+  .score-row.misaligned {
+    background: #fee2e2;
+  }
+
+  .score-row.misaligned span {
+    background: #b42318;
+  }
+
+  .grade-scale {
+    display: grid;
+    gap: 10px;
+  }
+
+  .grade-row {
+    align-items: center;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 58px 1fr;
+  }
+
+  .grade-badge {
+    align-items: center;
+    border: 2px solid #1f2933;
+    border-radius: 14px;
+    color: #fefce8;
+    display: inline-flex;
+    font-size: 2rem;
+    font-weight: 950;
+    height: 54px;
+    justify-content: center;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    width: 54px;
+  }
+
+  .grade-row strong,
+  .grade-row small {
+    display: block;
+  }
+
+  .grade-row small {
+    color: #4b5563;
+    font-weight: 800;
+    margin-top: 2px;
+  }
+
+  .grade-a {
+    background: #166534;
+  }
+
+  .grade-b {
+    background: #65a30d;
+  }
+
+  .grade-c {
+    background: #ca8a04;
+  }
+
+  .grade-d {
+    background: #ea580c;
+  }
+
+  .grade-f {
+    background: #b42318;
+  }
+
+  .example-panel {
+    align-items: center;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin-top: 16px;
+  }
+
+  .example-panel strong {
+    color: #1f2933;
+  }
+
+  .references {
+    margin-top: 16px;
+  }
+
+  .section-heading {
+    margin-bottom: 12px;
+  }
+
+  .reference-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .reference-card {
+    background: #eef6ff;
+    border: 2px solid #1f2933;
+    border-radius: 8px;
+    box-shadow: 3px 3px 0 #1f2933;
+    color: #1f2933;
+    display: grid;
+    gap: 8px;
+    min-height: 130px;
+    padding: 14px;
+    text-decoration: none;
+  }
+
+  .reference-card strong {
+    font-size: 1rem;
+  }
+
+  .reference-card span {
+    color: #4b5563;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
   .note {
     margin-top: 16px;
   }
 
-  .note a {
-    display: inline-block;
-    margin-top: 14px;
+  @media (max-width: 900px) {
+    .graphic-panel,
+    .split,
+    .example-panel {
+      grid-template-columns: 1fr;
+    }
+
+    .workflow,
+    .reference-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (max-width: 720px) {
     .grid {
       grid-template-columns: 1fr;
+    }
+
+    .workflow,
+    .reference-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .example-panel a {
+      justify-content: center;
     }
   }
 </style>
