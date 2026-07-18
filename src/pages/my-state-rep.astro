@@ -724,7 +724,11 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           ) : directoryReps.length ? (
             <div class="rep-grid">
               {directoryReps.map((rep) => (
-                <RepresentativeCard rep={rep} trackedBills={trackedBills} />
+                <RepresentativeCard
+                  rep={rep}
+                  trackedBills={trackedBills}
+                  billSummaries={billSummaries}
+                />
               ))}
             </div>
           ) : (

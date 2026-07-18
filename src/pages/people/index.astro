@@ -5,6 +5,7 @@ import RepresentativeCard from "../../components/RepresentativeCard.astro";
 import FilterBar from "../../components/FilterBar.astro";
 import PageHero from "../../components/PageHero.astro";
 import TopNav from "../../components/TopNav.astro";
+import { getBillSummaries } from "../../lib/billsApi";
 import { getRepresentative, getRepresentatives, repName } from "../../lib/repsApi";
 import { cleanText } from "../../lib/text";
 import { getTrackedBills } from "../../lib/trackedBills";
@@ -21,10 +22,11 @@ const filters = {
 
 let representatives = [];
 let trackedBills = new Map();
+let billSummaries = new Map();
 let loadError = "";
 
 try {
-  const [repData, tracker] = await Promise.all([
+  const [repData, tracker, summaries] = await Promise.all([
     getRepresentatives({
       body: filters.body,
       q: filters.name || filters.town,
@@ -33,6 +35,7 @@ try {
       limit: 600,
     }),
     getTrackedBills(),
+    getBillSummaries(),
   ]);
 
   const directoryReps = repData.representatives || [];
@@ -40,6 +43,7 @@ try {
 
   representatives = await hydrateVotePreviewDetails(filteredReps);
   trackedBills = tracker;
+  billSummaries = summaries;
 } catch (error) {
   loadError = error?.message || "Unable to load representatives.";
 }
@@ -265,7 +269,11 @@ function countyNameForCode(code = "") {
       ) : representatives.length ? (
         <div class="rep-grid">
           {representatives.map((rep) => (
-            <RepresentativeCard rep={rep} trackedBills={trackedBills} />
+            <RepresentativeCard
+              rep={rep}
+              trackedBills={trackedBills}
+              billSummaries={billSummaries}
+            />
           ))}
         </div>
       ) : (

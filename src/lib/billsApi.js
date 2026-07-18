@@ -53,10 +53,11 @@ export async function getBills({
 }
 
 export async function getBillSummaries(options = {}) {
-  const cacheKey = JSON.stringify(options);
+  const summaryOptions = { limit: 1000, ...options };
+  const cacheKey = JSON.stringify(summaryOptions);
   if (billsCache.has(cacheKey)) return billsCache.get(cacheKey);
 
-  const data = await getBills(options);
+  const data = await getBills(summaryOptions);
   const summaries = new Map(
     (data.bills || []).map((bill) => [
       normalizeBillCodeForUrl(bill.condensedbillno),

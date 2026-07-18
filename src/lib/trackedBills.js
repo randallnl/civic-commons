@@ -158,10 +158,34 @@ export function gradeFromAlignmentPercent(value) {
 
 export function representativeGradeFor(rep = {}, trackedBills = new Map(), billSummaries = new Map()) {
   return (
-    representativeGrade(rep.voteHistory || [], trackedBills, billSummaries) ||
-    gradeFromAlignmentPercent(rep.alignment_percent || rep.alignmentPercent) ||
+    representativeOnlineTestimonyGrade(rep.voteHistory || [], billSummaries) ||
     unknownGrade()
   );
+}
+
+export function representativeOnlineTestimonyGrade(votes = [], billSummaries = new Map()) {
+  const scoredVotes = votes
+    .filter((vote) => isVotingAction(vote) && isKnownVote(vote))
+    .map((vote) => representativeOnlineTestimonyAnalysis(vote, billSummaryForVote(billSummaries, vote)))
+    .filter((analysis) => Number.isFinite(analysis?.score));
+
+  if (!scoredVotes.length) return null;
+
+  const aligned = scoredVotes.filter((analysis) => analysis.alignment === "aligned").length;
+  const missed = scoredVotes.filter((analysis) => analysis.alignment === "partial").length;
+  const percent =
+    scoredVotes.reduce((total, analysis) => total + analysis.score, 0) / scoredVotes.length;
+  const letter = letterGradeForAccountabilityPercent(percent);
+  const missedText = missed ? `, ${missed} missed or not voting` : "";
+
+  return {
+    letter,
+    percent,
+    aligned,
+    total: scoredVotes.length,
+    className: `grade-${letter.toLowerCase()}`,
+    label: `${Math.round(percent * 100)}% aligned with online testimony across ${scoredVotes.length} scored votes (${aligned} aligned${missedText})`,
+  };
 }
 
 export function representativeGrade(votes = [], trackedBills = new Map(), billSummaries = new Map()) {
@@ -196,6 +220,93 @@ export function representativeGrade(votes = [], trackedBills = new Map(), billSu
     total: scoredVotes.length,
     className: `grade-${letter.toLowerCase()}`,
     label: `${Math.round(percent * 100)}% accountability score across ${scoredVotes.length} tracked votes (${aligned} aligned${missedText})`,
+  };
+}
+
+export function representativeOnlineTestimonyVotePreviews(
+  rep = {},
+  billSummaries = new Map(),
+  { limit = 3 } = {},
+) {
+  const nameKey = rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim();
+  return (rep.voteHistory || [])
+    .map((vote) => {
+      if (!isVotingAction(vote) || !isKnownVote(vote)) return null;
+      const billSummary = billSummaryForVote(billSummaries, vote);
+      const analysis = representativeOnlineTestimonyAnalysis(vote, billSummary);
+      if (!Number.isFinite(analysis.score) || !billSummary) return null;
+      return {
+        vote,
+        billSummary,
+        analysis,
+        sortKey: stablePreviewSortKey(`${nameKey}:${vote.condensedbillno || vote.bill_number}:${vote.votesequencenumber || vote.vote_sequence || ""}`),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.sortKey - b.sortKey)
+    .slice(0, limit);
+}
+
+export function representativeOnlineTestimonyVoteStance(vote = {}, bill = {}) {
+  const analysis = representativeOnlineTestimonyAnalysis(vote, bill);
+  const rawVote = displayVoteLabel(vote) || titleCase(String(vote.vote || vote.vote_code || ""));
+
+  if (!analysis.billPosition || !analysis.testimonyPosition) {
+    return {
+      label: `Voted: ${rawVote || "Not listed"}: no clear online testimony position`,
+      className: "legislator-neutral",
+    };
+  }
+
+  const position = titleCase(analysis.billPosition);
+  const suffix =
+    analysis.alignment === "aligned"
+      ? "aligned with online testimony"
+      : analysis.alignment === "partial"
+        ? "documented non-vote"
+        : "not aligned with online testimony";
+
+  return {
+    label: `Voted: ${rawVote}: ${position} - ${suffix}`,
+    className:
+      analysis.alignment === "aligned"
+        ? "legislator-support"
+        : analysis.alignment === "misaligned"
+          ? "legislator-oppose"
+          : "legislator-neutral",
+  };
+}
+
+export function representativeOnlineTestimonyAnalysis(vote = {}, bill = {}) {
+  const testimonyPosition = publicTestimonyPositionForBill(bill);
+  const billPosition = inferredBillPositionForVote(vote);
+  const isNonVote = !billPosition && isDocumentedNonVote(vote);
+  const alignment =
+    !testimonyPosition || testimonyPosition === "neutral"
+      ? "neutral"
+      : isNonVote
+        ? "partial"
+        : !billPosition
+          ? "neutral"
+          : billPosition === testimonyPosition
+            ? "aligned"
+            : "misaligned";
+  const score =
+    !testimonyPosition || testimonyPosition === "neutral"
+      ? null
+      : isNonVote
+        ? 0.6
+        : !billPosition
+          ? null
+          : billPosition === testimonyPosition
+            ? 1
+            : 0;
+
+  return {
+    billPosition,
+    testimonyPosition,
+    alignment,
+    score,
   };
 }
 
@@ -338,6 +449,14 @@ function preferredStanceForBill(bill = {}) {
 }
 
 function publicTestimonyPreferredStance(bill = {}) {
+  const position = publicTestimonyPositionForBill(bill);
+  if (position === "support") return "yea";
+  if (position === "oppose") return "nay";
+  if (position === "neutral") return "neutral";
+  return "";
+}
+
+export function publicTestimonyPositionForBill(bill = {}) {
   const support = numericBillValue(bill, [
     "support_count",
     "supportCount",
@@ -361,7 +480,7 @@ function publicTestimonyPreferredStance(bill = {}) {
   if (total < 50 && margin <= 0.25) return "neutral";
   if (margin <= 0.1) return "neutral";
 
-  return support > oppose ? "yea" : "nay";
+  return support > oppose ? "support" : "oppose";
 }
 
 function numericBillValue(bill = {}, keys = []) {
@@ -419,6 +538,29 @@ function displayVoteLabel(vote = {}) {
   return titleCase(value);
 }
 
+export function inferredBillPositionForVote(vote = {}) {
+  const voteStance = normalizeVoteStance(vote);
+  if (!voteStance) return "";
+
+  const motionText = cleanText(
+    vote.action_text ||
+      vote.question_motion ||
+      vote.motion ||
+      vote.title1 ||
+      vote.title2 ||
+      vote.description ||
+      "",
+  ).toLowerCase();
+  const motionOpposesBill =
+    /\bitl\b/.test(motionText) ||
+    motionText.includes("inexpedient to legislate") ||
+    motionText.includes("indefinitely postpone") ||
+    motionText.includes("postpone indefinitely");
+
+  if (motionOpposesBill) return voteStance === "yea" ? "oppose" : "support";
+  return voteStance === "yea" ? "support" : "oppose";
+}
+
 function normalizedVoteDisplayValue(vote = {}) {
   const values = [
     vote.vote_label,
@@ -463,6 +605,14 @@ function unknownGrade() {
     className: "grade-unknown",
     label: "No scored tracked votes",
   };
+}
+
+function stablePreviewSortKey(value = "") {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
 }
 
 function titleCase(value = "") {

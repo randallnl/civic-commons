@@ -6,11 +6,10 @@ import { isFreeStater } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
 import { cleanText } from "../lib/text";
 import {
-  isVotingAction,
   normalizeBillCode,
   representativeGradeFor,
-  representativeVoteImpact,
-  representativeVoteStance,
+  representativeOnlineTestimonyVotePreviews,
+  representativeOnlineTestimonyVoteStance,
   trackedBillForVote,
 } from "../lib/trackedBills";
 
@@ -38,11 +37,7 @@ const name = cleanText(
 );
 const profileHref = `/people/${slugify(name)}`;
 const photoUrl = profilePhotoUrl(rep.photo);
-const voteHistory = Array.isArray(rep.voteHistory)
-  ? rep.voteHistory
-      .filter((vote) => trackedBillForVote(trackedBills, vote) && isVotingAction(vote))
-      .slice(0, 3)
-  : [];
+const voteHistory = representativeOnlineTestimonyVotePreviews(rep, billSummaries, { limit: 3 });
 const grade = representativeGradeFor(rep, trackedBills, billSummaries);
 
 function trackedBillFor(vote) {
@@ -135,16 +130,17 @@ function billSummaryFor(vote) {
   </div>
 
   <div class="vote-summary">
-    <span>Recent Votes</span>
+    <span>Online Testimony Alignment</span>
 
     {voteHistory.length ? (
       <div class="vote-list">
-        {voteHistory.map((vote) => {
+        {voteHistory.map((preview) => {
+          const vote = preview.vote;
           const bill = trackedBillFor(vote);
-          const billSummary = billSummaryFor(vote);
+          const billSummary = preview.billSummary || billSummaryFor(vote);
           const billYear = billSummary?.sessionyear || vote.sessionyear;
-          const stance = representativeVoteStance(vote, bill);
-          const voteImpact = representativeVoteImpact(vote, bill);
+          const stance = representativeOnlineTestimonyVoteStance(vote, billSummary);
+          const voteImpact = "";
           const summary = bill?.summary || billSummary?.summary || "";
 
           return (
@@ -181,7 +177,7 @@ function billSummaryFor(vote) {
         })}
       </div>
     ) : (
-      <p>No tracked vote history returned.</p>
+      <p>No scored online testimony vote previews returned.</p>
     )}
   </div>
 </article>

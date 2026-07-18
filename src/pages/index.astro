@@ -21,8 +21,9 @@ import {
 import {
   getTrackedBills,
   normalizeBillCode,
+  representativeOnlineTestimonyVotePreviews,
+  representativeOnlineTestimonyVoteStance,
   representativeGradeFor,
-  representativeVoteStance,
   trackedBillForVote,
 } from "../lib/trackedBills";
 import { getSpotlightLegislators } from "../lib/spotlightTracker";
@@ -347,8 +348,7 @@ function locationLabel(person = {}) {
 }
 
 function trackedVotesFor(person = {}, limit = 3) {
-  const votes = Array.isArray(person.voteHistory) ? person.voteHistory : [];
-  return votes.filter((vote) => trackedBillForVote(trackedBills, vote)).slice(0, limit);
+  return representativeOnlineTestimonyVotePreviews(person, billSummaries, { limit });
 }
 
 function positionClass(position = "") {
@@ -571,14 +571,18 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
                   </div>
                   {votes.length > 0 && (
                     <div class="person-vote-list">
-                      <span>Bill Tracker Votes</span>
-                      {votes.map((vote) => {
+                      <span>Online Testimony Alignment</span>
+                      {votes.map((preview) => {
+                        const vote = preview.vote;
+                        const billSummary = preview.billSummary;
                         const trackedBill = trackedBillForVote(trackedBills, vote);
-                        const voteStance = representativeVoteStance(vote, trackedBill);
+                        const voteStance = representativeOnlineTestimonyVoteStance(vote, billSummary);
+                        const billCode = billSummary?.condensedbillno || trackedBill?.code || vote.condensedbillno;
+                        const billTitle = trackedBill?.name || billSummary?.name || billSummary?.title || "Bill";
 
                         return (
                           <div class:list={["person-vote-preview", voteStance.className]}>
-                            <strong>{trackedBill.code}: {trackedBill.name || "Tracked Bill"}</strong>
+                            <strong>{billCode}: {billTitle}</strong>
                             <small>{voteStance.label}</small>
                           </div>
                         );
