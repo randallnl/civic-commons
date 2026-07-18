@@ -1,4 +1,5 @@
 import { DEFAULT_CIVIC_API_BASE, civicApiFetch } from "./civicApi";
+import { cleanText } from "./text";
 
 export function candidatesApiBase() {
   return import.meta.env.REP_LOOKUP_API_BASE || DEFAULT_CIVIC_API_BASE;
@@ -117,7 +118,7 @@ export async function getCandidate(slugOrId, {
 }
 
 export function candidateName(candidate = {}) {
-  return (
+  return cleanText(
     candidate.name ||
     [candidate.candidateFirstName, candidate.candidateLastName]
       .filter(Boolean)
@@ -147,7 +148,7 @@ export function candidatePath(candidate = {}) {
 }
 
 export function formatCandidateParty(party = "") {
-  const value = String(party).trim();
+  const value = cleanText(party).trim();
   if (!value) return "Party not listed";
   return value.replace(/\s+Party$/i, "");
 }
