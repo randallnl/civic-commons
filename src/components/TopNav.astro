@@ -6,13 +6,13 @@ const links = [
   { href: "/", label: "Home", match: (path) => path === "/" },
   { href: "/my-state-rep", label: "My State Rep" },
   { href: "/candidates", label: "Candidates" },
-  { href: "/bills", label: "Bills" },
   { href: "/search", label: "Search" },
 ];
 
 const exploreLinks = [
   { href: "/communities", label: "Communities" },
   { href: "/people", label: "Legislators" },
+  { href: "/bills", label: "Bills" },
   { href: "/organizations", label: "Organizations" },
   { href: "/articles", label: "Articles" },
 ];
@@ -341,11 +341,11 @@ const isGuidesActive = guideLinks.some(isActive);
     }
 
     nav {
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
       justify-content: flex-start;
-      margin: 0 calc(50% - 50vw);
-      overflow-x: auto;
-      padding: 2px max(16px, calc(50vw - 560px)) 8px;
+      margin: 0;
+      overflow: visible;
+      padding: 2px 0 8px;
       scrollbar-width: none;
       width: 100%;
     }
@@ -375,9 +375,15 @@ const isGuidesActive = guideLinks.some(isActive);
       flex: 0 0 auto;
     }
 
+    .nav-dropdown[open] {
+      flex-basis: 100%;
+    }
+
     .dropdown-menu {
-      left: 0;
-      right: auto;
+      margin-top: 8px;
+      min-width: 0;
+      position: static;
+      width: min(100%, 320px);
     }
   }
 </style>
