@@ -4527,6 +4527,12 @@ async function handleArticles(request, env) {
   const town = String(url.searchParams.get("town") || "").trim();
   const personid = url.searchParams.get("personid");
   const employeeno = url.searchParams.get("employeeno");
+  const candidate = String(
+    url.searchParams.get("candidate") ||
+      url.searchParams.get("filerEntityNumber") ||
+      url.searchParams.get("filer_entity_number") ||
+      "",
+  ).trim();
   const bill = normalizeBillNumber(url.searchParams.get("bill") || "");
   const issue = String(url.searchParams.get("issue") || "").trim();
   const impact = String(url.searchParams.get("impact") || "").trim();
@@ -4560,6 +4566,8 @@ async function handleArticles(request, env) {
       ON ait.article_id = a.article_id
     LEFT JOIN d1_article_bills ab
       ON ab.article_id = a.article_id
+    LEFT JOIN d1_article_candidates ac
+      ON ac.article_id = a.article_id
     WHERE 1 = 1
   `;
 
@@ -4590,6 +4598,16 @@ async function handleArticles(request, env) {
   if (employeeno) {
     sql += ` AND al.employeeno = ?`;
     binds.push(Number(employeeno));
+  }
+
+  if (candidate) {
+    sql += `
+      AND (
+        CAST(ac.filer_entity_number AS TEXT) = ?
+        OR LOWER(ac.candidate_name_raw) = LOWER(?)
+      )
+    `;
+    binds.push(candidate, candidate);
   }
 
   if (bill) {
@@ -4633,6 +4651,7 @@ async function handleArticles(request, env) {
       town,
       personid: personid ? Number(personid) : null,
       employeeno: employeeno ? Number(employeeno) : null,
+      candidate,
       bill,
       issue,
       impact,

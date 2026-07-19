@@ -17,6 +17,8 @@ export async function getArticles({
   town = "",
   personid = "",
   employeeno = "",
+  candidate = "",
+  filerEntityNumber = "",
   issue = "",
   impact = "",
   resourceType = "",
@@ -31,6 +33,8 @@ export async function getArticles({
   if (town) params.set("town", town);
   if (personid) params.set("personid", String(personid));
   if (employeeno) params.set("employeeno", String(employeeno));
+  if (candidate) params.set("candidate", String(candidate));
+  if (filerEntityNumber) params.set("filerEntityNumber", String(filerEntityNumber));
   if (issue) params.set("issue", issue);
   if (impact) params.set("impact", impact);
   if (resourceType) params.set("resourceType", resourceType);

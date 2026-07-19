@@ -99,13 +99,30 @@ const endorsements = endorsementsForCandidate(organizations, candidate, slug);
 let relatedArticles = [];
 
 try {
-  const articleData = await getArticles({
-    q: candidate.legislatorPersonId ? "" : name,
-    personid: candidate.legislatorPersonId || "",
-    include: "relations",
-    limit: 6,
-  });
-  relatedArticles = articleData.articles || [];
+  const articleRequests = [
+    getArticles({
+      candidate: candidate.filerEntityNumber || candidate.filer_entity_number || name,
+      include: "relations",
+      limit: 6,
+    }),
+  ];
+
+  if (candidate.legislatorPersonId) {
+    articleRequests.push(
+      getArticles({
+        personid: candidate.legislatorPersonId,
+        include: "relations",
+        limit: 6,
+      }),
+    );
+  }
+
+  const articleResults = await Promise.allSettled(articleRequests);
+  relatedArticles = uniqueArticles(
+    articleResults
+      .filter((result) => result.status === "fulfilled")
+      .flatMap((result) => result.value.articles || []),
+  ).slice(0, 6);
 } catch (error) {
   console.error(error?.message || "Unable to load candidate articles.");
 }
@@ -163,6 +180,16 @@ function roleOfficeLine(role = {}) {
     role.county,
     role.district ? `District ${role.district}` : "",
   ].filter(Boolean).join(", ");
+}
+
+function uniqueArticles(articles = []) {
+  const seen = new Set();
+  return articles.filter((article) => {
+    const key = article.article_id || article.articleId || article.url || article.title;
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 ---
 
