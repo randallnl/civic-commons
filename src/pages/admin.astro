@@ -52,6 +52,7 @@ let organizationAdminData = [];
 let pendingOrganizationEndorsements = [];
 let candidateEndorsementOptions = [];
 let billCommentOptions = [];
+let billAdminData = [];
 
 if (session) {
   try {
@@ -156,6 +157,29 @@ if (session) {
         bills.findIndex((item) => item.code === bill.code) === index,
       )
       .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+    billAdminData = (billData.bills || [])
+      .map((bill) => {
+        const code = normalizeBillCodeForUrl(bill.condensedbillno || bill.bill || bill.code || "");
+        const title = cleanText(bill.name || bill.title || bill.summary || "");
+        const label = [code, title || bill.description].filter(Boolean).join(" | ");
+        return {
+          code,
+          label: label || code,
+          title,
+          summary: cleanText(bill.summary || ""),
+          description: cleanText(bill.description || ""),
+          year: String(bill.sessionyear || bill.year || 2026),
+          href: `/bills/${code}?year=${bill.sessionyear || bill.year || 2026}`,
+        };
+      })
+      .filter((bill) => bill.code)
+      .filter((bill, index, bills) =>
+        bills.findIndex((item) => `${item.year}:${item.code}` === `${bill.year}:${bill.code}`) === index,
+      )
+      .sort((a, b) =>
+        a.code.localeCompare(b.code, undefined, { numeric: true }) ||
+        b.year.localeCompare(a.year),
+      );
   } catch (error) {
     console.error(error?.message || "Unable to load bill comment options.");
   }
@@ -277,6 +301,7 @@ function reviewDate(value = "") {
 
             <nav class="admin-links" aria-label="Admin sections">
               <a href="#profile-editing">Edit profiles</a>
+              <a href="#bill-admin">Edit bills</a>
               <a href="#profile-cleanup">Profile cleanup</a>
               <a href="#community-updates">Community updates</a>
               <a href="#article-submissions">Submitted articles</a>
@@ -301,6 +326,81 @@ function reviewDate(value = "") {
               <a href="/people">Find a legislator</a>
               <a href="/candidates">Find a candidate</a>
             </div>
+          </section>
+
+          <section id="bill-admin" class="panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Bills</p>
+              <h2>Edit bill title and description</h2>
+              <p>
+                Save a readable bill title and summary for public bill previews
+                and profiles. The latest action/source description field is
+                optional; use it when the source description needs a correction.
+              </p>
+            </div>
+
+            <datalist id="billAdminOptions">
+              {billAdminData.map((bill) => (
+                <option value={bill.label} />
+              ))}
+            </datalist>
+
+            <form class="stack-form bill-admin-form" action="/api/admin/bills" method="post">
+              <input type="hidden" name="redirectTo" value="/admin#bill-admin" />
+
+              <label>
+                Find bill
+                <input
+                  id="billAdminSearch"
+                  list="billAdminOptions"
+                  placeholder="Start typing HB155 or a bill title"
+                  autocomplete="off"
+                />
+              </label>
+
+              <div class="form-grid three">
+                <label>
+                  Bill code
+                  <input id="billAdminCode" name="bill" placeholder="HB155" required />
+                </label>
+                <label>
+                  Year
+                  <input id="billAdminYear" name="sessionyear" type="number" value="2026" required />
+                </label>
+                <a id="billAdminPreviewLink" class="inline-action" href="/bills">Open bill</a>
+              </div>
+
+              <label>
+                Public title
+                <input
+                  id="billAdminTitle"
+                  name="title"
+                  placeholder="HB155: Short public-facing title"
+                />
+              </label>
+
+              <label>
+                Public summary / description
+                <textarea
+                  id="billAdminSummary"
+                  name="summary"
+                  rows="5"
+                  placeholder="Plain-language summary shown in previews and bill profiles."
+                ></textarea>
+              </label>
+
+              <label>
+                Latest action / source description <span>Optional</span>
+                <textarea
+                  id="billAdminDescription"
+                  name="description"
+                  rows="3"
+                  placeholder="Use only when the D1 source description/latest action needs to be changed."
+                ></textarea>
+              </label>
+
+              <button type="submit">Save Bill Text</button>
+            </form>
           </section>
 
           <section id="profile-cleanup" class="panel">
@@ -1138,7 +1238,7 @@ function reviewDate(value = "") {
         </div>
       )}
     </main>
-    <script define:vars={{ organizationAdminData, candidateEndorsementOptions, billCommentOptions }}>
+    <script define:vars={{ organizationAdminData, candidateEndorsementOptions, billCommentOptions, billAdminData }}>
       const profileSearch = document.getElementById("gapProfileSearch");
       const profileValue = document.getElementById("gapProfileValue");
       const profileOptions = Array.from(
@@ -1158,6 +1258,44 @@ function reviewDate(value = "") {
 
       profileSearch?.addEventListener("input", syncProfileFilterValue);
       profileSearch?.form?.addEventListener("submit", syncProfileFilterValue);
+
+      const billAdminSearch = document.getElementById("billAdminSearch");
+      const billAdminCode = document.getElementById("billAdminCode");
+      const billAdminYear = document.getElementById("billAdminYear");
+      const billAdminTitle = document.getElementById("billAdminTitle");
+      const billAdminSummary = document.getElementById("billAdminSummary");
+      const billAdminDescription = document.getElementById("billAdminDescription");
+      const billAdminPreviewLink = document.getElementById("billAdminPreviewLink");
+      const billAdminMap = new Map();
+
+      billAdminData.forEach((bill) => {
+        billAdminMap.set(bill.label, bill);
+        billAdminMap.set(bill.code, bill);
+        billAdminMap.set(`${bill.code} ${bill.year}`, bill);
+      });
+
+      function hydrateBillAdminForm() {
+        if (!billAdminSearch) return;
+        const rawValue = billAdminSearch.value || "";
+        const code = normalizeBillInput(rawValue);
+        const bill = billAdminMap.get(rawValue) || billAdminMap.get(code);
+        if (!bill) {
+          if (billAdminCode && code) billAdminCode.value = code;
+          return;
+        }
+        if (billAdminCode) billAdminCode.value = bill.code || "";
+        if (billAdminYear) billAdminYear.value = bill.year || "2026";
+        if (billAdminTitle) billAdminTitle.value = bill.title || "";
+        if (billAdminSummary) billAdminSummary.value = bill.summary || "";
+        if (billAdminDescription) billAdminDescription.value = bill.description || "";
+        if (billAdminPreviewLink) {
+          billAdminPreviewLink.href = bill.href || `/bills/${bill.code}?year=${bill.year || 2026}`;
+          billAdminPreviewLink.textContent = `Open ${bill.code}`;
+        }
+      }
+
+      billAdminSearch?.addEventListener("change", hydrateBillAdminForm);
+      billAdminSearch?.addEventListener("input", hydrateBillAdminForm);
 
       const reviewForms = document.querySelectorAll("[data-profile-review-form]");
 
@@ -1651,6 +1789,24 @@ function reviewDate(value = "") {
   .form-grid {
     display: grid;
     gap: 12px;
+  }
+
+  .inline-action {
+    align-self: end;
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    display: inline-flex;
+    font-weight: 900;
+    justify-content: center;
+    padding: 11px 12px;
+    text-decoration: none;
+  }
+
+  .inline-action:hover {
+    background: white;
+    border-color: #1f2933;
   }
 
   .form-grid.two {

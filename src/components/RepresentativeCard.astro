@@ -141,7 +141,7 @@ function billSummaryFor(vote) {
           const billYear = billSummary?.sessionyear || vote.sessionyear;
           const stance = representativeOnlineTestimonyVoteStance(vote, billSummary);
           const voteImpact = "";
-          const summary = bill?.summary || billSummary?.summary || "";
+          const summary = billSummary?.summary || bill?.summary || "";
 
           return (
             <div class="vote-item">
@@ -151,7 +151,9 @@ function billSummaryFor(vote) {
                     {bill?.code || vote.condensedbillno || "Bill"}
                   </a>
                 </strong>
-                {bill?.name && <span>{cleanText(bill.name)}</span>}
+                {(billSummary?.name || billSummary?.title || bill?.name) && (
+                  <span>{cleanText(billSummary?.name || billSummary?.title || bill.name)}</span>
+                )}
                 {summary && <p class="bill-summary">{cleanText(summary)}</p>}
               </div>
               <div class="vote-copy">

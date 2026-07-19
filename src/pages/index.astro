@@ -607,11 +607,12 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
                 return (
                   <article class="bill-preview-card">
                     <a href={billDetailPath(bill.condensedbillno || bill.bill_number, bill.sessionyear || bill.session_year)}>
-                      {trackedBill?.name || bill.condensedbillno || bill.bill_number}
+                      {bill.name || bill.title || trackedBill?.name || bill.condensedbillno || bill.bill_number}
                     </a>
                     <p>
                       {previewText(
-                        trackedBill?.summary ||
+                        bill.summary ||
+                          trackedBill?.summary ||
                           bill.description ||
                           bill.title ||
                           "No tracker summary available yet.",

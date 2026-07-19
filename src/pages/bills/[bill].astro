@@ -80,7 +80,7 @@ function cleanNamePart(value = "") {
 }
 
 function billTitle() {
-  return trackedBill?.name || bill?.condensedbillno || billCode;
+  return bill?.name || bill?.title || trackedBill?.name || bill?.condensedbillno || billCode;
 }
 
 function bodyLabel(value = "") {
@@ -134,7 +134,7 @@ function commentsForBill(organizations = [], code = "") {
             <p class="eyebrow">Bill Detail</p>
             <h1>{bill.condensedbillno}</h1>
             <h2>{billTitle()}</h2>
-            {trackedBill?.summary && <p>{trackedBill.summary}</p>}
+            {(bill.summary || trackedBill?.summary) && <p>{bill.summary || trackedBill.summary}</p>}
 
             <div class="hero-meta">
               <span>{bill.sessionyear}</span>

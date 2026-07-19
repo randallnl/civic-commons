@@ -123,12 +123,13 @@ function previewText(text = "", maxLength = 180) {
                     </div>
                     <h3>
                       <a href={billDetailPath(bill.condensedbillno, bill.sessionyear)}>
-                        {trackedBill?.name || bill.condensedbillno}
+                        {bill.name || bill.title || trackedBill?.name || bill.condensedbillno}
                       </a>
                     </h3>
                     <p>
                       {previewText(
-                        trackedBill?.summary ||
+                        bill.summary ||
+                          trackedBill?.summary ||
                           bill.description ||
                           "No summary returned.",
                       )}

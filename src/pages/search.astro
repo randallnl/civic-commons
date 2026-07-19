@@ -230,11 +230,12 @@ function previewText(text = "", maxLength = 170) {
                       <a href={billDetailPath(bill.condensedbillno || bill.bill_number, bill.sessionyear || bill.session_year)}>
                         <span>
                           <strong>
-                            {bill.condensedbillno || bill.bill_number}: {trackedBill?.name || bill.name || bill.title || "Tracked bill"}
+                            {bill.condensedbillno || bill.bill_number}: {bill.name || bill.title || trackedBill?.name || "Tracked bill"}
                           </strong>
                           <small>
                             {previewText(
-                              trackedBill?.summary ||
+                              bill.summary ||
+                                trackedBill?.summary ||
                                 bill.description ||
                                 bill.status ||
                                 "No tracker summary available yet.",

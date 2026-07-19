@@ -3434,31 +3434,53 @@ function getSessionYear(url) {
   return Number(url.searchParams.get("sessionyear") || url.searchParams.get("year") || 2026);
 }
 
+async function ensureBillOverridesTable(db) {
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS d1_bill_overrides (
+      sessionyear INTEGER NOT NULL,
+      condensedbillno TEXT NOT NULL,
+      title TEXT,
+      summary TEXT,
+      description TEXT,
+      updated_by TEXT,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (sessionyear, condensedbillno)
+    )
+  `).run();
+}
+
 async function handleBills(request, env) {
   const url = new URL(request.url);
+  await ensureBillOverridesTable(env.DB);
 
   const sessionyear = url.searchParams.get("sessionyear") || url.searchParams.get("year");
   const q = normalizeBillNumber(url.searchParams.get("q") || "");
-  const limit = Math.min(Number(url.searchParams.get("limit") || 100), 250);
+  const limit = Math.min(Number(url.searchParams.get("limit") || 100), 1000);
   const offset = Number(url.searchParams.get("offset") || 0);
 
   let sql = `
     SELECT
-      sessionyear,
-      legislationid,
-      condensedbillno,
-      expandedbillno,
-      legislativebody,
-      description,
-      statusdate,
-      statusorder,
-      testimony_count,
-      germane_count,
-      nongermane_count,
-      support_count,
-      oppose_count,
-      neutral_count
+      d1_bills.sessionyear,
+      d1_bills.legislationid,
+      d1_bills.condensedbillno,
+      d1_bills.expandedbillno,
+      d1_bills.legislativebody,
+      COALESCE(NULLIF(bo.description, ''), d1_bills.description) AS description,
+      NULLIF(bo.title, '') AS name,
+      NULLIF(bo.title, '') AS title,
+      NULLIF(bo.summary, '') AS summary,
+      d1_bills.statusdate,
+      d1_bills.statusorder,
+      d1_bills.testimony_count,
+      d1_bills.germane_count,
+      d1_bills.nongermane_count,
+      d1_bills.support_count,
+      d1_bills.oppose_count,
+      d1_bills.neutral_count
     FROM d1_bills
+    LEFT JOIN d1_bill_overrides bo
+      ON bo.sessionyear = d1_bills.sessionyear
+     AND UPPER(bo.condensedbillno) = UPPER(d1_bills.condensedbillno)
     WHERE 1 = 1
   `;
 
@@ -3472,16 +3494,18 @@ async function handleBills(request, env) {
   if (q) {
     sql += `
       AND (
-        UPPER(condensedbillno) LIKE ?
-        OR UPPER(expandedbillno) LIKE ?
-        OR UPPER(description) LIKE ?
+        UPPER(d1_bills.condensedbillno) LIKE ?
+        OR UPPER(d1_bills.expandedbillno) LIKE ?
+        OR UPPER(d1_bills.description) LIKE ?
+        OR UPPER(COALESCE(bo.title, '')) LIKE ?
+        OR UPPER(COALESCE(bo.summary, '')) LIKE ?
       )
     `;
-    binds.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    binds.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
   }
 
   sql += `
-    ORDER BY sessionyear DESC, statusdate DESC, condensedbillno
+    ORDER BY d1_bills.sessionyear DESC, d1_bills.statusdate DESC, d1_bills.condensedbillno
     LIMIT ?
     OFFSET ?
   `;
@@ -3504,6 +3528,7 @@ async function handleBills(request, env) {
 
 async function handleBillDetail(request, env) {
   const url = new URL(request.url);
+  await ensureBillOverridesTable(env.DB);
   const billNumber = getBillNumberFromPath(url.pathname);
   const sessionyear = getSessionYear(url);
 
@@ -3513,25 +3538,31 @@ async function handleBillDetail(request, env) {
 
   const bill = await env.DB.prepare(`
     SELECT
-      sessionyear,
-      legislationid,
-      condensedbillno,
-      expandedbillno,
-      legislativebody,
-      description,
-      statusdate,
-      statusorder,
-      testimony_count,
-      germane_count,
-      nongermane_count,
-      support_count,
-      oppose_count,
-      neutral_count
+      d1_bills.sessionyear,
+      d1_bills.legislationid,
+      d1_bills.condensedbillno,
+      d1_bills.expandedbillno,
+      d1_bills.legislativebody,
+      COALESCE(NULLIF(bo.description, ''), d1_bills.description) AS description,
+      NULLIF(bo.title, '') AS name,
+      NULLIF(bo.title, '') AS title,
+      NULLIF(bo.summary, '') AS summary,
+      d1_bills.statusdate,
+      d1_bills.statusorder,
+      d1_bills.testimony_count,
+      d1_bills.germane_count,
+      d1_bills.nongermane_count,
+      d1_bills.support_count,
+      d1_bills.oppose_count,
+      d1_bills.neutral_count
     FROM d1_bills
-    WHERE sessionyear = ?
+    LEFT JOIN d1_bill_overrides bo
+      ON bo.sessionyear = d1_bills.sessionyear
+     AND UPPER(bo.condensedbillno) = UPPER(d1_bills.condensedbillno)
+    WHERE d1_bills.sessionyear = ?
       AND (
-        UPPER(condensedbillno) = ?
-        OR UPPER(expandedbillno) = ?
+        UPPER(d1_bills.condensedbillno) = ?
+        OR UPPER(d1_bills.expandedbillno) = ?
       )
     LIMIT 1
   `)
@@ -3594,6 +3625,7 @@ async function handleBillDetail(request, env) {
 
 async function handleBillRollCall(request, env) {
   const url = new URL(request.url);
+  await ensureBillOverridesTable(env.DB);
   const billNumber = getBillNumberFromPath(url.pathname);
   const sequence = getRollCallSequenceFromPath(url.pathname);
   const sessionyear = getSessionYear(url);
@@ -3608,25 +3640,31 @@ async function handleBillRollCall(request, env) {
 
   const bill = await env.DB.prepare(`
     SELECT
-      sessionyear,
-      legislationid,
-      condensedbillno,
-      expandedbillno,
-      legislativebody,
-      description,
-      statusdate,
-      statusorder,
-      testimony_count,
-      germane_count,
-      nongermane_count,
-      support_count,
-      oppose_count,
-      neutral_count
+      d1_bills.sessionyear,
+      d1_bills.legislationid,
+      d1_bills.condensedbillno,
+      d1_bills.expandedbillno,
+      d1_bills.legislativebody,
+      COALESCE(NULLIF(bo.description, ''), d1_bills.description) AS description,
+      NULLIF(bo.title, '') AS name,
+      NULLIF(bo.title, '') AS title,
+      NULLIF(bo.summary, '') AS summary,
+      d1_bills.statusdate,
+      d1_bills.statusorder,
+      d1_bills.testimony_count,
+      d1_bills.germane_count,
+      d1_bills.nongermane_count,
+      d1_bills.support_count,
+      d1_bills.oppose_count,
+      d1_bills.neutral_count
     FROM d1_bills
-    WHERE sessionyear = ?
+    LEFT JOIN d1_bill_overrides bo
+      ON bo.sessionyear = d1_bills.sessionyear
+     AND UPPER(bo.condensedbillno) = UPPER(d1_bills.condensedbillno)
+    WHERE d1_bills.sessionyear = ?
       AND (
-        UPPER(condensedbillno) = ?
-        OR UPPER(expandedbillno) = ?
+        UPPER(d1_bills.condensedbillno) = ?
+        OR UPPER(d1_bills.expandedbillno) = ?
       )
     LIMIT 1
   `)

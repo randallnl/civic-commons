@@ -288,8 +288,8 @@ function previewText(value = "", length = 260) {
                 const voteImpact = voteImpactFor(vote);
                 const billYear = vote.billSummary?.sessionyear || vote.sessionyear;
                 const summary =
-                  vote.trackedBill?.summary ||
                   vote.billSummary?.summary ||
+                  vote.trackedBill?.summary ||
                   "";
                 const billCode = billCodeFor(vote);
                 const action = voteActionFor(vote);
