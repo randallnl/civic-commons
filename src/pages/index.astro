@@ -178,10 +178,39 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
   return cleanText(
     billSummary?.name ||
       billSummary?.title ||
+      billSummary?.headline ||
       trackedBill?.name ||
       trackedBill?.title ||
-      "Bill",
+      billSummary?.expandedbillno ||
+      billSummary?.description ||
+      "Bill details",
   );
+}
+
+function billPreviewSummary(billSummary = {}, trackedBill = {}) {
+  return previewText(
+    billSummary?.summary ||
+      billSummary?.description ||
+      trackedBill?.summary ||
+      trackedBill?.impact ||
+      "",
+    180,
+  );
+}
+
+function compactBillTitle(code = "", title = "") {
+  const billCode = normalizeBillCode(code);
+  const cleanedTitle = cleanText(title);
+  if (!billCode) return cleanedTitle || "Bill details";
+  if (!cleanedTitle || cleanedTitle === "Bill details") return billCode;
+
+  const deDuplicated = cleanText(
+    cleanedTitle
+      .replace(new RegExp(`^${billCode}\\s*[:\\-–—]?\\s*`, "i"), "")
+      .trim(),
+  );
+
+  return deDuplicated ? `${billCode}: ${deDuplicated}` : billCode;
 }
 
 function positionClass(position = "") {
@@ -375,11 +404,28 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
                         const voteStance = representativeOnlineTestimonyVoteStance(vote, billSummary);
                         const billCode = billSummary?.condensedbillno || trackedBill?.code || vote.condensedbillno;
                         const billTitle = billPreviewTitle(billSummary, trackedBill);
+                        const billSummaryText = billPreviewSummary(billSummary, trackedBill);
+                        const billYear = billSummary?.sessionyear || vote.sessionyear;
 
                         return (
                           <div class:list={["person-vote-preview", voteStance.className]}>
-                            <strong>{billCode}: {billTitle}</strong>
-                            <small>{voteStance.label}</small>
+                            <div class="person-vote-heading">
+                              <a href={billDetailPath(billCode, billYear)}>
+                                {compactBillTitle(billCode, billTitle)}
+                              </a>
+                              {billSummaryText && <p>{billSummaryText}</p>}
+                            </div>
+                            <a
+                              class="person-vote-pill"
+                              href="/vote-interpretations"
+                              title="How do we determine this?"
+                              aria-label={`How do we determine this? ${voteStance.label}`}
+                            >
+                              {voteStance.label}
+                            </a>
+                            {billSummary && (
+                              <BillPositionSummary bill={billSummary} compact={true} />
+                            )}
                           </div>
                         );
                       })}
@@ -1375,7 +1421,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     border: 1px solid #9ca3af;
     border-radius: 8px;
     display: grid;
-    gap: 4px;
+    gap: 8px;
     padding: 8px 10px;
   }
 
@@ -1392,6 +1438,49 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   .person-vote-preview.legislator-neutral {
     background: #dbeafe;
     border-color: #2563eb;
+  }
+
+  .person-vote-heading {
+    display: grid;
+    gap: 5px;
+  }
+
+  .person-vote-heading a {
+    color: #1f2933;
+    font-size: 0.9rem;
+    font-weight: 950;
+    line-height: 1.25;
+    text-decoration: none;
+  }
+
+  .person-vote-heading a:hover {
+    text-decoration: underline;
+  }
+
+  .person-vote-heading p {
+    color: #374151;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .person-vote-pill {
+    align-self: start;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    color: #1f2933;
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 850;
+    justify-self: start;
+    line-height: 1.25;
+    padding: 5px 8px;
+    text-decoration: none;
+  }
+
+  .person-vote-pill:hover {
+    background: white;
   }
 
   .person-vote-preview strong {
