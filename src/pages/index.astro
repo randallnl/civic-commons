@@ -8,8 +8,6 @@ import profileIcon from "../assets/profile icon.png";
 import { articleDetailPath, articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills, getBillSummaries } from "../lib/billsApi";
 import { isFreeStater } from "../lib/civicTags";
-import { countyImageUrl } from "../lib/communityImages";
-import { getCountyCommunity } from "../lib/communitiesApi";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
@@ -33,17 +31,9 @@ let recentArticles = [];
 let recentBills = [];
 let recentPeople = [];
 let organizationComments = [];
-let communityPreviews = [];
 let recentCommunityUpdates = [];
 let trackedBills = new Map();
 let billSummaries = new Map();
-const COMMUNITY_PREVIEW_COUNTIES = [
-  "Hillsborough",
-  "Merrimack",
-  "Rockingham",
-  "Strafford",
-  "Cheshire",
-];
 const howToStepImages = [
   organizationAssetUrl("capital dome.png"),
   organizationAssetUrl("portsmouth.png"),
@@ -60,7 +50,6 @@ try {
     billSummaryResult,
     spotlightResult,
     organizationResult,
-    communityResult,
     communityUpdatesResult,
   ] = await Promise.allSettled([
     getArticles({ include: "relations", limit: 5 }),
@@ -70,7 +59,6 @@ try {
     getBillSummaries(),
     getSpotlightLegislators({ limit: 8 }),
     getOrganizations(),
-    getHomepageCommunityPreviews(),
     getRecentApprovedCommunityUpdates({ limit: 6 }),
   ]);
 
@@ -81,7 +69,6 @@ try {
   billSummaries = billSummaryResult.status === "fulfilled" ? billSummaryResult.value : new Map();
   const spotlightPeople = spotlightResult.status === "fulfilled" ? spotlightResult.value : [];
   const organizations = organizationResult.status === "fulfilled" ? organizationResult.value : [];
-  communityPreviews = communityResult.status === "fulfilled" ? communityResult.value : [];
   recentCommunityUpdates = communityUpdatesResult.status === "fulfilled" ? communityUpdatesResult.value : [];
 
   recentArticles = articleData.articles || [];
@@ -99,172 +86,8 @@ try {
 
 recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
 
-const fallbackCommunityPreviews = [
-  {
-    title: "Town Profiles",
-    href: "/communities",
-    meta: "Find your town",
-    description:
-      "Start with your town profile to see the State House districts, State Senate district, legislative candidates, legislators, and updates tied to where you live.",
-    stats: ["Towns", "Legislative districts", "Local updates"],
-  },
-  {
-    title: "County Profiles",
-    href: "/communities",
-    meta: "Browse by county",
-    description:
-      "County profiles group towns and districts together so you can move from a broad regional view into specific legislative profiles.",
-    stats: ["Counties", "House districts", "Articles"],
-  },
-  {
-    title: "District Profiles",
-    href: "/communities",
-    meta: "House and Senate",
-    description:
-      "District profiles connect State Representatives, State Senators, towns represented, legislative candidates, and related coverage for a more specific civic picture.",
-    stats: ["Legislators", "Legislative candidates", "Votes"],
-  },
-];
-
 function trackedBillFor(bill = {}) {
   return trackedBills.get(normalizeBillCode(bill.condensedbillno || bill.bill_number));
-}
-
-async function getHomepageCommunityPreviews() {
-  const results = await Promise.allSettled(
-    COMMUNITY_PREVIEW_COUNTIES.map(async (county) => {
-      const data = await getCountyCommunity(county, {
-        body: "house",
-        articleLimit: 2,
-      });
-      return normalizeCommunityPreview(data, county);
-    }),
-  );
-
-  return results
-    .filter((result) => result.status === "fulfilled")
-    .map((result) => result.value)
-    .filter(Boolean);
-}
-
-function normalizeCommunityPreview(data = {}, fallbackCounty = "") {
-  const county =
-    data.counties?.[0] ||
-    data.county ||
-    data.community ||
-    data.result ||
-    data;
-  const rawCommunities =
-    county.communities ||
-    county.districts ||
-    county.results ||
-    data.communities ||
-    data.districts ||
-    [];
-  const communities = Array.isArray(rawCommunities) ? rawCommunities : [];
-  const representatives = [
-    ...(county.representatives || county.reps || county.legislators || []),
-    ...(county.representativeSummary?.representatives || []),
-    ...(county.representativeSummary?.reps || []),
-    ...(data.representatives || data.reps || data.legislators || []),
-    ...(data.representativeSummary?.representatives || []),
-    ...(data.representativeSummary?.reps || []),
-    ...communities.flatMap((community) =>
-      [
-        ...(community.representatives || community.reps || community.legislators || []),
-        ...(community.representativeSummary?.representatives || []),
-        ...(community.representativeSummary?.reps || []),
-      ]
-    ),
-  ];
-  const towns = new Set([
-    ...townsFromValue(county.townsRepresented || county.towns || county.towns_represented || []),
-    ...communities.flatMap((community) =>
-      townsFromValue(
-        community.towns ||
-          community.towns_represented ||
-          community.townsRepresented ||
-          community.location_text ||
-          "",
-      ),
-    ),
-  ]);
-  const articles = [
-    ...(county.relatedArticles || county.articles || data.relatedArticles || data.articles || []),
-    ...communities.flatMap((community) => community.articles || community.relatedArticles || []),
-  ].filter(Boolean);
-  const countyName = county.name || county.county || fallbackCounty;
-  const representativeCount =
-    uniqueRepresentatives(representatives) ||
-    numberFromSummary(county.representativeSummary) ||
-    numberFromSummary(data.representativeSummary) ||
-    Number(county.representativeCount || data.representativeCount || 0);
-  const updateCount =
-    articles.length ||
-    Number(county.articleCount || county.updateCount || data.articleCount || data.updateCount || 0);
-  const districtCount =
-    communities.length ||
-    Number(county.districtCount || county.houseDistrictCount || data.districtCount || data.houseDistrictCount || 0);
-
-  return {
-    title: `${countyName} County`,
-    href: `/communities/counties/${encodeURIComponent(slugify(countyName))}`,
-    imageUrl: countyImageUrl(countyName),
-    meta: `${towns.size || "Regional"} towns represented`,
-    description:
-      previewText(articles[0]?.preview?.title || articles[0]?.title || "", 135) ||
-      `Explore regional House districts, towns represented, State Representatives, State Senators, legislative candidates, and community updates for ${countyName} County.`,
-    stats: [
-      `${districtCount || "Regional"} House districts`,
-      `${representativeCount || "Current"} legislators`,
-      `${updateCount || "Recent"} updates`,
-    ],
-  };
-}
-
-function numberFromSummary(summary = {}) {
-  if (!summary || typeof summary !== "object") return 0;
-  return Number(
-    summary.count ||
-      summary.total ||
-      summary.representativeCount ||
-      summary.representativesCount ||
-      summary.legislatorCount ||
-      summary.legislatorsCount ||
-      0,
-  );
-}
-
-function townsFromValue(value = []) {
-  if (Array.isArray(value)) {
-    return value
-      .map((town) => typeof town === "object" && town !== null ? town.town || town.name || town.label : town)
-      .map((town) => cleanText(town).trim())
-      .filter(Boolean);
-  }
-
-  return String(value)
-    .split(/;|,/)
-    .map((town) => cleanText(town).trim())
-    .filter(Boolean);
-}
-
-function uniqueRepresentatives(representatives = []) {
-  return new Set(
-    representatives
-      .filter(Boolean)
-      .map((rep) => rep.personid || rep.id || repName(rep))
-      .filter(Boolean),
-  ).size;
-}
-
-function slugify(value = "") {
-  return String(value)
-    .toLowerCase()
-    .trim()
-    .replace(/['']/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 function trackedBillForCode(code = "") {
@@ -441,91 +264,54 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
       <section class="pathway">
         <div class="section-intro">
           <p class="eyebrow">How to use NH Deserves Better</p>
-          <h2>Start with representation. Then follow the local picture.</h2>
+          <h2>Explore the tools on the site.</h2>
           <p>
-            Civic information is easier to understand when you move in order:
-            identify who represents you, learn the districts and communities
-            they serve, then connect votes, bills, testimony, and coverage.
-            New Hampshire's large legislature requires an equally large
-            community response to keep public decisions transparent and
-            accountable.
+            NH Deserves Better helps neighbors connect representatives,
+            candidates, bills, testimony, local updates, articles, and
+            community profiles in one place.
           </p>
         </div>
 
-        <ol class="steps">
-          <li>
-            <span>1</span>
+        <div class="feature-grid">
+          <a class="feature-card" href="/my-state-rep">
             <img class="step-photo" src={howToStepImages[0]} alt="" loading="lazy" />
             <div>
-              <h3>Find your current representatives</h3>
-              <p>Use your address to see your State Senate district, State House districts, ward-specific representatives, candidates for those offices, contact information, and vote summaries.</p>
-              <a href="/my-state-rep">Start with My State Rep</a>
+              <span>Address lookup</span>
+              <h3>Find My State Rep</h3>
+              <p>Enter an address to find current State Representatives, State Senators, districts, candidates, and vote summaries.</p>
             </div>
-          </li>
+          </a>
 
-          <li>
-            <span>2</span>
+          <a class="feature-card" href="/communities">
             <img class="step-photo" src={howToStepImages[1]} alt="" loading="lazy" />
             <div>
-              <h3>Understand your community profile</h3>
-              <p>Search for your town or county to open a local profile with State House districts, State Senate districts, legislators, legislative candidates, and community updates tied to that specific region.</p>
-              <a href="/communities">Explore communities</a>
+              <span>Town and county profiles</span>
+              <h3>Explore Communities</h3>
+              <p>Search towns, counties, and districts to see legislators, candidates, articles, and updates tied to a place.</p>
             </div>
-          </li>
+          </a>
 
-          <li>
-            <span>3</span>
+          <a class="feature-card" href="/bills">
             <img class="step-photo" src={howToStepImages[2]} alt="" loading="lazy" />
             <div>
-              <h3>Follow votes, bills, and testimony</h3>
-              <p>See how State Representatives and State Senators voted on tracked bills, compare those votes to the preferred stance, and review public testimony summaries.</p>
-              <a href="/bills">Track legislation</a>
+              <span>Bills and votes</span>
+              <h3>Track Legislation</h3>
+              <p>Review bill summaries, public testimony, roll calls, vote labels, and legislator vote alignment.</p>
             </div>
-          </li>
+          </a>
 
-          <li>
-            <span>4</span>
+          <a class="feature-card" href="/articles">
             <img class="step-photo" src={howToStepImages[3]} alt="" loading="lazy" />
             <div>
-              <h3>Add and share local context</h3>
-              <p>Share articles, social media posts, images, profile updates, and local observations so neighbors can understand how legislators, candidates, bills, and public decisions affect their communities.</p>
-              <a href="/articles">Read articles</a>
+              <span>Community context</span>
+              <h3>Share Updates</h3>
+              <p>Submit articles, profile corrections, local updates, photos, and context for moderation.</p>
             </div>
-          </li>
-        </ol>
+          </a>
+        </div>
       </section>
 
       <section class="homepage-stack">
-        <div class="homepage-panel">
-          <h2>Next: Understand Your Community</h2>
-          <p class="panel-intro">
-            Start with a town or county profile to move from broad regional
-            context into the specific State House and State Senate districts,
-            legislators, legislative candidates, and
-            updates connected to that place.
-          </p>
-          <div class="community-preview-grid">
-            {(communityPreviews.length ? communityPreviews : fallbackCommunityPreviews).map((community) => (
-              <a class="community-preview-card" href={community.href}>
-                {community.imageUrl && (
-                  <img src={community.imageUrl} alt="" loading="lazy" />
-                )}
-                <div class="community-preview-copy">
-                  <span>{community.meta}</span>
-                  <strong>{community.title}</strong>
-                  <p>{community.description}</p>
-                  <div class="community-preview-stats">
-                    {community.stats.map((stat) => <em>{stat}</em>)}
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-          <a class="community-search-link" href="/communities">
-            Search for your town profile
-          </a>
-        </div>
-
         <div class="homepage-panel">
           <h2>Representative Profiles</h2>
           <ul class="list stacked-list">
@@ -1019,40 +805,47 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     padding: 32px;
   }
 
-  .steps {
+  .feature-grid {
     display: grid;
-    gap: 14px;
-    list-style: none;
+    gap: 16px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     margin: 0;
-    padding: 0;
   }
 
-  .steps li {
-    align-items: start;
+  .feature-card {
     background: #fffaf1;
     border: 1px solid #d1d5db;
     border-radius: 12px;
+    color: inherit;
     display: grid;
-    gap: 16px;
-    grid-template-columns: 52px minmax(150px, 22%) 1fr;
-    padding: 18px;
+    gap: 14px;
+    overflow: hidden;
+    padding: 12px;
+    text-decoration: none;
+    transition: transform 160ms ease, box-shadow 160ms ease;
   }
 
-  .steps li > span {
-    align-items: center;
-    background: #1f2933;
-    border-radius: 999px;
-    color: white;
-    display: inline-flex;
-    font-size: 1.35rem;
+  .feature-card:hover {
+    box-shadow: 0 10px 24px rgba(31, 41, 51, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .feature-card > div {
+    display: grid;
+    gap: 8px;
+    padding: 0 4px 4px;
+  }
+
+  .feature-card span {
+    color: #6b4f2a;
+    font-size: 0.72rem;
     font-weight: 950;
-    height: 52px;
-    justify-content: center;
-    width: 52px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   .step-photo {
-    aspect-ratio: 16 / 10;
+    aspect-ratio: 4 / 3;
     border: 1px solid #d1d5db;
     border-radius: 10px;
     height: auto;
@@ -1060,26 +853,16 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     width: 100%;
   }
 
-  .steps h3 {
+  .feature-card h3 {
     font-size: 1.25rem;
     line-height: 1.15;
     margin: 0;
   }
 
-  .steps p {
+  .feature-card p {
     color: #4b5563;
     line-height: 1.55;
-    margin: 8px 0 12px;
-  }
-
-  .steps a {
-    color: #1f2933;
-    font-weight: 900;
-    text-decoration: none;
-  }
-
-  .steps a:hover {
-    text-decoration: underline;
+    margin: 0;
   }
 
   .homepage-stack {
@@ -1143,102 +926,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     color: #4b5563;
     line-height: 1.5;
     margin: 0;
-  }
-
-  .panel-intro {
-    color: #4b5563;
-    line-height: 1.55;
-    margin: 0 0 16px;
-  }
-
-  .community-preview-grid {
-    display: grid;
-    gap: 12px;
-  }
-
-  .community-preview-card {
-    align-items: stretch;
-    background: #fffaf1;
-    border: 1px solid #d1d5db;
-    border-radius: 12px;
-    color: inherit;
-    display: grid;
-    gap: 8px;
-    grid-template-columns: 112px minmax(0, 1fr);
-    overflow: hidden;
-    padding: 0;
-    text-decoration: none;
-  }
-
-  .community-preview-card:hover strong {
-    text-decoration: underline;
-  }
-
-  .community-preview-card > img {
-    display: block;
-    height: 100%;
-    min-height: 136px;
-    object-fit: cover;
-    width: 100%;
-  }
-
-  .community-preview-copy {
-    display: grid;
-    gap: 8px;
-    padding: 14px;
-  }
-
-  .community-preview-copy > span {
-    color: #6b4f2a;
-    font-size: 0.72rem;
-    font-weight: 950;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  .community-preview-copy strong {
-    font-size: 1.15rem;
-    line-height: 1.15;
-  }
-
-  .community-preview-copy p {
-    color: #4b5563;
-    line-height: 1.45;
-    margin: 0;
-  }
-
-  .community-preview-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
-    margin-top: 2px;
-  }
-
-  .community-preview-stats em {
-    background: white;
-    border: 1px solid #d1d5db;
-    border-radius: 999px;
-    color: #1f2933;
-    font-size: 0.74rem;
-    font-style: normal;
-    font-weight: 850;
-    padding: 5px 8px;
-  }
-
-  .community-search-link {
-    border: 2px solid #1f2933;
-    border-radius: 999px;
-    color: #1f2933;
-    display: inline-block;
-    font-weight: 900;
-    margin-top: 16px;
-    padding: 10px 14px;
-    text-decoration: none;
-  }
-
-  .community-search-link:hover {
-    background: #1f2933;
-    color: white;
   }
 
   .community-comments {
@@ -1755,12 +1442,16 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
       grid-template-columns: 1fr 1fr;
     }
 
+    .feature-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (max-width: 600px) {
     .rep-preview,
     .comment-columns,
     .bill-preview-grid,
+    .feature-grid,
     .community-update-card.has-photo {
       grid-template-columns: 1fr;
     }
@@ -1780,24 +1471,16 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
       padding: 22px;
     }
 
-    .steps li {
-      grid-template-columns: 42px 1fr;
-      padding: 14px;
-    }
-
-    .steps li > span {
-      font-size: 1.1rem;
-      height: 42px;
-      width: 42px;
-    }
-
     .step-photo {
-      grid-column: 2;
       min-width: 0;
     }
 
-    .steps li > div {
-      grid-column: 1 / -1;
+    .feature-card {
+      grid-template-columns: 112px minmax(0, 1fr);
+    }
+
+    .feature-card > div {
+      align-content: start;
     }
 
     .list .article-update.has-image {
@@ -1822,14 +1505,5 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
       font-size: 1.75rem;
     }
 
-    .community-preview-card {
-      grid-template-columns: 1fr;
-    }
-
-    .community-preview-card > img {
-      aspect-ratio: 16 / 8;
-      height: auto;
-      min-height: 0;
-    }
   }
 </style>
