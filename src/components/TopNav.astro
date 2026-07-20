@@ -32,7 +32,7 @@ const isExploreActive = exploreLinks.some(isActive);
 const isGuidesActive = guideLinks.some(isActive);
 ---
 
-<header class="site-nav">
+<header class="site-nav" data-site-nav>
   <div class="nav-inner">
     <a class="return-link" href="/" data-return-link hidden>Return</a>
 
@@ -117,6 +117,47 @@ const isGuidesActive = guideLinks.some(isActive);
     returnLink.href = returnPath;
     returnLink.hidden = false;
   }
+
+  const siteNav = document.querySelector("[data-site-nav]");
+  let lastScrollY = window.scrollY;
+  let ticking = false;
+
+  function navHasActiveInteraction() {
+    return Boolean(
+      siteNav?.matches(":hover, :focus-within") ||
+        siteNav?.querySelector(".nav-dropdown[open]"),
+    );
+  }
+
+  function updateNavVisibility() {
+    if (!(siteNav instanceof HTMLElement)) return;
+
+    const currentScrollY = Math.max(window.scrollY, 0);
+    const delta = currentScrollY - lastScrollY;
+
+    if (currentScrollY < 80 || delta < -6 || navHasActiveInteraction()) {
+      siteNav.classList.remove("is-hidden");
+    } else if (delta > 6) {
+      siteNav.classList.add("is-hidden");
+    }
+
+    lastScrollY = currentScrollY;
+    ticking = false;
+  }
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(updateNavVisibility);
+    },
+    { passive: true },
+  );
+
+  siteNav?.addEventListener("mouseenter", () => siteNav.classList.remove("is-hidden"));
+  siteNav?.addEventListener("focusin", () => siteNav.classList.remove("is-hidden"));
+  siteNav?.addEventListener("toggle", () => siteNav.classList.remove("is-hidden"), true);
 </script>
 
 <style>
@@ -125,8 +166,23 @@ const isGuidesActive = guideLinks.some(isActive);
     border-bottom: 2px solid #1f2933;
     position: sticky;
     top: 0;
+    transform: translateY(0);
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease;
     z-index: 20;
     backdrop-filter: blur(10px);
+  }
+
+  .site-nav.is-hidden {
+    box-shadow: none;
+    transform: translateY(-110%);
+  }
+
+  .site-nav:focus-within,
+  .site-nav:hover,
+  .site-nav:has(.nav-dropdown[open]) {
+    transform: translateY(0);
   }
 
   .nav-inner {
@@ -384,6 +440,12 @@ const isGuidesActive = guideLinks.some(isActive);
       min-width: 0;
       position: static;
       width: min(100%, 320px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .site-nav {
+      transition: none;
     }
   }
 </style>
