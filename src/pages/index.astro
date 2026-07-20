@@ -351,6 +351,16 @@ function trackedVotesFor(person = {}, limit = 3) {
   return representativeOnlineTestimonyVotePreviews(person, billSummaries, { limit });
 }
 
+function billPreviewTitle(billSummary = {}, trackedBill = {}) {
+  return cleanText(
+    billSummary?.name ||
+      billSummary?.title ||
+      trackedBill?.name ||
+      trackedBill?.title ||
+      "Bill",
+  );
+}
+
 function positionClass(position = "") {
   const value = String(position).toLowerCase();
   if (value.includes("support") || value.includes("favor")) return "support";
@@ -578,7 +588,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
                         const trackedBill = trackedBillForVote(trackedBills, vote);
                         const voteStance = representativeOnlineTestimonyVoteStance(vote, billSummary);
                         const billCode = billSummary?.condensedbillno || trackedBill?.code || vote.condensedbillno;
-                        const billTitle = trackedBill?.name || billSummary?.name || billSummary?.title || "Bill";
+                        const billTitle = billPreviewTitle(billSummary, trackedBill);
 
                         return (
                           <div class:list={["person-vote-preview", voteStance.className]}>

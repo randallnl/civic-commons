@@ -449,6 +449,20 @@ function trackedVotesFor(person = {}, limit = 3) {
   return votes.filter((vote) => trackedBillForVote(trackedBills, vote)).slice(0, limit);
 }
 
+function billSummaryForVote(vote = {}) {
+  return billSummaries.get(normalizeBillCode(vote.condensedbillno || vote.bill_number));
+}
+
+function billPreviewTitle(billSummary = {}, trackedBill = {}) {
+  return cleanText(
+    billSummary?.name ||
+      billSummary?.title ||
+      trackedBill?.name ||
+      trackedBill?.title ||
+      "Tracked Bill",
+  );
+}
+
 function formatAddress(normalized = {}) {
   return [
     normalized.line1,
@@ -674,11 +688,14 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
                       <span>Bill Tracker Votes</span>
                       {votes.map((vote) => {
                         const trackedBill = trackedBillForVote(trackedBills, vote);
+                        const billSummary = billSummaryForVote(vote);
                         const voteStance = representativeVoteStance(vote, trackedBill);
+                        const billCode = billSummary?.condensedbillno || trackedBill?.code || vote.condensedbillno;
+                        const billTitle = billPreviewTitle(billSummary, trackedBill);
 
                         return (
                           <div class:list={["sample-vote-preview", voteStance.className]}>
-                            <strong>{trackedBill.code}: {trackedBill.name || "Tracked Bill"}</strong>
+                            <strong>{billCode}: {billTitle}</strong>
                             <small>{voteStance.label}</small>
                           </div>
                         );

@@ -131,9 +131,10 @@ function billCodeFor(vote = {}) {
 
 function billTitleFor(vote = {}) {
   return (
-    vote.trackedBill?.name ||
     vote.billSummary?.name ||
     vote.billSummary?.title ||
+    vote.trackedBill?.name ||
+    vote.trackedBill?.title ||
     billCodeFor(vote)
   );
 }

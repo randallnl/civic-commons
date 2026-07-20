@@ -47,6 +47,16 @@ function trackedBillFor(vote) {
 function billSummaryFor(vote) {
   return billSummaries.get(normalizeBillCode(vote.condensedbillno || vote.bill_number));
 }
+
+function billPreviewTitle(billSummary = {}, trackedBill = {}) {
+  return cleanText(
+    billSummary?.name ||
+      billSummary?.title ||
+      trackedBill?.name ||
+      trackedBill?.title ||
+      "",
+  );
+}
 ---
 
 <article class="rep-card">
@@ -142,6 +152,7 @@ function billSummaryFor(vote) {
           const stance = representativeOnlineTestimonyVoteStance(vote, billSummary);
           const voteImpact = "";
           const summary = billSummary?.summary || bill?.summary || "";
+          const billTitle = billPreviewTitle(billSummary, bill);
 
           return (
             <div class="vote-item">
@@ -151,8 +162,8 @@ function billSummaryFor(vote) {
                     {bill?.code || vote.condensedbillno || "Bill"}
                   </a>
                 </strong>
-                {(billSummary?.name || billSummary?.title || bill?.name) && (
-                  <span>{cleanText(billSummary?.name || billSummary?.title || bill.name)}</span>
+                {billTitle && (
+                  <span>{billTitle}</span>
                 )}
                 {summary && <p class="bill-summary">{cleanText(summary)}</p>}
               </div>
