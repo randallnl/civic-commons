@@ -24,11 +24,12 @@ export async function POST({ request }) {
     });
 
     return redirectWithMessage(
+      request,
       redirectTo,
       `${result.bill} updated for ${result.sessionyear}.`,
     );
   } catch (error) {
-    return redirectWithError(redirectTo, error?.message || "Unable to update bill.");
+    return redirectWithError(request, redirectTo, error?.message || "Unable to update bill.");
   }
 }
 
@@ -38,14 +39,14 @@ function safeRedirectPath(value) {
   return path;
 }
 
-function redirectWithMessage(path, message) {
-  const url = new URL(path, "https://admin.local");
+function redirectWithMessage(request, path, message) {
+  const url = new URL(path, request.url);
   url.searchParams.set("message", message);
-  return Response.redirect(`${url.pathname}${url.search}${url.hash}`, 303);
+  return Response.redirect(url, 303);
 }
 
-function redirectWithError(path, message) {
-  const url = new URL(path, "https://admin.local");
+function redirectWithError(request, path, message) {
+  const url = new URL(path, request.url);
   url.searchParams.set("error", message);
-  return Response.redirect(`${url.pathname}${url.search}${url.hash}`, 303);
+  return Response.redirect(url, 303);
 }
