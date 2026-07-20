@@ -4,6 +4,7 @@ export const prerender = false;
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import ArticleList from "../../components/ArticleList.astro";
 import TopNav from "../../components/TopNav.astro";
+import { currentAdminSession } from "../../lib/adminAuth";
 import { getBillDetail, getBillTestimony, positionCounts, rollCallPath } from "../../lib/billsApi";
 import { getOrganizations, organizationPath } from "../../lib/organizationsApi";
 import { cleanText } from "../../lib/text";
@@ -11,6 +12,7 @@ import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const billCode = Astro.params.bill || "";
 const year = Astro.url.searchParams.get("year")?.trim() || "";
+const adminSession = await currentAdminSession(Astro.request);
 
 let bill = null;
 let rollCalls = [];
@@ -50,6 +52,7 @@ const latestRollCall = sortedRollCalls[0];
 const previousRollCalls = sortedRollCalls.slice(1);
 const visibleTestimony = testimony.slice(0, 15);
 const remainingTestimony = testimony.slice(15);
+const currentPath = `${Astro.url.pathname}${Astro.url.search}`;
 
 function formatDate(value) {
   if (!value) return "";
@@ -142,6 +145,52 @@ function commentsForBill(organizations = [], code = "") {
               {bill.statusdate && <span>{formatDate(bill.statusdate)}</span>}
             </div>
           </section>
+
+          {adminSession && (
+            <section class="panel admin-bill-panel">
+              <div class="section-heading">
+                <p class="eyebrow">Admin</p>
+                <h2>Edit bill text</h2>
+              </div>
+              <form class="admin-bill-form" action="/api/admin/bills" method="post">
+                <input type="hidden" name="redirectTo" value={currentPath} />
+                <input type="hidden" name="bill" value={bill.condensedbillno || billCode} />
+                <input type="hidden" name="sessionyear" value={bill.sessionyear || year || 2026} />
+
+                <label>
+                  Public title
+                  <input
+                    name="title"
+                    value={bill.name || bill.title || trackedBill?.name || ""}
+                    placeholder="HB155: Short public-facing title"
+                  />
+                </label>
+
+                <label>
+                  Public summary / description
+                  <textarea
+                    name="summary"
+                    rows="4"
+                    placeholder="Plain-language summary shown in previews and bill profiles."
+                  >{bill.summary || trackedBill?.summary || ""}</textarea>
+                </label>
+
+                <label>
+                  Latest action / source description <span>Optional</span>
+                  <textarea
+                    name="description"
+                    rows="3"
+                    placeholder="Use only when the D1 source description/latest action needs to be changed."
+                  >{bill.description || ""}</textarea>
+                </label>
+
+                <div class="admin-form-actions">
+                  <button type="submit">Save bill text</button>
+                  <a class="secondary-button" href="/admin#bill-admin">Open admin bills</a>
+                </div>
+              </form>
+            </section>
+          )}
 
           <section class="overview-grid">
             <article class="latest-action panel">
@@ -585,6 +634,73 @@ function commentsForBill(organizations = [], code = "") {
   .section-heading.compact h2 {
     font-size: 1.15rem;
     margin-bottom: 12px;
+  }
+
+  .admin-bill-panel {
+    margin-bottom: 22px;
+  }
+
+  .admin-bill-form {
+    display: grid;
+    gap: 14px;
+  }
+
+  .admin-bill-form label {
+    color: #1f2933;
+    display: grid;
+    font-size: 0.88rem;
+    font-weight: 900;
+    gap: 6px;
+  }
+
+  .admin-bill-form label span {
+    color: #6b7280;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .admin-bill-form input,
+  .admin-bill-form textarea {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    color: #1f2933;
+    font: inherit;
+    font-weight: 600;
+    padding: 11px 12px;
+    width: 100%;
+  }
+
+  .admin-bill-form textarea {
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  .admin-form-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .admin-bill-form button,
+  .secondary-button {
+    border: 2px solid #1f2933;
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 950;
+    padding: 10px 16px;
+    text-decoration: none;
+  }
+
+  .admin-bill-form button {
+    background: #1f2933;
+    color: white;
+  }
+
+  .secondary-button {
+    background: white;
+    color: #1f2933;
   }
 
   .testimony-breakdown {

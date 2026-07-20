@@ -349,7 +349,17 @@ function reviewDate(value = "") {
               <input type="hidden" name="redirectTo" value="/admin#bill-admin" />
 
               <label>
-                Find bill
+                Select existing bill
+                <select id="billAdminSelect">
+                  <option value="">Choose a bill to edit</option>
+                  {billAdminData.map((bill) => (
+                    <option value={`${bill.year}:${bill.code}`}>{bill.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Or search bill
                 <input
                   id="billAdminSearch"
                   list="billAdminOptions"
@@ -1259,6 +1269,7 @@ function reviewDate(value = "") {
       profileSearch?.addEventListener("input", syncProfileFilterValue);
       profileSearch?.form?.addEventListener("submit", syncProfileFilterValue);
 
+      const billAdminSelect = document.getElementById("billAdminSelect");
       const billAdminSearch = document.getElementById("billAdminSearch");
       const billAdminCode = document.getElementById("billAdminCode");
       const billAdminYear = document.getElementById("billAdminYear");
@@ -1269,20 +1280,23 @@ function reviewDate(value = "") {
       const billAdminMap = new Map();
 
       billAdminData.forEach((bill) => {
+        billAdminMap.set(`${bill.year}:${bill.code}`, bill);
         billAdminMap.set(bill.label, bill);
         billAdminMap.set(bill.code, bill);
         billAdminMap.set(`${bill.code} ${bill.year}`, bill);
       });
 
-      function hydrateBillAdminForm() {
-        if (!billAdminSearch) return;
-        const rawValue = billAdminSearch.value || "";
+      function hydrateBillAdminForm(value, { syncSearch = false, syncSelect = false } = {}) {
+        const rawValue = value || "";
         const code = normalizeBillInput(rawValue);
         const bill = billAdminMap.get(rawValue) || billAdminMap.get(code);
         if (!bill) {
           if (billAdminCode && code) billAdminCode.value = code;
           return;
         }
+        const billKey = `${bill.year}:${bill.code}`;
+        if (syncSearch && billAdminSearch) billAdminSearch.value = bill.label || bill.code || "";
+        if (syncSelect && billAdminSelect) billAdminSelect.value = billKey;
         if (billAdminCode) billAdminCode.value = bill.code || "";
         if (billAdminYear) billAdminYear.value = bill.year || "2026";
         if (billAdminTitle) billAdminTitle.value = bill.title || "";
@@ -1294,8 +1308,15 @@ function reviewDate(value = "") {
         }
       }
 
-      billAdminSearch?.addEventListener("change", hydrateBillAdminForm);
-      billAdminSearch?.addEventListener("input", hydrateBillAdminForm);
+      billAdminSelect?.addEventListener("change", () => {
+        hydrateBillAdminForm(billAdminSelect.value, { syncSearch: true });
+      });
+      billAdminSearch?.addEventListener("change", () => {
+        hydrateBillAdminForm(billAdminSearch.value, { syncSelect: true });
+      });
+      billAdminSearch?.addEventListener("input", () => {
+        hydrateBillAdminForm(billAdminSearch.value);
+      });
 
       const reviewForms = document.querySelectorAll("[data-profile-review-form]");
 
