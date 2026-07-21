@@ -308,10 +308,6 @@ function uniqueArticles(articles = []) {
                 <span>Election Year</span>
                 <strong>{role.electionYear || candidate.electionYear || "Not listed"}</strong>
               </div>
-              <div>
-                <span>Filer Entity</span>
-                <strong>{role.filerEntityNumber || "Not listed"}</strong>
-              </div>
             </article>
           ))}
           {(candidate.candidateWebsite || candidate.candidateEmail) && (

@@ -57,6 +57,16 @@ const error = Astro.url.searchParams.get("error") || "";
             required
           />
 
+          <label for="submitterEmail">Email</label>
+          <input
+            id="submitterEmail"
+            name="submitterEmail"
+            type="email"
+            autocomplete="email"
+            placeholder="Used if we need to follow up"
+            required
+          />
+
           <label for="suggestion">Suggested update</label>
           <textarea
             id="suggestion"

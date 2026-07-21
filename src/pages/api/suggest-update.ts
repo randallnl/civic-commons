@@ -14,12 +14,17 @@ export async function POST({ request }) {
   try {
     const form = await request.formData();
     const pageUrl = String(form.get("pageUrl") || "").trim();
+    const submitterEmail = String(form.get("submitterEmail") || "").trim();
     const suggestion = String(form.get("suggestion") || "").trim();
     const otherInfo = String(form.get("otherInfo") || "").trim();
     submittedPageUrl = pageUrl;
 
-    if (!pageUrl || !suggestion) {
-      return redirectToForm(pageUrl, "Page and suggested update are required.");
+    if (!pageUrl || !submitterEmail || !suggestion) {
+      return redirectToForm(pageUrl, "Page, email, and suggested update are required.");
+    }
+
+    if (!isValidEmail(submitterEmail)) {
+      return redirectToForm(pageUrl, "Enter a valid email address.");
     }
 
     const token = await mondayToken();
@@ -31,6 +36,7 @@ export async function POST({ request }) {
     await createMondayItem({
       token,
       pageUrl,
+      submitterEmail,
       suggestedEdit: suggestion,
       otherInfo,
     });
@@ -54,7 +60,7 @@ export function OPTIONS() {
   });
 }
 
-async function createMondayItem({ token, pageUrl, suggestedEdit, otherInfo = "" }) {
+async function createMondayItem({ token, pageUrl, submitterEmail = "", suggestedEdit, otherInfo = "" }) {
   const mutation = `
     mutation CreateSuggestedUpdate($boardId: ID!, $itemName: String!, $columnValues: JSON!) {
       create_item(board_id: $boardId, item_name: $itemName, column_values: $columnValues) {
@@ -65,7 +71,7 @@ async function createMondayItem({ token, pageUrl, suggestedEdit, otherInfo = "" 
   const columnValues = JSON.stringify({
     [SUGGESTED_EDIT_COLUMN]: { text: suggestedEdit },
     [URL_COLUMN]: pageUrl,
-    [OTHER_INFO_COLUMN]: otherInfo,
+    [OTHER_INFO_COLUMN]: ["Submitter email: " + submitterEmail, otherInfo].filter(Boolean).join("\n\n"),
   });
 
   const response = await fetch(MONDAY_API_URL, {
@@ -90,6 +96,10 @@ async function createMondayItem({ token, pageUrl, suggestedEdit, otherInfo = "" 
   }
 
   return data.data?.create_item;
+}
+
+function isValidEmail(value = "") {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
 }
 
 async function mondayToken() {
