@@ -125,7 +125,9 @@ function townLabel(town = {}) {
 
 function isTownRelation(value = {}) {
   if (!value) return false;
-  if (typeof value === "string") return !/\b(county|district|house|senate)\b/i.test(value);
+  if (typeof value === "string") {
+    return !isNumericOnlyTag(value) && !/\b(county|district|house|senate)\b/i.test(value);
+  }
 
   const relationType = cleanText(
     value.type ||
@@ -141,10 +143,15 @@ function isTownRelation(value = {}) {
   if (value.district || value.houseDistrict || value.senateDistrict) return false;
   if (value.body || value.chamber) return false;
 
-  return Boolean(townLabel(value));
+  const label = townLabel(value);
+  return Boolean(label && !isNumericOnlyTag(label));
 }
 
 const articleTowns = (article.towns || []).filter(isTownRelation);
+
+function isNumericOnlyTag(value = "") {
+  return /^\d+$/.test(String(value || "").trim());
+}
 
 function billOptionValue(bill = {}) {
   return bill.condensedbillno || bill.bill_number || "";

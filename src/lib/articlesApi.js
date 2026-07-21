@@ -202,5 +202,20 @@ function cleanRelationList(values, keys = []) {
           .map((key) => [key, cleanText(value[key])]),
       ),
     };
-  });
+  }).filter((value) => !isNumericOnlyRelation(value, keys));
+}
+
+function isNumericOnlyRelation(value, keys = []) {
+  if (typeof value === "string") return isNumericOnlyTag(value);
+  if (!value || typeof value !== "object") return false;
+
+  const labels = keys
+    .map((key) => value[key])
+    .filter((label) => typeof label === "string" && label.trim());
+
+  return labels.length > 0 && labels.every(isNumericOnlyTag);
+}
+
+function isNumericOnlyTag(value = "") {
+  return /^\d+$/.test(String(value || "").trim());
 }

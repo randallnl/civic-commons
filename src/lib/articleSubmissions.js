@@ -551,12 +551,15 @@ async function insertArticleRelations(db, articleId, scan = {}) {
   }
 
   for (const town of scan.towns || []) {
+    const townLabel = cleanText(town.town || town.name || town.label || "");
+    if (isNumericOnlyTag(townLabel)) continue;
+
     await db
       .prepare(
         `INSERT OR IGNORE INTO d1_article_towns (article_id, town)
          VALUES (?, ?)`,
       )
-      .bind(articleId, town.town)
+      .bind(articleId, townLabel)
       .run();
   }
 }
@@ -803,7 +806,7 @@ function townsFromCommunities(value = "") {
   return String(value || "")
     .split(/[,;]/)
     .map((town) => cleanText(town).replace(/\s*-\s*Ward\s+\d+$/i, "").trim())
-    .filter(Boolean);
+    .filter((town) => town && !isNumericOnlyTag(town));
 }
 
 function containsName(text, name) {
@@ -904,6 +907,10 @@ function splitManualValues(value = "") {
     .map((item) => cleanText(item).trim())
     .filter(Boolean)
     .slice(0, 30);
+}
+
+function isNumericOnlyTag(value = "") {
+  return /^\d+$/.test(String(value || "").trim());
 }
 
 function dedupeBy(values = [], keyFor) {

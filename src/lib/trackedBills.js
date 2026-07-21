@@ -159,6 +159,7 @@ export function gradeFromAlignmentPercent(value) {
 export function representativeGradeFor(rep = {}, trackedBills = new Map(), billSummaries = new Map()) {
   return (
     representativeOnlineTestimonyGrade(rep.voteHistory || [], billSummaries) ||
+    gradeFromAlignmentPercent(rep.alignment_percent ?? rep.alignmentPercent) ||
     unknownGrade()
   );
 }
