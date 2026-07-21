@@ -62,8 +62,10 @@ const opposeCount = Math.max(0, Number(counts.oppose || 0));
     background: #f8fafc;
     border: 1px solid #9ca3af;
     border-radius: 12px;
+    box-sizing: border-box;
     display: grid;
     gap: 7px;
+    min-width: 0;
     padding: 8px;
   }
 
@@ -84,6 +86,8 @@ const opposeCount = Math.max(0, Number(counts.oppose || 0));
     font-weight: 900;
     justify-content: center;
     line-height: 1.1;
+    min-width: 0;
+    overflow-wrap: anywhere;
     padding: 6px 9px;
     text-align: center;
   }
@@ -99,6 +103,8 @@ const opposeCount = Math.max(0, Number(counts.oppose || 0));
     font-weight: 900;
     justify-content: center;
     line-height: 1.1;
+    min-width: 0;
+    overflow-wrap: anywhere;
     padding: 6px 9px;
     text-align: center;
   }
@@ -118,6 +124,7 @@ const opposeCount = Math.max(0, Number(counts.oppose || 0));
     font-size: 0.68rem;
     min-height: 22px;
     padding: 2px 7px;
+    width: 100%;
   }
 
   .position-summary.compact {
@@ -127,7 +134,10 @@ const opposeCount = Math.max(0, Number(counts.oppose || 0));
   }
 
   .position-summary.compact .summary-pills {
+    display: grid;
     gap: 4px;
+    grid-template-columns: 1fr;
+    min-width: 0;
   }
 
   .summary-title {

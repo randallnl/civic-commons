@@ -220,11 +220,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
         <div class="section-intro">
           <p class="eyebrow">How to use NH Deserves Better</p>
           <h2>Explore the tools on the site.</h2>
-          <p>
-            NH Deserves Better helps neighbors connect representatives,
-            candidates, bills, testimony, local updates, articles, and
-            community profiles in one place.
-          </p>
         </div>
 
         <div class="feature-grid">
@@ -233,7 +228,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
             <div>
               <span>Address lookup</span>
               <h3>Find My Legislator</h3>
-              <p>Enter an address to find current State Representatives, State Senators, districts, candidates, and vote summaries.</p>
             </div>
           </a>
 
@@ -242,7 +236,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
             <div>
               <span>Town and county profiles</span>
               <h3>Explore Communities</h3>
-              <p>Search towns, counties, and districts to see legislators, candidates, articles, and updates tied to a place.</p>
             </div>
           </a>
 
@@ -251,7 +244,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
             <div>
               <span>Bills and votes</span>
               <h3>Track Legislation</h3>
-              <p>Review bill summaries, public testimony, roll calls, vote labels, and legislator vote alignment.</p>
             </div>
           </a>
 
@@ -260,7 +252,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
             <div>
               <span>Community context</span>
               <h3>Share Updates</h3>
-              <p>Submit articles, profile corrections, local updates, photos, and context for moderation.</p>
             </div>
           </a>
         </div>
@@ -781,12 +772,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     margin: 0;
   }
 
-  .feature-card p {
-    color: #4b5563;
-    line-height: 1.55;
-    margin: 0;
-  }
-
   .portal-sidebar-row {
     display: grid;
     gap: 18px;
@@ -902,12 +887,15 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   .home-rep-list {
     display: grid;
     gap: 18px;
+    justify-items: center;
   }
 
   :global(.home-rep-list .rep-card) {
     border: 1px solid #e2e8f0;
     border-radius: 10px;
     box-shadow: none;
+    max-width: 820px;
+    width: 100%;
   }
 
   :global(.home-rep-list .rep-photo) {
@@ -1639,9 +1627,19 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     }
 
     .hero {
-      aspect-ratio: 16 / 9;
-      min-height: 280px;
-      padding: 28px 22px;
+      aspect-ratio: auto;
+      min-height: 430px;
+      padding: 38px 22px;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.9rem, 9vw, 2.45rem);
+      line-height: 1.04;
+    }
+
+    .hero .lede {
+      font-size: 1rem;
+      line-height: 1.5;
     }
 
     .pathway,
