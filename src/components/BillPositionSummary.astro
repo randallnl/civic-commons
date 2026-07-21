@@ -115,15 +115,19 @@ const opposeCount = Math.max(0, Number(counts.oppose || 0));
 
   .position-summary.compact .sentiment-pill,
   .position-summary.compact .count-pill {
-    font-size: 0.76rem;
-    min-height: 26px;
-    padding: 4px 8px;
+    font-size: 0.68rem;
+    min-height: 22px;
+    padding: 2px 7px;
   }
 
   .position-summary.compact {
     border-radius: 10px;
+    gap: 3px;
+    padding: 5px;
+  }
+
+  .position-summary.compact .summary-pills {
     gap: 4px;
-    padding: 6px;
   }
 
   .summary-title {
@@ -138,8 +142,8 @@ const opposeCount = Math.max(0, Number(counts.oppose || 0));
   }
 
   .position-summary.compact .summary-title {
-    font-size: 0.66rem;
-    padding-bottom: 4px;
+    font-size: 0.6rem;
+    padding-bottom: 3px;
   }
 
   .community-neutral {
