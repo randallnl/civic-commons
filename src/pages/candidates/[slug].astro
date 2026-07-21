@@ -8,6 +8,7 @@ import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import profileIcon from "../../assets/profile icon.png";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
+import { getBillSummaries } from "../../lib/billsApi";
 import { representativePersonIdForCandidate } from "../../lib/candidateLegislatorLinks";
 import {
   candidateName,
@@ -19,12 +20,13 @@ import {
 import { enrichCandidateWithLegislator } from "../../lib/candidateLegislators";
 import { isFreeStater } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
-import { getRepresentatives, repName } from "../../lib/repsApi";
+import { getRepresentative, getRepresentatives, repName } from "../../lib/repsApi";
 import {
   endorsementsForCandidate,
   getOrganizations,
   organizationPath,
 } from "../../lib/organizationsApi";
+import { representativeGradeFor } from "../../lib/trackedBills";
 
 const { slug } = Astro.params;
 
@@ -32,6 +34,8 @@ let apiData = null;
 let organizations = [];
 let legislatorOptions = [];
 let linkedRepresentativePersonId = "";
+let currentLegislator = null;
+let currentLegislatorGrade = null;
 const adminSession = await currentAdminSession(Astro.request);
 const message = Astro.url.searchParams.get("message") || "";
 const error = Astro.url.searchParams.get("error") || "";
@@ -50,6 +54,27 @@ if (!candidate?.filerEntityNumber && !candidate?.name) {
 
 candidate = await enrichCandidateWithLegislator(candidate);
 
+if (candidate.currentLegislator && candidate.legislatorPersonId) {
+  try {
+    const [representativeData, billSummaries] = await Promise.all([
+      getRepresentative(candidate.legislatorPersonId, { voteLimit: 200 }),
+      getBillSummaries(),
+    ]);
+    const representative =
+      representativeData.representative ||
+      representativeData.rep ||
+      representativeData.person ||
+      representativeData;
+    currentLegislator = {
+      ...representative,
+      voteHistory: representativeData.voteHistory || representative.voteHistory || [],
+    };
+    currentLegislatorGrade = representativeGradeFor(currentLegislator, new Map(), billSummaries);
+  } catch (error) {
+    console.error(error?.message || "Unable to load current legislator grade.");
+  }
+}
+
 const name = candidateName(candidate);
 const candidateEntityKey = candidate.filerEntityNumber || slug;
 const portraitUrl = profilePhotoUrl(candidate.photoUrl) || profilePhotoUrl(candidate.legislatorPhotoUrl);
@@ -63,6 +88,7 @@ const officeParts = [
   candidate.district ? `District ${candidate.district}` : "",
 ].filter(Boolean);
 const candidateRoles = uniqueCandidateRoles(candidate.candidateRoles?.length ? candidate.candidateRoles : [candidate]);
+const hasFreeStaterTag = isFreeStater(candidate) || isFreeStater(currentLegislator);
 
 function externalProfileUrl(entity = {}, names = []) {
   return names
@@ -264,7 +290,7 @@ function uniqueArticles(articles = []) {
             <span class:list={["meta-pill", partyClassName(candidate.politicalParty)]}>
               {formatCandidateParty(candidate.politicalParty)}
             </span>
-            {isFreeStater(candidate) && (
+            {hasFreeStaterTag && (
               <a
                 class="meta-pill free-stater-pill"
                 href="/free-staters"
@@ -277,6 +303,17 @@ function uniqueArticles(articles = []) {
             {officeTypeLabel && <span class="meta-pill">{officeTypeLabel}</span>}
             {candidate.electionYear && <span class="meta-pill">{candidate.electionYear}</span>}
             {candidate.currentLegislator && <span class="meta-pill">Current Legislator</span>}
+            {currentLegislatorGrade && (
+              <a
+                class:list={["legislator-grade-pill", currentLegislatorGrade.className]}
+                href="/vote-grades"
+                title="How do we determine this?"
+                aria-label={`How do we determine this? ${currentLegislatorGrade.label}`}
+              >
+                <strong>{currentLegislatorGrade.letter}</strong>
+                <span>Legislator Grade</span>
+              </a>
+            )}
           </div>
 
           <p class="office-line">{officeParts.join(", ") || "Office not listed"}</p>
@@ -693,6 +730,60 @@ function uniqueArticles(articles = []) {
 
   .free-stater-pill:hover {
     background: #450a0a;
+  }
+
+  .legislator-grade-pill {
+    align-items: center;
+    border: 1px solid rgba(31, 41, 51, 0.32);
+    border-radius: 12px;
+    color: #fefce8;
+    display: inline-flex;
+    gap: 8px;
+    padding: 6px 10px;
+    text-decoration: none;
+  }
+
+  .legislator-grade-pill strong,
+  .legislator-grade-pill span {
+    color: #fefce8;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+
+  .legislator-grade-pill strong {
+    font-size: 1.45rem;
+    font-weight: 950;
+    line-height: 1;
+  }
+
+  .legislator-grade-pill span {
+    font-size: 0.64rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .grade-a {
+    background: #166534;
+  }
+
+  .grade-b {
+    background: #65a30d;
+  }
+
+  .grade-c {
+    background: #ca8a04;
+  }
+
+  .grade-d {
+    background: #ea580c;
+  }
+
+  .grade-f {
+    background: #b42318;
+  }
+
+  .grade-unknown {
+    background: #5b616e;
   }
 
   .office-line {
