@@ -1,0 +1,8 @@
+---
+export const prerender = false;
+
+const target = new URL("/my-state-rep", Astro.url);
+target.search = Astro.url.search;
+
+return Astro.redirect(target.pathname + target.search);
+---

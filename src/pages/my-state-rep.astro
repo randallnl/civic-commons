@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import CandidateCard from "../components/CandidateCard.astro";
+import FilterBar from "../components/FilterBar.astro";
 import RepresentativeCard from "../components/RepresentativeCard.astro";
 import TopNav from "../components/TopNav.astro";
 import profileIcon from "../assets/profile icon.png";
@@ -46,7 +47,6 @@ const filters = {
   name: Astro.url.searchParams.get("name")?.trim() || "",
   town: Astro.url.searchParams.get("town")?.trim() || "",
   county: Astro.url.searchParams.get("county")?.trim() || "",
-  district: Astro.url.searchParams.get("district")?.trim() || "",
 };
 const normalizedBodyFilter = normalizeBodyFilter(filters.body);
 const hasDirectoryFilters = Object.values(filters).some(Boolean);
@@ -62,7 +62,6 @@ const countyOptions = [
   "Strafford",
   "Sullivan",
 ];
-const districtOptions = Array.from({ length: 50 }, (_, index) => String(index + 1));
 
 let lookupData = null;
 let lookupError = "";
@@ -70,6 +69,8 @@ let randomLegislators = [];
 let previewCandidates = [];
 let directoryReps = [];
 let directoryCandidates = [];
+let nameOptions = [];
+let townOptions = [];
 let trackedBills = new Map();
 let billSummaries = new Map();
 let directoryError = "";
@@ -98,12 +99,16 @@ if (address) {
 }
 
 try {
-  const [spotlightPeople, candidateData] = await Promise.all([
+  const [spotlightPeople, candidateData, repOptionData] = await Promise.all([
     getSpotlightLegislators({ limit: 8 }),
     getCandidates({ electionYear: 2026, limit: 8 }),
+    getRepresentatives({ limit: 600 }),
   ]);
   randomLegislators = shuffle(spotlightPeople).slice(0, 6);
   previewCandidates = (candidateData.candidates || []).filter(isLegislativeCandidate).slice(0, 6);
+  const optionReps = repOptionData.representatives || [];
+  nameOptions = uniqueOptions(optionReps.map(repName));
+  townOptions = uniqueOptions(optionReps.flatMap(townsForOption));
 } catch (error) {
   console.error(error?.message || "Unable to load preview profiles.");
 }
@@ -115,13 +120,11 @@ if (!address && hasDirectoryFilters) {
         body: normalizedBodyFilter,
         q: filters.name || filters.town,
         county: filters.county,
-        district: filters.district,
         limit: 600,
       }),
       getCandidates({
         q: filters.name,
         county: filters.county,
-        district: filters.district,
         office: bodyFilterToCandidateOffice(normalizedBodyFilter),
         electionYear: 2026,
         limit: 200,
@@ -251,8 +254,7 @@ function matchesDirectoryFilters(rep = {}, values = {}) {
     matchesBody(rep, values.body) &&
     matchesText(repName(rep), values.name) &&
     matchesText(locationLabel(rep), values.town) &&
-    matchesCounty(rep, values.county) &&
-    matchesDistrict(rep, values.district)
+    matchesCounty(rep, values.county)
   );
 }
 
@@ -261,7 +263,6 @@ function matchesCandidateFilters(candidate = {}, values = {}) {
     matchesCandidateBody(candidate, values.body) &&
     matchesText(candidate.name || `${candidate.candidateFirstName || ""} ${candidate.candidateLastName || ""}`, values.name) &&
     matchesText(candidate.county, values.county) &&
-    matchesDistrict(candidate, values.district) &&
     (!values.town || matchesText(recordText(candidate), values.town))
   );
 }
@@ -291,25 +292,6 @@ function matchesCounty(record = {}, query = "") {
   ].filter(Boolean).join(" "), query);
 }
 
-function matchesDistrict(record = {}, query = "") {
-  if (!query) return true;
-  const queryNumber = districtNumberFilter(query);
-  const recordDistrictNumber = districtNumberFilter(record.raw_district || record.district);
-
-  if (queryNumber !== null && recordDistrictNumber !== null) {
-    return queryNumber === recordDistrictNumber;
-  }
-
-  return matchesText([
-    record.district,
-    record.raw_district,
-    record.district_label,
-    record.districtLabel,
-    districtLabel(record),
-    locationLabel(record),
-  ].filter(Boolean).join(" "), query);
-}
-
 function matchesText(source = "", query = "") {
   if (!query) return true;
   return normalizeSearch(source).includes(normalizeSearch(query));
@@ -320,13 +302,6 @@ function normalizeSearch(value = "") {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
-}
-
-function districtNumberFilter(value = "") {
-  const match = String(value || "").match(/\d+/);
-  if (!match) return null;
-  const number = Number(match[0]);
-  return Number.isFinite(number) ? number : null;
 }
 
 function countyNameForCode(code = "") {
@@ -412,6 +387,25 @@ function stringifyValue(value) {
     return [value.town, value.name, value.label, value.location_text, value.locationText].flatMap(stringifyValue);
   }
   return [String(value)];
+}
+
+function townsForOption(rep = {}) {
+  return stringifyValue(
+    rep.location_text ||
+      rep.locationText ||
+      rep.towns_represented ||
+      rep.townsRepresented ||
+      rep.towns ||
+      "",
+  )
+    .flatMap((value) => String(value).split(/[,;|]/))
+    .map((value) => value.replace(/\s*-\s*Ward\s+\d+$/i, "").trim())
+    .filter(Boolean);
+}
+
+function uniqueOptions(values = []) {
+  return [...new Set(values.flat().map((value) => String(value || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
 }
 
 function escapeRegExp(value = "") {
@@ -511,7 +505,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="/NH%20DB%20Logo.png" />
     <link rel="apple-touch-icon" href="/NH%20DB%20Logo.png" />
-    <title>My State Rep | NH Deserves Better</title>
+    <title>My Legislator | NH Deserves Better</title>
     <meta
       name="description"
       content="Find your New Hampshire state legislators by address."
@@ -524,7 +518,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
       <a class="back" href="/">Back home</a>
 
       <section class="hero">
-        <p class="eyebrow">My State Rep</p>
+        <p class="eyebrow">My Legislator</p>
         <h1>Find your New Hampshire state legislators.</h1>
         <p class="lede">
           Enter your address to identify your State Senator, your ward-based
@@ -546,20 +540,29 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
               required
             />
 
-            <button type="submit">Find My Reps</button>
+            <button type="submit">Find My Legislators</button>
           </div>
         </form>
 
-        <form class="filters" action="/my-state-rep#rep-results" method="get" data-results-form>
+        <FilterBar
+          action="/my-state-rep#rep-results"
+          submitLabel="Filter current legislators"
+          clearHref={hasDirectoryFilters ? "/my-state-rep#rep-results" : ""}
+          dataResultsForm={true}
+        >
           <label>
             <span>Name</span>
             <input
               type="search"
               name="name"
               value={filters.name}
+              list="legislatorNameOptions"
               placeholder="Start typing a legislator"
               autocomplete="off"
             />
+            <datalist id="legislatorNameOptions">
+              {nameOptions.map((option) => <option value={option} />)}
+            </datalist>
           </label>
           <label>
             <span>County</span>
@@ -573,16 +576,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
             </select>
           </label>
           <label>
-            <span>District</span>
-            <select name="district">
-              <option value="">All districts</option>
-              {districtOptions.map((option) => (
-                <option value={option} selected={filters.district === option}>{option}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Body</span>
+            <span>Body / office</span>
             <select name="body">
               <option value="">House and Senate</option>
               <option value="house" selected={normalizedBodyFilter === "house"}>House</option>
@@ -595,12 +589,15 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
               type="search"
               name="town"
               value={filters.town}
-              placeholder="Manchester"
+              list="legislatorTownOptions"
+              placeholder="Start typing a town"
               autocomplete="off"
             />
+            <datalist id="legislatorTownOptions">
+              {townOptions.map((option) => <option value={option} />)}
+            </datalist>
           </label>
-          <button type="submit">Filter current legislators</button>
-        </form>
+        </FilterBar>
 
         <p class="help-text">
           Address lookups and filters focus on current New Hampshire State
@@ -752,7 +749,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           ) : (
             <p class="status-message">
               No current legislators matched those filters. Try a broader town,
-              county, district, or name search.
+              county, or name search.
             </p>
           )}
 

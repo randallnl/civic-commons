@@ -3,12 +3,11 @@ export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
 import BillPositionSummary from "../components/BillPositionSummary.astro";
+import RepresentativeCard from "../components/RepresentativeCard.astro";
 import headingBanner from "../assets/heading_banner.png";
-import profileIcon from "../assets/profile icon.png";
 import { articleDetailPath, articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills, getBillSummaries } from "../lib/billsApi";
-import { isFreeStater } from "../lib/civicTags";
-import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
+import { getRepresentatives } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 import { getOrganizations, organizationPath } from "../lib/organizationsApi";
@@ -19,13 +18,8 @@ import {
 import {
   getTrackedBills,
   normalizeBillCode,
-  representativeOnlineTestimonyVotePreviews,
-  representativeOnlineTestimonyVoteStance,
-  representativeGradeFor,
-  trackedBillForVote,
 } from "../lib/trackedBills";
 import { getSpotlightLegislators } from "../lib/spotlightTracker";
-import { profilePhotoUrl } from "../lib/photos";
 
 let recentArticles = [];
 let recentBills = [];
@@ -144,75 +138,6 @@ function instagramPreview(value = "") {
   }
 }
 
-function legislativeBody(person = {}) {
-  const value = String(person.chamber || person.legislativebody || person.body || "").toLowerCase();
-  if (value === "h" || value === "house") return "House";
-  if (value === "s" || value === "senate") return "Senate";
-  return person.chamber || "";
-}
-
-function districtLabel(person = {}) {
-  const district = person.district || person.raw_district || "";
-  const body = legislativeBody(person);
-  if (!district) return body;
-  if (body === "House") return `NH House District ${district}`;
-  if (body === "Senate") return `NH Senate District ${district}`;
-  return `District ${district}`;
-}
-
-function locationLabel(person = {}) {
-  return cleanText(
-    person.location_text ||
-      person.locationText ||
-      person.towns_represented ||
-      person.townsRepresented ||
-      "",
-  );
-}
-
-function trackedVotesFor(person = {}, limit = 3) {
-  return representativeOnlineTestimonyVotePreviews(person, billSummaries, { limit });
-}
-
-function billPreviewTitle(billSummary = {}, trackedBill = {}) {
-  return cleanText(
-    billSummary?.name ||
-      billSummary?.title ||
-      billSummary?.headline ||
-      trackedBill?.name ||
-      trackedBill?.title ||
-      billSummary?.expandedbillno ||
-      billSummary?.description ||
-      "Bill details",
-  );
-}
-
-function billPreviewSummary(billSummary = {}, trackedBill = {}) {
-  return previewText(
-    billSummary?.summary ||
-      billSummary?.description ||
-      trackedBill?.summary ||
-      trackedBill?.impact ||
-      "",
-    180,
-  );
-}
-
-function compactBillTitle(code = "", title = "") {
-  const billCode = normalizeBillCode(code);
-  const cleanedTitle = cleanText(title);
-  if (!billCode) return cleanedTitle || "Bill details";
-  if (!cleanedTitle || cleanedTitle === "Bill details") return billCode;
-
-  const deDuplicated = cleanText(
-    cleanedTitle
-      .replace(new RegExp(`^${billCode}\\s*[:\\-–—]?\\s*`, "i"), "")
-      .trim(),
-  );
-
-  return deDuplicated ? `${billCode}: ${deDuplicated}` : billCode;
-}
-
 function positionClass(position = "") {
   const value = String(position).toLowerCase();
   if (value.includes("support") || value.includes("favor")) return "support";
@@ -276,7 +201,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
             State Representative and State Senator cards, contact details,
             and recent vote summaries.
           </p>
-          <a href="/my-state-rep">Open My State Rep</a>
+          <a href="/my-state-rep">Open My Legislator</a>
         </div>
 
         <div class="preview-panel">
@@ -306,7 +231,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
             <img class="step-photo" src={howToStepImages[0]} alt="" loading="lazy" />
             <div>
               <span>Address lookup</span>
-              <h3>Find My State Rep</h3>
+              <h3>Find My Legislator</h3>
               <p>Enter an address to find current State Representatives, State Senators, districts, candidates, and vote summaries.</p>
             </div>
           </a>
@@ -343,107 +268,19 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
       <section class="homepage-stack">
         <div class="homepage-panel">
           <h2>Representative Profiles</h2>
-          <ul class="list stacked-list">
+          <div class="home-rep-list">
             {recentPeople.length === 0 ? (
-              <li>No legislators returned yet.</li>
+              <p class="empty">No legislators returned yet.</p>
             ) : recentPeople.map((person) => {
-              const photoUrl = profilePhotoUrl(person.photo || person.photo_url);
-              const grade = representativeGradeFor(person, trackedBills, billSummaries);
-              const votes = trackedVotesFor(person, 3);
-
               return (
-                <li class="person-preview">
-                  <div class="person-preview-link">
-                    <a class="person-photo-link" href={`/people/${repSlug(person)}`}>
-                      <img
-                        class:list={[!photoUrl && "profile-icon"]}
-                        src={photoUrl || profileIcon.src}
-                        alt={photoUrl ? `Photo of ${repName(person)}` : ""}
-                        loading="lazy"
-                      />
-                    </a>
-                    <div class="person-preview-copy">
-                      <a href={`/people/${repSlug(person)}`}>
-                        <strong>{repName(person)}</strong>
-                      </a>
-                      <small>
-                        {[
-                          person.party || "No party listed",
-                          districtLabel(person),
-                        ].filter(Boolean).join(" - ")}
-                      </small>
-                      {locationLabel(person) && <em>{locationLabel(person)}</em>}
-                      {isFreeStater(person) && (
-                        <a
-                          class="free-stater-inline"
-                          href="/free-staters"
-                          title="What is a Free Stater?"
-                          aria-label="What is a Free Stater?"
-                        >
-                          Free Stater
-                        </a>
-                      )}
-                    </div>
-                    <a
-                      class:list={["mini-grade", grade.className]}
-                      href="/vote-grades"
-                      title="How do we determine this?"
-                      aria-label={`How do we determine this? ${grade.label}`}
-                    >
-                      <strong>{grade.letter}</strong>
-                      <small>Grade</small>
-                    </a>
-                  </div>
-                  {votes.length > 0 && (
-                    <div class="person-vote-list">
-                      <span>Online Testimony Alignment</span>
-                      {votes.map((preview) => {
-                        const vote = preview.vote;
-                        const billSummary = preview.billSummary;
-                        const trackedBill = trackedBillForVote(trackedBills, vote);
-                        const voteStance = representativeOnlineTestimonyVoteStance(vote, billSummary);
-                        const billCode = billSummary?.condensedbillno || trackedBill?.code || vote.condensedbillno;
-                        const billTitle = billPreviewTitle(billSummary, trackedBill);
-                        const billSummaryText = billPreviewSummary(billSummary, trackedBill);
-                        const billYear = billSummary?.sessionyear || vote.sessionyear;
-
-                        return (
-                          <div class:list={["person-vote-preview", voteStance.className]}>
-                            <div class="person-vote-main">
-                              <div class="person-vote-heading">
-                                <a href={billDetailPath(billCode, billYear)}>
-                                  {compactBillTitle(billCode, billTitle)}
-                                </a>
-                                {billSummaryText && <p>{billSummaryText}</p>}
-                              </div>
-                              <div class="person-vote-copy">
-                                <div class:list={["vote-interpretation", voteStance.className]}>
-                                  <strong>Vote</strong>
-                                  <a
-                                    class:list={["person-vote-pill", voteStance.className]}
-                                    href="/vote-interpretations"
-                                    title="How do we determine this?"
-                                    aria-label={`How do we determine this? ${voteStance.label}`}
-                                  >
-                                    {voteStance.label}
-                                  </a>
-                                </div>
-                              </div>
-                              {billSummary && (
-                                <div class="vote-pill-stack">
-                                  <BillPositionSummary bill={billSummary} compact={true} />
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </li>
+                <RepresentativeCard
+                  rep={person}
+                  trackedBills={trackedBills}
+                  billSummaries={billSummaries}
+                />
               );
             })}
-          </ul>
+          </div>
         </div>
 
         <div class="homepage-panel">
@@ -932,6 +769,11 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
   .homepage-panel h2 {
     margin-top: 0;
+  }
+
+  .home-rep-list {
+    display: grid;
+    gap: 18px;
   }
 
   .stacked-list {
