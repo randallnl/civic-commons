@@ -1,5 +1,6 @@
 ---
 import TopNav from "../components/TopNav.astro";
+import SiteFooter from "../components/SiteFooter.astro";
 
 const interpretationSteps = [
   {
@@ -59,8 +60,8 @@ const referenceLinks = [
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="/NH%20DB%20Logo.png" />
-    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.png" />
+    <link rel="icon" type="image/svg+xml" href="/NH%20DB%20Logo.svg" />
+    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.svg" />
     <title>How Vote Labels Work | NH Deserves Better</title>
     <meta
       name="description"
@@ -71,8 +72,6 @@ const referenceLinks = [
   <body>
     <TopNav />
     <main class="page">
-      <a class="back" href="/">Back home</a>
-
       <section class="hero">
         <p class="eyebrow">Methodology</p>
         <h1>How Vote Labels Work</h1>
@@ -168,25 +167,11 @@ const referenceLinks = [
         </p>
       </section>
     </main>
+    <SiteFooter />
   </body>
 </html>
 
 <style>
-  :global(body) {
-    margin: 0;
-    font-family:
-      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-      sans-serif;
-    background: #f7f4ee;
-    color: #1f2933;
-  }
-
-  .page {
-    margin: 0 auto;
-    padding: 40px 0 72px;
-    width: min(1040px, calc(100% - 32px));
-  }
-
   .back,
   a {
     color: #1f2933;
@@ -207,9 +192,9 @@ const referenceLinks = [
   .hero-actions a,
   .example-panel a {
     background: #2563eb;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 999px;
-    box-shadow: 3px 3px 0 #1f2933;
+    box-shadow: none;
     color: white;
     display: inline-flex;
     font-weight: 950;
@@ -251,9 +236,9 @@ const referenceLinks = [
   .graphic-panel,
   .panel {
     background: white;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
-    box-shadow: 4px 4px 0 #1f2933;
+    box-shadow: none;
     padding: 20px;
   }
 
@@ -277,7 +262,7 @@ const referenceLinks = [
 
   .formula span {
     background: #eef6ff;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 999px;
     color: #1e3a8a;
     font-weight: 950;
@@ -302,9 +287,9 @@ const referenceLinks = [
   .workflow-card,
   .example-card {
     background: white;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
-    box-shadow: 4px 4px 0 #1f2933;
+    box-shadow: none;
     padding: 18px;
   }
 
@@ -353,7 +338,7 @@ const referenceLinks = [
   }
 
   .vote-equation strong {
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 999px;
     padding: 9px 10px;
     text-align: center;
@@ -395,9 +380,9 @@ const referenceLinks = [
 
   .reference-card {
     background: #eef6ff;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
-    box-shadow: 3px 3px 0 #1f2933;
+    box-shadow: none;
     color: #1f2933;
     display: grid;
     gap: 8px;

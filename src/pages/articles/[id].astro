@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import TopNav from "../../components/TopNav.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
 import profileIcon from "../../assets/profile icon.png";
 import { enrichArticlesWithPreviews } from "../../lib/articlePreviews";
 import { currentAdminSession } from "../../lib/adminAuth";
@@ -135,8 +136,8 @@ function billOptionLabel(bill = {}) {
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="/NH%20DB%20Logo.png" />
-    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.png" />
+    <link rel="icon" type="image/svg+xml" href="/NH%20DB%20Logo.svg" />
+    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.svg" />
     <title>{title} | NH Deserves Better</title>
     <meta name="description" content={description || "Civic article details and related New Hampshire entities."} />
   </head>
@@ -323,25 +324,11 @@ function billOptionLabel(bill = {}) {
         </>
       )}
     </main>
+    <SiteFooter />
   </body>
 </html>
 
 <style>
-  :global(body) {
-    margin: 0;
-    font-family:
-      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-      sans-serif;
-    background: #f7f4ee;
-    color: #1f2933;
-  }
-
-  .page {
-    margin: 0 auto;
-    padding: 40px 0 72px;
-    width: min(1120px, calc(100% - 32px));
-  }
-
   .back,
   a {
     color: #1f2933;
@@ -419,9 +406,9 @@ function billOptionLabel(bill = {}) {
   .preview-image {
     aspect-ratio: 16 / 10;
     background: white;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 10px;
-    box-shadow: 5px 5px 0 #1f2933;
+    box-shadow: none;
     object-fit: cover;
     width: 100%;
   }
@@ -435,9 +422,9 @@ function billOptionLabel(bill = {}) {
   .panel,
   .status-message {
     background: white;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 10px;
-    box-shadow: 4px 4px 0 #1f2933;
+    box-shadow: none;
     padding: 20px;
   }
 
@@ -475,7 +462,7 @@ function billOptionLabel(bill = {}) {
 
   .admin-link-form input,
   .admin-link-form select {
-    background: #fffaf1;
+    background: #f8fafc;
     border: 1px solid #9ca3af;
     border-radius: 12px;
     box-sizing: border-box;
@@ -499,7 +486,7 @@ function billOptionLabel(bill = {}) {
 
   .admin-link-form button {
     background: #1f2933;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 999px;
     color: white;
     cursor: pointer;
@@ -520,7 +507,7 @@ function billOptionLabel(bill = {}) {
   }
 
   .relation-list a {
-    background: #fffaf1;
+    background: #f8fafc;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     display: grid;
@@ -531,7 +518,7 @@ function billOptionLabel(bill = {}) {
 
   .person-relation-card {
     align-items: stretch;
-    background: #fffaf1;
+    background: #f8fafc;
     border: 1px solid #d1d5db;
     border-radius: 10px;
     color: inherit;
