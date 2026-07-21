@@ -1,4 +1,6 @@
 export function isFreeStater(record = {}) {
+  if (!record || typeof record !== "object") return false;
+
   const value =
     record.is_free_stater ??
     record.isFreeStater ??
