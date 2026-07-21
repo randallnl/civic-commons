@@ -1492,7 +1492,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     border-radius: 12px;
     display: grid;
     gap: 7px;
-    min-height: 92px;
+    min-height: 78px;
     padding: 8px;
   }
 
@@ -1517,15 +1517,18 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   }
 
   .person-vote-pill {
+    align-items: center;
     border: 1px solid currentColor;
     border-radius: 999px;
     box-sizing: border-box;
     color: #1f2933;
-    display: block;
+    display: flex;
     font-size: 0.78rem;
     font-weight: 900;
-    line-height: 1.2;
-    padding: 7px 10px;
+    justify-content: center;
+    line-height: 1.12;
+    min-height: 30px;
+    padding: 5px 10px;
     text-align: center;
     text-decoration: none;
     width: 100%;
@@ -1559,7 +1562,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   }
 
   .vote-pill-stack :global(.position-summary) {
-    min-height: 92px;
+    min-height: 78px;
     width: 100%;
   }
 
