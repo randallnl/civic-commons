@@ -13,9 +13,10 @@
     "generate-types": "wrangler types"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^13.6.1",
-    "astro": "^6.4.4",
-    "wrangler": "^4.98.0"
+    "@astrojs/cloudflare": "^13.7.0",
+    "astro": "^6.4.8",
+    "wrangler": "^4.98.0",
+    "zod": "^4.4.3"
   },
   "overrides": {
     "vite": "^7"

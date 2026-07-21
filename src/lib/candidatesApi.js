@@ -1,4 +1,5 @@
 import { DEFAULT_CIVIC_API_BASE, civicApiFetch } from "./civicApi";
+import { parseCandidate, parseList } from "./schemas";
 import { cleanText } from "./text";
 
 export function candidatesApiBase() {
@@ -41,11 +42,13 @@ export async function getCandidates({
 
   return {
     ...data,
-    candidates:
+    candidates: parseList(
       data.candidates ||
       data.results ||
       data.people ||
       [],
+      parseCandidate,
+    ),
   };
 }
 
@@ -114,7 +117,10 @@ export async function getCandidate(slugOrId, {
     throw new Error(`Unable to load candidate: ${response.status}`);
   }
 
-  return data;
+  return {
+    ...data,
+    candidate: data.candidate ? parseCandidate(data.candidate) : data.candidate,
+  };
 }
 
 export function candidateName(candidate = {}) {

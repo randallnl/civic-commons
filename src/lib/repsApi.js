@@ -1,4 +1,5 @@
 import { DEFAULT_CIVIC_API_BASE, civicApiFetch } from "./civicApi";
+import { parseList, parseRepresentative } from "./schemas";
 
 export function repsApiBase() {
   return import.meta.env.REP_LOOKUP_API_BASE || DEFAULT_CIVIC_API_BASE;
@@ -42,12 +43,14 @@ export async function getRepresentatives({
 
   return {
     ...data,
-    representatives:
+    representatives: parseList(
       data.representatives ||
       data.reps ||
       data.people ||
       data.results ||
       [],
+      parseRepresentative,
+    ),
   };
 }
 
@@ -68,7 +71,18 @@ export async function getRepresentative(slugOrId, {
     throw new Error(`Unable to load representative: ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  const representative = data.representative || data.rep || data.person;
+
+  return {
+    ...data,
+    representative: representative
+      ? parseRepresentative({
+          ...representative,
+          voteHistory: data.voteHistory || representative.voteHistory || [],
+        })
+      : representative,
+  };
 }
 
 export function repName(rep = {}) {

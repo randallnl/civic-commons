@@ -1,6 +1,7 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
+import { SuggestUpdateSchema } from "../../lib/schemas";
 
 const MONDAY_API_URL = "https://api.monday.com/v2";
 const BOARD_ID = "18420986061";
@@ -13,19 +14,22 @@ export async function POST({ request }) {
 
   try {
     const form = await request.formData();
-    const pageUrl = String(form.get("pageUrl") || "").trim();
-    const submitterEmail = String(form.get("submitterEmail") || "").trim();
-    const suggestion = String(form.get("suggestion") || "").trim();
-    const otherInfo = String(form.get("otherInfo") || "").trim();
-    submittedPageUrl = pageUrl;
+    const parsedForm = SuggestUpdateSchema.safeParse({
+      pageUrl: form.get("pageUrl"),
+      submitterEmail: form.get("submitterEmail"),
+      suggestion: form.get("suggestion"),
+      otherInfo: form.get("otherInfo"),
+    });
+    submittedPageUrl = String(form.get("pageUrl") || "").trim();
 
-    if (!pageUrl || !submitterEmail || !suggestion) {
-      return redirectToForm(pageUrl, "Page, email, and suggested update are required.");
+    if (!parsedForm.success) {
+      return redirectToForm(
+        submittedPageUrl,
+        parsedForm.error.issues[0]?.message || "Page, email, and suggested update are required.",
+      );
     }
 
-    if (!isValidEmail(submitterEmail)) {
-      return redirectToForm(pageUrl, "Enter a valid email address.");
-    }
+    const { pageUrl, submitterEmail, suggestion, otherInfo } = parsedForm.data;
 
     const token = await mondayToken();
 
@@ -96,10 +100,6 @@ async function createMondayItem({ token, pageUrl, submitterEmail = "", suggested
   }
 
   return data.data?.create_item;
-}
-
-function isValidEmail(value = "") {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
 }
 
 async function mondayToken() {

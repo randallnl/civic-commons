@@ -1,4 +1,5 @@
 import { DEFAULT_CIVIC_API_BASE, civicApiFetch } from "./civicApi";
+import { parseArticle } from "./schemas";
 import { cleanText } from "./text";
 
 export function articlesApiBase() {
@@ -86,35 +87,36 @@ export function articleDetailPath(article = {}) {
 }
 
 function normalizeArticle(article = {}) {
-  const preview = normalizeArticlePreview(article);
+  const parsedArticle = parseArticle(article);
+  const preview = normalizeArticlePreview(parsedArticle);
 
   return {
-    ...article,
-    title: cleanText(article.title),
-    summary: cleanText(article.summary),
-    publisher: cleanText(article.publisher),
-    source: cleanText(article.source),
-    publication: cleanText(article.publication),
-    domain: cleanText(article.domain),
-    resource_type: cleanText(article.resource_type),
-    resourceType: cleanText(article.resourceType),
-    towns: cleanRelationList(article.towns, ["town", "name", "label"]),
-    bills: cleanRelationList(article.bills, ["condensedbillno", "bill_number", "name", "title"]),
-    legislators: cleanRelationList(article.legislators, [
+    ...parsedArticle,
+    title: cleanText(parsedArticle.title),
+    summary: cleanText(parsedArticle.summary),
+    publisher: cleanText(parsedArticle.publisher),
+    source: cleanText(parsedArticle.source),
+    publication: cleanText(parsedArticle.publication),
+    domain: cleanText(parsedArticle.domain),
+    resource_type: cleanText(parsedArticle.resource_type),
+    resourceType: cleanText(parsedArticle.resourceType),
+    towns: cleanRelationList(parsedArticle.towns, ["town", "name", "label"]),
+    bills: cleanRelationList(parsedArticle.bills, ["condensedbillno", "bill_number", "name", "title"]),
+    legislators: cleanRelationList(parsedArticle.legislators, [
       "matched_name",
       "legislator_name_raw",
       "name",
       "firstname",
       "lastname",
     ]),
-    candidates: cleanRelationList(article.candidates, [
+    candidates: cleanRelationList(parsedArticle.candidates, [
       "candidate_name_raw",
       "name",
       "candidate_first_name",
       "candidate_last_name",
     ]),
-    issueAreas: cleanRelationList(article.issueAreas, ["issue_area", "name"]),
-    impactTypes: cleanRelationList(article.impactTypes, ["impact_type", "name"]),
+    issueAreas: cleanRelationList(parsedArticle.issueAreas, ["issue_area", "name"]),
+    impactTypes: cleanRelationList(parsedArticle.impactTypes, ["impact_type", "name"]),
     preview,
   };
 }
