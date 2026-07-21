@@ -1,5 +1,6 @@
 ---
 import GlobalTheme from "./GlobalTheme.astro";
+import ClientEnhancements from "./ClientEnhancements.astro";
 
 const currentPath = Astro.url.pathname;
 const suggestHref = `/suggest-update?page=${encodeURIComponent(Astro.url.href)}`;
@@ -35,16 +36,24 @@ const isGuidesActive = guideLinks.some(isActive);
 ---
 
 <GlobalTheme />
+<ClientEnhancements />
 
-<header class="site-nav" data-site-nav>
+<header
+  class="site-nav"
+  data-site-nav
+  x-data="{ navOpen: false }"
+  :class="{ 'nav-open': navOpen }"
+  @keydown.escape.window="navOpen = false"
+>
   <div class="nav-inner">
     <button
       class="mobile-menu-toggle"
       type="button"
       aria-label="Toggle navigation"
-      aria-expanded="false"
+      :aria-expanded="String(navOpen)"
       aria-controls="primary-navigation"
       data-mobile-menu-toggle
+      @click="navOpen = !navOpen; $el.closest('[data-site-nav]')?.classList.remove('is-hidden')"
     >
       <span></span>
       <span></span>
@@ -64,7 +73,12 @@ const isGuidesActive = guideLinks.some(isActive);
       <span>NH Deserves Better</span>
     </a>
 
-    <nav id="primary-navigation" class="primary-nav" aria-label="Primary navigation">
+    <nav
+      id="primary-navigation"
+      class="primary-nav"
+      aria-label="Primary navigation"
+      @click="if ($event.target.closest('a')) navOpen = false"
+    >
       {links.map((link) => (
         <a
           class:list={["nav-link", isActive(link) && "active"]}
@@ -206,13 +220,6 @@ const isGuidesActive = guideLinks.some(isActive);
     });
   });
 
-  const menuToggle = document.querySelector("[data-mobile-menu-toggle]");
-  menuToggle?.addEventListener("click", () => {
-    if (!(siteNav instanceof HTMLElement) || !(menuToggle instanceof HTMLButtonElement)) return;
-    const isOpen = siteNav.classList.toggle("nav-open");
-    menuToggle.setAttribute("aria-expanded", String(isOpen));
-    siteNav.classList.remove("is-hidden");
-  });
 </script>
 
 <style>

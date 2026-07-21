@@ -1,0 +1,13 @@
+<script>
+  import Alpine from "alpinejs";
+  import htmx from "htmx.org";
+
+  if (!window.htmx) {
+    window.htmx = htmx;
+  }
+
+  if (!window.Alpine) {
+    window.Alpine = Alpine;
+    Alpine.start();
+  }
+</script>
