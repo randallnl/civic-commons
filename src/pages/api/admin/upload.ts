@@ -7,6 +7,7 @@ import {
   slugify as organizationSlugify,
 } from "../../../lib/organizationsApi";
 import {
+  ensureUnifiedPeopleTables,
   upsertPersonFromCandidate,
   upsertPersonFromLegislator,
 } from "../../../lib/unifiedPeople";
@@ -96,7 +97,23 @@ async function updateCandidatePhoto(entityKey, publicUrl) {
   const db = adminDb();
   if (!db) throw new Error("D1 database binding is not configured.");
 
-  const result = await db
+  await ensureUnifiedPeopleTables(db);
+
+  const unifiedResult = await db
+    .prepare(
+      `UPDATE d1_people
+       SET photo_url = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE filer_entity_number = ?
+          OR slug = ?
+          OR CAST(id AS TEXT) = ?`,
+    )
+    .bind(publicUrl, String(entityKey), String(entityKey), String(entityKey))
+    .run();
+
+  const unifiedChanges = unifiedResult.meta?.changes ?? unifiedResult.changes ?? 0;
+
+  const legacyResult = await db
     .prepare(
       `UPDATE candidates
        SET photo_url = ?
@@ -105,9 +122,10 @@ async function updateCandidatePhoto(entityKey, publicUrl) {
     .bind(publicUrl, String(entityKey), String(entityKey))
     .run();
 
-  const changes = result.meta?.changes ?? result.changes ?? 0;
+  const legacyChanges = legacyResult.meta?.changes ?? legacyResult.changes ?? 0;
+  const changes = unifiedChanges + legacyChanges;
   if (!changes) throw new Error("No matching candidate row was updated.");
-  await upsertPersonFromCandidate(String(entityKey), db);
+  if (legacyChanges) await upsertPersonFromCandidate(String(entityKey), db);
   return "candidate photo_url";
 }
 
