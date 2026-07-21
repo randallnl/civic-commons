@@ -1,0 +1,248 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-main">
+      <div class="footer-about">
+        <a class="footer-brand" href="/">
+          <img src="/NH%20DB%20Logo.svg" alt="" width="44" height="44" />
+          <span>NH Deserves Better</span>
+        </a>
+        <p>
+          Community-powered civic information for New Hampshire voters,
+          neighbors, organizers, and anyone trying to understand how state
+          decisions affect everyday life.
+        </p>
+        <div class="footer-socials" aria-label="Follow NH Deserves Better">
+          <a href="#">Facebook</a>
+          <a href="#">Instagram</a>
+          <a href="#">Youtube</a>
+          <a href="#">LinkedIn</a>
+        </div>
+      </div>
+
+      <nav class="footer-links" aria-label="Footer navigation">
+        <div>
+          <h2>Explore</h2>
+          <a href="/my-state-rep">My Legislator</a>
+          <a href="/people">Legislators</a>
+          <a href="/candidates">Candidates</a>
+          <a href="/bills">Bills</a>
+        </div>
+        <div>
+          <h2>Communities</h2>
+          <a href="/communities">Community Profiles</a>
+          <a href="/articles">Articles</a>
+          <a href="/organizations">Organizations</a>
+          <a href="/search">Search</a>
+        </div>
+        <div>
+          <h2>Civic Guides</h2>
+          <a href="/state-government">State Government</a>
+          <a href="/how-bills-become-law">How Bills Become Law</a>
+          <a href="/vote-grades">Vote Grades</a>
+          <a href="/free-staters">Free Staters</a>
+        </div>
+      </nav>
+    </div>
+
+    <div class="footer-callout">
+      <div>
+        <h2>Help keep the public record useful.</h2>
+        <p>Suggest profile edits, submit articles, and share context for review.</p>
+      </div>
+      <a href="/suggest-update">Suggest an update</a>
+    </div>
+
+    <div class="footer-bottom">
+      <p>© {year} NH Deserves Better. Community accountability takes participation.</p>
+      <div>
+        <a href="/admin">Admin</a>
+        <a href="/suggest-update">Corrections</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    background: #f1f5f9;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 12px;
+    padding: 54px 0 28px;
+  }
+
+  .footer-inner {
+    display: grid;
+    gap: 32px;
+    margin: 0 auto;
+    width: var(--nhdb-page-rail, min(1280px, calc(100% - clamp(28px, 4vw, 64px))));
+  }
+
+  .footer-main {
+    display: grid;
+    gap: 42px;
+    grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .footer-about {
+    display: grid;
+    gap: 16px;
+    max-width: 360px;
+  }
+
+  .footer-brand {
+    align-items: center;
+    color: #1f2933;
+    display: inline-flex;
+    font-size: 1.12rem;
+    font-weight: 950;
+    gap: 10px;
+    text-decoration: none;
+  }
+
+  .footer-brand img {
+    border-radius: 6px;
+    display: block;
+    height: 44px;
+    object-fit: contain;
+    width: 44px;
+  }
+
+  .footer-about p,
+  .footer-callout p,
+  .footer-bottom p {
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .footer-socials {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .footer-socials a {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    color: #475569;
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 900;
+    min-height: 34px;
+    padding: 7px 11px;
+    text-decoration: none;
+  }
+
+  .footer-links {
+    display: grid;
+    gap: 28px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .footer-links > div {
+    align-content: start;
+    display: grid;
+    gap: 10px;
+  }
+
+  .footer-links h2 {
+    color: #1f2933;
+    font-size: 0.94rem;
+    line-height: 1.2;
+    margin: 0 0 4px;
+  }
+
+  .footer-links a,
+  .footer-bottom a {
+    color: #6b7280;
+    font-size: 0.9rem;
+    font-weight: 800;
+    text-decoration: none;
+  }
+
+  .footer-socials a:hover,
+  .footer-links a:hover,
+  .footer-bottom a:hover {
+    color: #b6390a;
+    text-decoration: underline;
+  }
+
+  .footer-callout {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    display: flex;
+    gap: 18px;
+    justify-content: space-between;
+    padding: 22px;
+  }
+
+  .footer-callout h2 {
+    color: #1f2933;
+    font-size: 1.25rem;
+    line-height: 1.15;
+    margin: 0 0 6px;
+  }
+
+  .footer-callout > a {
+    background: #1f2933;
+    border-radius: 999px;
+    color: #ffffff;
+    flex: 0 0 auto;
+    font-weight: 900;
+    padding: 12px 16px;
+    text-decoration: none;
+  }
+
+  .footer-callout > a:hover {
+    background: #dc4d09;
+  }
+
+  .footer-bottom {
+    align-items: center;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 18px;
+    justify-content: space-between;
+    padding-top: 22px;
+  }
+
+  .footer-bottom > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  @media (max-width: 900px) {
+    .footer-main {
+      grid-template-columns: 1fr;
+    }
+
+    .footer-about {
+      max-width: 620px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .footer-links {
+      grid-template-columns: 1fr;
+    }
+
+    .footer-callout,
+    .footer-bottom {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .footer-callout > a {
+      text-align: center;
+    }
+  }
+</style>

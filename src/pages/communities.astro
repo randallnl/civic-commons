@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
+import SiteFooter from "../components/SiteFooter.astro";
 import { articlePublishDate, articleSourceName } from "../lib/articlesApi";
 import {
   communityPath,
@@ -257,8 +258,8 @@ const total = Number(meta.total || meta.count || countyGroups.length);
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="/NH%20DB%20Logo.png" />
-    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.png" />
+    <link rel="icon" type="image/svg+xml" href="/NH%20DB%20Logo.svg" />
+    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.svg" />
     <title>Communities | NH Deserves Better</title>
     <meta
       name="description"
@@ -269,8 +270,6 @@ const total = Number(meta.total || meta.count || countyGroups.length);
   <body>
     <TopNav />
     <main class="page">
-      <a class="back" href="/">Back home</a>
-
       <section class="hero">
         <p class="eyebrow">Communities</p>
         <h1>Explore communities by county.</h1>
@@ -383,25 +382,11 @@ const total = Number(meta.total || meta.count || countyGroups.length);
 
       </section>
     </main>
+    <SiteFooter />
   </body>
 </html>
 
 <style>
-  :global(body) {
-    margin: 0;
-    font-family:
-      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-      sans-serif;
-    background: #f7f4ee;
-    color: #1f2933;
-  }
-
-  .page {
-    margin: 0 auto;
-    padding: 40px 0 72px;
-    width: min(1120px, calc(100% - 32px));
-  }
-
   .back,
   a {
     color: #1f2933;
@@ -437,7 +422,7 @@ const total = Number(meta.total || meta.count || countyGroups.length);
 
   input,
   button {
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     box-sizing: border-box;
     font: inherit;
@@ -474,9 +459,9 @@ const total = Number(meta.total || meta.count || countyGroups.length);
   .county-card,
   .status-message {
     background: white;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
-    box-shadow: 4px 4px 0 #1f2933;
+    box-shadow: none;
     padding: 18px;
   }
 
@@ -576,7 +561,7 @@ const total = Number(meta.total || meta.count || countyGroups.length);
   }
 
   .county-stats span {
-    background: #fffaf1;
+    background: #f8fafc;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     color: #4b5563;
@@ -597,7 +582,7 @@ const total = Number(meta.total || meta.count || countyGroups.length);
   .topline span,
   .towns a,
   .towns span {
-    background: #fffaf1;
+    background: #f8fafc;
     border: 1px solid #d1d5db;
     border-radius: 999px;
     font-size: 0.78rem;
@@ -683,7 +668,7 @@ const total = Number(meta.total || meta.count || countyGroups.length);
   .show-more a,
   .pagination a {
     background: #1f2933;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 999px;
     color: white;
     padding: 10px 14px;

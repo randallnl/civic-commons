@@ -1,4 +1,6 @@
 ---
+import GlobalTheme from "./GlobalTheme.astro";
+
 const currentPath = Astro.url.pathname;
 const suggestHref = `/suggest-update?page=${encodeURIComponent(Astro.url.href)}`;
 
@@ -32,16 +34,37 @@ const isExploreActive = exploreLinks.some(isActive);
 const isGuidesActive = guideLinks.some(isActive);
 ---
 
+<GlobalTheme />
+
 <header class="site-nav" data-site-nav>
   <div class="nav-inner">
+    <button
+      class="mobile-menu-toggle"
+      type="button"
+      aria-label="Toggle navigation"
+      aria-expanded="false"
+      aria-controls="primary-navigation"
+      data-mobile-menu-toggle
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
     <a class="return-link" href="/" data-return-link hidden>Return</a>
 
     <a class="brand" href="/">
-      <img src="/NH%20DB%20Logo.png" alt="" width="40" height="40" />
+      <img src="/NH%20DB%20Logo.svg" alt="" width="40" height="40" />
       <span>NH Deserves Better</span>
     </a>
 
-    <nav aria-label="Primary navigation">
+    <nav id="primary-navigation" class="primary-nav" aria-label="Primary navigation">
       {links.map((link) => (
         <a
           class:list={["nav-link", isActive(link) && "active"]}
@@ -86,7 +109,6 @@ const isGuidesActive = guideLinks.some(isActive);
     </nav>
 
     <div class="utility-links">
-      <a class="admin-link" href="/admin">Admin</a>
       <a class="suggest-link" href={suggestHref}>Suggest an update</a>
     </div>
   </div>
@@ -158,12 +180,45 @@ const isGuidesActive = guideLinks.some(isActive);
   siteNav?.addEventListener("mouseenter", () => siteNav.classList.remove("is-hidden"));
   siteNav?.addEventListener("focusin", () => siteNav.classList.remove("is-hidden"));
   siteNav?.addEventListener("toggle", () => siteNav.classList.remove("is-hidden"), true);
+
+  const navDropdowns = Array.from(document.querySelectorAll(".nav-dropdown"));
+
+  navDropdowns.forEach((dropdown) => {
+    dropdown.addEventListener("toggle", () => {
+      if (!(dropdown instanceof HTMLDetailsElement) || !dropdown.open) return;
+
+      navDropdowns.forEach((otherDropdown) => {
+        if (
+          otherDropdown !== dropdown &&
+          otherDropdown instanceof HTMLDetailsElement
+        ) {
+          otherDropdown.open = false;
+        }
+      });
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    if (siteNav?.contains(event.target instanceof Node ? event.target : null)) return;
+
+    navDropdowns.forEach((dropdown) => {
+      if (dropdown instanceof HTMLDetailsElement) dropdown.open = false;
+    });
+  });
+
+  const menuToggle = document.querySelector("[data-mobile-menu-toggle]");
+  menuToggle?.addEventListener("click", () => {
+    if (!(siteNav instanceof HTMLElement) || !(menuToggle instanceof HTMLButtonElement)) return;
+    const isOpen = siteNav.classList.toggle("nav-open");
+    menuToggle.setAttribute("aria-expanded", String(isOpen));
+    siteNav.classList.remove("is-hidden");
+  });
 </script>
 
 <style>
   .site-nav {
-    background: rgba(247, 244, 238, 0.96);
-    border-bottom: 2px solid #1f2933;
+    background: rgba(255, 255, 255, 0.96);
+    border-bottom: 1px solid #e2e8f0;
     position: sticky;
     top: 0;
     transform: translateY(0);
@@ -193,7 +248,25 @@ const isGuidesActive = guideLinks.some(isActive);
     margin: 0 auto;
     min-height: 64px;
     padding: 10px 0;
-    width: min(1120px, calc(100% - 32px));
+    width: min(1280px, calc(100% - clamp(28px, 4vw, 64px)));
+  }
+
+  .mobile-menu-toggle {
+    background: transparent;
+    border: 0;
+    display: none;
+    flex: 0 0 auto;
+    gap: 3px;
+    grid-template-columns: repeat(3, 4px);
+    padding: 11px;
+  }
+
+  .mobile-menu-toggle span {
+    background: #1f2933;
+    border-radius: 999px;
+    display: block;
+    height: 4px;
+    width: 4px;
   }
 
   .brand,
@@ -217,8 +290,8 @@ const isGuidesActive = guideLinks.some(isActive);
   }
 
   .return-link {
-    border: 1px solid #d1d5db;
-    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
     flex: 0 0 auto;
     font-size: 0.84rem;
     font-weight: 900;
@@ -232,8 +305,8 @@ const isGuidesActive = guideLinks.some(isActive);
   }
 
   .return-link:hover {
-    background: white;
-    border-color: #1f2933;
+    background: #fff7ed;
+    border-color: #fed7aa;
   }
 
   .return-link[hidden] {
@@ -241,14 +314,14 @@ const isGuidesActive = guideLinks.some(isActive);
   }
 
   .brand img {
-    border-radius: 8px;
+    border-radius: 4px;
     display: block;
     height: 40px;
     object-fit: contain;
     width: 40px;
   }
 
-  nav {
+  .primary-nav {
     align-items: center;
     display: flex;
     flex-wrap: wrap;
@@ -258,7 +331,7 @@ const isGuidesActive = guideLinks.some(isActive);
 
   .nav-link {
     border: 1px solid transparent;
-    border-radius: 999px;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 850;
@@ -271,13 +344,14 @@ const isGuidesActive = guideLinks.some(isActive);
   .nav-dropdown.active > summary,
   .nav-dropdown[open] > summary,
   .suggest-link:hover {
-    background: white;
-    border-color: #1f2933;
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #b6390a;
   }
 
   .nav-link.active,
   .nav-dropdown.active > summary {
-    box-shadow: 2px 2px 0 #1f2933;
+    box-shadow: inset 3px 0 0 #dc4d09;
   }
 
   .nav-dropdown {
@@ -303,9 +377,9 @@ const isGuidesActive = guideLinks.some(isActive);
 
   .dropdown-menu {
     background: white;
-    border: 2px solid #1f2933;
-    border-radius: 12px;
-    box-shadow: 3px 3px 0 #1f2933;
+    border: 1px solid #e2e8f0;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
     display: grid;
     gap: 4px;
     min-width: 220px;
@@ -326,7 +400,8 @@ const isGuidesActive = guideLinks.some(isActive);
 
   .dropdown-link:hover,
   .dropdown-link.active {
-    background: #f7f4ee;
+    background: #fff7ed;
+    color: #b6390a;
   }
 
   .utility-links {
@@ -337,8 +412,8 @@ const isGuidesActive = guideLinks.some(isActive);
   }
 
   .admin-link {
-    border: 1px solid #d1d5db;
-    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
     font-size: 0.84rem;
     font-weight: 900;
     line-height: 1;
@@ -347,14 +422,14 @@ const isGuidesActive = guideLinks.some(isActive);
   }
 
   .admin-link:hover {
-    background: white;
-    border-color: #1f2933;
+    background: #fff7ed;
+    border-color: #fed7aa;
   }
 
   .suggest-link {
-    background: #1f2933;
-    border: 1px solid #1f2933;
-    border-radius: 999px;
+    background: #dc4d09;
+    border: 1px solid #dc4d09;
+    border-radius: 4px;
     color: white;
     font-size: 0.88rem;
     font-weight: 900;
@@ -364,51 +439,78 @@ const isGuidesActive = guideLinks.some(isActive);
   }
 
   .suggest-link:hover {
-    color: #1f2933;
+    color: #b6390a;
   }
 
-  @media (max-width: 720px) {
+  @media (max-width: 1040px) {
     .site-nav {
       position: sticky;
     }
 
     .nav-inner {
-      align-items: start;
-      flex-direction: column;
-      gap: 6px;
+      align-items: center;
+      display: grid;
+      gap: 8px 12px;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       min-height: 0;
       padding: 8px 0;
     }
 
+    .mobile-menu-toggle {
+      display: grid;
+      grid-column: 1;
+      grid-row: 1;
+      justify-self: start;
+      position: relative;
+      z-index: 2;
+    }
+
     .brand {
-      font-size: 0.98rem;
-      min-height: 34px;
+      font-size: 1.04rem;
+      grid-column: 1 / -1;
+      grid-row: 1;
+      justify-self: center;
+      min-height: 42px;
+      position: relative;
+      z-index: 1;
     }
 
     .return-link {
       font-size: 0.82rem;
+      grid-column: 1 / -1;
+      grid-row: 2;
+      justify-self: start;
       padding: 8px 10px;
     }
 
     .brand img {
       border-radius: 6px;
-      height: 34px;
-      width: 34px;
+      height: 42px;
+      width: 42px;
     }
 
-    nav {
-      flex-wrap: wrap;
+    .primary-nav,
+    .utility-links {
+      display: none;
+      grid-column: 1 / -1;
       justify-content: flex-start;
-      margin: 0;
-      overflow: visible;
-      padding: 2px 0 8px;
-      scrollbar-width: none;
       width: 100%;
     }
 
-    .utility-links {
-      align-self: flex-start;
+    .site-nav.nav-open .primary-nav {
+      align-items: stretch;
+      border-top: 1px solid #e2e8f0;
+      display: grid;
+      gap: 6px;
+      grid-row: 3;
+      padding-top: 10px;
+    }
+
+    .site-nav.nav-open .utility-links {
+      display: flex;
       flex-wrap: wrap;
+      grid-row: 4;
+      padding-bottom: 4px;
     }
 
     .admin-link,
@@ -417,13 +519,10 @@ const isGuidesActive = guideLinks.some(isActive);
       padding: 8px 10px;
     }
 
-    nav::-webkit-scrollbar {
-      display: none;
-    }
-
     .nav-link {
       flex: 0 0 auto;
       font-size: 0.82rem;
+      justify-content: space-between;
       padding: 8px 10px;
     }
 
@@ -432,7 +531,7 @@ const isGuidesActive = guideLinks.some(isActive);
     }
 
     .nav-dropdown[open] {
-      flex-basis: 100%;
+      width: 100%;
     }
 
     .dropdown-menu {

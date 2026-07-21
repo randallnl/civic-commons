@@ -2,6 +2,7 @@
 export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
+import SiteFooter from "../components/SiteFooter.astro";
 
 const examples = [
   {
@@ -81,8 +82,8 @@ const detours = [
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="/NH%20DB%20Logo.png" />
-    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.png" />
+    <link rel="icon" type="image/svg+xml" href="/NH%20DB%20Logo.svg" />
+    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.svg" />
     <title>How Bills Move Through the NH Legislature | NH Deserves Better</title>
     <meta
       name="description"
@@ -93,8 +94,6 @@ const detours = [
   <body>
     <TopNav />
     <main class="page">
-      <a class="back" href="/">Back home</a>
-
       <section class="hero">
         <p class="eyebrow">Civic Basics</p>
         <h1>How bills move through the New Hampshire Legislature.</h1>
@@ -205,25 +204,11 @@ const detours = [
         <a class="primary-link" href="/bills">Go to bills</a>
       </section>
     </main>
+    <SiteFooter />
   </body>
 </html>
 
 <style>
-  :global(body) {
-    margin: 0;
-    font-family:
-      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-      sans-serif;
-    background: #f7f4ee;
-    color: #1f2933;
-  }
-
-  .page {
-    margin: 0 auto;
-    padding: 40px 0 80px;
-    width: min(1120px, calc(100% - 32px));
-  }
-
   .back,
   a {
     color: #1f2933;
@@ -286,7 +271,7 @@ const detours = [
 
   .primary-link,
   .secondary-link {
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 999px;
     display: inline-block;
     padding: 14px 18px;
@@ -306,9 +291,9 @@ const detours = [
   .example-card,
   .next-step {
     background: white;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
-    box-shadow: 4px 4px 0 #1f2933;
+    box-shadow: none;
   }
 
   .overview {
@@ -329,7 +314,7 @@ const detours = [
   }
 
   .overview aside {
-    background: #fffaf1;
+    background: #f8fafc;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     padding: 18px;
@@ -374,7 +359,7 @@ const detours = [
 
   .flow li {
     align-items: start;
-    background: #fffaf1;
+    background: #f8fafc;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     display: grid;
@@ -453,7 +438,7 @@ const detours = [
   }
 
   .detour-grid article {
-    background: #fffaf1;
+    background: #f8fafc;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     padding: 14px;

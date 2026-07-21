@@ -5,6 +5,7 @@ import ArticleList from "../../components/ArticleList.astro";
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import TopNav from "../../components/TopNav.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
 import profileIcon from "../../assets/profile icon.png";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
@@ -322,8 +323,8 @@ function candidateOptionLabel(candidate = {}) {
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="/NH%20DB%20Logo.png" />
-    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.png" />
+    <link rel="icon" type="image/svg+xml" href="/NH%20DB%20Logo.svg" />
+    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.svg" />
     <title>{person.full_name} | NH Deserves Better</title>
     <meta
       name="description"
@@ -921,25 +922,11 @@ function candidateOptionLabel(candidate = {}) {
         </aside>
       </section>
     </main>
+    <SiteFooter />
   </body>
 </html>
 
 <style>
-  :global(body) {
-    margin: 0;
-    font-family:
-      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-      sans-serif;
-    background: #f7f4ee;
-    color: #1f2933;
-  }
-
-  .page {
-    margin: 0 auto;
-    padding: 40px 0 72px;
-    width: min(1120px, calc(100% - 32px));
-  }
-
   .back,
   a {
     color: #1f2933;
@@ -957,9 +944,9 @@ function candidateOptionLabel(candidate = {}) {
   .portrait-card {
     aspect-ratio: 4 / 5;
     background: #d8cfc0;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
-    box-shadow: 8px 8px 0 #1f2933;
+    box-shadow: none;
     overflow: hidden;
     width: 100%;
   }
@@ -1028,7 +1015,7 @@ function candidateOptionLabel(candidate = {}) {
 
   .meta-pill,
   .vote-meta span {
-    background: #fffaf1;
+    background: #f8fafc;
   }
 
   .party-pill {
@@ -1071,9 +1058,9 @@ function candidateOptionLabel(candidate = {}) {
   }
 
   .profile-grade {
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 14px;
-    box-shadow: 3px 3px 0 #1f2933;
+    box-shadow: none;
     color: #fefce8;
     display: grid;
     min-width: 82px;
@@ -1127,7 +1114,7 @@ function candidateOptionLabel(candidate = {}) {
   .free-stater-pill {
     background: #7f1d1d;
     border-color: #111827;
-    box-shadow: 2px 2px 0 #111827;
+    box-shadow: none;
     color: white;
   }
 
@@ -1164,9 +1151,9 @@ function candidateOptionLabel(candidate = {}) {
   .summary-card,
   .panel {
     background: white;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
-    box-shadow: 4px 4px 0 #1f2933;
+    box-shadow: none;
   }
 
   .summary-strip article,
@@ -1222,9 +1209,9 @@ function candidateOptionLabel(candidate = {}) {
 
   .status-message {
     background: white;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
-    box-shadow: 3px 3px 0 #1f2933;
+    box-shadow: none;
     font-weight: 900;
     margin: 18px 0 0;
     padding: 14px 16px;
@@ -1281,7 +1268,7 @@ function candidateOptionLabel(candidate = {}) {
   .admin-edit-form input,
   .admin-edit-form select,
   .admin-edit-form textarea {
-    background: #fffaf1;
+    background: #f8fafc;
     border: 1px solid #9ca3af;
     border-radius: 12px;
     box-sizing: border-box;
@@ -1308,7 +1295,7 @@ function candidateOptionLabel(candidate = {}) {
 
   .admin-edit-form button {
     background: #1f2933;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 999px;
     color: white;
     cursor: pointer;
@@ -1325,7 +1312,7 @@ function candidateOptionLabel(candidate = {}) {
   }
 
   .admin-edit-form .secondary-button {
-    background: #fffaf1;
+    background: #f8fafc;
     color: #1f2933;
   }
 
@@ -1369,7 +1356,7 @@ function candidateOptionLabel(candidate = {}) {
 
   .section-action {
     background: #1f2933;
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     border-radius: 999px;
     color: white;
     flex: 0 0 auto;
@@ -1399,7 +1386,7 @@ function candidateOptionLabel(candidate = {}) {
   .side-list article,
   .detail-list div,
   .towns-list article {
-    background: #fffaf1;
+    background: #f8fafc;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     padding: 16px;

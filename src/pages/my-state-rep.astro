@@ -5,6 +5,7 @@ import CandidateCard from "../components/CandidateCard.astro";
 import FilterBar from "../components/FilterBar.astro";
 import RepresentativeCard from "../components/RepresentativeCard.astro";
 import TopNav from "../components/TopNav.astro";
+import SiteFooter from "../components/SiteFooter.astro";
 import profileIcon from "../assets/profile icon.png";
 import { getBillDetail, getBillSummaries } from "../lib/billsApi";
 import { getCandidates, isLegislativeCandidate } from "../lib/candidatesApi";
@@ -503,8 +504,8 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="/NH%20DB%20Logo.png" />
-    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.png" />
+    <link rel="icon" type="image/svg+xml" href="/NH%20DB%20Logo.svg" />
+    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.svg" />
     <title>My Legislator | NH Deserves Better</title>
     <meta
       name="description"
@@ -969,32 +970,23 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           }
       });
     </script>
+    <SiteFooter />
   </body>
 </html>
 
 <style>
-  :global(body) {
-    margin: 0;
-    font-family:
-      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-      sans-serif;
-    background: #f7f4ee;
-    color: #1f2933;
-  }
-
-  .page {
-    width: min(1120px, calc(100% - 32px));
-    margin: 0 auto;
-    padding: 40px 0 64px;
-  }
-
   .back {
     color: #1f2933;
     font-weight: 800;
   }
 
   .hero {
-    padding: 48px 0 24px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-sizing: border-box;
+    margin-top: 24px;
+    padding: 32px;
   }
 
   .eyebrow,
@@ -1014,8 +1006,8 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
   h1 {
     max-width: 900px;
-    font-size: clamp(2.15rem, 5.25vw, 4.2rem);
-    line-height: 0.95;
+    font-size: clamp(2.1rem, 4.6vw, 3.7rem);
+    line-height: 1;
     margin: 0;
   }
 
@@ -1030,10 +1022,10 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
   .panel,
   .address-lookup,
   .filters {
-    background: rgba(255, 255, 255, 0.75);
-    border: 2px solid #1f2933;
-    border-radius: 16px;
-    box-shadow: 6px 6px 0 #1f2933;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: none;
   }
 
   .address-lookup {
@@ -1041,11 +1033,15 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     padding: 24px;
   }
 
+  .address-lookup + :global(.nhdb-filter-bar) {
+    margin-top: 32px;
+  }
+
   .filters {
     display: grid;
     gap: 14px;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    margin-top: 18px;
+    margin-top: 32px;
     padding: 18px;
   }
 
@@ -1079,7 +1075,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     flex: 1;
     min-width: 0;
     padding: 16px 18px;
-    border: 2px solid #1f2933;
+    border: 1px solid #cbd5e1;
     border-radius: 999px;
     font: inherit;
     background: white;
@@ -1088,14 +1084,14 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
   .filters input,
   .filters select {
-    background: #fffaf1;
-    border: 1px solid #9ca3af;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
     padding: 12px 14px;
   }
 
   button,
   .secondary-link {
-    border: 2px solid #1f2933;
+    border: 1px solid #e2e8f0;
     padding: 16px 22px;
     border-radius: 999px;
     font: inherit;
@@ -1156,10 +1152,10 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
   .ward-filter {
     align-items: center;
-    background: #fffaf1;
-    border: 2px solid #d97706;
-    border-radius: 12px;
-    box-shadow: 3px 3px 0 #d97706;
+    background: #f8fafc;
+    border: 1px solid #d97706;
+    border-radius: 10px;
+    box-shadow: none;
     display: grid;
     gap: 10px;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -1171,7 +1167,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
   .ward-filter.needs-ward {
     background: #fffbeb;
     border-color: #b45309;
-    box-shadow: 4px 4px 0 #b45309;
+    box-shadow: none;
   }
 
   .ward-filter label {
@@ -1227,9 +1223,9 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
   }
 
   .summary-item {
-    background: #fffaf1;
-    border: 1px solid #d1d5db;
-    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
     padding: 16px;
   }
 
@@ -1317,9 +1313,9 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
   .sample-card {
     background: white;
-    border: 2px solid #1f2933;
-    border-radius: 16px;
-    box-shadow: 4px 4px 0 #1f2933;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: none;
     color: inherit;
     display: grid;
     gap: 10px;
@@ -1344,8 +1340,8 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
   .sample-photo-link img,
   .sample-fallback {
     aspect-ratio: 4 / 5;
-    border: 2px solid #1f2933;
-    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
     display: block;
     height: 80px;
     object-fit: cover;
@@ -1398,9 +1394,9 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
   }
 
   .mini-grade {
-    border: 1px solid #1f2933;
+    border: 1px solid rgba(31, 41, 51, 0.32);
     border-radius: 8px;
-    box-shadow: 2px 2px 0 #1f2933;
+    box-shadow: none;
     color: #fefce8;
     display: grid;
     min-width: 52px;
@@ -1503,7 +1499,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     background: #7f1d1d;
     border: 1px solid #111827;
     border-radius: 999px;
-    box-shadow: 2px 2px 0 #111827;
+    box-shadow: none;
     color: white;
     display: inline-flex;
     font-size: 0.74rem;
