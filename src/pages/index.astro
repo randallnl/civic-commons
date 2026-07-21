@@ -1447,10 +1447,10 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   }
 
   .person-vote-main {
-    align-items: start;
+    align-items: stretch;
     display: grid;
     gap: 10px;
-    grid-template-columns: minmax(0, 1fr) minmax(165px, 210px);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .person-vote-heading {
@@ -1482,15 +1482,17 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
   .person-vote-copy,
   .vote-pill-stack {
+    display: grid;
     min-width: 0;
   }
 
   .vote-interpretation {
-    background: white;
-    border: 1px solid #9ca3af;
+    background: #fffaf1;
+    border: 1px solid #eadfce;
     border-radius: 12px;
     display: grid;
     gap: 7px;
+    min-height: 92px;
     padding: 8px;
   }
 
@@ -1503,22 +1505,18 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   }
 
   .vote-interpretation.legislator-support {
-    background: #dff0d8;
     border-color: #2f7d4f;
   }
 
   .vote-interpretation.legislator-oppose {
-    background: #fde2de;
     border-color: #b42318;
   }
 
   .vote-interpretation.legislator-neutral {
-    background: #dbeafe;
     border-color: #2563eb;
   }
 
   .person-vote-pill {
-    background: rgba(255, 255, 255, 0.75);
     border: 1px solid currentColor;
     border-radius: 999px;
     box-sizing: border-box;
@@ -1533,8 +1531,23 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     width: 100%;
   }
 
+  .person-vote-pill.legislator-support {
+    background: #dff0d8;
+    color: #14532d;
+  }
+
+  .person-vote-pill.legislator-oppose {
+    background: #fde2de;
+    color: #7f1d1d;
+  }
+
+  .person-vote-pill.legislator-neutral {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
   .person-vote-pill:hover {
-    background: white;
+    filter: brightness(0.97);
   }
 
   .vote-pill-stack {
@@ -1546,6 +1559,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   }
 
   .vote-pill-stack :global(.position-summary) {
+    min-height: 92px;
     width: 100%;
   }
 
