@@ -27,7 +27,7 @@ try {
 
   bill = data.bill;
   rollCall = data.rollCall;
-  votes = data.votes || [];
+  votes = (data.votes || []).filter(isListedLegislatorVote);
   trackedBill = trackedBills.get(normalizeBillCode(bill?.condensedbillno || billCode));
 } catch (loadError) {
   error = loadError?.message || "Unable to load roll call votes.";
@@ -41,6 +41,13 @@ const voteFilters = groupedVotes.map((group) => ({
 }));
 const countyFilters = groupByValue(votes, (vote) => cleanText(vote.county || ""));
 const testimonyPosition = testimonyPositionForBill(bill);
+
+function isListedLegislatorVote(vote = {}) {
+  return Boolean(
+    cleanText(vote.name || "") &&
+      (vote.personid || vote.id || vote.slug || vote.employeeno || cleanText(vote.name || "")),
+  );
+}
 
 function groupVotes(voteRows = []) {
   const groups = new Map();
