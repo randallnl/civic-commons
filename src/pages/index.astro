@@ -409,23 +409,32 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
                         return (
                           <div class:list={["person-vote-preview", voteStance.className]}>
-                            <div class="person-vote-heading">
-                              <a href={billDetailPath(billCode, billYear)}>
-                                {compactBillTitle(billCode, billTitle)}
-                              </a>
-                              {billSummaryText && <p>{billSummaryText}</p>}
+                            <div class="person-vote-main">
+                              <div class="person-vote-heading">
+                                <a href={billDetailPath(billCode, billYear)}>
+                                  {compactBillTitle(billCode, billTitle)}
+                                </a>
+                                {billSummaryText && <p>{billSummaryText}</p>}
+                              </div>
+                              <div class="person-vote-copy">
+                                <div class:list={["vote-interpretation", voteStance.className]}>
+                                  <strong>Vote</strong>
+                                  <a
+                                    class:list={["person-vote-pill", voteStance.className]}
+                                    href="/vote-interpretations"
+                                    title="How do we determine this?"
+                                    aria-label={`How do we determine this? ${voteStance.label}`}
+                                  >
+                                    {voteStance.label}
+                                  </a>
+                                </div>
+                              </div>
+                              {billSummary && (
+                                <div class="vote-pill-stack">
+                                  <BillPositionSummary bill={billSummary} compact={true} />
+                                </div>
+                              )}
                             </div>
-                            <a
-                              class="person-vote-pill"
-                              href="/vote-interpretations"
-                              title="How do we determine this?"
-                              aria-label={`How do we determine this? ${voteStance.label}`}
-                            >
-                              {voteStance.label}
-                            </a>
-                            {billSummary && (
-                              <BillPositionSummary bill={billSummary} compact={true} />
-                            )}
                           </div>
                         );
                       })}
@@ -1418,31 +1427,37 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   }
 
   .person-vote-preview {
-    border: 1px solid #9ca3af;
+    background: #fffaf1;
+    border: 1px solid #d1d5db;
     border-radius: 8px;
     display: grid;
-    gap: 8px;
-    padding: 8px 10px;
+    padding: 10px;
   }
 
   .person-vote-preview.legislator-support {
-    background: #dff0d8;
     border-color: #2f7d4f;
   }
 
   .person-vote-preview.legislator-oppose {
-    background: #fde2de;
     border-color: #b42318;
   }
 
   .person-vote-preview.legislator-neutral {
-    background: #dbeafe;
     border-color: #2563eb;
+  }
+
+  .person-vote-main {
+    align-items: start;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) minmax(165px, 210px);
   }
 
   .person-vote-heading {
     display: grid;
     gap: 5px;
+    grid-column: 1 / -1;
+    min-width: 0;
   }
 
   .person-vote-heading a {
@@ -1459,28 +1474,84 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
   .person-vote-heading p {
     color: #374151;
-    font-size: 0.82rem;
-    line-height: 1.4;
+    font-size: 0.83rem;
+    font-weight: 500;
+    line-height: 1.45;
     margin: 0;
   }
 
+  .person-vote-copy,
+  .vote-pill-stack {
+    min-width: 0;
+  }
+
+  .vote-interpretation {
+    background: white;
+    border: 1px solid #9ca3af;
+    border-radius: 12px;
+    display: grid;
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .vote-interpretation > strong {
+    color: #4b5563;
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .vote-interpretation.legislator-support {
+    background: #dff0d8;
+    border-color: #2f7d4f;
+  }
+
+  .vote-interpretation.legislator-oppose {
+    background: #fde2de;
+    border-color: #b42318;
+  }
+
+  .vote-interpretation.legislator-neutral {
+    background: #dbeafe;
+    border-color: #2563eb;
+  }
+
   .person-vote-pill {
-    align-self: start;
     background: rgba(255, 255, 255, 0.75);
     border: 1px solid currentColor;
     border-radius: 999px;
+    box-sizing: border-box;
     color: #1f2933;
-    display: inline-flex;
+    display: block;
     font-size: 0.78rem;
-    font-weight: 850;
-    justify-self: start;
-    line-height: 1.25;
-    padding: 5px 8px;
+    font-weight: 900;
+    line-height: 1.2;
+    padding: 7px 10px;
+    text-align: center;
     text-decoration: none;
+    width: 100%;
   }
 
   .person-vote-pill:hover {
     background: white;
+  }
+
+  .vote-pill-stack {
+    align-items: stretch;
+    display: grid;
+    gap: 8px;
+    justify-items: stretch;
+    width: 100%;
+  }
+
+  .vote-pill-stack :global(.position-summary) {
+    width: 100%;
+  }
+
+  .vote-pill-stack :global(.position-summary span) {
+    box-sizing: border-box;
+    text-align: center;
   }
 
   .person-vote-preview strong {
@@ -1592,6 +1663,15 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
     .list .mini-grade strong {
       font-size: 1.75rem;
+    }
+
+    .person-vote-main {
+      grid-template-columns: 1fr;
+    }
+
+    .vote-pill-stack {
+      align-items: start;
+      justify-items: stretch;
     }
 
   }
