@@ -1431,7 +1431,9 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     border: 1px solid #d1d5db;
     border-radius: 8px;
     display: grid;
+    max-width: 66%;
     padding: 10px;
+    width: 100%;
   }
 
   .person-vote-preview.legislator-support {
@@ -1684,6 +1686,10 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
     .person-vote-main {
       grid-template-columns: 1fr;
+    }
+
+    .person-vote-preview {
+      max-width: none;
     }
 
     .vote-pill-stack {
