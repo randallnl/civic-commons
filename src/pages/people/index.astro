@@ -17,7 +17,6 @@ const filters = {
   name: Astro.url.searchParams.get("name")?.trim() || "",
   town: Astro.url.searchParams.get("town")?.trim() || "",
   county: Astro.url.searchParams.get("county")?.trim() || "",
-  district: Astro.url.searchParams.get("district")?.trim() || "",
 };
 
 let representatives = [];
@@ -31,7 +30,6 @@ try {
       body: filters.body,
       q: filters.name || filters.town,
       county: filters.county,
-      district: filters.district,
       limit: 600,
     }),
     getTrackedBills(),
@@ -55,8 +53,7 @@ function matchesFilters(rep = {}, values = {}) {
     matchesBody(rep, values.body) &&
     matchesText(repName(rep), values.name) &&
     matchesText(locationText(rep), values.town) &&
-    matchesCounty(rep, values.county) &&
-    matchesDistrict(rep, values.district)
+    matchesCounty(rep, values.county)
   );
 }
 
@@ -109,27 +106,6 @@ function matchesCounty(rep = {}, query = "") {
   return matchesText(countyText, query);
 }
 
-function matchesDistrict(rep = {}, query = "") {
-  if (!query) return true;
-  const queryNumber = districtNumberFilter(query);
-  const repDistrictNumber = districtNumberFilter(rep.raw_district || rep.district);
-
-  if (queryNumber !== null && repDistrictNumber !== null) {
-    return queryNumber === repDistrictNumber;
-  }
-
-  const districtText = [
-    rep.district,
-    rep.raw_district,
-    rep.district_label,
-    rep.districtLabel,
-    districtLabel(rep),
-    locationText(rep),
-  ].filter(Boolean).join(" ");
-
-  return matchesText(districtText, query);
-}
-
 function locationText(rep = {}) {
   const value =
     rep.location_text ||
@@ -160,27 +136,11 @@ function legislativeBody(rep = {}) {
   return rep.chamber || "";
 }
 
-function districtLabel(rep = {}) {
-  const district = rep.district || rep.raw_district || "";
-  const body = legislativeBody(rep);
-  if (!district) return body;
-  if (body === "House") return `NH House District ${district}`;
-  if (body === "Senate") return `NH Senate District ${district}`;
-  return `District ${district}`;
-}
-
 function normalizeSearch(value = "") {
   return cleanText(value)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
-}
-
-function districtNumberFilter(value = "") {
-  const match = String(value || "").match(/\d+/);
-  if (!match) return null;
-  const number = Number(match[0]);
-  return Number.isFinite(number) ? number : null;
 }
 
 function countyNameForCode(code = "") {
@@ -210,7 +170,7 @@ function countyNameForCode(code = "") {
     <title>All Representatives | NH Deserves Better</title>
     <meta
       name="description"
-      content="Browse New Hampshire legislators by name, town, county, or district and preview their tracked bill votes."
+      content="Browse New Hampshire legislators by name, town, or county and preview their tracked bill votes."
     />
   </head>
 
@@ -222,7 +182,7 @@ function countyNameForCode(code = "") {
         backLabel="Back to My State Rep"
         eyebrow="Representative Directory"
         title="Browse New Hampshire state legislators."
-        lede="Search by name, town, county, or district to preview representative profiles, vote grades, and recent tracked bill votes."
+        lede="Search by name, town, or county to preview representative profiles, vote grades, and recent tracked bill votes."
       >
         <FilterBar
           action="/people"
@@ -248,10 +208,6 @@ function countyNameForCode(code = "") {
           <label for="county">
             <span>County</span>
           <input id="county" name="county" type="search" value={filters.county} placeholder="Hillsborough" />
-          </label>
-          <label for="district">
-            <span>District</span>
-          <input id="district" name="district" type="search" value={filters.district} placeholder="NH House District 15" />
           </label>
         </FilterBar>
       </PageHero>
@@ -279,7 +235,7 @@ function countyNameForCode(code = "") {
       ) : (
         <p class="status-message">
           No representatives matched those filters. Try a broader town, county,
-          district, or name search.
+          or name search.
         </p>
       )}
     </main>

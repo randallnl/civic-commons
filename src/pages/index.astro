@@ -1452,7 +1452,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     align-items: stretch;
     display: grid;
     gap: 10px;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(10, minmax(0, 1fr));
   }
 
   .person-vote-heading {
@@ -1486,6 +1486,14 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   .vote-pill-stack {
     display: grid;
     min-width: 0;
+  }
+
+  .person-vote-copy {
+    grid-column: span 3;
+  }
+
+  .vote-pill-stack {
+    grid-column: span 4;
   }
 
   .vote-interpretation {
@@ -1686,6 +1694,11 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
     .person-vote-main {
       grid-template-columns: 1fr;
+    }
+
+    .person-vote-copy,
+    .vote-pill-stack {
+      grid-column: auto;
     }
 
     .person-vote-preview {
