@@ -9,6 +9,10 @@ import { getArticles } from "../../lib/articlesApi";
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const bill = Astro.url.searchParams.get("bill")?.trim() || "";
 const town = Astro.url.searchParams.get("town")?.trim() || "";
+const requestedLimit = Number(Astro.url.searchParams.get("limit") || 20);
+const articleLimit = Number.isFinite(requestedLimit)
+  ? Math.min(Math.max(Math.trunc(requestedLimit), 20), 100)
+  : 20;
 const submitted = Astro.url.searchParams.get("submitted") === "1";
 const submitError = Astro.url.searchParams.get("error") || "";
 
@@ -22,13 +26,25 @@ try {
     bill,
     town,
     include: "relations",
-    limit: 50,
+    limit: articleLimit,
   });
   articles = data.articles || [];
   meta = data.meta || {};
 } catch (loadError) {
   error = loadError?.message || "Unable to load articles.";
 }
+
+const nextLimit = Math.min(articleLimit + 20, 100);
+const totalArticles = Number(meta.count ?? meta.total ?? 0);
+const hasMoreArticles =
+  totalArticles > articles.length ||
+  (!totalArticles && articles.length >= articleLimit && articleLimit < 100);
+const seeMoreParams = new URLSearchParams();
+if (q) seeMoreParams.set("q", q);
+if (bill) seeMoreParams.set("bill", bill);
+if (town) seeMoreParams.set("town", town);
+seeMoreParams.set("limit", String(nextLimit));
+const seeMoreHref = `/articles?${seeMoreParams.toString()}`;
 ---
 
 <html lang="en">
@@ -130,10 +146,15 @@ try {
       ) : (
         <section class="panel">
           <div class="results-heading">
-            <h2>{meta.count ?? articles.length} Articles</h2>
+            <h2>Recent Articles</h2>
             {(q || bill || town) && <a href="/articles">Clear filters</a>}
           </div>
           <ArticleList articles={articles} />
+          {hasMoreArticles && (
+            <div class="see-more-row">
+              <a class="see-more-button" href={seeMoreHref}>See more articles</a>
+            </div>
+          )}
         </section>
       )}
     </main>
@@ -359,6 +380,26 @@ try {
   .results-heading h2 {
     font-size: 1.6rem;
     margin: 0;
+  }
+
+  .see-more-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 22px;
+  }
+
+  .see-more-button {
+    background: #1f2933;
+    border-radius: 999px;
+    color: white;
+    display: inline-flex;
+    font-weight: 900;
+    padding: 12px 18px;
+    text-decoration: none;
+  }
+
+  .see-more-button:hover {
+    background: #dc4d09;
   }
 
   @media (max-width: 860px) {

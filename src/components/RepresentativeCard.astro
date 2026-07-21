@@ -151,7 +151,6 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
           const billYear = billSummary?.sessionyear || vote.sessionyear;
           const stance = representativeOnlineTestimonyVoteStance(vote, billSummary);
           const voteImpact = "";
-          const summary = billSummary?.summary || bill?.summary || "";
           const billTitle = billPreviewTitle(billSummary, bill);
 
           return (
@@ -165,7 +164,6 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
                 {billTitle && (
                   <span>{billTitle}</span>
                 )}
-                {summary && <p class="bill-summary">{cleanText(summary)}</p>}
               </div>
               <div class="vote-copy">
                 <div class:list={["vote-interpretation", stance.className]}>
@@ -418,14 +416,6 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
     display: grid;
     gap: 6px;
     min-width: 0;
-  }
-
-  .bill-summary {
-    color: #4b5563;
-    font-size: 0.86rem;
-    font-weight: 500;
-    line-height: 1.45;
-    margin: 0;
   }
 
   .vote-pill-stack {

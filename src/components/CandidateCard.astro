@@ -78,17 +78,6 @@ function formatCurrency(value) {
 
     <p class="office-line">{officeParts.join(", ") || "Office not listed"}</p>
 
-    <dl>
-      <div>
-        <dt>Raised</dt>
-        <dd>{formatCurrency(candidate.totalRaised)}</dd>
-      </div>
-      <div>
-        <dt>Spent</dt>
-        <dd>{formatCurrency(candidate.totalSpent)}</dd>
-      </div>
-    </dl>
-
     {contactLinks.length > 0 && (
       <div class="actions">
         {contactLinks.map((link) => (
@@ -208,34 +197,6 @@ function formatCurrency(value) {
     font-weight: 800;
     line-height: 1.4;
     margin: 12px 0 0;
-  }
-
-  dl {
-    display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin: 14px 0 0;
-  }
-
-  dl div {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 8px 10px;
-  }
-
-  dt {
-    color: #6b7280;
-    font-size: 0.72rem;
-    font-weight: 900;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  dd {
-    font-size: 1rem;
-    font-weight: 950;
-    margin: 2px 0 0;
   }
 
   .actions {

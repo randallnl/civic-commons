@@ -119,6 +119,33 @@ function townPath(town = {}) {
   return `/communities/towns/${encodeURIComponent(townName)}`;
 }
 
+function townLabel(town = {}) {
+  return cleanText(town.town || town.name || town);
+}
+
+function isTownRelation(value = {}) {
+  if (!value) return false;
+  if (typeof value === "string") return !/\b(county|district|house|senate)\b/i.test(value);
+
+  const relationType = cleanText(
+    value.type ||
+      value.kind ||
+      value.community_type ||
+      value.communityType ||
+      value.body ||
+      value.chamber ||
+      "",
+  ).toLowerCase();
+
+  if (relationType && !relationType.includes("town")) return false;
+  if (value.district || value.houseDistrict || value.senateDistrict) return false;
+  if (value.body || value.chamber) return false;
+
+  return Boolean(townLabel(value));
+}
+
+const articleTowns = (article.towns || []).filter(isTownRelation);
+
 function billOptionValue(bill = {}) {
   return bill.condensedbillno || bill.bill_number || "";
 }
@@ -262,8 +289,8 @@ function billOptionLabel(bill = {}) {
                 <h2>Towns and Topics</h2>
               </div>
               <div class="chip-list">
-                {(article.towns || []).map((town) => (
-                  <a href={townPath(town)}>{cleanText(town.town || town.name || town)}</a>
+                {articleTowns.map((town) => (
+                  <a href={townPath(town)}>{townLabel(town)}</a>
                 ))}
                 {(article.issueAreas || []).map((issue) => (
                   <span>{cleanText(issue.issue_area || issue.name)}</span>
@@ -272,7 +299,7 @@ function billOptionLabel(bill = {}) {
                   <span>{cleanText(impact.impact_type || impact.name)}</span>
                 ))}
               </div>
-              {!(article.towns?.length || article.issueAreas?.length || article.impactTypes?.length) && (
+              {!(articleTowns.length || article.issueAreas?.length || article.impactTypes?.length) && (
                 <p class="empty">No community or topic links are attached yet.</p>
               )}
             </section>
@@ -340,7 +367,8 @@ function billOptionLabel(bill = {}) {
     display: grid;
     gap: 28px;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
-    padding: 42px 0 28px;
+    margin-top: 24px;
+    padding: 32px;
   }
 
   .eyebrow {

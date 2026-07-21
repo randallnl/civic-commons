@@ -59,6 +59,21 @@ const officeParts = [
   candidate.district ? `District ${candidate.district}` : "",
 ].filter(Boolean);
 const candidateRoles = uniqueCandidateRoles(candidate.candidateRoles?.length ? candidate.candidateRoles : [candidate]);
+
+function externalProfileUrl(entity = {}, names = []) {
+  return names
+    .map((name) => entity[name])
+    .find((value) => typeof value === "string" && value.trim());
+}
+
+function ballotpediaUrlForName(value = "") {
+  const slug = String(value)
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^A-Za-z0-9_().-]/g, "");
+  return slug ? `https://ballotpedia.org/${slug}` : "";
+}
+
 const sourceLinks = [
   candidate.candidateWebsite && {
     href: candidate.candidateWebsite,
@@ -71,6 +86,20 @@ const sourceLinks = [
   candidate.legislatorProfileUrl && {
     href: candidate.legislatorProfileUrl,
     label: "Legislator Profile",
+  },
+  {
+    href: "https://cfs.sos.nh.gov/public/cf/reports",
+    label: "Search candidate finance filings",
+  },
+  {
+    href:
+      externalProfileUrl(candidate, ["ballotpediaUrl", "ballotpedia_url"]) ||
+      ballotpediaUrlForName(name),
+    label: "Ballotpedia",
+  },
+  externalProfileUrl(candidate, ["citizensCountUrl", "citizens_count_url", "citizenscount_url"]) && {
+    href: externalProfileUrl(candidate, ["citizensCountUrl", "citizens_count_url", "citizenscount_url"]),
+    label: "Citizens Count",
   },
 ].filter(Boolean);
 
@@ -274,14 +303,6 @@ function uniqueArticles(articles = []) {
               <div>
                 <span>Election Year</span>
                 <strong>{role.electionYear || candidate.electionYear || "Not listed"}</strong>
-              </div>
-              <div>
-                <span>Raised</span>
-                <strong>{formatCurrency(role.totalRaised)}</strong>
-              </div>
-              <div>
-                <span>Spent</span>
-                <strong>{formatCurrency(role.totalSpent)}</strong>
               </div>
               <div>
                 <span>Filer Entity</span>
@@ -564,7 +585,8 @@ function uniqueArticles(articles = []) {
     display: grid;
     gap: 28px;
     grid-template-columns: 260px 1fr;
-    padding: 42px 0 28px;
+    margin-top: 24px;
+    padding: 32px;
   }
 
   .portrait-card {

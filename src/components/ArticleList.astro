@@ -2,9 +2,13 @@
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 import { articleDetailPath, articlePublishDate, articleSourceName } from "../lib/articlesApi";
+import { billDetailPath } from "../lib/billsApi";
+import { candidatePath } from "../lib/candidatesApi";
 
 const { articles = [], emptyText = "No articles found.", compact = false } = Astro.props;
-const previewArticles = await enrichArticlesWithPreviews(articles, { limit: compact ? 8 : 20 });
+const previewArticles = await enrichArticlesWithPreviews(articles, {
+  limit: compact ? 8 : Math.min(articles.length, 100),
+});
 
 function previewText(text = "", maxLength = compact ? 140 : 220) {
   const normalized = cleanText(text).replace(/\s+/g, " ").trim();
@@ -12,18 +16,56 @@ function previewText(text = "", maxLength = compact ? 140 : 220) {
   return `${normalized.slice(0, maxLength).trim()}...`;
 }
 
-function relationLabels(article = {}) {
-  return [
-    ...(article.bills || []).map((bill) => bill.condensedbillno).filter(Boolean),
-    ...(article.towns || []).map((town) => town.town || town.name || town).filter(Boolean),
-    ...(article.legislators || [])
-      .map((person) => person.matched_name || person.legislator_name_raw)
-      .filter(Boolean),
-    ...(article.candidates || [])
-      .map((candidate) => candidate.name || candidate.candidate_name_raw)
-      .filter(Boolean),
-    ...(article.issueAreas || []).map((issue) => issue.issue_area).filter(Boolean),
-  ].map(cleanText).slice(0, compact ? 4 : 8);
+function slugify(value = "") {
+  return String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/['']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function mentionedBills(article = {}) {
+  return (article.bills || [])
+    .map((bill) => {
+      const code = cleanText(bill.condensedbillno || bill.bill_number || bill.code || "");
+      if (!code) return null;
+      return {
+        label: code,
+        href: billDetailPath(code, bill.sessionyear || bill.year),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, compact ? 3 : 6);
+}
+
+function legislatorPath(person = {}) {
+  const key =
+    person.personid ||
+    person.id ||
+    person.employeeno ||
+    slugify(person.matched_name || person.legislator_name_raw || person.name || "");
+  return `/people/${encodeURIComponent(String(key))}`;
+}
+
+function mentionedPeople(article = {}) {
+  const legislators = (article.legislators || [])
+    .map((person) => {
+      const label = cleanText(person.matched_name || person.legislator_name_raw || person.name || "");
+      if (!label) return null;
+      return { label, href: legislatorPath(person) };
+    })
+    .filter(Boolean);
+
+  const candidates = (article.candidates || [])
+    .map((candidate) => {
+      const label = cleanText(candidate.name || candidate.candidate_name_raw || "");
+      if (!label) return null;
+      return { label, href: candidatePath(candidate) };
+    })
+    .filter(Boolean);
+
+  return [...legislators, ...candidates].slice(0, compact ? 3 : 6);
 }
 ---
 
@@ -51,11 +93,29 @@ function relationLabels(article = {}) {
           <p>{previewText(article.preview?.description || article.summary)}</p>
         )}
 
-        {relationLabels(article).length > 0 && (
-          <div class="relation-chips">
-            {relationLabels(article).map((label) => (
-              <span>{label}</span>
-            ))}
+        {(mentionedBills(article).length > 0 || mentionedPeople(article).length > 0) && (
+          <div class="relation-groups">
+            {mentionedBills(article).length > 0 && (
+              <div class="relation-group">
+                <span class="relation-heading">Mentioned Bills</span>
+                <div class="relation-chips">
+                  {mentionedBills(article).map((bill) => (
+                    <a href={bill.href}>{bill.label}</a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {mentionedPeople(article).length > 0 && (
+              <div class="relation-group">
+                <span class="relation-heading">Mentioned People</span>
+                <div class="relation-chips">
+                  {mentionedPeople(article).map((person) => (
+                    <a href={person.href}>{person.label}</a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
         {article.url && <a class="source-link" href={article.url}>Original article</a>}
@@ -113,7 +173,7 @@ function relationLabels(article = {}) {
   }
 
   .article-topline span,
-  .relation-chips span {
+  .relation-chips a {
     background: white;
     border: 1px solid #d1d5db;
     border-radius: 999px;
@@ -121,6 +181,12 @@ function relationLabels(article = {}) {
     font-size: 0.76rem;
     font-weight: 900;
     padding: 5px 8px;
+    text-decoration: none;
+  }
+
+  .relation-chips a:hover {
+    border-color: #dc4d09;
+    color: #b6390a;
   }
 
   h3 {
@@ -139,8 +205,24 @@ function relationLabels(article = {}) {
     font-weight: 900;
   }
 
-  .relation-chips {
+  .relation-groups {
+    display: grid;
+    gap: 10px;
     margin-top: 12px;
+  }
+
+  .relation-group {
+    display: grid;
+    gap: 6px;
+  }
+
+  .relation-heading {
+    color: #6b7280;
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
 
   .source-link {

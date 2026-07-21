@@ -292,6 +292,29 @@ function sourceUrlsToLinks(sourceUrls = {}) {
   return links;
 }
 
+function externalProfileUrl(entity = {}, names = []) {
+  return names
+    .map((name) => entity[name])
+    .find((value) => typeof value === "string" && value.trim());
+}
+
+function ballotpediaUrlForName(value = "") {
+  const slug = String(value)
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^A-Za-z0-9_().-]/g, "");
+  return slug ? `https://ballotpedia.org/${slug}` : "";
+}
+
+const ballotpediaProfileUrl =
+  externalProfileUrl(representative, ["ballotpediaUrl", "ballotpedia_url"]) ||
+  ballotpediaUrlForName(person.full_name);
+const citizensCountProfileUrl = externalProfileUrl(representative, [
+  "citizensCountUrl",
+  "citizens_count_url",
+  "citizenscount_url",
+]);
+
 function formatDate(value) {
   if (!value) return "";
 
@@ -404,6 +427,12 @@ function candidateOptionLabel(candidate = {}) {
             )}
             {currentCandidateProfile && (
               <a href={currentCandidateProfile.href}>{currentCandidateProfile.label}</a>
+            )}
+            {ballotpediaProfileUrl && (
+              <a href={ballotpediaProfileUrl}>Ballotpedia</a>
+            )}
+            {citizensCountProfileUrl && (
+              <a href={citizensCountProfileUrl}>Citizens Count</a>
             )}
           </div>
         </div>
@@ -938,7 +967,8 @@ function candidateOptionLabel(candidate = {}) {
     display: grid;
     gap: 32px;
     grid-template-columns: minmax(180px, 260px) 1fr;
-    padding: 40px 0 24px;
+    margin-top: 24px;
+    padding: 32px;
   }
 
   .portrait-card {
