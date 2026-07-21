@@ -1031,6 +1031,11 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     display: grid;
     gap: 9px;
     min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .community-update-copy > * {
+    min-width: 0;
   }
 
   .comment-card.placeholder {
@@ -1063,6 +1068,12 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     display: flex;
     gap: 10px;
     justify-content: space-between;
+    min-width: 0;
+  }
+
+  .comment-topline a {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .organization-comment-source {
@@ -1100,6 +1111,8 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   }
 
   .bill-comment-link {
+    max-width: 100%;
+    overflow-wrap: anywhere;
     text-decoration: none;
   }
 
@@ -1120,6 +1133,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     grid-template-columns: auto minmax(0, 1fr) auto;
     padding: 10px 12px;
     text-decoration: none;
+    min-width: 0;
   }
 
   .instagram-preview-card.compact {
@@ -1142,6 +1156,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   .instagram-preview-card strong,
   .instagram-preview-card small {
     display: block;
+    overflow-wrap: anywhere;
   }
 
   .instagram-preview-card strong {

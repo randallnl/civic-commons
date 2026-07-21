@@ -53,6 +53,10 @@ candidate = await enrichCandidateWithLegislator(candidate);
 const name = candidateName(candidate);
 const candidateEntityKey = candidate.filerEntityNumber || slug;
 const portraitUrl = profilePhotoUrl(candidate.photoUrl) || profilePhotoUrl(candidate.legislatorPhotoUrl);
+const officeTypeLabel =
+  String(candidate.officeType || "").trim().toLowerCase() === "general court"
+    ? ""
+    : candidate.officeType;
 const officeParts = [
   candidate.office,
   candidate.county,
@@ -270,7 +274,7 @@ function uniqueArticles(articles = []) {
                 Free Stater
               </a>
             )}
-            {candidate.officeType && <span class="meta-pill">{candidate.officeType}</span>}
+            {officeTypeLabel && <span class="meta-pill">{officeTypeLabel}</span>}
             {candidate.electionYear && <span class="meta-pill">{candidate.electionYear}</span>}
             {candidate.currentLegislator && <span class="meta-pill">Current Legislator</span>}
           </div>
@@ -310,6 +314,26 @@ function uniqueArticles(articles = []) {
               </div>
             </article>
           ))}
+          {(candidate.candidateWebsite || candidate.candidateEmail) && (
+            <article class="role-card candidate-contact-details">
+              {candidate.candidateWebsite && (
+                <div>
+                  <span>Campaign Website</span>
+                  <strong>
+                    <a href={candidate.candidateWebsite}>{candidate.candidateWebsite}</a>
+                  </strong>
+                </div>
+              )}
+              {candidate.candidateEmail && (
+                <div>
+                  <span>Email</span>
+                  <strong>
+                    <a href={`mailto:${candidate.candidateEmail}`}>{candidate.candidateEmail}</a>
+                  </strong>
+                </div>
+              )}
+            </article>
+          )}
         </div>
       </section>
 
@@ -697,6 +721,11 @@ function uniqueArticles(articles = []) {
     margin: 24px 0;
   }
 
+  .page > section + section,
+  .page > .community-updates + section {
+    margin-top: 24px;
+  }
+
   .summary-strip article,
   .panel {
     background: white;
@@ -775,6 +804,15 @@ function uniqueArticles(articles = []) {
   .detail-grid strong,
   .role-card strong {
     overflow-wrap: anywhere;
+  }
+
+  .candidate-contact-details a {
+    color: #0f766e;
+    text-decoration: none;
+  }
+
+  .candidate-contact-details a:hover {
+    text-decoration: underline;
   }
 
   .admin-edit-panel {

@@ -13,6 +13,10 @@ const { candidate } = Astro.props;
 
 const name = candidateName(candidate);
 const photoUrl = profilePhotoUrl(candidate.photoUrl) || profilePhotoUrl(candidate.legislatorPhotoUrl);
+const officeTypeLabel =
+  String(candidate.officeType || "").trim().toLowerCase() === "general court"
+    ? ""
+    : candidate.officeType;
 const officeParts = [
   candidate.office,
   candidate.county,
@@ -72,7 +76,7 @@ function formatCurrency(value) {
           Free Stater
         </a>
       )}
-      {candidate.officeType && <span>{candidate.officeType}</span>}
+      {officeTypeLabel && <span>{officeTypeLabel}</span>}
       {candidate.currentLegislator && <span>Current Legislator</span>}
     </div>
 
