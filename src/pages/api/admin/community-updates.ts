@@ -12,12 +12,14 @@ export async function POST({ request }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
+  const wantsHtml = request.headers.get("HX-Request") === "true";
   let redirectTo = "/admin";
   try {
     const form = await request.formData();
     const id = Number(form.get("id") || 0);
     const action = String(form.get("action") || "").trim();
     const comment = cleanText(form.get("comment") || "");
+    const displayName = cleanText(form.get("displayName") || "") || "Community member";
     redirectTo = safeRedirectPath(form.get("redirectTo")) || "/admin";
 
     if (!id) throw new Error("Community update id is required.");
@@ -33,10 +35,11 @@ export async function POST({ request }) {
       await db
         .prepare(
           `UPDATE community_updates
-           SET comment = ?
+           SET display_name = ?,
+               comment = ?
            WHERE id = ?`,
         )
-        .bind(comment, id)
+        .bind(displayName, comment, id)
         .run();
 
       await db
@@ -50,6 +53,7 @@ export async function POST({ request }) {
     }
 
     if (action === "save") {
+      if (wantsHtml) return htmlMessage("Community update edits saved.", "success");
       return redirectWithMessage(request, redirectTo, "Community update edits saved.");
     }
 
@@ -68,8 +72,12 @@ export async function POST({ request }) {
     const changed = result.meta?.changes ?? result.changes ?? 0;
     if (!changed) throw new Error("No matching community update was found.");
 
+    if (wantsHtml) return htmlMessage(`Community update ${status}.`, "success");
     return redirectWithMessage(request, redirectTo, `Community update ${status}.`);
   } catch (error) {
+    if (wantsHtml) {
+      return htmlMessage(error?.message || "Unable to moderate community update.", "error", 400);
+    }
     return redirectWithError(request, redirectTo, error?.message || "Unable to moderate community update.");
   }
 }
@@ -90,4 +98,26 @@ function redirectWithError(request, path, message) {
   const url = new URL(path, request.url);
   url.searchParams.set("error", message);
   return Response.redirect(url, 303);
+}
+
+function htmlMessage(message, status = "success", responseStatus = 200) {
+  return new Response(
+    `<span class="inline-status ${status}">${escapeHtml(message)}</span>`,
+    {
+      status: responseStatus,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    },
+  );
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

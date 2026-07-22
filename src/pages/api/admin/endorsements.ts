@@ -10,6 +10,7 @@ export async function POST({ request }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
+  const wantsHtml = request.headers.get("HX-Request") === "true";
   let redirectTo = "/admin";
 
   try {
@@ -21,6 +22,7 @@ export async function POST({ request }) {
       const result = await moderateOrganizationEndorsement(form.get("id"), action, {
         reviewedBy: auth.session.email,
       });
+      if (wantsHtml) return htmlMessage(`Endorsement ${result.status}.`, "success");
       return redirectWithMessage(request, redirectTo, `Endorsement ${result.status}.`);
     }
 
@@ -49,6 +51,9 @@ export async function POST({ request }) {
       `Endorsement saved for ${result.candidateSlugKey}.`,
     );
   } catch (error) {
+    if (wantsHtml) {
+      return htmlMessage(error?.message || "Unable to update endorsements.", "error", 400);
+    }
     return redirectWithError(request, redirectTo, error?.message || "Unable to update endorsements.");
   }
 }
@@ -69,4 +74,26 @@ function redirectWithError(request, path, message) {
   const url = new URL(path, request.url);
   url.searchParams.set("error", message);
   return Response.redirect(url, 303);
+}
+
+function htmlMessage(message, status = "success", responseStatus = 200) {
+  return new Response(
+    `<span class="inline-status ${status}">${escapeHtml(message)}</span>`,
+    {
+      status: responseStatus,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    },
+  );
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

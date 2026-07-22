@@ -561,21 +561,36 @@ function reviewDate(value = "") {
                     </div>
 
                     <p class="moderation-meta">
-                      Submitted by {cleanText(update.displayName)}
-                      {communityUpdateDate(update.createdAt) && ` on ${communityUpdateDate(update.createdAt)}`}
+                      Submitted {communityUpdateDate(update.createdAt) && `on ${communityUpdateDate(update.createdAt)}`}
                     </p>
 
                     {update.pageUrl && <a href={update.pageUrl}>Open profile page</a>}
-                    <form class="moderation-edit-form" action="/api/admin/community-updates" method="post">
+                    <form
+                      class="moderation-edit-form"
+                      action="/api/admin/community-updates"
+                      method="post"
+                      hx-post="/api/admin/community-updates"
+                      hx-target="find .moderation-inline-status"
+                      hx-swap="innerHTML"
+                      x-data="{ busy: false, lastAction: '' }"
+                      @htmx:before-request="busy = true"
+                      @htmx:after-request="busy = false; if ($event.detail.successful && ['approve', 'reject'].includes(lastAction)) $el.closest('article')?.remove()"
+                    >
                       <input type="hidden" name="id" value={update.id} />
                       <input type="hidden" name="redirectTo" value="/admin" />
+                      <label>
+                        Submitted by
+                        <input name="displayName" value={cleanText(update.displayName)} />
+                      </label>
                       <label>
                         Edit update text
                         <textarea name="comment" rows="4">{cleanText(update.comment)}</textarea>
                       </label>
                       <div class="moderation-actions">
-                        <button type="submit" name="action" value="save">Save edits</button>
-                        <button type="submit" name="action" value="approve">Approve</button>
+                        <button type="submit" name="action" value="save" @click="lastAction = 'save'" :disabled="busy">Save edits</button>
+                        <button type="submit" name="action" value="approve" @click="lastAction = 'approve'" :disabled="busy">Approve</button>
+                        <button class="secondary danger" type="submit" name="action" value="reject" @click="lastAction = 'reject'" :disabled="busy">Reject</button>
+                        <span class="moderation-inline-status" aria-live="polite"></span>
                       </div>
                     </form>
                     {update.mentions?.length > 0 && (
@@ -593,15 +608,6 @@ function reviewDate(value = "") {
                     )}
                     {update.linkUrl && <a href={update.linkUrl}>Open submitted link</a>}
                     {update.photoUrl && <img src={update.photoUrl} alt="" loading="lazy" />}
-
-                    <div class="moderation-actions">
-                      <form action="/api/admin/community-updates" method="post">
-                        <input type="hidden" name="id" value={update.id} />
-                        <input type="hidden" name="action" value="reject" />
-                        <input type="hidden" name="redirectTo" value="/admin" />
-                        <button class="secondary danger" type="submit">Reject</button>
-                      </form>
-                    </div>
                   </article>
                 ))}
               </div>
@@ -662,10 +668,18 @@ function reviewDate(value = "") {
                       </div>
                     </div>
 
-                    <div class="moderation-actions">
-                      <form action="/api/admin/article-submissions" method="post">
+                    <form
+                      class="moderation-edit-form"
+                      action="/api/admin/article-submissions"
+                      method="post"
+                      hx-post="/api/admin/article-submissions"
+                      hx-target="find .moderation-inline-status"
+                      hx-swap="innerHTML"
+                      x-data="{ busy: false, lastAction: '' }"
+                      @htmx:before-request="busy = true"
+                      @htmx:after-request="busy = false; if ($event.detail.successful && ['approve', 'reject'].includes(lastAction)) $el.closest('article')?.remove()"
+                    >
                         <input type="hidden" name="id" value={submission.id} />
-                        <input type="hidden" name="action" value="approve" />
                         <input type="hidden" name="redirectTo" value="/admin" />
                         <div class="manual-link-fields">
                           <label>
@@ -677,15 +691,12 @@ function reviewDate(value = "") {
                             <input name="people" list="articlePeopleModerationOptions" placeholder="person id, name, filer number, or GC id" />
                           </label>
                         </div>
-                        <button type="submit">Approve</button>
-                      </form>
-                      <form action="/api/admin/article-submissions" method="post">
-                        <input type="hidden" name="id" value={submission.id} />
-                        <input type="hidden" name="action" value="reject" />
-                        <input type="hidden" name="redirectTo" value="/admin" />
-                        <button class="secondary danger" type="submit">Reject</button>
-                      </form>
-                    </div>
+                        <div class="moderation-actions">
+                          <button type="submit" name="action" value="approve" @click="lastAction = 'approve'" :disabled="busy">Approve</button>
+                          <button class="secondary danger" type="submit" name="action" value="reject" @click="lastAction = 'reject'" :disabled="busy">Reject</button>
+                          <span class="moderation-inline-status" aria-live="polite"></span>
+                        </div>
+                    </form>
                   </article>
                 ))}
               </div>
@@ -731,20 +742,25 @@ function reviewDate(value = "") {
                       </p>
                     )}
 
-                    <div class="moderation-actions">
-                      <form action="/api/admin/endorsements" method="post">
+                    <form
+                      class="moderation-edit-form"
+                      action="/api/admin/endorsements"
+                      method="post"
+                      hx-post="/api/admin/endorsements"
+                      hx-target="find .moderation-inline-status"
+                      hx-swap="innerHTML"
+                      x-data="{ busy: false, lastAction: '' }"
+                      @htmx:before-request="busy = true"
+                      @htmx:after-request="busy = false; if ($event.detail.successful && ['approve', 'reject'].includes(lastAction)) $el.closest('article')?.remove()"
+                    >
                         <input type="hidden" name="id" value={endorsement.id} />
-                        <input type="hidden" name="action" value="approve" />
                         <input type="hidden" name="redirectTo" value="/admin#endorsement-submissions" />
-                        <button type="submit">Approve</button>
-                      </form>
-                      <form action="/api/admin/endorsements" method="post">
-                        <input type="hidden" name="id" value={endorsement.id} />
-                        <input type="hidden" name="action" value="reject" />
-                        <input type="hidden" name="redirectTo" value="/admin#endorsement-submissions" />
-                        <button class="secondary danger" type="submit">Reject</button>
-                      </form>
-                    </div>
+                        <div class="moderation-actions">
+                          <button type="submit" name="action" value="approve" @click="lastAction = 'approve'" :disabled="busy">Approve</button>
+                          <button class="secondary danger" type="submit" name="action" value="reject" @click="lastAction = 'reject'" :disabled="busy">Reject</button>
+                          <span class="moderation-inline-status" aria-live="polite"></span>
+                        </div>
+                    </form>
                   </article>
                 ))}
               </div>
@@ -2047,6 +2063,20 @@ function reviewDate(value = "") {
 
   .moderation-edit-form textarea {
     min-height: 112px;
+  }
+
+  .moderation-inline-status {
+    color: #4b5563;
+    font-size: 0.84rem;
+    font-weight: 900;
+  }
+
+  .moderation-inline-status :global(.inline-status.success) {
+    color: #047857;
+  }
+
+  .moderation-inline-status :global(.inline-status.error) {
+    color: #b91c1c;
   }
 
   .moderation-mentions {
