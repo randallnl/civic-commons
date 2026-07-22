@@ -566,7 +566,18 @@ function reviewDate(value = "") {
                     </p>
 
                     {update.pageUrl && <a href={update.pageUrl}>Open profile page</a>}
-                    {update.comment && <p>{cleanText(update.comment)}</p>}
+                    <form class="moderation-edit-form" action="/api/admin/community-updates" method="post">
+                      <input type="hidden" name="id" value={update.id} />
+                      <input type="hidden" name="redirectTo" value="/admin" />
+                      <label>
+                        Edit update text
+                        <textarea name="comment" rows="4">{cleanText(update.comment)}</textarea>
+                      </label>
+                      <div class="moderation-actions">
+                        <button type="submit" name="action" value="save">Save edits</button>
+                        <button type="submit" name="action" value="approve">Approve</button>
+                      </div>
+                    </form>
                     {update.mentions?.length > 0 && (
                       <div class="moderation-mentions">
                         <span>Tagged people</span>
@@ -584,12 +595,6 @@ function reviewDate(value = "") {
                     {update.photoUrl && <img src={update.photoUrl} alt="" loading="lazy" />}
 
                     <div class="moderation-actions">
-                      <form action="/api/admin/community-updates" method="post">
-                        <input type="hidden" name="id" value={update.id} />
-                        <input type="hidden" name="action" value="approve" />
-                        <input type="hidden" name="redirectTo" value="/admin" />
-                        <button type="submit">Approve</button>
-                      </form>
                       <form action="/api/admin/community-updates" method="post">
                         <input type="hidden" name="id" value={update.id} />
                         <input type="hidden" name="action" value="reject" />
@@ -2032,6 +2037,16 @@ function reviewDate(value = "") {
   .empty {
     color: #4b5563;
     font-weight: 800;
+  }
+
+  .moderation-edit-form {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .moderation-edit-form textarea {
+    min-height: 112px;
   }
 
   .moderation-mentions {

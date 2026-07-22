@@ -1,7 +1,12 @@
 export const prerender = false;
 
 import { requireAdmin } from "../../../lib/adminAuth";
-import { ensureCommunityUpdatesTable, communityUpdatesDb } from "../../../lib/communityUpdates";
+import {
+  ensureCommunityUpdatesTable,
+  communityUpdatesDb,
+  saveCommunityUpdateMentions,
+} from "../../../lib/communityUpdates";
+import { cleanText } from "../../../lib/text";
 
 export async function POST({ request }) {
   const auth = await requireAdmin(request);
@@ -12,16 +17,41 @@ export async function POST({ request }) {
     const form = await request.formData();
     const id = Number(form.get("id") || 0);
     const action = String(form.get("action") || "").trim();
+    const comment = cleanText(form.get("comment") || "");
     redirectTo = safeRedirectPath(form.get("redirectTo")) || "/admin";
 
     if (!id) throw new Error("Community update id is required.");
-    if (!["approve", "reject"].includes(action)) {
-      throw new Error("Choose approve or reject.");
+    if (!["approve", "reject", "save"].includes(action)) {
+      throw new Error("Choose save, approve, or reject.");
     }
 
     const db = communityUpdatesDb();
     if (!db) throw new Error("D1 database binding is not configured.");
     await ensureCommunityUpdatesTable(db);
+
+    if (action === "save" || action === "approve") {
+      await db
+        .prepare(
+          `UPDATE community_updates
+           SET comment = ?
+           WHERE id = ?`,
+        )
+        .bind(comment, id)
+        .run();
+
+      await db
+        .prepare("DELETE FROM community_update_mentions WHERE update_id = ?")
+        .bind(id)
+        .run();
+
+      if (comment) {
+        await saveCommunityUpdateMentions(id, comment, db);
+      }
+    }
+
+    if (action === "save") {
+      return redirectWithMessage(request, redirectTo, "Community update edits saved.");
+    }
 
     const status = action === "approve" ? "approved" : "rejected";
     const result = await db
