@@ -10,17 +10,23 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "generate-types": "wrangler types"
+    "generate-types": "wrangler types",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^13.7.0",
     "alpinejs": "^3.15.12",
     "astro": "^6.4.8",
+    "drizzle-orm": "^0.45.2",
     "htmx.org": "^2.0.10",
     "wrangler": "^4.98.0",
     "zod": "^4.4.3"
   },
   "overrides": {
     "vite": "^7"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10"
   }
 }
