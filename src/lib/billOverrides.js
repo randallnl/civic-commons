@@ -1,4 +1,6 @@
 import { env } from "cloudflare:workers";
+import { sql } from "drizzle-orm";
+import { getDrizzleDb, schema } from "../db/client";
 import { cleanText } from "./text";
 import { normalizeBillCodeForUrl } from "./billsApi";
 
@@ -40,48 +42,48 @@ export async function saveBillOverride({
 
   await ensureBillOverrideTable(db);
 
-  await db.prepare(`
-    INSERT INTO d1_bill_overrides (
-      sessionyear,
-      condensedbillno,
-      title,
-      summary,
-      description,
-      updated_by,
-      updated_at
-    )
-    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    ON CONFLICT(sessionyear, condensedbillno) DO UPDATE SET
-      title = excluded.title,
-      summary = excluded.summary,
-      description = excluded.description,
-      updated_by = excluded.updated_by,
-      updated_at = CURRENT_TIMESTAMP
-  `)
-    .bind(
-      year,
-      code,
-      cleanText(title),
-      cleanText(summary),
-      cleanText(description),
-      cleanText(updatedBy),
-    )
+  const drizzleDb = getDrizzleDb(db);
+  const cleanDescription = cleanText(description);
+
+  await drizzleDb
+    .insert(schema.billOverrides)
+    .values({
+      sessionYear: year,
+      condensedBillNo: code,
+      title: cleanText(title),
+      summary: cleanText(summary),
+      description: cleanDescription,
+      updatedBy: cleanText(updatedBy),
+      updatedAt: sql`CURRENT_TIMESTAMP`,
+    })
+    .onConflictDoUpdate({
+      target: [
+        schema.billOverrides.sessionYear,
+        schema.billOverrides.condensedBillNo,
+      ],
+      set: {
+        title: cleanText(title),
+        summary: cleanText(summary),
+        description: cleanDescription,
+        updatedBy: cleanText(updatedBy),
+        updatedAt: sql`CURRENT_TIMESTAMP`,
+      },
+    })
     .run();
 
-  const sourceUpdate = await db.prepare(`
-    UPDATE d1_bills
-    SET description = CASE
-      WHEN NULLIF(?, '') IS NULL THEN description
-      ELSE ?
-    END
-    WHERE sessionyear = ?
-      AND (
-        UPPER(condensedbillno) = ?
-        OR UPPER(expandedbillno) = ?
-      )
-  `)
-    .bind(cleanText(description), cleanText(description), year, code, code)
-    .run();
+  const sourceUpdate = cleanDescription
+    ? await drizzleDb
+        .update(schema.bills)
+        .set({ description: cleanDescription })
+        .where(sql`
+          ${schema.bills.sessionYear} = ${year}
+          AND (
+            UPPER(${schema.bills.condensedBillNo}) = ${code}
+            OR UPPER(${schema.bills.expandedBillNo}) = ${code}
+          )
+        `)
+        .run()
+    : { meta: { changes: 0 } };
 
   return {
     sessionyear: year,

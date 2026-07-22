@@ -303,6 +303,16 @@ export const billOverrides = sqliteTable(
   }),
 );
 
+export const bills = sqliteTable(
+  "d1_bills",
+  {
+    sessionYear: integer("sessionyear"),
+    condensedBillNo: text("condensedbillno"),
+    expandedBillNo: text("expandedbillno"),
+    description: text("description"),
+  },
+);
+
 export const adminMagicLinks = sqliteTable("admin_magic_links", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   email: text("email").notNull(),
