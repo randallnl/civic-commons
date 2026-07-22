@@ -887,16 +887,23 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   .home-rep-list {
     display: grid;
     gap: 18px;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
     align-items: stretch;
   }
 
   :global(.home-rep-list .rep-card) {
     border: 1px solid #e2e8f0;
     border-radius: 10px;
+    box-sizing: border-box;
     box-shadow: none;
+    min-width: 0;
     padding: 24px;
     width: 100%;
+  }
+
+  :global(.home-rep-list .rep-card-top),
+  :global(.home-rep-list .rep-copy) {
+    min-width: 0;
   }
 
   :global(.home-rep-list .rep-photo) {
