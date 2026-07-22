@@ -569,11 +569,13 @@ function reviewDate(value = "") {
                     {update.comment && <p>{cleanText(update.comment)}</p>}
                     {update.mentions?.length > 0 && (
                       <div class="moderation-mentions">
-                        <span>Tagged legislators</span>
+                        <span>Tagged people</span>
                         {update.mentions.map((mention) => (
                           <a href={mention.path || `/people/${mention.personid}`}>
                             {cleanText(mention.name)}
-                            {mention.chamber && <small>{cleanText(mention.chamber)}</small>}
+                            {(mention.roleLabel || mention.chamber) && (
+                              <small>{cleanText(mention.roleLabel || mention.chamber)}</small>
+                            )}
                           </a>
                         ))}
                       </div>

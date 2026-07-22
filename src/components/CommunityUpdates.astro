@@ -126,7 +126,27 @@ function escapeRegExp(value = "") {
 
       <label>
         Comment
-        <textarea name="comment" rows="4" placeholder="Share a local observation, correction, article context, social post summary, or update."></textarea>
+        <div class="mention-field" data-mention-field>
+          <textarea
+            name="comment"
+            rows="4"
+            placeholder="Share a local observation, correction, article context, social post summary, or update. Type @ and a legislator's name to tag them."
+            data-mention-textarea
+          ></textarea>
+          <input
+            class="mention-query-input"
+            type="search"
+            name="_mentionQuery"
+            autocomplete="off"
+            tabindex="-1"
+            aria-hidden="true"
+            hx-get="/api/mentions/people"
+            hx-trigger="input changed delay:120ms"
+            hx-target="next .mention-suggestions"
+          />
+          <div class="mention-suggestions" data-mention-suggestions aria-live="polite"></div>
+          <p class="mention-help">Type <strong>@</strong> plus a candidate or legislator name to tag them for moderation.</p>
+        </div>
       </label>
 
       <div class="form-grid">
@@ -190,12 +210,14 @@ function escapeRegExp(value = "") {
               </p>
             )}
             {update.mentions?.length > 0 && (
-              <div class="mention-list" aria-label="Tagged legislators">
-                <span>Tagged legislators</span>
+              <div class="mention-list" aria-label="Tagged people">
+                <span>Tagged people</span>
                 {update.mentions.map((mention) => (
                   <a href={mention.path}>
                     {mention.name}
-                    {mention.chamber && <small>{mention.chamber}</small>}
+                    {(mention.roleLabel || mention.chamber) && (
+                      <small>{mention.roleLabel || mention.chamber}</small>
+                    )}
                   </a>
                 ))}
               </div>
@@ -278,6 +300,75 @@ function escapeRegExp(value = "") {
 
     dialog.addEventListener("close", () => {
       preview.removeAttribute("src");
+    });
+  });
+
+  document.querySelectorAll("[data-mention-field]").forEach((field) => {
+    const textarea = field.querySelector("[data-mention-textarea]");
+    const queryInput = field.querySelector(".mention-query-input");
+    const suggestions = field.querySelector("[data-mention-suggestions]");
+
+    if (!(textarea instanceof HTMLTextAreaElement) || !(queryInput instanceof HTMLInputElement)) {
+      return;
+    }
+
+    function activeMention() {
+      const cursor = textarea.selectionStart ?? textarea.value.length;
+      const beforeCursor = textarea.value.slice(0, cursor);
+      const match = beforeCursor.match(/(^|\s)@([A-Za-z][A-Za-z.' -]{0,60})$/);
+      if (!match) return null;
+
+      return {
+        query: match[2].trim(),
+        start: cursor - match[2].length - 1,
+        end: cursor,
+      };
+    }
+
+    function updateMentionQuery() {
+      const mention = activeMention();
+
+      if (!mention || mention.query.length < 2) {
+        field.removeAttribute("data-mention-start");
+        field.removeAttribute("data-mention-end");
+        queryInput.value = "";
+        if (suggestions) suggestions.innerHTML = "";
+        return;
+      }
+
+      field.setAttribute("data-mention-start", String(mention.start));
+      field.setAttribute("data-mention-end", String(mention.end));
+
+      if (queryInput.value === mention.query) return;
+      queryInput.value = mention.query;
+      queryInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    textarea.addEventListener("input", updateMentionQuery);
+    textarea.addEventListener("keyup", updateMentionQuery);
+    textarea.addEventListener("click", updateMentionQuery);
+
+    field.addEventListener("click", (event) => {
+      const button = event.target?.closest?.("[data-mention]");
+      if (!(button instanceof HTMLButtonElement)) return;
+
+      const mentionText = button.getAttribute("data-mention");
+      const start = Number(field.getAttribute("data-mention-start"));
+      const end = Number(field.getAttribute("data-mention-end"));
+      if (!mentionText || !Number.isFinite(start) || !Number.isFinite(end)) return;
+
+      const before = textarea.value.slice(0, start);
+      const after = textarea.value.slice(end);
+      const insertion = `${mentionText} `;
+      textarea.value = `${before}${insertion}${after}`;
+      const cursor = before.length + insertion.length;
+      textarea.focus();
+      textarea.setSelectionRange(cursor, cursor);
+
+      queryInput.value = "";
+      if (suggestions) suggestions.innerHTML = "";
+      field.removeAttribute("data-mention-start");
+      field.removeAttribute("data-mention-end");
     });
   });
 </script>
@@ -620,6 +711,79 @@ function escapeRegExp(value = "") {
     display: grid;
     gap: 12px;
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mention-field {
+    display: grid;
+    gap: 8px;
+    letter-spacing: 0;
+    position: relative;
+    text-transform: none;
+  }
+
+  .mention-query-input {
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    width: 1px;
+  }
+
+  .mention-suggestions {
+    display: grid;
+    gap: 6px;
+  }
+
+  .mention-result-list {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    display: grid;
+    gap: 4px;
+    max-height: 220px;
+    overflow: auto;
+    padding: 6px;
+  }
+
+  .mention-suggestion {
+    align-items: start;
+    background: #f8fafc;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: #1f2933;
+    cursor: pointer;
+    display: grid;
+    gap: 2px;
+    justify-items: start;
+    padding: 9px 10px;
+    text-align: left;
+  }
+
+  .mention-suggestion:hover,
+  .mention-suggestion:focus-visible {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    outline: none;
+  }
+
+  .mention-suggestion strong {
+    font-size: 0.92rem;
+  }
+
+  .mention-suggestion span,
+  .mention-empty,
+  .mention-help {
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .mention-empty,
+  .mention-help {
+    margin: 0;
   }
 
   label {

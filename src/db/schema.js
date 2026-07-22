@@ -247,11 +247,15 @@ export const communityUpdateMentions = sqliteTable(
   {
     updateId: integer("update_id").notNull(),
     personid: integer("personid").notNull(),
+    personId: integer("person_id"),
     employeeNo: integer("employeeno"),
+    filerEntityNumber: text("filer_entity_number"),
     name: text("name").notNull(),
     chamber: text("chamber"),
     party: text("party"),
     district: text("district"),
+    path: text("path"),
+    roleLabel: text("role_label"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({

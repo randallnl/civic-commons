@@ -21,11 +21,15 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_updates (
 const MENTIONS_TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_update_mentions (
   update_id INTEGER NOT NULL,
   personid INTEGER NOT NULL,
+  person_id INTEGER,
   employeeno INTEGER,
+  filer_entity_number TEXT,
   name TEXT NOT NULL,
   chamber TEXT,
   party TEXT,
   district TEXT,
+  path TEXT,
+  role_label TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY(update_id, personid)
 )`;
@@ -39,6 +43,10 @@ export async function ensureCommunityUpdatesTable(db = communityUpdatesDb()) {
   await db.prepare(TABLE_SQL).run();
   await db.prepare(MENTIONS_TABLE_SQL).run();
   await addColumnIfMissing(db, "community_updates", "link_url", "TEXT");
+  await addColumnIfMissing(db, "community_update_mentions", "person_id", "INTEGER");
+  await addColumnIfMissing(db, "community_update_mentions", "filer_entity_number", "TEXT");
+  await addColumnIfMissing(db, "community_update_mentions", "path", "TEXT");
+  await addColumnIfMissing(db, "community_update_mentions", "role_label", "TEXT");
   await db
     .prepare(
       `CREATE INDEX IF NOT EXISTS idx_community_updates_entity_status
@@ -142,7 +150,7 @@ export async function saveCommunityUpdateMentions(updateId, comment = "", db = c
   if (!db || !updateId || !comment) return [];
 
   await ensureCommunityUpdatesTable(db);
-  const mentions = await findLegislatorMentions(comment, db);
+  const mentions = await findPeopleMentions(comment, db);
 
   if (!mentions.length) return [];
 
@@ -150,18 +158,23 @@ export async function saveCommunityUpdateMentions(updateId, comment = "", db = c
     db
       .prepare(
         `INSERT OR IGNORE INTO community_update_mentions (
-          update_id, personid, employeeno, name, chamber, party, district
+          update_id, personid, person_id, employeeno, filer_entity_number,
+          name, chamber, party, district, path, role_label
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         updateId,
         mention.personid,
+        mention.personId || null,
         mention.employeeno || null,
+        mention.filerEntityNumber || "",
         mention.name,
         mention.chamber,
         mention.party || "",
         mention.district || "",
+        mention.path || "",
+        mention.roleLabel || "",
       ),
   );
 
@@ -169,43 +182,81 @@ export async function saveCommunityUpdateMentions(updateId, comment = "", db = c
   return mentions;
 }
 
-async function findLegislatorMentions(comment = "", db) {
-  const tags = [...String(comment || "").matchAll(/@([A-Za-z][A-Za-z.'-]+(?:\s+[A-Za-z][A-Za-z.'-]+){1,3})/g)]
-    .map((match) => cleanText(match[1]).toLowerCase())
-    .filter(Boolean);
-  const uniqueTags = [...new Set(tags)];
-  if (!uniqueTags.length) return [];
+async function findPeopleMentions(comment = "", db) {
+  const cleanComment = cleanText(comment);
+  if (!cleanComment.includes("@")) return [];
 
   const result = await db
     .prepare(
-      `SELECT personid, employeeno, firstname, lastname, party, legislativebody, district
-       FROM d1_legislators
-       WHERE active = 1
-       ORDER BY lastname, firstname`,
+      `SELECT id, gc_personid, employeeno, filer_entity_number, slug,
+              firstname, lastname, display_name, party,
+              is_current_legislator, is_2026_candidate
+       FROM d1_people
+       WHERE is_current_legislator = 1
+          OR is_2026_candidate = 1
+       ORDER BY lastname COLLATE NOCASE, firstname COLLATE NOCASE, display_name COLLATE NOCASE`,
     )
     .all();
 
   const mentions = [];
   const seen = new Set();
 
-  for (const rep of result.results || []) {
-    const name = cleanText([rep.firstname, rep.lastname].filter(Boolean).join(" "));
-    const normalizedName = name.toLowerCase();
-    if (!uniqueTags.includes(normalizedName)) continue;
-    if (!rep.personid || seen.has(rep.personid)) continue;
+  for (const person of result.results || []) {
+    const name = cleanText(
+      person.display_name ||
+        [person.firstname, person.lastname].filter(Boolean).join(" "),
+    );
+    if (!name || !hasMention(cleanComment, name)) continue;
+    const mentionKey = Number(person.gc_personid || person.id);
+    if (!mentionKey || seen.has(mentionKey)) continue;
 
-    seen.add(rep.personid);
+    seen.add(mentionKey);
     mentions.push({
-      personid: rep.personid,
-      employeeno: rep.employeeno,
+      personid: mentionKey,
+      personId: person.id,
+      employeeno: person.employeeno,
+      filerEntityNumber: person.filer_entity_number || "",
       name,
-      chamber: rep.legislativebody === "S" ? "Senate" : "House",
-      party: rep.party || "",
-      district: rep.district || "",
+      chamber: Number(person.is_current_legislator) === 1 ? "Legislator" : "",
+      party: person.party || "",
+      district: "",
+      path: personMentionPath(person),
+      roleLabel: personRoleLabel(person),
     });
   }
 
   return mentions;
+}
+
+function personMentionPath(person = {}) {
+  if (Number(person.is_current_legislator) === 1) {
+    return `/people/${encodeURIComponent(String(person.slug || person.gc_personid || person.employeeno || person.id))}`;
+  }
+
+  if (Number(person.is_2026_candidate) === 1) {
+    return `/candidates/${encodeURIComponent(String(person.filer_entity_number || person.slug || person.id))}`;
+  }
+
+  return "";
+}
+
+function personRoleLabel(person = {}) {
+  const labels = [
+    Number(person.is_current_legislator) === 1 && "Legislator",
+    Number(person.is_2026_candidate) === 1 && "Candidate",
+  ].filter(Boolean);
+  return labels.join(" · ");
+}
+
+function hasMention(comment = "", name = "") {
+  return new RegExp(
+    `(^|\\s)@${escapeRegExp(name)}(?=$|\\s|[.,!?;:])`,
+    "i",
+  ).test(comment);
+}
+
+function escapeRegExp(value = "") {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
@@ -215,7 +266,8 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
 
   const result = await db
     .prepare(
-      `SELECT update_id, personid, employeeno, name, chamber, party, district
+      `SELECT update_id, personid, person_id, employeeno, filer_entity_number,
+              name, chamber, party, district, path, role_label
        FROM community_update_mentions
        WHERE update_id IN (${ids.map(() => "?").join(", ")})
        ORDER BY name`,
@@ -228,12 +280,15 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
     const list = mentionsByUpdate.get(mention.update_id) || [];
     list.push({
       personid: mention.personid,
+      personId: mention.person_id,
       employeeno: mention.employeeno,
+      filerEntityNumber: mention.filer_entity_number,
       name: cleanText(mention.name),
       chamber: cleanText(mention.chamber),
       party: cleanText(mention.party),
       district: cleanText(mention.district),
-      path: `/people/${encodeURIComponent(String(mention.personid))}`,
+      path: mention.path || `/people/${encodeURIComponent(String(mention.personid))}`,
+      roleLabel: cleanText(mention.role_label),
     });
     mentionsByUpdate.set(mention.update_id, list);
   }

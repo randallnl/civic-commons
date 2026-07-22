@@ -887,14 +887,14 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   .home-rep-list {
     display: grid;
     gap: 18px;
-    justify-items: center;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+    align-items: stretch;
   }
 
   :global(.home-rep-list .rep-card) {
     border: 1px solid #e2e8f0;
     border-radius: 10px;
     box-shadow: none;
-    max-width: 820px;
     width: 100%;
   }
 
