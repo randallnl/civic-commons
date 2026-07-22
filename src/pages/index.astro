@@ -887,7 +887,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   .home-rep-list {
     display: grid;
     gap: 18px;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+    grid-template-columns: repeat(2, 1fr);
     align-items: stretch;
   }
 
@@ -1627,6 +1627,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   @media (max-width: 900px) {
     .rep-preview,
     .comment-columns,
+    .home-rep-list,
     .portal-sidebar-row {
       grid-template-columns: 1fr;
     }
