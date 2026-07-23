@@ -10,6 +10,7 @@ import {
   candidateName,
   candidateOfficePriority,
   getCandidates,
+  getLegislativeCandidates,
   isLegislativeCandidate,
 } from "../../lib/candidatesApi";
 import { enrichCandidatesWithLegislators } from "../../lib/candidateLegislators";
@@ -74,15 +75,20 @@ try {
     meta = data.meta || {};
     resultContext = data.town?.name || data.community?.name || town;
   } else {
-    const data = await getDirectoryCandidates({
-      q: name,
-      county,
-      office: selectedOffice,
-      electionYear,
-      limit: 100,
-    });
-    candidates = data.candidates || [];
-    meta = data.meta || {};
+    if (!name && !county && !selectedOffice) {
+      candidates = await getLegislativeCandidates({ electionYear, limit: 100, maxPages: 20 });
+      meta = { count: candidates.length };
+    } else {
+      const data = await getDirectoryCandidates({
+        q: name,
+        county,
+        office: selectedOffice,
+        electionYear,
+        limit: 100,
+      });
+      candidates = data.candidates || [];
+      meta = data.meta || {};
+    }
   }
 } catch (loadError) {
   error = loadError?.message || "Unable to load candidates.";
