@@ -371,7 +371,7 @@ function uniqueOptions(values = []) {
 
   <body>
     <TopNav />
-    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.candidate-card[data-fuzzy-item]' })">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.candidate-card[data-fuzzy-item]', idleLimit: 12 })">
       <PageHero
         backHref="/"
         backLabel="Back home"
@@ -460,8 +460,12 @@ function uniqueOptions(values = []) {
         <section class="results">
           <div class="results-heading">
             <div>
-              <h2><span data-fuzzy-count>{resultCount}</span> House and Senate Candidates</h2>
-              {resultContext && <p>Showing matches for {resultContext}</p>}
+              <h2><span data-fuzzy-count>{Math.min(resultCount, 12)}</span> House and Senate Candidates Shown</h2>
+              {resultContext ? (
+                <p>Showing matches for {resultContext}</p>
+              ) : (
+                <p>Showing a preview. Use the filters to reveal matching candidate profiles.</p>
+              )}
             </div>
             {hasFilters && <a href="/candidates">Clear filters</a>}
           </div>

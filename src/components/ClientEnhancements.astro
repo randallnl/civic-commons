@@ -41,6 +41,11 @@
     return value.includes(query);
   }
 
+  function isActiveControl(control) {
+    const query = controlValue(control);
+    return !!query && query !== "all";
+  }
+
   Alpine.data("nhdbFuzzyFilter", (options = {}) => ({
     count: 0,
     total: 0,
@@ -97,15 +102,20 @@
     apply() {
       const searchQuery = normalize(this.searchControls.map((control) => control.value).join(" "));
       this.query = searchQuery;
+      const idleLimit = Number(options.idleLimit || 0);
+      const searchActive = searchQuery.length >= 2;
+      const filtersActive = this.filterControls.some(isActiveControl);
+      const filterActive = searchActive || filtersActive;
       const fuzzyMatches = searchQuery.length >= 2
         ? new Set(this.fuse.search(searchQuery).map((result) => result.item.el))
         : null;
 
       let visible = 0;
-      this.items.forEach((item) => {
+      this.items.forEach((item, index) => {
         const matchesSearch = !fuzzyMatches || fuzzyMatches.has(item.el);
         const matchesFilters = this.filterControls.every((control) => controlMatches(item, control));
-        const show = matchesSearch && matchesFilters;
+        const matches = matchesSearch && matchesFilters;
+        const show = matches && (filterActive || !idleLimit || index < idleLimit);
         item.el.hidden = !show;
         item.el.toggleAttribute("data-fuzzy-hidden", !show);
         if (show) visible += 1;
