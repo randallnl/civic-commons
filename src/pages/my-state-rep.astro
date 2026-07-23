@@ -515,7 +515,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
   <body>
     <TopNav />
-    <main class="page">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.rep-card[data-fuzzy-item]' })">
       <a class="back" href="/">Back home</a>
 
       <section class="hero">
@@ -560,6 +560,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
               list="legislatorNameOptions"
               placeholder="Start typing a legislator"
               autocomplete="off"
+              data-fuzzy-search
             />
             <datalist id="legislatorNameOptions">
               {nameOptions.map((option) => <option value={option} />)}
@@ -567,7 +568,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           </label>
           <label>
             <span>County</span>
-            <select name="county">
+            <select name="county" data-fuzzy-filter-field data-fuzzy-field="county" data-fuzzy-match="exact">
               <option value="">All counties</option>
               {countyOptions.map((option) => (
                 <option value={option} selected={filters.county.toLowerCase() === option.toLowerCase()}>
@@ -578,7 +579,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           </label>
           <label>
             <span>Body / office</span>
-            <select name="body">
+            <select name="body" data-fuzzy-filter-field data-fuzzy-field="body" data-fuzzy-match="exact">
               <option value="">House and Senate</option>
               <option value="house" selected={normalizedBodyFilter === "house"}>House</option>
               <option value="senate" selected={normalizedBodyFilter === "senate"}>Senate</option>
@@ -593,6 +594,8 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
               list="legislatorTownOptions"
               placeholder="Start typing a town"
               autocomplete="off"
+              data-fuzzy-filter-field
+              data-fuzzy-field="town"
             />
             <datalist id="legislatorTownOptions">
               {townOptions.map((option) => <option value={option} />)}
@@ -730,7 +733,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           <div class="results-heading">
             <div>
               <p class="eyebrow">Filtered Current Legislators</p>
-              <h2>{directoryReps.length} Representatives and Senators</h2>
+              <h2><span data-fuzzy-count>{directoryReps.length}</span> Representatives and Senators</h2>
             </div>
             <a class="secondary-link" href="/my-state-rep#rep-results">Clear filters</a>
           </div>
@@ -738,15 +741,21 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           {directoryError ? (
             <p class="status-message">{directoryError}</p>
           ) : directoryReps.length ? (
-            <div class="rep-grid">
-              {directoryReps.map((rep) => (
-                <RepresentativeCard
-                  rep={rep}
-                  trackedBills={trackedBills}
-                  billSummaries={billSummaries}
-                />
-              ))}
-            </div>
+            <>
+              <div class="rep-grid">
+                {directoryReps.map((rep) => (
+                  <RepresentativeCard
+                    rep={rep}
+                    trackedBills={trackedBills}
+                    billSummaries={billSummaries}
+                  />
+                ))}
+              </div>
+              <p class="status-message" data-fuzzy-empty hidden>
+                No current legislators matched those filters. Try a broader town,
+                county, or name search.
+              </p>
+            </>
           ) : (
             <p class="status-message">
               No current legislators matched those filters. Try a broader town,
@@ -958,6 +967,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
             if (!nextResults) throw new Error("Unable to load results.");
 
             resultsRegion.innerHTML = nextResults.innerHTML;
+            window.Alpine?.$data?.(document.querySelector("main[x-data]"))?.refresh?.();
             window.history.pushState({}, "", `${url}#rep-results`);
             resultsRegion.scrollIntoView({ behavior: "smooth", block: "start" });
           } catch (error) {

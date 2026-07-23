@@ -177,7 +177,7 @@ function countyNameForCode(code = "") {
 
   <body>
     <TopNav />
-    <main class="page">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.rep-card[data-fuzzy-item]' })">
       <PageHero
         backHref="/my-state-rep"
         backLabel="Back to My Legislator"
@@ -192,7 +192,7 @@ function countyNameForCode(code = "") {
         >
           <label for="body">
             <span>Body</span>
-          <select id="body" name="body">
+          <select id="body" name="body" data-fuzzy-filter-field data-fuzzy-field="body" data-fuzzy-match="exact">
             <option value="" selected={!filters.body}>House and Senate</option>
             <option value="house" selected={filters.body === "house"}>House</option>
             <option value="senate" selected={filters.body === "senate"}>Senate</option>
@@ -200,15 +200,15 @@ function countyNameForCode(code = "") {
           </label>
           <label for="name">
             <span>Name</span>
-          <input id="name" name="name" type="search" value={filters.name} placeholder="David Rochefort" />
+          <input id="name" name="name" type="search" value={filters.name} placeholder="David Rochefort" data-fuzzy-search />
           </label>
           <label for="town">
             <span>Town</span>
-          <input id="town" name="town" type="search" value={filters.town} placeholder="Manchester" />
+          <input id="town" name="town" type="search" value={filters.town} placeholder="Manchester" data-fuzzy-filter-field data-fuzzy-field="town" />
           </label>
           <label for="county">
             <span>County</span>
-          <input id="county" name="county" type="search" value={filters.county} placeholder="Hillsborough" />
+          <input id="county" name="county" type="search" value={filters.county} placeholder="Hillsborough" data-fuzzy-filter-field data-fuzzy-field="county" />
           </label>
         </FilterBar>
       </PageHero>
@@ -216,7 +216,7 @@ function countyNameForCode(code = "") {
       <section class="results-heading">
         <div>
           <p class="eyebrow">Results</p>
-          <h2>{representatives.length} Representatives</h2>
+          <h2><span data-fuzzy-count>{representatives.length}</span> Representatives</h2>
         </div>
         <a class="secondary-link" href="/my-state-rep">Find my legislators</a>
       </section>
@@ -224,15 +224,21 @@ function countyNameForCode(code = "") {
       {loadError ? (
         <p class="status-message">{loadError}</p>
       ) : representatives.length ? (
-        <div class="rep-grid">
-          {representatives.map((rep) => (
-            <RepresentativeCard
-              rep={rep}
-              trackedBills={trackedBills}
-              billSummaries={billSummaries}
-            />
-          ))}
-        </div>
+        <>
+          <div class="rep-grid">
+            {representatives.map((rep) => (
+              <RepresentativeCard
+                rep={rep}
+                trackedBills={trackedBills}
+                billSummaries={billSummaries}
+              />
+            ))}
+          </div>
+          <p class="status-message" data-fuzzy-empty hidden>
+            No representatives matched those filters. Try a broader town, county,
+            or name search.
+          </p>
+        </>
       ) : (
         <p class="status-message">
           No representatives matched those filters. Try a broader town, county,

@@ -67,12 +67,55 @@ function mentionedPeople(article = {}) {
 
   return [...legislators, ...candidates].slice(0, compact ? 3 : 6);
 }
+
+function articleSearchText(article = {}) {
+  return cleanText([
+    article.preview?.title,
+    article.title,
+    article.preview?.description,
+    article.summary,
+    articleSourceName(article),
+    article.resource_type,
+    article.town,
+    article.towns,
+    ...(article.bills || []).map((bill) => bill.condensedbillno || bill.bill_number || bill.code),
+    ...(article.legislators || []).map((person) => person.matched_name || person.legislator_name_raw || person.name),
+    ...(article.candidates || []).map((candidate) => candidate.name || candidate.candidate_name_raw),
+  ].flat().filter(Boolean).join(" "));
+}
+
+function articleBillText(article = {}) {
+  return cleanText((article.bills || [])
+    .map((bill) => bill.condensedbillno || bill.bill_number || bill.code)
+    .filter(Boolean)
+    .join(" "));
+}
+
+function articlePeopleText(article = {}) {
+  return cleanText(mentionedPeople(article).map((person) => person.label).join(" "));
+}
+
+function articleTownText(article = {}) {
+  return cleanText([article.town, article.towns, article.community, article.communities]
+    .flat()
+    .filter(Boolean)
+    .join(" "));
+}
 ---
 
 {previewArticles.length ? (
   <div class:list={["article-list", compact && "compact"]}>
     {previewArticles.map((article) => (
-      <article class="article-card">
+      <article
+        class="article-card"
+        data-fuzzy-item
+        data-fuzzy-title={cleanText(article.preview?.title || article.title)}
+        data-fuzzy-bill={articleBillText(article)}
+        data-fuzzy-people={articlePeopleText(article)}
+        data-fuzzy-town={articleTownText(article)}
+        data-fuzzy-source={articleSourceName(article)}
+        data-fuzzy-text={articleSearchText(article)}
+      >
         {article.preview?.imageUrl && (
           <a class="article-image" href={articleDetailPath(article)} tabindex="-1" aria-hidden="true">
             <img src={article.preview.imageUrl} alt="" loading="lazy" />

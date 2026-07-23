@@ -331,7 +331,7 @@ function uniqueOptions(values = []) {
         </section>
       </article>
 
-      <section class="directory-section" id="directory">
+      <section class="directory-section" id="directory" x-data="nhdbFuzzyFilter()">
         <div class="directory-heading">
           <p class="eyebrow">Directory</p>
           <h2>Free Stater Legislators and Candidates</h2>
@@ -365,12 +365,12 @@ function uniqueOptions(values = []) {
         >
           <label>
             <span>Name</span>
-            <input name="q" value={filterName} placeholder="Search by name" />
+            <input name="q" value={filterName} placeholder="Search by name" data-fuzzy-search />
           </label>
 
           <label>
             <span>Show</span>
-            <select name="type">
+            <select name="type" data-fuzzy-filter-field data-fuzzy-field="kind" data-fuzzy-match="exact">
               <option value="all" selected={filterType === "all"}>Legislators and candidates</option>
               <option value="legislators" selected={filterType === "legislators"}>Current legislators</option>
               <option value="candidates" selected={filterType === "candidates"}>2026 candidates</option>
@@ -379,7 +379,7 @@ function uniqueOptions(values = []) {
 
           <label>
             <span>Body / office</span>
-            <select name="body">
+            <select name="body" data-fuzzy-filter-field data-fuzzy-field="body" data-fuzzy-match="exact">
               <option value="all" selected={filterBody === "all"}>House and Senate</option>
               <option value="house" selected={filterBody === "house"}>House</option>
               <option value="senate" selected={filterBody === "senate"}>Senate</option>
@@ -388,7 +388,7 @@ function uniqueOptions(values = []) {
 
           <label>
             <span>Party</span>
-            <select name="party">
+            <select name="party" data-fuzzy-filter-field data-fuzzy-field="party" data-fuzzy-match="contains">
               <option value="all" selected={filterParty === "all"}>All parties</option>
               <option value="republican" selected={filterParty === "republican"}>Republican</option>
               <option value="democrat" selected={filterParty === "democrat"}>Democrat</option>
@@ -398,7 +398,7 @@ function uniqueOptions(values = []) {
 
           <label>
             <span>County</span>
-            <input name="county" value={filterCounty} list="freeStaterCountyOptions" placeholder="County" />
+            <input name="county" value={filterCounty} list="freeStaterCountyOptions" placeholder="County" data-fuzzy-filter-field data-fuzzy-field="county" />
             <datalist id="freeStaterCountyOptions">
               {countyOptions.map((option) => <option value={option} />)}
             </datalist>
@@ -406,7 +406,7 @@ function uniqueOptions(values = []) {
 
           <label>
             <span>Town / city</span>
-            <input name="town" value={filterTown} list="freeStaterTownOptions" placeholder="Town or city" />
+            <input name="town" value={filterTown} list="freeStaterTownOptions" placeholder="Town or city" data-fuzzy-filter-field data-fuzzy-field="town" />
             <datalist id="freeStaterTownOptions">
               {townOptions.map((option) => <option value={option} />)}
             </datalist>

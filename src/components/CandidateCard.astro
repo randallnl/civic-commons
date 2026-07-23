@@ -22,6 +22,36 @@ const officeParts = [
   candidate.county,
   candidate.district ? `District ${candidate.district}` : "",
 ].filter(Boolean);
+const searchableText = [
+  name,
+  candidate.candidateFirstName,
+  candidate.candidateLastName,
+  candidate.officeType,
+  candidate.office,
+  candidate.county,
+  candidate.district,
+  candidate.politicalParty,
+  candidate.party,
+  candidate.town,
+  candidate.city,
+  candidate.towns,
+  candidate.townsRepresented,
+  candidate.candidateEmail,
+  candidate.candidateWebsite,
+  candidate.currentLegislator ? "Current Legislator" : "",
+  isFreeStater(candidate) ? "Free Stater" : "",
+].flat().filter(Boolean).join(" ");
+const searchableTown = [
+  candidate.town,
+  candidate.city,
+  candidate.towns,
+  candidate.townsRepresented,
+].flat().filter(Boolean).join(" ");
+const searchableBody = /senate/i.test(`${candidate.office || ""} ${candidate.officeType || ""}`)
+  ? "senate"
+  : /representative|house/i.test(`${candidate.office || ""} ${candidate.officeType || ""}`)
+    ? "house"
+    : "";
 const contactLinks = [
   candidate.candidateEmail && {
     href: `mailto:${candidate.candidateEmail}`,
@@ -47,7 +77,18 @@ function formatCurrency(value) {
 }
 ---
 
-<article class="candidate-card">
+<article
+  class="candidate-card"
+  data-fuzzy-item
+  data-fuzzy-name={name}
+  data-fuzzy-town={searchableTown}
+  data-fuzzy-county={candidate.county || ""}
+  data-fuzzy-office={candidate.office || ""}
+  data-fuzzy-body={searchableBody}
+  data-fuzzy-kind="candidates"
+  data-fuzzy-party={candidate.politicalParty || candidate.party || ""}
+  data-fuzzy-text={searchableText}
+>
   <a class="photo-wrap" href={candidatePath(candidate)}>
     {photoUrl ? (
       <img src={photoUrl} alt={`Photo of ${name}`} loading="lazy" />

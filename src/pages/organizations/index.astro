@@ -63,7 +63,7 @@ function matchesOption(values = [], selected = "") {
 
   <body>
     <TopNav />
-    <main class="page">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.org-card[data-fuzzy-item]' })">
       <section class="hero">
         <p class="eyebrow">Organizations</p>
         <h1>Advocacy organizations and bill comments.</h1>
@@ -86,6 +86,7 @@ function matchesOption(values = [], selected = "") {
                 value={name}
                 list="organizationNames"
                 placeholder="Start typing an organization"
+                data-fuzzy-search
               />
               <datalist id="organizationNames">
                 {organizationOptions.map((option) => <option value={option} />)}
@@ -94,7 +95,7 @@ function matchesOption(values = [], selected = "") {
 
             <label>
               <span>Issue</span>
-              <select name="issue">
+              <select name="issue" data-fuzzy-filter-field data-fuzzy-field="issue" data-fuzzy-match="contains">
                 <option value="">All issues</option>
                 {issueOptions.map((option) => (
                   <option value={option} selected={option === issue}>{option}</option>
@@ -104,7 +105,7 @@ function matchesOption(values = [], selected = "") {
 
             <label>
               <span>Town</span>
-              <select name="town">
+              <select name="town" data-fuzzy-filter-field data-fuzzy-field="town" data-fuzzy-match="contains">
                 <option value="">All towns</option>
                 {townOptions.map((option) => (
                   <option value={option} selected={option === town}>{option}</option>
@@ -121,7 +122,23 @@ function matchesOption(values = [], selected = "") {
           {filteredOrganizations.length ? (
             <section class="org-grid" aria-label="Organizations">
               {filteredOrganizations.map((organization) => (
-                <article class="org-card">
+                <article
+                  class="org-card"
+                  data-fuzzy-item
+                  data-fuzzy-name={organization.name}
+                  data-fuzzy-issue={(organization.issueAreas || []).join(" ")}
+                  data-fuzzy-town={(organization.towns || []).join(" ")}
+                  data-fuzzy-text={[
+                    organization.name,
+                    organization.type,
+                    organization.shortDescription,
+                    organization.serviceArea,
+                    organization.city,
+                    organization.state,
+                    ...(organization.issueAreas || []),
+                    ...(organization.towns || []),
+                  ].filter(Boolean).join(" ")}
+                >
                   <a class="logo-wrap" href={organizationPath(organization)}>
                     {organization.logoUrl ? (
                       <img src={organization.logoUrl} alt={`${organization.name} logo`} loading="lazy" />
@@ -150,6 +167,7 @@ function matchesOption(values = [], selected = "") {
           ) : (
             <p class="status-message">No organizations matched those filters.</p>
           )}
+          <p class="status-message" data-fuzzy-empty hidden>No organizations matched those filters.</p>
         </>
       ) : (
         <p class="status-message">No organizations found.</p>

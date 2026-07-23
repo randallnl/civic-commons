@@ -1,10 +1,121 @@
 <script>
   import Alpine from "alpinejs";
+  import Fuse from "fuse.js";
   import htmx from "htmx.org";
 
   if (!window.htmx) {
     window.htmx = htmx;
   }
+
+  function normalize(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[’‘`]/g, "'")
+      .replace(/[^a-z0-9' ]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function controlValue(control) {
+    return normalize(control?.value || "");
+  }
+
+  function fieldValue(item, field) {
+    if (!field) return normalize(item.text);
+    const key = `fuzzy${field.charAt(0).toUpperCase()}${field.slice(1)}`;
+    return normalize(item.el.dataset[key] || item.text);
+  }
+
+  function controlMatches(item, control) {
+    const query = controlValue(control);
+    if (!query || query === "all") return true;
+
+    const field = control.dataset.fuzzyField || "";
+    const matchMode = control.dataset.fuzzyMatch || (control.tagName === "SELECT" ? "exact" : "contains");
+    const value = fieldValue(item, field);
+
+    if (matchMode === "exact") return value === query;
+    if (matchMode === "starts") return value.startsWith(query);
+    return value.includes(query);
+  }
+
+  Alpine.data("nhdbFuzzyFilter", (options = {}) => ({
+    count: 0,
+    total: 0,
+    query: "",
+    init() {
+      this.itemSelector = options.itemSelector || "[data-fuzzy-item]";
+      this.searchControls = Array.from(this.$el.querySelectorAll("[data-fuzzy-search]"));
+      this.filterControls = Array.from(this.$el.querySelectorAll("[data-fuzzy-filter-field]"));
+      this.countTarget = this.$el.querySelector("[data-fuzzy-count]");
+      this.emptyTarget = this.$el.querySelector("[data-fuzzy-empty]");
+      this.refresh();
+
+      [...this.searchControls, ...this.filterControls].forEach((control) => {
+        control.addEventListener("input", () => this.apply());
+        control.addEventListener("change", () => this.apply());
+      });
+
+      this.apply();
+    },
+    refresh() {
+      this.countTarget = this.$el.querySelector("[data-fuzzy-count]");
+      this.emptyTarget = this.$el.querySelector("[data-fuzzy-empty]");
+      this.items = Array.from(this.$el.querySelectorAll(this.itemSelector || "[data-fuzzy-item]")).map((el) => {
+        const fieldData = {};
+        for (const [key, value] of Object.entries(el.dataset)) {
+          if (key.startsWith("fuzzy") && key !== "fuzzyItem" && key !== "fuzzyText") {
+            fieldData[key] = value;
+          }
+        }
+        return {
+          el,
+          text: el.dataset.fuzzyText || el.textContent || "",
+          ...fieldData,
+        };
+      });
+      this.total = this.items.length;
+      this.fuse = new Fuse(this.items, {
+        ignoreLocation: true,
+        includeScore: true,
+        minMatchCharLength: 2,
+        threshold: Number(options.threshold ?? 0.36),
+        keys: [
+          { name: "text", weight: 0.6 },
+          { name: "fuzzyName", weight: 0.9 },
+          { name: "fuzzyTitle", weight: 0.9 },
+          { name: "fuzzyTown", weight: 0.45 },
+          { name: "fuzzyCounty", weight: 0.45 },
+          { name: "fuzzyBill", weight: 0.6 },
+          { name: "fuzzyPeople", weight: 0.6 },
+        ],
+      });
+      this.apply();
+    },
+    apply() {
+      const searchQuery = normalize(this.searchControls.map((control) => control.value).join(" "));
+      this.query = searchQuery;
+      const fuzzyMatches = searchQuery.length >= 2
+        ? new Set(this.fuse.search(searchQuery).map((result) => result.item.el))
+        : null;
+
+      let visible = 0;
+      this.items.forEach((item) => {
+        const matchesSearch = !fuzzyMatches || fuzzyMatches.has(item.el);
+        const matchesFilters = this.filterControls.every((control) => controlMatches(item, control));
+        const show = matchesSearch && matchesFilters;
+        item.el.hidden = !show;
+        item.el.toggleAttribute("data-fuzzy-hidden", !show);
+        if (show) visible += 1;
+      });
+
+      this.count = visible;
+      if (this.countTarget) this.countTarget.textContent = String(visible);
+      if (this.emptyTarget) this.emptyTarget.hidden = visible !== 0;
+    },
+  }));
 
   if (!window.Alpine) {
     window.Alpine = Alpine;

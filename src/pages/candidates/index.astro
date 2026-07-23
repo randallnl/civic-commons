@@ -365,7 +365,7 @@ function uniqueOptions(values = []) {
 
   <body>
     <TopNav />
-    <main class="page">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.candidate-card[data-fuzzy-item]' })">
       <PageHero
         backHref="/"
         backLabel="Back home"
@@ -403,6 +403,7 @@ function uniqueOptions(values = []) {
               list="candidateNameOptions"
               placeholder="Start typing a candidate"
               autocomplete="off"
+              data-fuzzy-search
             />
             <datalist id="candidateNameOptions">
               {nameOptions.map((option) => <option value={option} />)}
@@ -410,7 +411,7 @@ function uniqueOptions(values = []) {
           </label>
           <label>
             <span>County</span>
-            <select name="county">
+            <select name="county" data-fuzzy-filter-field data-fuzzy-field="county" data-fuzzy-match="exact">
               <option value="">All counties</option>
               {countyOptions.map((option) => (
                 <option value={option} selected={county.toLowerCase() === option.toLowerCase()}>
@@ -421,7 +422,7 @@ function uniqueOptions(values = []) {
           </label>
           <label>
             <span>Office</span>
-            <select name="office">
+            <select name="office" data-fuzzy-filter-field data-fuzzy-field="office" data-fuzzy-match="exact">
               <option value="">State House and Senate</option>
               {officeOptions.map((option) => (
                 <option value={option} selected={selectedOffice === option}>{option}</option>
@@ -437,6 +438,8 @@ function uniqueOptions(values = []) {
               list="candidateTownOptions"
               placeholder="Start typing a town"
               autocomplete="off"
+              data-fuzzy-filter-field
+              data-fuzzy-field="town"
             />
             <datalist id="candidateTownOptions">
               {townOptions.map((option) => <option value={option} />)}
@@ -451,18 +454,21 @@ function uniqueOptions(values = []) {
         <section class="results">
           <div class="results-heading">
             <div>
-              <h2>{resultCount} House and Senate Candidates</h2>
+              <h2><span data-fuzzy-count>{resultCount}</span> House and Senate Candidates</h2>
               {resultContext && <p>Showing matches for {resultContext}</p>}
             </div>
             {hasFilters && <a href="/candidates">Clear filters</a>}
           </div>
 
           {candidates.length ? (
-            <div class="candidate-grid">
-              {candidates.map((candidate) => (
-                <CandidateCard candidate={candidate} />
-              ))}
-            </div>
+            <>
+              <div class="candidate-grid">
+                {candidates.map((candidate) => (
+                  <CandidateCard candidate={candidate} />
+                ))}
+              </div>
+              <p class="status-message" data-fuzzy-empty hidden>No State House or State Senate candidates found.</p>
+            </>
           ) : (
             <p class="status-message">No State House or State Senate candidates found.</p>
           )}

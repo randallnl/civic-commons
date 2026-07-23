@@ -61,7 +61,7 @@ const seeMoreHref = `/articles?${seeMoreParams.toString()}`;
 
   <body>
     <TopNav />
-    <main class="page">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.article-card[data-fuzzy-item]' })">
       <section class="hero">
         <p class="eyebrow">Articles</p>
         <h1>Read civic coverage by bill, legislator, or town.</h1>
@@ -69,15 +69,15 @@ const seeMoreHref = `/articles?${seeMoreParams.toString()}`;
         <form class="filters" action="/articles" method="get">
           <label>
             <span>Search</span>
-            <input type="search" name="q" value={q} placeholder="housing, schools..." />
+            <input type="search" name="q" value={q} placeholder="housing, schools..." data-fuzzy-search />
           </label>
           <label>
             <span>Bill</span>
-            <input type="text" name="bill" value={bill} placeholder="HB155" />
+            <input type="text" name="bill" value={bill} placeholder="HB155" data-fuzzy-filter-field data-fuzzy-field="bill" />
           </label>
           <label>
             <span>Town</span>
-            <input type="text" name="town" value={town} placeholder="Manchester" />
+            <input type="text" name="town" value={town} placeholder="Manchester" data-fuzzy-filter-field data-fuzzy-field="town" />
           </label>
           <button type="submit">Filter</button>
         </form>
@@ -146,10 +146,11 @@ const seeMoreHref = `/articles?${seeMoreParams.toString()}`;
       ) : (
         <section class="panel">
           <div class="results-heading">
-            <h2>Recent Articles</h2>
+            <h2>Recent Articles <span class="inline-count">(<span data-fuzzy-count>{articles.length}</span>)</span></h2>
             {(q || bill || town) && <a href="/articles">Clear filters</a>}
           </div>
           <ArticleList articles={articles} />
+          <p class="status-message" data-fuzzy-empty hidden>No articles matched those filters.</p>
           {hasMoreArticles && (
             <div class="see-more-row">
               <a class="see-more-button" href={seeMoreHref}>See more articles</a>

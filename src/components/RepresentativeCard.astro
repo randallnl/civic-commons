@@ -32,6 +32,40 @@ function slugify(value = "") {
     .replace(/^-+|-+$/g, "");
 }
 
+function countyNameFor(rep = {}) {
+  const codeMap = {
+    "01": "Belknap",
+    "02": "Carroll",
+    "03": "Cheshire",
+    "04": "Coos",
+    "05": "Grafton",
+    "06": "Hillsborough",
+    "07": "Merrimack",
+    "08": "Rockingham",
+    "09": "Strafford",
+    "10": "Sullivan",
+  };
+  const prefixMap = {
+    BEL: "Belknap",
+    CAR: "Carroll",
+    CHE: "Cheshire",
+    COO: "Coos",
+    GRA: "Grafton",
+    HIL: "Hillsborough",
+    MER: "Merrimack",
+    ROC: "Rockingham",
+    STR: "Strafford",
+    SUL: "Sullivan",
+  };
+  const county = cleanText(rep.county || "");
+  if (county) return county;
+  const code = String(rep.countycode || "").padStart(2, "0");
+  if (codeMap[code]) return codeMap[code];
+  const district = cleanText(rep.raw_district || rep.district || "");
+  const prefix = district.match(/\b([A-Z]{3})\b/)?.[1];
+  return prefixMap[prefix] || "";
+}
+
 const name = cleanText(
   rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim(),
 );
@@ -39,6 +73,33 @@ const profileHref = `/people/${slugify(name)}`;
 const photoUrl = profilePhotoUrl(rep.photo);
 const voteHistory = representativeOnlineTestimonyVotePreviews(rep, billSummaries, { limit: 3 });
 const grade = representativeGradeFor(rep, trackedBills, billSummaries);
+const searchableText = cleanText([
+  name,
+  rep.firstname,
+  rep.lastname,
+  rep.chamber,
+  rep.party,
+  rep.district,
+  rep.raw_district,
+  rep.county,
+  rep.countycode,
+  rep.location_text,
+  rep.towns_represented,
+  rep.townsRepresented,
+  rep.email,
+  isFreeStater(rep) ? "Free Stater" : "",
+].flat().filter(Boolean).join(" "));
+const searchableTown = cleanText([
+  rep.location_text,
+  rep.towns_represented,
+  rep.townsRepresented,
+].flat().filter(Boolean).join(" "));
+const searchableCounty = countyNameFor(rep);
+const searchableBody = /senate/i.test(rep.chamber || "")
+  ? "senate"
+  : /house/i.test(rep.chamber || "")
+    ? "house"
+    : cleanText(rep.chamber || "");
 
 function trackedBillFor(vote) {
   return trackedBillForVote(trackedBills, vote);
@@ -59,7 +120,17 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
 }
 ---
 
-<article class="rep-card">
+<article
+  class="rep-card"
+  data-fuzzy-item
+  data-fuzzy-name={name}
+  data-fuzzy-town={searchableTown}
+  data-fuzzy-county={searchableCounty}
+  data-fuzzy-body={searchableBody}
+  data-fuzzy-kind="legislators"
+  data-fuzzy-party={formatParty(rep.party)}
+  data-fuzzy-text={searchableText}
+>
   <div class="rep-card-top">
     <a class="photo-wrap" href={profileHref}>
       {photoUrl ? (
