@@ -39,6 +39,18 @@ async function removeSourceProfile(entityType, entityKey) {
 
   if (entityType === "candidate") {
     await ensureUnifiedPeopleTables(db);
+    const key = String(entityKey);
+    const person = await db
+      .prepare(
+        `SELECT id, filer_entity_number
+         FROM d1_people
+         WHERE filer_entity_number = ?
+            OR slug = ?
+            OR CAST(id AS TEXT) = ?
+         LIMIT 1`,
+      )
+      .bind(key, key, key)
+      .first();
     const candidate = await db
       .prepare(
         `SELECT filer_entity_number
@@ -46,24 +58,37 @@ async function removeSourceProfile(entityType, entityKey) {
          WHERE filer_entity_number = ? OR slug = ?
          LIMIT 1`,
       )
-      .bind(String(entityKey), String(entityKey))
+      .bind(key, key)
       .first();
-    const changed = await runSourceUpdate(
+    const candidateFiler =
+      candidate?.filer_entity_number || person?.filer_entity_number || key;
+
+    const sourceChanged = await runSourceUpdate(
       db,
       `DELETE FROM candidates
        WHERE filer_entity_number = ? OR slug = ?`,
-      [String(entityKey), String(entityKey)],
+      [candidateFiler, key],
     );
 
-    if (!changed) throw new Error("No matching candidate source row was removed.");
-    await runSourceUpdate(
+    const roleChanged = await runSourceUpdate(
+      db,
+      `DELETE FROM d1_person_candidate_roles
+       WHERE filer_entity_number = ?
+          OR (? IS NOT NULL AND person_id = ?)`,
+      [candidateFiler, person?.id ?? null, person?.id ?? null],
+    );
+    const personChanged = await runSourceUpdate(
       db,
       `UPDATE d1_people
        SET is_2026_candidate = 0,
            updated_at = CURRENT_TIMESTAMP
-       WHERE filer_entity_number = ?`,
-      [candidate?.filer_entity_number || String(entityKey)],
+       WHERE filer_entity_number = ?
+          OR slug = ?
+          OR CAST(id AS TEXT) = ?`,
+      [candidateFiler, key, key],
     );
+    const changed = sourceChanged + roleChanged + personChanged;
+    if (!changed) throw new Error("No matching candidate profile was removed.");
     return { changed, label: "Candidate" };
   }
 

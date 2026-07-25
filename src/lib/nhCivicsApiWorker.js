@@ -1466,6 +1466,7 @@ async function handleRepProfile(request, env) {
       l.personid AS id,
       l.personid,
       l.employeeno,
+      people.slug AS slug,
       CASE l.legislativebody
         WHEN 'S' THEN 'Senate'
         WHEN 'H' THEN 'House'
@@ -1515,11 +1516,14 @@ async function handleRepProfile(request, env) {
       AND ${
         isNumeric
           ? "l.personid = ?"
-          : "LOWER(l.firstname || '-' || l.lastname) = LOWER(?)"
+          : `(
+              LOWER(l.firstname || '-' || l.lastname) = LOWER(?)
+              OR LOWER(COALESCE(people.slug, '')) = LOWER(?)
+            )`
       }
     LIMIT 1
   `)
-    .bind(identifier)
+    .bind(...(isNumeric ? [identifier] : [identifier, identifier]))
     .first();
 
   if (!legislator) {
@@ -3262,6 +3266,7 @@ async function handleReps(request, env) {
       r.personid AS id,
       r.personid,
       r.employeeno,
+      people.slug AS slug,
       CASE r.legislativebody
         WHEN 'S' THEN 'Senate'
         WHEN 'H' THEN 'House'
@@ -4398,9 +4403,12 @@ async function findHouseRepsFromDistrictMappings(env, districts) {
     const result = await env.DB.prepare(`
       SELECT
         l.personid AS id,
+        l.personid,
         l.employeeno,
+        people.slug AS slug,
         'House' AS chamber,
         l.firstname || ' ' || l.lastname AS name,
+        people.name_aliases AS name_aliases,
         l.firstname,
         l.lastname,
         l.party,
@@ -4419,6 +4427,9 @@ async function findHouseRepsFromDistrictMappings(env, districts) {
         AND CAST(l.district AS INTEGER) = dm.district
       LEFT JOIN d1_legislator_photos p
         ON p.employeeno = l.employeeno
+      LEFT JOIN d1_people people
+        ON people.gc_personid = l.personid
+        OR people.employeeno = l.employeeno
       WHERE l.active = 1
         AND l.legislativebody = 'H'
         AND CAST(l.countycode AS INTEGER) = ?
@@ -4440,9 +4451,12 @@ async function findSenators(env, senate) {
   const result = await env.DB.prepare(`
     SELECT
       l.personid AS id,
+      l.personid,
       l.employeeno,
+      people.slug AS slug,
       'Senate' AS chamber,
       l.firstname || ' ' || l.lastname AS name,
+      people.name_aliases AS name_aliases,
       l.firstname,
       l.lastname,
       l.party,
@@ -4460,6 +4474,9 @@ async function findSenators(env, senate) {
       AND CAST(l.district AS INTEGER) = dm.district
     LEFT JOIN d1_legislator_photos p
       ON p.employeeno = l.employeeno
+    LEFT JOIN d1_people people
+      ON people.gc_personid = l.personid
+      OR people.employeeno = l.employeeno
     WHERE l.active = 1
       AND l.legislativebody = 'S'
       AND CAST(l.district AS INTEGER) = ?

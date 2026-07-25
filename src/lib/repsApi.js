@@ -92,9 +92,11 @@ export function repName(rep = {}) {
 export function repSlug(rep = {}) {
   const value = rep.slug || repName(rep);
   return String(value)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim()
-    .replace(/['']/g, "")
+    .replace(/[''`’‘]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }

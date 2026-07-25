@@ -25,9 +25,11 @@ function formatParty(party) {
 
 function slugify(value = "") {
   return String(value)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim()
-    .replace(/['']/g, "")
+    .replace(/[''`’‘]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
@@ -69,7 +71,7 @@ function countyNameFor(rep = {}) {
 const name = cleanText(
   rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim(),
 );
-const profileHref = `/people/${slugify(name)}`;
+const profileHref = `/people/${rep.slug || rep.personid || rep.id || slugify(name)}`;
 const photoUrl = profilePhotoUrl(rep.photo);
 const voteHistory = representativeOnlineTestimonyVotePreviews(rep, billSummaries, { limit: 3 });
 const grade = representativeGradeFor(rep, trackedBills, billSummaries);

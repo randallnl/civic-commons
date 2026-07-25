@@ -143,6 +143,8 @@ export function candidateSlug(candidate = {}) {
       .join("-");
 
   return String(value)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .replace(/[''`’‘]/g, "")
     .replace(/[^a-zA-Z0-9]+/g, "-")
