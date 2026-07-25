@@ -2762,17 +2762,27 @@ async function handleCandidateDetail(request, env) {
     return json({ error: "Candidate identifier is required." }, 400);
   }
 
+  const identifierFilerPrefix = identifier.match(/^(\d+)(?:-|$)/)?.[1] || "";
+
   const candidate = await env.DB.prepare(`
     ${candidateBaseCte()}
     SELECT ${candidateBaseSelectColumns()}
     FROM candidate_base c
     WHERE c.filer_entity_number = ?
+      OR (? != '' AND c.filer_entity_number = ?)
       OR c.slug = ?
       OR c.legacy_slug = ?
       OR CAST(c.person_id AS TEXT) = ?
     LIMIT 1
   `)
-    .bind(identifier, identifier, identifier, identifier)
+    .bind(
+      identifier,
+      identifierFilerPrefix,
+      identifierFilerPrefix,
+      identifier,
+      identifier,
+      identifier,
+    )
     .first();
 
   if (!candidate) {
