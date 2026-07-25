@@ -9,6 +9,11 @@
 
   function normalize(value) {
     return String(value || "")
+      .replace(/â€™|â€˜/g, "'")
+      .replace(/â€œ|â€/g, "\"")
+      .replace(/â€“|â€”/g, "-")
+      .replace(/Â·/g, " ")
+      .replace(/Â/g, "")
       .toLowerCase()
       .normalize("NFKD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -46,6 +51,14 @@
     return !!query && query !== "all";
   }
 
+  function debounce(callback, wait = 120) {
+    let timeout = 0;
+    return (...args) => {
+      window.clearTimeout(timeout);
+      timeout = window.setTimeout(() => callback(...args), wait);
+    };
+  }
+
   Alpine.data("nhdbFuzzyFilter", (options = {}) => ({
     count: 0,
     total: 0,
@@ -58,11 +71,26 @@
       this.emptyTarget = this.$el.querySelector("[data-fuzzy-empty]");
       this.refresh();
 
+      this.applyAndSync = debounce(() => {
+        this.apply();
+        this.syncUrl(false);
+      }, Number(options.debounce ?? 120));
+
       [...this.searchControls, ...this.filterControls].forEach((control) => {
-        control.addEventListener("input", () => this.apply());
-        control.addEventListener("change", () => this.apply());
+        control.addEventListener("input", () => this.applyAndSync());
+        control.addEventListener("change", () => this.applyAndSync());
       });
 
+      this.forms = Array.from(this.$el.querySelectorAll("[data-fuzzy-live-form]"));
+      this.forms.forEach((form) => {
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          this.apply();
+          this.syncUrl(true);
+        });
+      });
+
+      this.$el.addEventListener("nhdb:fuzzy-refresh", () => this.refresh());
       this.apply();
     },
     refresh() {
@@ -124,6 +152,33 @@
       this.count = visible;
       if (this.countTarget) this.countTarget.textContent = String(visible);
       if (this.emptyTarget) this.emptyTarget.hidden = visible !== 0;
+    },
+    syncUrl(push = false) {
+      if (options.syncUrl === false || !this.forms?.length) return;
+
+      const form = this.forms[0];
+      const url = new URL(form.getAttribute("action") || window.location.href, window.location.origin);
+      const params = new URLSearchParams();
+
+      this.forms.forEach((currentForm) => {
+        const formData = new FormData(currentForm);
+        for (const [key, value] of formData.entries()) {
+          const normalizedValue = String(value || "").trim();
+          if (!normalizedValue || normalizedValue.toLowerCase() === "all") continue;
+          params.set(key, normalizedValue);
+        }
+      });
+
+      url.search = params.toString();
+      const hash = url.hash || window.location.hash;
+      const nextUrl = `${url.pathname}${url.search}${hash}`;
+      if (nextUrl === `${window.location.pathname}${window.location.search}${window.location.hash}`) return;
+
+      if (push) {
+        window.history.pushState({}, "", nextUrl);
+      } else {
+        window.history.replaceState({}, "", nextUrl);
+      }
     },
   }));
 

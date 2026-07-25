@@ -19,8 +19,21 @@ const filters = {
   town: Astro.url.searchParams.get("town")?.trim() || "",
   county: Astro.url.searchParams.get("county")?.trim() || "",
 };
+const countyOptions = [
+  "Belknap",
+  "Carroll",
+  "Cheshire",
+  "Coos",
+  "Grafton",
+  "Hillsborough",
+  "Merrimack",
+  "Rockingham",
+  "Strafford",
+  "Sullivan",
+];
 
 let representatives = [];
+let allRepresentatives = [];
 let trackedBills = new Map();
 let billSummaries = new Map();
 let loadError = "";
@@ -28,17 +41,14 @@ let loadError = "";
 try {
   const [repData, tracker, summaries] = await Promise.all([
     getRepresentatives({
-      body: filters.body,
-      q: filters.name || filters.town,
-      county: filters.county,
       limit: 600,
     }),
     getTrackedBills(),
     getBillSummaries(),
   ]);
 
-  const directoryReps = repData.representatives || [];
-  const filteredReps = directoryReps.filter((rep) => matchesFilters(rep, filters));
+  allRepresentatives = repData.representatives || [];
+  const filteredReps = allRepresentatives.filter((rep) => matchesFilters(rep, filters));
 
   representatives = await hydrateVotePreviewDetails(filteredReps);
   trackedBills = tracker;
@@ -48,6 +58,8 @@ try {
 }
 
 const activeFilterCount = Object.values(filters).filter(Boolean).length;
+const nameOptions = uniqueOptions(allRepresentatives.map(repName));
+const townOptions = uniqueOptions(allRepresentatives.flatMap((rep) => townsFromValue(locationText(rep))));
 
 function matchesFilters(rep = {}, values = {}) {
   return (
@@ -140,8 +152,26 @@ function legislativeBody(rep = {}) {
 function normalizeSearch(value = "") {
   return cleanText(value)
     .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+function townsFromValue(value = "") {
+  if (Array.isArray(value)) {
+    return value.flatMap(townsFromValue);
+  }
+
+  return String(value || "")
+    .split(/[,;|]/)
+    .map((item) => item.replace(/\s*-\s*Ward\s+\d+$/i, "").trim())
+    .filter(Boolean);
+}
+
+function uniqueOptions(values = []) {
+  return [...new Set(values.map((value) => cleanText(value).trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
 }
 
 function countyNameForCode(code = "") {
@@ -190,26 +220,59 @@ function countyNameForCode(code = "") {
           action="/people"
           submitLabel="Filter reps"
           clearHref={activeFilterCount > 0 ? "/people" : ""}
+          live
         >
           <label for="body">
             <span>Body</span>
-          <select id="body" name="body" data-fuzzy-filter-field data-fuzzy-field="body" data-fuzzy-match="exact">
-            <option value="" selected={!filters.body}>House and Senate</option>
-            <option value="house" selected={filters.body === "house"}>House</option>
-            <option value="senate" selected={filters.body === "senate"}>Senate</option>
-          </select>
+            <select id="body" name="body" data-fuzzy-filter-field data-fuzzy-field="body" data-fuzzy-match="exact">
+              <option value="" selected={!filters.body}>House and Senate</option>
+              <option value="house" selected={filters.body === "house"}>House</option>
+              <option value="senate" selected={filters.body === "senate"}>Senate</option>
+            </select>
           </label>
           <label for="name">
             <span>Name</span>
-          <input id="name" name="name" type="search" value={filters.name} placeholder="David Rochefort" data-fuzzy-search />
+            <input
+              id="name"
+              name="name"
+              type="search"
+              value={filters.name}
+              list="repNameOptions"
+              placeholder="Start typing a legislator"
+              autocomplete="off"
+              data-fuzzy-search
+            />
+            <datalist id="repNameOptions">
+              {nameOptions.map((option) => <option value={option} />)}
+            </datalist>
           </label>
           <label for="town">
             <span>Town</span>
-          <input id="town" name="town" type="search" value={filters.town} placeholder="Manchester" data-fuzzy-filter-field data-fuzzy-field="town" />
+            <input
+              id="town"
+              name="town"
+              type="search"
+              value={filters.town}
+              list="repTownOptions"
+              placeholder="Start typing a town"
+              autocomplete="off"
+              data-fuzzy-filter-field
+              data-fuzzy-field="town"
+            />
+            <datalist id="repTownOptions">
+              {townOptions.map((option) => <option value={option} />)}
+            </datalist>
           </label>
           <label for="county">
             <span>County</span>
-          <input id="county" name="county" type="search" value={filters.county} placeholder="Hillsborough" data-fuzzy-filter-field data-fuzzy-field="county" />
+            <select id="county" name="county" data-fuzzy-filter-field data-fuzzy-field="county" data-fuzzy-match="exact">
+              <option value="" selected={!filters.county}>All counties</option>
+              {countyOptions.map((option) => (
+                <option value={option} selected={filters.county.toLowerCase() === option.toLowerCase()}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </label>
         </FilterBar>
       </PageHero>

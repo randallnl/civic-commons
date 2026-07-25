@@ -3,6 +3,7 @@ export const prerender = false;
 
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
+import FilterBar from "../../components/FilterBar.astro";
 import { getOrganizations, organizationPath } from "../../lib/organizationsApi";
 
 let organizations = [];
@@ -78,7 +79,12 @@ function matchesOption(values = [], selected = "") {
         <p class="status-message">{error}</p>
       ) : organizations.length ? (
         <>
-          <form class="filters" method="get" action="/organizations">
+          <FilterBar
+            action="/organizations"
+            submitLabel="Filter organizations"
+            clearHref={hasFilters ? "/organizations" : ""}
+            live
+          >
             <label>
               <span>Name</span>
               <input
@@ -95,9 +101,9 @@ function matchesOption(values = [], selected = "") {
             </label>
 
             <label>
-              <span>Issue</span>
+              <span>Issue area</span>
               <select name="issue" data-fuzzy-filter-field data-fuzzy-field="issue" data-fuzzy-match="contains">
-                <option value="">All issues</option>
+                <option value="">All issue areas</option>
                 {issueOptions.map((option) => (
                   <option value={option} selected={option === issue}>{option}</option>
                 ))}
@@ -114,11 +120,7 @@ function matchesOption(values = [], selected = "") {
               </select>
             </label>
 
-            <div class="filter-actions">
-              <button type="submit">Filter</button>
-              {hasFilters && <a href="/organizations">Clear</a>}
-            </div>
-          </form>
+          </FilterBar>
 
           {filteredOrganizations.length ? (
             <section class="org-grid" aria-label="Organizations">
