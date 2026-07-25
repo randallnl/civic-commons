@@ -16,7 +16,7 @@ export async function GET({ url }) {
   const result = await db
     .prepare(
       `SELECT id, gc_personid, employeeno, filer_entity_number, slug,
-              display_name, firstname, lastname, party,
+              display_name, name_aliases, firstname, lastname, party,
               is_current_legislator, is_2026_candidate
        FROM d1_people
        WHERE (is_current_legislator = 1 OR is_2026_candidate = 1)
@@ -25,11 +25,12 @@ export async function GET({ url }) {
            OR firstname LIKE ?
            OR lastname LIKE ?
            OR (firstname || ' ' || lastname) LIKE ?
+           OR COALESCE(name_aliases, '') LIKE ?
          )
        ORDER BY lastname COLLATE NOCASE, firstname COLLATE NOCASE, display_name COLLATE NOCASE
        LIMIT 8`,
     )
-    .bind(like, like, like, like)
+    .bind(like, like, like, like, like)
     .all();
 
   const people = result.results || [];
@@ -56,6 +57,7 @@ function renderPersonOption(person = {}) {
     Number(person.is_2026_candidate) === 1 && "Candidate",
   ].filter(Boolean);
   const meta = [partyLabel(person.party), roleLabels.join(" · ")].filter(Boolean).join(" · ");
+  const aliasNote = person.name_aliases ? `Aliases: ${cleanText(person.name_aliases)}` : "";
 
   return `
     <button
@@ -66,6 +68,7 @@ function renderPersonOption(person = {}) {
     >
       <strong>${escapeHtml(name)}</strong>
       ${meta ? `<span>${escapeHtml(meta)}</span>` : ""}
+      ${aliasNote ? `<small>${escapeHtml(aliasNote)}</small>` : ""}
     </button>
   `;
 }

@@ -15,6 +15,7 @@ export async function ensureUnifiedPeopleTables(db = adminDb()) {
         lastname TEXT,
         middlename TEXT,
         display_name TEXT NOT NULL,
+        name_aliases TEXT,
         slug TEXT NOT NULL UNIQUE,
         party TEXT,
         email TEXT,
@@ -31,6 +32,8 @@ export async function ensureUnifiedPeopleTables(db = adminDb()) {
       )`,
     )
     .run();
+
+  await ensureColumn(db, "d1_people", "name_aliases", "TEXT");
 
   await db
     .prepare(
@@ -265,7 +268,7 @@ export async function getPeopleLinkOptions({ limit = 900, db = adminDb() } = {})
   const result = await db
     .prepare(
       `SELECT id, gc_personid, employeeno, filer_entity_number, display_name,
-              firstname, lastname, party, is_current_legislator, is_2026_candidate
+              name_aliases, firstname, lastname, party, is_current_legislator, is_2026_candidate
        FROM d1_people
        WHERE is_current_legislator = 1
           OR is_2026_candidate = 1
@@ -295,6 +298,13 @@ async function insertArticlePerson(articleId, personId, rawName = "", source = "
     .bind(articleId, personId, source, cleanText(rawName || ""))
     .run();
   return { changed: result.meta?.changes ?? result.changes ?? 0 };
+}
+
+async function ensureColumn(db, table, column, definition) {
+  const result = await db.prepare(`PRAGMA table_info(${table})`).all();
+  const exists = (result.results || []).some((row) => row.name === column);
+  if (exists) return;
+  await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
 }
 
 export async function upsertPersonFromLegislator(identifier, db = adminDb()) {
@@ -504,5 +514,6 @@ function peopleOptionLabel(person = {}) {
     person.party,
     person.gc_personid ? `GC ${person.gc_personid}` : "",
     person.filer_entity_number ? `Filer ${person.filer_entity_number}` : "",
+    person.name_aliases ? `Aliases ${person.name_aliases}` : "",
   ].filter(Boolean).join(" - ");
 }

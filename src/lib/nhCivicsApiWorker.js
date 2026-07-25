@@ -1472,6 +1472,7 @@ async function handleRepProfile(request, env) {
         ELSE l.legislativebody
       END AS chamber,
       l.firstname || ' ' || l.lastname AS name,
+      people.name_aliases AS name_aliases,
       l.firstname,
       l.lastname,
       l.middlename,
@@ -1507,6 +1508,9 @@ async function handleRepProfile(request, env) {
       )
     LEFT JOIN d1_legislator_photos p
       ON p.employeeno = l.employeeno
+    LEFT JOIN d1_people people
+      ON people.gc_personid = l.personid
+      OR people.employeeno = l.employeeno
     WHERE l.active = 1
       AND ${
         isNumeric
@@ -2666,9 +2670,10 @@ async function handleCandidates(request, env) {
         OR c.slug LIKE ?
         OR c.office LIKE ?
         OR c.county LIKE ?
+        OR COALESCE(c.name_aliases, '') LIKE ?
       )
     `);
-    binds.push(search, search, search, search, search, search);
+    binds.push(search, search, search, search, search, search, search);
   }
 
   if (officeType) {
@@ -2876,6 +2881,7 @@ function candidateBaseCte() {
         COALESCE(cr.filer_entity_number, p.filer_entity_number, CAST(p.id AS TEXT)) AS filer_entity_number,
         p.firstname AS candidate_first_name,
         p.lastname AS candidate_last_name,
+        p.name_aliases AS name_aliases,
         COALESCE(NULLIF(cr.office_type, ''), 'General Court') AS office_type,
         COALESCE(
           NULLIF(cr.office, ''),
@@ -2931,6 +2937,7 @@ function candidateBaseSelectColumns(tableAlias = "c") {
     "filer_entity_number",
     "candidate_first_name",
     "candidate_last_name",
+    "name_aliases",
     "office_type",
     "office",
     "county",
@@ -2959,6 +2966,7 @@ function candidateSelectColumns(tableAlias = "") {
     "filer_entity_number",
     "candidate_first_name",
     "candidate_last_name",
+    "name_aliases",
     "office_type",
     "office",
     "county",
@@ -2986,6 +2994,8 @@ function formatCandidate(candidate) {
     filerEntityNumber: candidate.filer_entity_number,
     candidateFirstName: candidate.candidate_first_name,
     candidateLastName: candidate.candidate_last_name,
+    nameAliases: candidate.name_aliases,
+    name_aliases: candidate.name_aliases,
     name: [candidate.candidate_first_name, candidate.candidate_last_name]
       .filter(Boolean)
       .join(" "),
@@ -3184,8 +3194,9 @@ async function handleReps(request, env) {
       LOWER(r.firstname || ' ' || r.lastname) LIKE LOWER(?)
       OR LOWER(r.lastname) LIKE LOWER(?)
       OR LOWER(COALESCE(dm.communities_represented, r.city, '')) LIKE LOWER(?)
+      OR LOWER(COALESCE(people.name_aliases, '')) LIKE LOWER(?)
     )`);
-    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
   }
 
   if (county) {
@@ -3213,6 +3224,9 @@ async function handleReps(request, env) {
     FROM d1_legislators r
     LEFT JOIN d1_legislator_photos p
       ON r.employeeno = p.employeeno
+    LEFT JOIN d1_people people
+      ON people.gc_personid = r.personid
+      OR people.employeeno = r.employeeno
     LEFT JOIN county_codes cc
       ON CAST(r.countycode AS INTEGER) = cc.source_county_id
     LEFT JOIN d1_district_mapping dm
@@ -3245,6 +3259,7 @@ async function handleReps(request, env) {
       END AS chamber,
       r.legislativebody AS body,
       r.firstname || ' ' || r.lastname AS name,
+      people.name_aliases AS name_aliases,
       r.firstname,
       r.lastname,
       r.middlename,

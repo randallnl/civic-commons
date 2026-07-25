@@ -479,6 +479,15 @@ function candidateOptionLabel(candidate = {}) {
               <input name="name" value={representative.name || person.full_name} />
             </label>
 
+            <label>
+              Name Aliases
+              <textarea name="nameAliases" rows="3" placeholder="Sly, Sly Karasinski">{representative.nameAliases || representative.name_aliases || ""}</textarea>
+              <small class="field-help">
+                Add alternate names separated by commas or new lines. These are
+                used for search, tagging, and mention matching.
+              </small>
+            </label>
+
             <div class="form-grid">
               <label>
                 First Name

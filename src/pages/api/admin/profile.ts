@@ -7,12 +7,14 @@ import {
   linkLegislatorToCandidate,
 } from "../../../lib/candidateLegislatorLinks";
 import {
+  ensureUnifiedPeopleTables,
   upsertPersonFromCandidate,
   upsertPersonFromLegislator,
 } from "../../../lib/unifiedPeople";
 
 const CANDIDATE_FIELDS = [
   "name",
+  "nameAliases",
   "candidateFirstName",
   "candidateLastName",
   "politicalParty",
@@ -33,6 +35,7 @@ const CANDIDATE_FIELDS = [
 
 const REPRESENTATIVE_FIELDS = [
   "name",
+  "nameAliases",
   "firstname",
   "lastname",
   "middlename",
@@ -103,12 +106,24 @@ export async function POST({ request }) {
 }
 
 function normalizeFieldValue(field, value) {
+  if (field === "nameAliases") return normalizeAliases(value);
   if (field === "electionYear") return Number(value) || value;
   if (field === "totalRaised" || field === "totalSpent") return Number(value) || 0;
   if (field === "is_free_stater") {
     return ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
   }
   return value;
+}
+
+function normalizeAliases(value = "") {
+  return String(value || "")
+    .split(/[\n,;]/)
+    .map((alias) => alias.trim())
+    .filter(Boolean)
+    .filter((alias, index, aliases) =>
+      aliases.findIndex((candidate) => candidate.toLowerCase() === alias.toLowerCase()) === index,
+    )
+    .join(", ");
 }
 
 async function updateSourceProfile(entityType, entityKey, data) {
@@ -130,6 +145,7 @@ async function updateRepresentativeSource(db, entityKey, data) {
   const personid = numericId(entityKey);
   if (!personid) throw new Error("A numeric legislator personid is required.");
 
+  await ensureUnifiedPeopleTables(db);
   let changed = 0;
   const firstName = data.firstname || firstNameFromFullName(data.name);
   const lastName = data.lastname || lastNameFromFullName(data.name);
@@ -211,12 +227,14 @@ async function updateRepresentativeSource(db, entityKey, data) {
   }
 
   await upsertPersonFromLegislator(personid, db);
+  changed += await updatePersonAliases(db, { gcPersonid: personid }, data);
 
   if (!changed) throw new Error("No matching legislator source row was updated.");
   return { changed };
 }
 
 async function updateCandidateSource(db, entityKey, data) {
+  await ensureUnifiedPeopleTables(db);
   const firstName = data.candidateFirstName || firstNameFromFullName(data.name);
   const lastName = data.candidateLastName || lastNameFromFullName(data.name);
   let changed = await runSourceUpdate(
@@ -273,9 +291,37 @@ async function updateCandidateSource(db, entityKey, data) {
   }
 
   await upsertPersonFromCandidate(String(entityKey), db);
+  changed += await updatePersonAliases(db, { filerEntityNumber: String(entityKey) }, data);
 
   if (!changed) throw new Error("No matching candidate source row was updated.");
   return { changed };
+}
+
+async function updatePersonAliases(db, identifiers = {}, data = {}) {
+  if (!Object.prototype.hasOwnProperty.call(data, "nameAliases")) return 0;
+
+  const clauses = [];
+  const params = [data.nameAliases || ""];
+
+  if (identifiers.gcPersonid) {
+    clauses.push("gc_personid = ?");
+    params.push(identifiers.gcPersonid);
+  }
+  if (identifiers.filerEntityNumber) {
+    clauses.push("filer_entity_number = ?");
+    params.push(identifiers.filerEntityNumber);
+  }
+  if (!clauses.length) return 0;
+
+  const result = await db
+    .prepare(
+      `UPDATE d1_people
+       SET name_aliases = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE ${clauses.join(" OR ")}`,
+    )
+    .bind(...params)
+    .run();
+  return result.meta?.changes ?? result.changes ?? 0;
 }
 
 async function runSourceUpdate(db, sql, params) {

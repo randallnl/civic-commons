@@ -189,7 +189,7 @@ async function findPeopleMentions(comment = "", db) {
   const result = await db
     .prepare(
       `SELECT id, gc_personid, employeeno, filer_entity_number, slug,
-              firstname, lastname, display_name, party,
+              firstname, lastname, display_name, name_aliases, party,
               is_current_legislator, is_2026_candidate
        FROM d1_people
        WHERE is_current_legislator = 1
@@ -206,7 +206,8 @@ async function findPeopleMentions(comment = "", db) {
       person.display_name ||
         [person.firstname, person.lastname].filter(Boolean).join(" "),
     );
-    if (!name || !hasMention(cleanComment, name)) continue;
+    const aliases = aliasList(person.name_aliases);
+    if (!name || (!hasMention(cleanComment, name) && !aliases.some((alias) => hasMention(cleanComment, alias)))) continue;
     const mentionKey = Number(person.gc_personid || person.id);
     if (!mentionKey || seen.has(mentionKey)) continue;
 
@@ -226,6 +227,13 @@ async function findPeopleMentions(comment = "", db) {
   }
 
   return mentions;
+}
+
+function aliasList(value = "") {
+  return String(value || "")
+    .split(/[\n,;]/)
+    .map((alias) => cleanText(alias))
+    .filter(Boolean);
 }
 
 function personMentionPath(person = {}) {

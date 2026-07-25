@@ -20,6 +20,7 @@ export const people = sqliteTable(
     lastName: text("lastname"),
     middleName: text("middlename"),
     displayName: text("display_name").notNull(),
+    nameAliases: text("name_aliases"),
     slug: text("slug").notNull(),
     party: text("party"),
     email: text("email"),

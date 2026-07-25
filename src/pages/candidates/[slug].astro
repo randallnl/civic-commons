@@ -408,6 +408,15 @@ function uniqueArticles(articles = []) {
               <input name="name" value={candidate.name || name} />
             </label>
 
+            <label>
+              Name Aliases
+              <textarea name="nameAliases" rows="3" placeholder="Sly, Sly Karasinski">{candidate.nameAliases || candidate.name_aliases || ""}</textarea>
+              <small class="field-help">
+                Add alternate names separated by commas or new lines. These are
+                used for search, tagging, and mention matching.
+              </small>
+            </label>
+
             <div class="form-grid">
               <label>
                 First Name
