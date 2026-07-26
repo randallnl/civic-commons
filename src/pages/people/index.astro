@@ -19,6 +19,11 @@ const filters = {
   town: Astro.url.searchParams.get("town")?.trim() || "",
   county: Astro.url.searchParams.get("county")?.trim() || "",
 };
+const requestedLimit = Math.min(
+  Math.max(Number(Astro.url.searchParams.get("limit") || 48), 24),
+  240,
+);
+const nextLimit = Math.min(requestedLimit + 48, 240);
 const countyOptions = [
   "Belknap",
   "Carroll",
@@ -41,7 +46,10 @@ let loadError = "";
 try {
   const [repData, tracker, summaries] = await Promise.all([
     getRepresentatives({
-      limit: 600,
+      q: filters.name || filters.town,
+      body: filters.body,
+      county: filters.county,
+      limit: requestedLimit,
     }),
     getTrackedBills(),
     getBillSummaries(),
@@ -60,11 +68,20 @@ try {
 const activeFilterCount = Object.values(filters).filter(Boolean).length;
 const nameOptions = uniqueOptions(allRepresentatives.map(repName));
 const townOptions = uniqueOptions(allRepresentatives.flatMap((rep) => townsFromValue(locationText(rep))));
+const totalRepresentatives = Number(repDataTotal(allRepresentatives, representatives));
+const seeMoreParams = new URLSearchParams();
+if (filters.body) seeMoreParams.set("body", filters.body);
+if (filters.name) seeMoreParams.set("name", filters.name);
+if (filters.town) seeMoreParams.set("town", filters.town);
+if (filters.county) seeMoreParams.set("county", filters.county);
+seeMoreParams.set("limit", String(nextLimit));
+const seeMoreHref = `/people?${seeMoreParams.toString()}#rep-results`;
+const hasMoreServerResults = requestedLimit < 240 && representatives.length >= Math.min(requestedLimit, 48);
 
 function matchesFilters(rep = {}, values = {}) {
   return (
     matchesBody(rep, values.body) &&
-    matchesText(repName(rep), values.name) &&
+    matchesText([repName(rep), rep.nameAliases, rep.name_aliases].filter(Boolean).join(" "), values.name) &&
     matchesText(locationText(rep), values.town) &&
     matchesCounty(rep, values.county)
   );
@@ -191,6 +208,10 @@ function countyNameForCode(code = "") {
   const normalized = String(code || "").padStart(2, "0");
   return counties[normalized] || "";
 }
+
+function repDataTotal(allReps = [], filteredReps = []) {
+  return Math.max(allReps.length, filteredReps.length);
+}
 ---
 
 <html lang="en">
@@ -208,7 +229,7 @@ function countyNameForCode(code = "") {
 
   <body>
     <TopNav />
-    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.rep-card[data-fuzzy-item]' })">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.rep-card[data-fuzzy-item]', pageSize: 12 })">
       <PageHero
         backHref="/my-state-rep"
         backLabel="Back to My Legislator"
@@ -265,22 +286,32 @@ function countyNameForCode(code = "") {
           </label>
           <label for="county">
             <span>County</span>
-            <select id="county" name="county" data-fuzzy-filter-field data-fuzzy-field="county" data-fuzzy-match="exact">
-              <option value="" selected={!filters.county}>All counties</option>
-              {countyOptions.map((option) => (
-                <option value={option} selected={filters.county.toLowerCase() === option.toLowerCase()}>
-                  {option}
-                </option>
-              ))}
-            </select>
+            <input
+              id="county"
+              name="county"
+              type="search"
+              value={filters.county}
+              list="repCountyOptions"
+              placeholder="Start typing a county"
+              autocomplete="off"
+              data-fuzzy-filter-field
+              data-fuzzy-field="county"
+            />
+            <datalist id="repCountyOptions">
+              {countyOptions.map((option) => <option value={option} />)}
+            </datalist>
           </label>
         </FilterBar>
       </PageHero>
 
-      <section class="results-heading">
+      <section class="results-heading" id="rep-results">
         <div>
           <p class="eyebrow">Results</p>
-          <h2><span data-fuzzy-count>{representatives.length}</span> Representatives</h2>
+          <h2><span data-fuzzy-count>{Math.min(representatives.length, 12)}</span> Representatives Shown</h2>
+          <p class="result-note">
+            <span data-fuzzy-matched-count>{representatives.length}</span> loaded matches
+            {totalRepresentatives ? <span> from the current database batch</span> : null}
+          </p>
         </div>
         <a class="secondary-link" href="/my-state-rep">Find my legislators</a>
       </section>
@@ -302,6 +333,10 @@ function countyNameForCode(code = "") {
             No representatives matched those filters. Try a broader town, county,
             or name search.
           </p>
+          <div class="see-more-row">
+            <button type="button" data-fuzzy-more hidden>Show more loaded results</button>
+            {hasMoreServerResults && <a class="see-more-button" href={seeMoreHref}>Load more from database</a>}
+          </div>
         </>
       ) : (
         <p class="status-message">
@@ -379,10 +414,39 @@ function countyNameForCode(code = "") {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .result-note {
+    color: #6b7280;
+    font-size: 0.95rem;
+    font-weight: 800;
+    margin: 8px 0 0;
+  }
+
   .status-message {
     color: #4b5563;
     font-size: 1.08rem;
     font-weight: 850;
+  }
+
+  .see-more-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 22px;
+  }
+
+  .see-more-row button,
+  .see-more-button {
+    background: #1f2933;
+    border: 1px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+    padding: 12px 18px;
+    text-decoration: none;
   }
 
   @media (max-width: 900px) {

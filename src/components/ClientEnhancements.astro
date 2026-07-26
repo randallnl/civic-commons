@@ -61,17 +61,25 @@
 
   Alpine.data("nhdbFuzzyFilter", (options = {}) => ({
     count: 0,
+    matchedCount: 0,
     total: 0,
     query: "",
+    visibleLimit: 0,
     init() {
       this.itemSelector = options.itemSelector || "[data-fuzzy-item]";
       this.searchControls = Array.from(this.$el.querySelectorAll("[data-fuzzy-search]"));
       this.filterControls = Array.from(this.$el.querySelectorAll("[data-fuzzy-filter-field]"));
       this.countTarget = this.$el.querySelector("[data-fuzzy-count]");
+      this.matchedCountTarget = this.$el.querySelector("[data-fuzzy-matched-count]");
+      this.totalCountTarget = this.$el.querySelector("[data-fuzzy-total-count]");
       this.emptyTarget = this.$el.querySelector("[data-fuzzy-empty]");
+      this.moreButton = this.$el.querySelector("[data-fuzzy-more]");
+      this.pageSize = Number(options.pageSize || options.idleLimit || 0);
+      this.visibleLimit = this.pageSize;
       this.refresh();
 
       this.applyAndSync = debounce(() => {
+        this.resetVisibleLimit();
         this.apply();
         this.syncUrl(false);
       }, Number(options.debounce ?? 120));
@@ -91,6 +99,10 @@
       });
 
       this.$el.addEventListener("nhdb:fuzzy-refresh", () => this.refresh());
+      this.moreButton?.addEventListener("click", (event) => {
+        event.preventDefault();
+        this.showMore();
+      });
       this.apply();
     },
     refresh() {
@@ -118,19 +130,33 @@
         keys: [
           { name: "text", weight: 0.6 },
           { name: "fuzzyName", weight: 0.9 },
+          { name: "fuzzyAliases", weight: 0.85 },
           { name: "fuzzyTitle", weight: 0.9 },
           { name: "fuzzyTown", weight: 0.45 },
           { name: "fuzzyCounty", weight: 0.45 },
+          { name: "fuzzyDistrict", weight: 0.45 },
+          { name: "fuzzyParty", weight: 0.35 },
+          { name: "fuzzyOffice", weight: 0.45 },
           { name: "fuzzyBill", weight: 0.6 },
+          { name: "fuzzyBillTitle", weight: 0.7 },
           { name: "fuzzyPeople", weight: 0.6 },
         ],
       });
+      this.apply();
+    },
+    resetVisibleLimit() {
+      this.visibleLimit = this.pageSize;
+    },
+    showMore() {
+      const increment = this.pageSize || Number(options.showMoreIncrement || 12);
+      this.visibleLimit = (this.visibleLimit || 0) + increment;
       this.apply();
     },
     apply() {
       const searchQuery = normalize(this.searchControls.map((control) => control.value).join(" "));
       this.query = searchQuery;
       const idleLimit = Number(options.idleLimit || 0);
+      const pageSize = Number(options.pageSize || 0);
       const searchActive = searchQuery.length >= 2;
       const filtersActive = this.filterControls.some(isActiveControl);
       const filterActive = searchActive || filtersActive;
@@ -139,19 +165,31 @@
         : null;
 
       let visible = 0;
+      let matched = 0;
       this.items.forEach((item, index) => {
         const matchesSearch = !fuzzyMatches || fuzzyMatches.has(item.el);
         const matchesFilters = this.filterControls.every((control) => controlMatches(item, control));
         const matches = matchesSearch && matchesFilters;
-        const show = matches && (filterActive || !idleLimit || index < idleLimit);
+        if (matches) matched += 1;
+
+        const loadedLimit = pageSize
+          ? (this.visibleLimit || pageSize)
+          : (filterActive || !idleLimit ? 0 : idleLimit);
+        const show = matches && (!loadedLimit || matched <= loadedLimit);
         item.el.hidden = !show;
         item.el.toggleAttribute("data-fuzzy-hidden", !show);
         if (show) visible += 1;
       });
 
       this.count = visible;
+      this.matchedCount = matched;
       if (this.countTarget) this.countTarget.textContent = String(visible);
+      if (this.matchedCountTarget) this.matchedCountTarget.textContent = String(matched);
+      if (this.totalCountTarget) this.totalCountTarget.textContent = String(this.total);
       if (this.emptyTarget) this.emptyTarget.hidden = visible !== 0;
+      if (this.moreButton) {
+        this.moreButton.hidden = !pageSize || matched <= visible;
+      }
     },
     syncUrl(push = false) {
       if (options.syncUrl === false || !this.forms?.length) return;

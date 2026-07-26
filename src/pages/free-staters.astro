@@ -120,7 +120,7 @@ function cleanFilter(value = "") {
 
 function matchesLegislatorFilters(rep = {}) {
   if (filterType === "candidates") return false;
-  if (!matchesText(repName(rep), filterName)) return false;
+  if (!matchesText([repName(rep), rep.nameAliases, rep.name_aliases].filter(Boolean).join(" "), filterName)) return false;
   if (!matchesBody(bodyForRep(rep), filterBody)) return false;
   if (!matchesParty(rep.party, filterParty)) return false;
   if (!matchesText(countyForRep(rep), filterCounty)) return false;
@@ -130,7 +130,11 @@ function matchesLegislatorFilters(rep = {}) {
 
 function matchesCandidateFilters(candidate = {}) {
   if (filterType === "legislators") return false;
-  if (!matchesText(candidateDisplayName(candidate), filterName)) return false;
+  if (!matchesText([
+    candidateDisplayName(candidate),
+    candidate.nameAliases,
+    candidate.name_aliases,
+  ].filter(Boolean).join(" "), filterName)) return false;
   if (!matchesBody(candidate.office, filterBody)) return false;
   if (!matchesParty(candidate.politicalParty, filterParty)) return false;
   if (!matchesText(candidate.county, filterCounty)) return false;
@@ -150,19 +154,21 @@ function bodyForRep(rep = {}) {
 
 function matchesBody(value = "", filter = "all") {
   if (!filter || filter === "all") return true;
-  const normalized = String(value || "").toLowerCase();
-  if (filter === "house") return normalized.includes("house") || normalized.includes("representative");
-  if (filter === "senate") return normalized.includes("senate") || normalized.includes("senator");
+  const normalized = normalizeSearch(value);
+  const normalizedFilter = normalizeSearch(filter);
+  if (normalizedFilter === "house") return normalized.includes("house") || normalized.includes("representative");
+  if (normalizedFilter === "senate") return normalized.includes("senate") || normalized.includes("senator");
   return true;
 }
 
 function matchesParty(value = "", filter = "all") {
   if (!filter || filter === "all") return true;
-  const normalized = String(value || "").toLowerCase();
-  if (filter === "republican") return normalized === "r" || normalized.includes("republican");
-  if (filter === "democrat") return normalized === "d" || normalized.includes("democrat");
-  if (filter === "independent") return normalized === "i" || normalized.includes("independent");
-  return normalized.includes(filter);
+  const normalized = normalizeSearch(value);
+  const normalizedFilter = normalizeSearch(filter);
+  if (normalizedFilter === "republican") return normalized === "r" || normalized.includes("republican");
+  if (normalizedFilter === "democrat") return normalized === "d" || normalized.includes("democrat");
+  if (normalizedFilter === "independent") return normalized === "i" || normalized.includes("independent");
+  return normalized.includes(normalizedFilter);
 }
 
 function countyForRep(rep = {}) {
@@ -213,7 +219,21 @@ function splitList(value = "") {
 
 function matchesText(value = "", filter = "") {
   if (!filter) return true;
-  return String(value || "").toLowerCase().includes(filter.toLowerCase());
+  return normalizeSearch(value).includes(normalizeSearch(filter));
+}
+
+function normalizeSearch(value = "") {
+  return String(value || "")
+    .replace(/â€™|â€˜/g, "'")
+    .replace(/â€œ|â€/g, "\"")
+    .replace(/â€“|â€”/g, "-")
+    .replace(/Â·/g, " ")
+    .replace(/Â/g, "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 function uniqueOptions(values = []) {
@@ -332,7 +352,7 @@ function uniqueOptions(values = []) {
         </section>
       </article>
 
-      <section class="directory-section" id="directory" x-data="nhdbFuzzyFilter()">
+      <section class="directory-section" id="directory" x-data="nhdbFuzzyFilter({ pageSize: 12 })">
         <div class="directory-heading">
           <p class="eyebrow">Directory</p>
           <h2>Free Stater Legislators and Candidates</h2>
@@ -381,21 +401,37 @@ function uniqueOptions(values = []) {
 
           <label>
             <span>Body / office</span>
-            <select name="body" data-fuzzy-filter-field data-fuzzy-field="body" data-fuzzy-match="exact">
-              <option value="all" selected={filterBody === "all"}>House and Senate</option>
-              <option value="house" selected={filterBody === "house"}>House</option>
-              <option value="senate" selected={filterBody === "senate"}>Senate</option>
-            </select>
+            <input
+              name="body"
+              value={filterBody === "all" ? "" : filterBody}
+              list="freeStaterBodyOptions"
+              placeholder="House or Senate"
+              autocomplete="off"
+              data-fuzzy-filter-field
+              data-fuzzy-field="body"
+            />
+            <datalist id="freeStaterBodyOptions">
+              <option value="house" />
+              <option value="senate" />
+            </datalist>
           </label>
 
           <label>
             <span>Party</span>
-            <select name="party" data-fuzzy-filter-field data-fuzzy-field="party" data-fuzzy-match="contains">
-              <option value="all" selected={filterParty === "all"}>All parties</option>
-              <option value="republican" selected={filterParty === "republican"}>Republican</option>
-              <option value="democrat" selected={filterParty === "democrat"}>Democrat</option>
-              <option value="independent" selected={filterParty === "independent"}>Independent</option>
-            </select>
+            <input
+              name="party"
+              value={filterParty === "all" ? "" : filterParty}
+              list="freeStaterPartyOptions"
+              placeholder="Republican, Democrat..."
+              autocomplete="off"
+              data-fuzzy-filter-field
+              data-fuzzy-field="party"
+            />
+            <datalist id="freeStaterPartyOptions">
+              <option value="republican" />
+              <option value="democrat" />
+              <option value="independent" />
+            </datalist>
           </label>
 
           <label>
@@ -458,6 +494,10 @@ function uniqueOptions(values = []) {
             <p class="empty">No Free Stater legislative candidates match these filters.</p>
           )}
         </section>
+
+        <div class="see-more-row">
+          <button type="button" data-fuzzy-more hidden>Show more loaded profiles</button>
+        </div>
       </section>
     </main>
     <SiteFooter />
@@ -620,6 +660,24 @@ function uniqueOptions(values = []) {
 
   .candidate-card-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .see-more-row {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    margin-top: 22px;
+  }
+
+  .see-more-row button {
+    background: #1f2933;
+    border: 1px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+    padding: 12px 18px;
   }
 
   section + section {

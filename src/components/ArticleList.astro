@@ -78,7 +78,14 @@ function articleSearchText(article = {}) {
     article.resource_type,
     article.town,
     article.towns,
-    ...(article.bills || []).map((bill) => bill.condensedbillno || bill.bill_number || bill.code),
+    ...(article.bills || []).map((bill) => [
+      bill.condensedbillno,
+      bill.bill_number,
+      bill.code,
+      bill.name,
+      bill.title,
+      bill.summary,
+    ]),
     ...(article.legislators || []).map((person) => person.matched_name || person.legislator_name_raw || person.name),
     ...(article.candidates || []).map((candidate) => candidate.name || candidate.candidate_name_raw),
   ].flat().filter(Boolean).join(" "));
@@ -87,6 +94,13 @@ function articleSearchText(article = {}) {
 function articleBillText(article = {}) {
   return cleanText((article.bills || [])
     .map((bill) => bill.condensedbillno || bill.bill_number || bill.code)
+    .filter(Boolean)
+    .join(" "));
+}
+
+function articleBillTitleText(article = {}) {
+  return cleanText((article.bills || [])
+    .map((bill) => bill.name || bill.title || bill.summary)
     .filter(Boolean)
     .join(" "));
 }
@@ -111,6 +125,7 @@ function articleTownText(article = {}) {
         data-fuzzy-item
         data-fuzzy-title={cleanText(article.preview?.title || article.title)}
         data-fuzzy-bill={articleBillText(article)}
+        data-fuzzy-bill-title={articleBillTitleText(article)}
         data-fuzzy-people={articlePeopleText(article)}
         data-fuzzy-town={articleTownText(article)}
         data-fuzzy-source={articleSourceName(article)}

@@ -75,16 +75,24 @@ const profileHref = `/people/${rep.slug || rep.personid || rep.id || slugify(nam
 const photoUrl = profilePhotoUrl(rep.photo);
 const voteHistory = representativeOnlineTestimonyVotePreviews(rep, billSummaries, { limit: 3 });
 const grade = representativeGradeFor(rep, trackedBills, billSummaries);
+const aliases = cleanText([rep.nameAliases, rep.name_aliases].filter(Boolean).join(" "));
+const districtLabel = cleanText(
+  rep.district
+    ? String(rep.district).match(/^(NH\s+)?(House|Senate)/i)
+      ? rep.district
+      : `${rep.chamber || "District"} ${rep.district}`
+    : rep.raw_district || "",
+);
 const searchableText = cleanText([
   name,
   rep.firstname,
   rep.lastname,
-  rep.nameAliases,
-  rep.name_aliases,
+  aliases,
   rep.chamber,
   rep.party,
   rep.district,
   rep.raw_district,
+  districtLabel,
   rep.county,
   rep.countycode,
   rep.location_text,
@@ -128,8 +136,11 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
   class="rep-card"
   data-fuzzy-item
   data-fuzzy-name={name}
+  data-fuzzy-aliases={aliases}
   data-fuzzy-town={searchableTown}
   data-fuzzy-county={searchableCounty}
+  data-fuzzy-district={districtLabel}
+  data-fuzzy-office={rep.chamber || ""}
   data-fuzzy-body={searchableBody}
   data-fuzzy-kind="legislators"
   data-fuzzy-party={formatParty(rep.party)}

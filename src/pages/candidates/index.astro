@@ -10,7 +10,6 @@ import {
   candidateName,
   candidateOfficePriority,
   getCandidates,
-  getLegislativeCandidates,
   isLegislativeCandidate,
 } from "../../lib/candidatesApi";
 import { enrichCandidatesWithLegislators } from "../../lib/candidateLegislators";
@@ -25,11 +24,16 @@ const name = Astro.url.searchParams.get("name")?.trim() || "";
 const office = Astro.url.searchParams.get("office")?.trim() || "";
 const town = Astro.url.searchParams.get("town")?.trim() || "";
 const electionYear = "2026";
+const requestedLimit = Math.min(
+  Math.max(Number(Astro.url.searchParams.get("limit") || 24), 12),
+  120,
+);
+const nextLimit = Math.min(requestedLimit + 24, 120);
 const officeOptions = [
   "State Representative",
   "State Senate",
 ];
-const selectedOffice = officeOptions.includes(office) ? office : "";
+const selectedOffice = officeOptions.find((option) => option.toLowerCase() === office.toLowerCase()) || "";
 const countyOptions = [
   "Belknap",
   "Carroll",
@@ -75,20 +79,15 @@ try {
     meta = data.meta || {};
     resultContext = data.town?.name || data.community?.name || town;
   } else {
-    if (!name && !county && !selectedOffice) {
-      candidates = await getLegislativeCandidates({ electionYear, limit: 100, maxPages: 20 });
-      meta = { count: candidates.length };
-    } else {
-      const data = await getDirectoryCandidates({
-        q: name,
-        county,
-        office: selectedOffice,
-        electionYear,
-        limit: 100,
-      });
-      candidates = data.candidates || [];
-      meta = data.meta || {};
-    }
+    const data = await getDirectoryCandidates({
+      q: name || town,
+      county,
+      office: selectedOffice,
+      electionYear,
+      limit: requestedLimit,
+    });
+    candidates = data.candidates || [];
+    meta = data.meta || {};
   }
 } catch (loadError) {
   error = loadError?.message || "Unable to load candidates.";
@@ -114,6 +113,15 @@ try {
 
 const hasFilters = address || county || selectedOffice || town || name;
 const resultCount = candidates.length;
+const seeMoreParams = new URLSearchParams();
+if (address) seeMoreParams.set("address", address);
+if (county) seeMoreParams.set("county", county);
+if (name) seeMoreParams.set("name", name);
+if (selectedOffice) seeMoreParams.set("office", selectedOffice);
+if (town) seeMoreParams.set("town", town);
+seeMoreParams.set("limit", String(nextLimit));
+const seeMoreHref = `/candidates?${seeMoreParams.toString()}#candidate-results`;
+const hasMoreServerResults = !address && requestedLimit < 120 && candidates.length >= Math.min(requestedLimit, 24);
 
 async function getDirectoryCandidates({
   q = "",
@@ -263,12 +271,31 @@ function filterCandidatesByOffice(items = [], selectedOffice = "") {
 }
 
 function filterCandidatesByName(items = [], filter = "") {
-  const nameFilter = filter.trim().toLowerCase();
+  const nameFilter = normalizeSearch(filter);
   if (!nameFilter) return items;
 
-  return items.filter((candidate) =>
-    candidateName(candidate).toLowerCase().includes(nameFilter),
-  );
+  return items.filter((candidate) => {
+    const searchableName = [
+      candidateName(candidate),
+      candidate.nameAliases,
+      candidate.name_aliases,
+    ].filter(Boolean).join(" ");
+    return normalizeSearch(searchableName).includes(nameFilter);
+  });
+}
+
+function normalizeSearch(value = "") {
+  return String(value || "")
+    .replace(/â€™|â€˜/g, "'")
+    .replace(/â€œ|â€/g, "\"")
+    .replace(/â€“|â€”/g, "-")
+    .replace(/Â·/g, " ")
+    .replace(/Â/g, "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 function filterLegislativeCandidates(items = []) {
@@ -372,7 +399,7 @@ function uniqueOptions(values = []) {
 
   <body>
     <TopNav />
-    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.candidate-card[data-fuzzy-item]', idleLimit: 12 })">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.candidate-card[data-fuzzy-item]', pageSize: 12 })">
       <PageHero
         backHref="/"
         backLabel="Back home"
@@ -419,23 +446,35 @@ function uniqueOptions(values = []) {
           </label>
           <label>
             <span>County</span>
-            <select name="county" data-fuzzy-filter-field data-fuzzy-field="county" data-fuzzy-match="exact">
-              <option value="">All counties</option>
-              {countyOptions.map((option) => (
-                <option value={option} selected={county.toLowerCase() === option.toLowerCase()}>
-                  {option}
-                </option>
-              ))}
-            </select>
+            <input
+              type="search"
+              name="county"
+              value={county}
+              list="candidateCountyOptions"
+              placeholder="Start typing a county"
+              autocomplete="off"
+              data-fuzzy-filter-field
+              data-fuzzy-field="county"
+            />
+            <datalist id="candidateCountyOptions">
+              {countyOptions.map((option) => <option value={option} />)}
+            </datalist>
           </label>
           <label>
             <span>Office</span>
-            <select name="office" data-fuzzy-filter-field data-fuzzy-field="office" data-fuzzy-match="exact">
-              <option value="">State House and Senate</option>
-              {officeOptions.map((option) => (
-                <option value={option} selected={selectedOffice === option}>{option}</option>
-              ))}
-            </select>
+            <input
+              type="search"
+              name="office"
+              value={selectedOffice || office}
+              list="candidateOfficeOptions"
+              placeholder="State Representative or State Senate"
+              autocomplete="off"
+              data-fuzzy-filter-field
+              data-fuzzy-field="office"
+            />
+            <datalist id="candidateOfficeOptions">
+              {officeOptions.map((option) => <option value={option} />)}
+            </datalist>
           </label>
           <label>
             <span>Town</span>
@@ -459,7 +498,7 @@ function uniqueOptions(values = []) {
       {error ? (
         <p class="status-message">{error}</p>
       ) : (
-        <section class="results">
+        <section class="results" id="candidate-results">
           <div class="results-heading">
             <div>
               <h2><span data-fuzzy-count>{Math.min(resultCount, 12)}</span> House and Senate Candidates Shown</h2>
@@ -480,6 +519,10 @@ function uniqueOptions(values = []) {
                 ))}
               </div>
               <p class="status-message" data-fuzzy-empty hidden>No State House or State Senate candidates found.</p>
+              <div class="see-more-row">
+                <button type="button" data-fuzzy-more hidden>Show more loaded results</button>
+                {hasMoreServerResults && <a class="see-more-button" href={seeMoreHref}>Load more from database</a>}
+              </div>
             </>
           ) : (
             <p class="status-message">No State House or State Senate candidates found.</p>
@@ -583,6 +626,28 @@ function uniqueOptions(values = []) {
     display: grid;
     gap: 18px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .see-more-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 22px;
+  }
+
+  .see-more-row button,
+  .see-more-button {
+    background: #1f2933;
+    border: 1px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+    padding: 12px 18px;
+    text-decoration: none;
   }
 
   .status-message {

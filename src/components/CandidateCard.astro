@@ -22,16 +22,21 @@ const officeParts = [
   candidate.county,
   candidate.district ? `District ${candidate.district}` : "",
 ].filter(Boolean);
+const districtLabel = [
+  candidate.county,
+  candidate.district ? `District ${candidate.district}` : "",
+].filter(Boolean).join(" ");
+const aliases = [candidate.nameAliases, candidate.name_aliases].filter(Boolean).join(" ");
 const searchableText = [
   name,
   candidate.candidateFirstName,
   candidate.candidateLastName,
-  candidate.nameAliases,
-  candidate.name_aliases,
+  aliases,
   candidate.officeType,
   candidate.office,
   candidate.county,
   candidate.district,
+  districtLabel,
   candidate.politicalParty,
   candidate.party,
   candidate.town,
@@ -83,9 +88,11 @@ function formatCurrency(value) {
   class="candidate-card"
   data-fuzzy-item
   data-fuzzy-name={name}
+  data-fuzzy-aliases={aliases}
   data-fuzzy-town={searchableTown}
   data-fuzzy-county={candidate.county || ""}
   data-fuzzy-office={candidate.office || ""}
+  data-fuzzy-district={districtLabel}
   data-fuzzy-body={searchableBody}
   data-fuzzy-kind="candidates"
   data-fuzzy-party={candidate.politicalParty || candidate.party || ""}
