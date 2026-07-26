@@ -9,6 +9,7 @@ import { getArticles } from "../../lib/articlesApi";
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const bill = Astro.url.searchParams.get("bill")?.trim() || "";
 const town = Astro.url.searchParams.get("town")?.trim() || "";
+const sort = Astro.url.searchParams.get("sort")?.trim() || "updated:desc";
 const requestedLimit = Number(Astro.url.searchParams.get("limit") || 20);
 const articleLimit = Number.isFinite(requestedLimit)
   ? Math.min(Math.max(Math.trunc(requestedLimit), 20), 100)
@@ -43,6 +44,7 @@ const seeMoreParams = new URLSearchParams();
 if (q) seeMoreParams.set("q", q);
 if (bill) seeMoreParams.set("bill", bill);
 if (town) seeMoreParams.set("town", town);
+if (sort) seeMoreParams.set("sort", sort);
 seeMoreParams.set("limit", String(nextLimit));
 const seeMoreHref = `/articles?${seeMoreParams.toString()}`;
 ---
@@ -67,7 +69,7 @@ const seeMoreHref = `/articles?${seeMoreParams.toString()}`;
         <p class="eyebrow">Articles</p>
         <h1>Read civic coverage by bill, legislator, or town.</h1>
 
-        <form class="filters" action="/articles" method="get">
+        <form class="filters" action="/articles" method="get" data-fuzzy-live-form>
           <label>
             <span>Search</span>
             <input type="search" name="q" value={q} placeholder="housing, schools..." data-fuzzy-search />
@@ -80,8 +82,17 @@ const seeMoreHref = `/articles?${seeMoreParams.toString()}`;
             <span>Town</span>
             <input type="text" name="town" value={town} placeholder="Manchester" data-fuzzy-filter-field data-fuzzy-field="town" />
           </label>
+          <label>
+            <span>Sort</span>
+            <select name="sort" data-fuzzy-sort>
+              <option value="updated:desc" selected={sort === "updated:desc"}>Newest article first</option>
+              <option value="name:asc" selected={sort === "name:asc"}>Title A-Z</option>
+              <option value="source:asc" selected={sort === "source:asc"}>Source A-Z</option>
+            </select>
+          </label>
           <button type="submit">Filter</button>
         </form>
+        <div class="filter-chips" data-fuzzy-chips hidden></div>
       </section>
 
       {submitted && (
@@ -151,7 +162,14 @@ const seeMoreHref = `/articles?${seeMoreParams.toString()}`;
             {(q || bill || town) && <a href="/articles">Clear filters</a>}
           </div>
           <ArticleList articles={articles} />
-          <p class="status-message" data-fuzzy-empty hidden>No articles matched those filters.</p>
+          <div class="status-message empty-state" data-fuzzy-empty hidden>
+            <strong>No articles matched those filters.</strong>
+            <ul>
+              <li>Try a broader keyword like housing, schools, or budget.</li>
+              <li>Remove the bill or town chip above.</li>
+              <li>Search by bill code, article title, source, or mentioned person.</li>
+            </ul>
+          </div>
           {hasMoreArticles && (
             <div class="see-more-row">
               <button type="button" class="see-more-button subtle" data-fuzzy-more hidden>Show more loaded articles</button>
@@ -197,7 +215,7 @@ const seeMoreHref = `/articles?${seeMoreParams.toString()}`;
     align-items: end;
     display: grid;
     gap: 12px;
-    grid-template-columns: minmax(220px, 1.4fr) minmax(160px, 0.8fr) minmax(160px, 0.8fr) auto;
+    grid-template-columns: minmax(220px, 1.4fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) minmax(170px, 0.7fr) auto;
   }
 
   label {
@@ -214,6 +232,7 @@ const seeMoreHref = `/articles?${seeMoreParams.toString()}`;
   }
 
   input,
+  select,
   button {
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -222,6 +241,33 @@ const seeMoreHref = `/articles?${seeMoreParams.toString()}`;
     font-weight: 800;
     min-height: 48px;
     padding: 10px 12px;
+  }
+
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .filter-chips button {
+    align-items: center;
+    background: #eef6ff;
+    border: 1px solid #93c5fd;
+    border-radius: 999px;
+    color: #1f2933;
+    display: inline-flex;
+    gap: 8px;
+    font-size: 0.84rem;
+    font-weight: 900;
+    min-height: auto;
+    padding: 7px 10px;
+  }
+
+  .filter-chips b {
+    color: #b91c1c;
+    font-size: 1rem;
+    line-height: 1;
   }
 
   button {
@@ -241,6 +287,19 @@ const seeMoreHref = `/articles?${seeMoreParams.toString()}`;
 
   .status-message {
     margin: 0 0 18px;
+  }
+
+  .empty-state strong {
+    color: #1f2933;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .empty-state ul {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding-left: 20px;
   }
 
   .status-message.success {

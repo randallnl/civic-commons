@@ -112,6 +112,19 @@ const searchableBody = /senate/i.test(rep.chamber || "")
   : /house/i.test(rep.chamber || "")
     ? "house"
     : cleanText(rep.chamber || "");
+const gradeSortValue = Number.isFinite(Number(grade.percent)) ? Number(grade.percent) : -1;
+const missingInfoCount = [
+  photoUrl,
+  rep.email,
+  rep.website_url || rep.website || rep.generalCourtUrl || rep.sourceUrls?.generalCourt,
+].filter((value) => !String(value || "").trim()).length;
+const updatedSortValue = Date.parse(
+  rep.updatedAt ||
+    rep.updated_at ||
+    rep.lastUpdated ||
+    rep.last_updated ||
+    "",
+) || 0;
 
 function trackedBillFor(vote) {
   return trackedBillForVote(trackedBills, vote);
@@ -144,6 +157,11 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
   data-fuzzy-body={searchableBody}
   data-fuzzy-kind="legislators"
   data-fuzzy-party={formatParty(rep.party)}
+  data-fuzzy-sort-name={name}
+  data-fuzzy-sort-district={districtLabel}
+  data-fuzzy-sort-grade={gradeSortValue}
+  data-fuzzy-sort-updated={updatedSortValue}
+  data-fuzzy-sort-missing={missingInfoCount}
   data-fuzzy-text={searchableText}
 >
   <div class="rep-card-top">

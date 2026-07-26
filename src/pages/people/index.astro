@@ -19,11 +19,7 @@ const filters = {
   town: Astro.url.searchParams.get("town")?.trim() || "",
   county: Astro.url.searchParams.get("county")?.trim() || "",
 };
-const requestedLimit = Math.min(
-  Math.max(Number(Astro.url.searchParams.get("limit") || 48), 24),
-  240,
-);
-const nextLimit = Math.min(requestedLimit + 48, 240);
+const sort = Astro.url.searchParams.get("sort")?.trim() || "";
 const countyOptions = [
   "Belknap",
   "Carroll",
@@ -46,10 +42,7 @@ let loadError = "";
 try {
   const [repData, tracker, summaries] = await Promise.all([
     getRepresentatives({
-      q: filters.name || filters.town,
-      body: filters.body,
-      county: filters.county,
-      limit: requestedLimit,
+      limit: 500,
     }),
     getTrackedBills(),
     getBillSummaries(),
@@ -69,14 +62,6 @@ const activeFilterCount = Object.values(filters).filter(Boolean).length;
 const nameOptions = uniqueOptions(allRepresentatives.map(repName));
 const townOptions = uniqueOptions(allRepresentatives.flatMap((rep) => townsFromValue(locationText(rep))));
 const totalRepresentatives = Number(repDataTotal(allRepresentatives, representatives));
-const seeMoreParams = new URLSearchParams();
-if (filters.body) seeMoreParams.set("body", filters.body);
-if (filters.name) seeMoreParams.set("name", filters.name);
-if (filters.town) seeMoreParams.set("town", filters.town);
-if (filters.county) seeMoreParams.set("county", filters.county);
-seeMoreParams.set("limit", String(nextLimit));
-const seeMoreHref = `/people?${seeMoreParams.toString()}#rep-results`;
-const hasMoreServerResults = requestedLimit < 240 && representatives.length >= Math.min(requestedLimit, 48);
 
 function matchesFilters(rep = {}, values = {}) {
   return (
@@ -229,7 +214,7 @@ function repDataTotal(allReps = [], filteredReps = []) {
 
   <body>
     <TopNav />
-    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.rep-card[data-fuzzy-item]', pageSize: 12 })">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.rep-card[data-fuzzy-item]', idleLimit: 12 })">
       <PageHero
         backHref="/my-state-rep"
         backLabel="Back to My Legislator"
@@ -301,7 +286,20 @@ function repDataTotal(allReps = [], filteredReps = []) {
               {countyOptions.map((option) => <option value={option} />)}
             </datalist>
           </label>
+          <label for="sort">
+            <span>Sort</span>
+            <select id="sort" name="sort" data-fuzzy-sort>
+              <option value="" selected={!sort}>Default</option>
+              <option value="name:asc" selected={sort === "name:asc"}>Name A-Z</option>
+              <option value="district:asc" selected={sort === "district:asc"}>District</option>
+              <option value="grade:desc" selected={sort === "grade:desc"}>Grade high-low</option>
+              <option value="grade:asc" selected={sort === "grade:asc"}>Grade low-high</option>
+              <option value="updated:desc" selected={sort === "updated:desc"}>Recently updated</option>
+              <option value="missing:desc" selected={sort === "missing:desc"}>Missing photo/email/website</option>
+            </select>
+          </label>
         </FilterBar>
+        <div class="filter-chips" data-fuzzy-chips hidden></div>
       </PageHero>
 
       <section class="results-heading" id="rep-results">
@@ -329,13 +327,13 @@ function repDataTotal(allReps = [], filteredReps = []) {
               />
             ))}
           </div>
-          <p class="status-message" data-fuzzy-empty hidden>
-            No representatives matched those filters. Try a broader town, county,
-            or name search.
-          </p>
-          <div class="see-more-row">
-            <button type="button" data-fuzzy-more hidden>Show more loaded results</button>
-            {hasMoreServerResults && <a class="see-more-button" href={seeMoreHref}>Load more from database</a>}
+          <div class="status-message empty-state" data-fuzzy-empty hidden>
+            <strong>No current legislators matched those filters.</strong>
+            <ul>
+              <li>Try searching by last name.</li>
+              <li>Remove the county or town chip above.</li>
+              <li>Clear the body filter to include both House and Senate.</li>
+            </ul>
           </div>
         </>
       ) : (
@@ -414,6 +412,34 @@ function repDataTotal(allReps = [], filteredReps = []) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .filter-chips button {
+    align-items: center;
+    background: #eef6ff;
+    border: 1px solid #93c5fd;
+    border-radius: 999px;
+    color: #1f2933;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 8px;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 900;
+    padding: 7px 10px;
+  }
+
+  .filter-chips b {
+    color: #b91c1c;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
   .result-note {
     color: #6b7280;
     font-size: 0.95rem;
@@ -425,6 +451,19 @@ function repDataTotal(allReps = [], filteredReps = []) {
     color: #4b5563;
     font-size: 1.08rem;
     font-weight: 850;
+  }
+
+  .empty-state strong {
+    color: #1f2933;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .empty-state ul {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding-left: 20px;
   }
 
   .see-more-row {

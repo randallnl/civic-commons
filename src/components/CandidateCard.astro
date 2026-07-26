@@ -59,6 +59,18 @@ const searchableBody = /senate/i.test(`${candidate.office || ""} ${candidate.off
   : /representative|house/i.test(`${candidate.office || ""} ${candidate.officeType || ""}`)
     ? "house"
     : "";
+const missingInfoCount = [
+  photoUrl,
+  candidate.candidateEmail,
+  candidate.candidateWebsite,
+].filter((value) => !String(value || "").trim()).length;
+const updatedSortValue = Date.parse(
+  candidate.updatedAt ||
+    candidate.updated_at ||
+    candidate.lastUpdated ||
+    candidate.last_updated ||
+    "",
+) || 0;
 const contactLinks = [
   candidate.candidateEmail && {
     href: `mailto:${candidate.candidateEmail}`,
@@ -96,6 +108,10 @@ function formatCurrency(value) {
   data-fuzzy-body={searchableBody}
   data-fuzzy-kind="candidates"
   data-fuzzy-party={candidate.politicalParty || candidate.party || ""}
+  data-fuzzy-sort-name={name}
+  data-fuzzy-sort-district={districtLabel}
+  data-fuzzy-sort-updated={updatedSortValue}
+  data-fuzzy-sort-missing={missingInfoCount}
   data-fuzzy-text={searchableText}
 >
   <a class="photo-wrap" href={candidatePath(candidate)}>

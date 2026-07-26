@@ -51,6 +51,45 @@
     return !!query && query !== "all";
   }
 
+  function controlLabel(control) {
+    return (
+      control.dataset.fuzzyLabel ||
+      control.closest("label")?.querySelector("span")?.textContent ||
+      control.name ||
+      "Filter"
+    ).trim();
+  }
+
+  function rawControlValue(control) {
+    return String(control?.value || "").trim();
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function sortValue(item, key) {
+    const dataKey = `fuzzySort${key.charAt(0).toUpperCase()}${key.slice(1)}`;
+    return item.el.dataset[dataKey] || item.el.dataset[`fuzzy${key.charAt(0).toUpperCase()}${key.slice(1)}`] || item.text || "";
+  }
+
+  function compareValues(a, b, numeric = false) {
+    if (numeric) {
+      const first = Number(a);
+      const second = Number(b);
+      if (Number.isFinite(first) && Number.isFinite(second)) return first - second;
+      if (Number.isFinite(first)) return -1;
+      if (Number.isFinite(second)) return 1;
+    }
+
+    return normalize(a).localeCompare(normalize(b), undefined, { numeric: true });
+  }
+
   function debounce(callback, wait = 120) {
     let timeout = 0;
     return (...args) => {
@@ -73,7 +112,9 @@
       this.matchedCountTarget = this.$el.querySelector("[data-fuzzy-matched-count]");
       this.totalCountTarget = this.$el.querySelector("[data-fuzzy-total-count]");
       this.emptyTarget = this.$el.querySelector("[data-fuzzy-empty]");
+      this.chipsTarget = this.$el.querySelector("[data-fuzzy-chips]");
       this.moreButton = this.$el.querySelector("[data-fuzzy-more]");
+      this.sortControls = Array.from(this.$el.querySelectorAll("[data-fuzzy-sort]"));
       this.pageSize = Number(options.pageSize || options.idleLimit || 0);
       this.visibleLimit = this.pageSize;
       this.refresh();
@@ -84,7 +125,7 @@
         this.syncUrl(false);
       }, Number(options.debounce ?? 120));
 
-      [...this.searchControls, ...this.filterControls].forEach((control) => {
+      [...this.searchControls, ...this.filterControls, ...this.sortControls].forEach((control) => {
         control.addEventListener("input", () => this.applyAndSync());
         control.addEventListener("change", () => this.applyAndSync());
       });
@@ -103,11 +144,23 @@
         event.preventDefault();
         this.showMore();
       });
+      this.chipsTarget?.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-fuzzy-chip]");
+        if (!button) return;
+
+        const control = this.activeControls()[Number(button.dataset.fuzzyChip)];
+        if (!control) return;
+
+        control.value = "";
+        control.dispatchEvent(new Event("input", { bubbles: true }));
+        control.dispatchEvent(new Event("change", { bubbles: true }));
+      });
       this.apply();
     },
     refresh() {
       this.countTarget = this.$el.querySelector("[data-fuzzy-count]");
       this.emptyTarget = this.$el.querySelector("[data-fuzzy-empty]");
+      this.chipsTarget = this.$el.querySelector("[data-fuzzy-chips]");
       this.items = Array.from(this.$el.querySelectorAll(this.itemSelector || "[data-fuzzy-item]")).map((el) => {
         const fieldData = {};
         for (const [key, value] of Object.entries(el.dataset)) {
@@ -144,6 +197,13 @@
       });
       this.apply();
     },
+    activeControls() {
+      return [...this.searchControls, ...this.filterControls].filter(isActiveControl);
+    },
+    activeSort() {
+      const control = this.sortControls.find((current) => rawControlValue(current));
+      return rawControlValue(control);
+    },
     resetVisibleLimit() {
       this.visibleLimit = this.pageSize;
     },
@@ -152,7 +212,46 @@
       this.visibleLimit = (this.visibleLimit || 0) + increment;
       this.apply();
     },
+    sortItems() {
+      const sort = this.activeSort();
+      if (!sort) return;
+
+      const [key, direction = "asc"] = sort.split(":");
+      const numeric = ["grade", "updated", "missing"].includes(key);
+      const sorted = [...this.items].sort((a, b) => {
+        const result = compareValues(sortValue(a, key), sortValue(b, key), numeric);
+        return direction === "desc" ? -result : result;
+      });
+
+      const byParent = new Map();
+      sorted.forEach((item) => {
+        const parent = item.el.parentElement;
+        if (!parent) return;
+        if (!byParent.has(parent)) byParent.set(parent, []);
+        byParent.get(parent).push(item.el);
+      });
+
+      byParent.forEach((elements, parent) => {
+        elements.forEach((element) => parent.appendChild(element));
+      });
+      this.items = sorted;
+    },
+    renderChips() {
+      if (!this.chipsTarget) return;
+
+      const controls = this.activeControls();
+      this.chipsTarget.hidden = controls.length === 0;
+      this.chipsTarget.innerHTML = controls
+        .map((control, index) => `
+          <button type="button" data-fuzzy-chip="${index}">
+            <span>${escapeHtml(controlLabel(control))}: ${escapeHtml(rawControlValue(control))}</span>
+            <b aria-hidden="true">×</b>
+          </button>
+        `)
+        .join("");
+    },
     apply() {
+      this.sortItems();
       const searchQuery = normalize(this.searchControls.map((control) => control.value).join(" "));
       this.query = searchQuery;
       const idleLimit = Number(options.idleLimit || 0);
@@ -187,6 +286,7 @@
       if (this.matchedCountTarget) this.matchedCountTarget.textContent = String(matched);
       if (this.totalCountTarget) this.totalCountTarget.textContent = String(this.total);
       if (this.emptyTarget) this.emptyTarget.hidden = visible !== 0;
+      this.renderChips();
       if (this.moreButton) {
         this.moreButton.hidden = !pageSize || matched <= visible;
       }

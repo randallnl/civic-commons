@@ -115,6 +115,24 @@ function articleTownText(article = {}) {
     .filter(Boolean)
     .join(" "));
 }
+
+function articleUpdatedSortValue(article = {}) {
+  const value =
+    article.published_at ||
+    article.publishedAt ||
+    article.published_date ||
+    article.publishedDate ||
+    article.publish_date ||
+    article.publishDate ||
+    article.date ||
+    article.article_date ||
+    article.articleDate ||
+    article.created_at ||
+    article.createdAt ||
+    article.updated_at ||
+    article.updatedAt;
+  return Date.parse(value || "") || 0;
+}
 ---
 
 {previewArticles.length ? (
@@ -129,6 +147,9 @@ function articleTownText(article = {}) {
         data-fuzzy-people={articlePeopleText(article)}
         data-fuzzy-town={articleTownText(article)}
         data-fuzzy-source={articleSourceName(article)}
+        data-fuzzy-sort-name={cleanText(article.preview?.title || article.title)}
+        data-fuzzy-sort-updated={articleUpdatedSortValue(article)}
+        data-fuzzy-sort-source={articleSourceName(article)}
         data-fuzzy-text={articleSearchText(article)}
       >
         {article.preview?.imageUrl && (
