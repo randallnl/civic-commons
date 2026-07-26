@@ -259,8 +259,24 @@
       const searchActive = searchQuery.length >= 2;
       const filtersActive = this.filterControls.some(isActiveControl);
       const filterActive = searchActive || filtersActive;
+      const directMatches = searchQuery.length >= 2
+        ? new Set(
+            this.items
+              .filter((item) => normalize([
+                item.text,
+                item.fuzzyName,
+                item.fuzzyAliases,
+                item.fuzzyTitle,
+                item.fuzzyBillTitle,
+                item.fuzzyPeople,
+              ].filter(Boolean).join(" ")).includes(searchQuery))
+              .map((item) => item.el),
+          )
+        : null;
       const fuzzyMatches = searchQuery.length >= 2
-        ? new Set(this.fuse.search(searchQuery).map((result) => result.item.el))
+        ? directMatches.size
+          ? directMatches
+          : new Set(this.fuse.search(searchQuery).map((result) => result.item.el))
         : null;
 
       let visible = 0;

@@ -548,6 +548,8 @@ function uniqueOptions(values = []) {
               <h2><span data-fuzzy-count>{Math.min(resultCount, 12)}</span> House and Senate Candidates Shown</h2>
               {resultContext ? (
                 <p>Showing matches for {resultContext}</p>
+              ) : hasFilters ? (
+                <p>Showing candidates that match the active filters.</p>
               ) : (
                 <p>Showing a preview. Use the filters to reveal matching candidate profiles.</p>
               )}
