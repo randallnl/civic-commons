@@ -14,7 +14,6 @@ import { getRepresentative, getRepresentatives, repName } from "../lib/repsApi";
 import {
   normalizeBillCode,
   getTrackedBills,
-  trackedBillForVote,
 } from "../lib/trackedBills";
 
 const API_BASE = civicApiBase();
@@ -142,7 +141,7 @@ if (!address && hasDirectoryFilters) {
 }
 
 if (!address && !hasDirectoryFilters) {
-  directoryReps = allCurrentReps;
+  directoryReps = await hydrateVotePreviewDetails(allCurrentReps);
 }
 
 if (lookupData || directoryReps.length > 0) {
@@ -154,7 +153,7 @@ if (lookupData || directoryReps.length > 0) {
   }
 }
 
-const senateReps = lookupData?.groups?.senate || [];
+let senateReps = lookupData?.groups?.senate || [];
 const houseRepsRaw = lookupData?.groups?.house || [];
 const allReps = lookupData?.representatives || [];
 const candidateGroups = lookupData?.groups?.candidates || {};
@@ -183,7 +182,7 @@ const wardNumber = isWardedCommunity
   ? selectedWard || normalizeWardNumber(civic.ward?.number || "")
   : normalizeWardNumber(civic.ward?.number || "");
 const ward = wardNumber ? `Ward ${wardNumber}` : "";
-const houseReps = isWardedCommunity && selectedWard
+let houseReps = isWardedCommunity && selectedWard
   ? houseRepsRaw.filter((rep) => representsWard(rep, selectedWard))
   : houseRepsRaw;
 let filteredHouseCandidates = isWardedCommunity && selectedWard
@@ -197,8 +196,19 @@ const houseDistricts = matchedDistricts
   .map((district) => district.district_label)
   .filter(Boolean);
 
+if (lookupData) {
+  [senateReps, houseReps] = await Promise.all([
+    hydrateVotePreviewDetails(senateReps),
+    hydrateVotePreviewDetails(houseReps),
+  ]);
+}
+
 if (lookupData && trackedBills.size) {
-  await hydrateMissingBillSummaries(allReps, trackedBills, billSummaries);
+  await hydrateMissingBillSummaries([...senateReps, ...houseReps], billSummaries);
+}
+
+if (!lookupData && directoryReps.length > 0 && trackedBills.size) {
+  await hydrateMissingBillSummaries(directoryReps, billSummaries);
 }
 
 if (lookupData) {
@@ -451,7 +461,7 @@ function formatAddress(normalized = {}) {
     .join(", ");
 }
 
-async function hydrateMissingBillSummaries(reps, tracked, summaries) {
+async function hydrateMissingBillSummaries(reps, summaries, { limit = 80 } = {}) {
   const missingBills = new Map();
 
   for (const rep of reps) {
@@ -459,14 +469,16 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
       const code = normalizeBillCode(vote.condensedbillno);
       if (
         !code ||
-        !trackedBillForVote(tracked, vote) ||
+        !isVotingAction(vote) ||
         summaries.has(code) ||
         missingBills.has(code)
       ) {
         continue;
       }
       missingBills.set(code, vote.sessionyear);
+      if (missingBills.size >= limit) break;
     }
+    if (missingBills.size >= limit) break;
   }
 
   await Promise.all(
@@ -478,6 +490,24 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
         console.error(error?.message || "Unable to load bill summary.");
       }
     }),
+  );
+}
+
+function isVotingAction(vote = {}) {
+  const text = [
+    vote.question_motion,
+    vote.motion,
+    vote.vote_label,
+    vote.description,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (!text) return true;
+  return (
+    /\b(ought|pass|adopt|table|refer|re-refer|inexpedient|itl|amend|conference|veto)\b/.test(text) ||
+    Boolean(vote.votesequencenumber || vote.vote_sequence || vote.roll_call)
   );
 }
 ---
