@@ -6,21 +6,14 @@ import FilterBar from "../components/FilterBar.astro";
 import RepresentativeCard from "../components/RepresentativeCard.astro";
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-import profileIcon from "../assets/profile icon.png";
 import { getBillDetail, getBillSummaries } from "../lib/billsApi";
 import { getCandidates, isLegislativeCandidate } from "../lib/candidatesApi";
 import { enrichCandidatesWithLegislators } from "../lib/candidateLegislators";
 import { civicApiBase, civicApiFetch } from "../lib/civicApi";
-import { isFreeStater } from "../lib/civicTags";
-import { profilePhotoUrl } from "../lib/photos";
-import { getRepresentative, getRepresentatives, repName, repSlug } from "../lib/repsApi";
-import { getSpotlightLegislators } from "../lib/spotlightTracker";
-import { cleanText } from "../lib/text";
+import { getRepresentative, getRepresentatives, repName } from "../lib/repsApi";
 import {
   normalizeBillCode,
   getTrackedBills,
-  representativeGradeFor,
-  representativeVoteStance,
   trackedBillForVote,
 } from "../lib/trackedBills";
 
@@ -49,6 +42,7 @@ const filters = {
   town: Astro.url.searchParams.get("town")?.trim() || "",
   county: Astro.url.searchParams.get("county")?.trim() || "",
 };
+const sort = Astro.url.searchParams.get("sort")?.trim() || "";
 const normalizedBodyFilter = normalizeBodyFilter(filters.body);
 const hasDirectoryFilters = Object.values(filters).some(Boolean);
 const countyOptions = [
@@ -66,7 +60,6 @@ const countyOptions = [
 
 let lookupData = null;
 let lookupError = "";
-let randomLegislators = [];
 let previewCandidates = [];
 let directoryReps = [];
 let directoryCandidates = [];
@@ -101,12 +94,10 @@ if (address) {
 }
 
 try {
-  const [spotlightPeople, candidateData, repOptionData] = await Promise.all([
-    getSpotlightLegislators({ limit: 8 }),
+  const [candidateData, repOptionData] = await Promise.all([
     getCandidates({ electionYear: 2026, limit: 8 }),
     getRepresentatives({ limit: 600 }),
   ]);
-  randomLegislators = shuffle(spotlightPeople).slice(0, 6);
   previewCandidates = (candidateData.candidates || []).filter(isLegislativeCandidate).slice(0, 6);
   const optionReps = repOptionData.representatives || [];
   allCurrentReps = optionReps;
@@ -150,7 +141,11 @@ if (!address && hasDirectoryFilters) {
   }
 }
 
-if (lookupData || randomLegislators.length > 0 || directoryReps.length > 0) {
+if (!address && !hasDirectoryFilters) {
+  directoryReps = allCurrentReps;
+}
+
+if (lookupData || directoryReps.length > 0) {
   try {
     trackedBills = await getTrackedBills();
     billSummaries = await getBillSummaries();
@@ -236,10 +231,6 @@ async function hydrateVotePreviewDetails(reps = []) {
   );
 
   return [...hydrated, ...reps.slice(previewLimit)];
-}
-
-function shuffle(items = []) {
-  return [...items].sort(() => Math.random() - 0.5);
 }
 
 function normalizeBodyFilter(value = "") {
@@ -449,25 +440,6 @@ function locationLabel(person = {}) {
   return value;
 }
 
-function trackedVotesFor(person = {}, limit = 3) {
-  const votes = Array.isArray(person.voteHistory) ? person.voteHistory : [];
-  return votes.filter((vote) => trackedBillForVote(trackedBills, vote)).slice(0, limit);
-}
-
-function billSummaryForVote(vote = {}) {
-  return billSummaries.get(normalizeBillCode(vote.condensedbillno || vote.bill_number));
-}
-
-function billPreviewTitle(billSummary = {}, trackedBill = {}) {
-  return cleanText(
-    billSummary?.name ||
-      billSummary?.title ||
-      trackedBill?.name ||
-      trackedBill?.title ||
-      "Tracked Bill",
-  );
-}
-
 function formatAddress(normalized = {}) {
   return [
     normalized.line1,
@@ -525,7 +497,7 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
 
   <body>
     <TopNav />
-    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.rep-card[data-fuzzy-item]' })">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.rep-card[data-fuzzy-item]', idleLimit: 12 })">
       <a class="back" href="/">Back home</a>
 
       <section class="hero">
@@ -559,7 +531,8 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           action="/my-state-rep#rep-results"
           submitLabel="Filter current legislators"
           clearHref={hasDirectoryFilters ? "/my-state-rep#rep-results" : ""}
-          dataResultsForm={true}
+          columns="dense"
+          live
         >
           <label>
             <span>Name</span>
@@ -593,21 +566,16 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
             </datalist>
           </label>
           <label>
-            <span>Body / office</span>
-            <input
-              type="search"
+            <span>Chamber</span>
+            <select
               name="body"
-              value={normalizedBodyFilter}
-              list="legislatorBodyOptions"
-              placeholder="House or Senate"
-              autocomplete="off"
               data-fuzzy-filter-field
               data-fuzzy-field="body"
-            />
-            <datalist id="legislatorBodyOptions">
-              <option value="house" />
-              <option value="senate" />
-            </datalist>
+            >
+              <option value="" selected={!normalizedBodyFilter}>All</option>
+              <option value="house" selected={normalizedBodyFilter === "house"}>House</option>
+              <option value="senate" selected={normalizedBodyFilter === "senate"}>Senate</option>
+            </select>
           </label>
           <label>
             <span>Town</span>
@@ -625,7 +593,20 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
               {townOptions.map((option) => <option value={option} />)}
             </datalist>
           </label>
+          <label>
+            <span>Sort</span>
+            <select name="sort" data-fuzzy-sort>
+              <option value="" selected={!sort}>Default</option>
+              <option value="name:asc" selected={sort === "name:asc"}>Name A-Z</option>
+              <option value="district:asc" selected={sort === "district:asc"}>District</option>
+              <option value="grade:desc" selected={sort === "grade:desc"}>Grade high-low</option>
+              <option value="grade:asc" selected={sort === "grade:asc"}>Grade low-high</option>
+              <option value="updated:desc" selected={sort === "updated:desc"}>Recently updated</option>
+              <option value="missing:desc" selected={sort === "missing:desc"}>Missing info</option>
+            </select>
+          </label>
         </FilterBar>
+        <div class="filter-chips" data-fuzzy-chips hidden></div>
 
         <p class="help-text">
           Address lookups and filters focus on current New Hampshire State
@@ -647,94 +628,6 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
         </div>
       )}
 
-      {!address && !hasDirectoryFilters && randomLegislators.length > 0 && (
-        <section class="sample-legislators">
-          <div class="group-header">
-            <h2>Current Legislator Profiles</h2>
-            <p>
-              Preview legislator profiles, vote grades, and recent tracked bill
-              votes. Enter your address above to see the legislators who
-              represent you, or use the filters to browse current State House
-              and State Senate profiles.
-            </p>
-          </div>
-
-          <div class="sample-grid">
-            {randomLegislators.map((rep) => {
-              const photoUrl = profilePhotoUrl(rep.photo || rep.photo_url);
-              const grade = representativeGradeFor(rep, trackedBills, billSummaries);
-              const votes = trackedVotesFor(rep, 3);
-
-              return (
-                <article class="sample-card">
-                  <div class="sample-profile-row">
-                    <a class="sample-photo-link" href={`/people/${repSlug(rep)}`}>
-                      <img
-                        class:list={[!photoUrl && "sample-fallback"]}
-                        src={photoUrl || profileIcon.src}
-                        alt={photoUrl ? `Photo of ${repName(rep)}` : ""}
-                        loading="lazy"
-                      />
-                    </a>
-
-                    <div class="sample-copy">
-                      <a href={`/people/${repSlug(rep)}`}><strong>{repName(rep)}</strong></a>
-                      <small>
-                        {[
-                          rep.party || "No party listed",
-                          districtLabel(rep),
-                        ].filter(Boolean).join(" - ")}
-                      </small>
-                      {locationLabel(rep) && <em>{locationLabel(rep)}</em>}
-                      {isFreeStater(rep) && (
-                      <a
-                        class="free-stater-pill"
-                        href="/free-staters"
-                        title="What is a Free Stater?"
-                        aria-label="What is a Free Stater?"
-                      >
-                        Free Stater
-                      </a>
-                      )}
-                    </div>
-
-                    <a
-                      class:list={["mini-grade", grade.className]}
-                      href="/vote-grades"
-                      title="How do we determine this?"
-                      aria-label={`How do we determine this? ${grade.label}`}
-                    >
-                      <strong>{grade.letter}</strong>
-                      <small>Grade</small>
-                    </a>
-                  </div>
-
-                  {votes.length > 0 && (
-                    <div class="sample-vote-list">
-                      <span>Bill Tracker Votes</span>
-                      {votes.map((vote) => {
-                        const trackedBill = trackedBillForVote(trackedBills, vote);
-                        const billSummary = billSummaryForVote(vote);
-                        const voteStance = representativeVoteStance(vote, trackedBill);
-                        const billCode = billSummary?.condensedbillno || trackedBill?.code || vote.condensedbillno;
-                        const billTitle = billPreviewTitle(billSummary, trackedBill);
-
-                        return (
-                          <div class:list={["sample-vote-preview", voteStance.className]}>
-                            <strong>{billCode}: {billTitle}</strong>
-                            <small>{voteStance.label}</small>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
       {!address && !hasDirectoryFilters && previewCandidates.length > 0 && (
         <section class="candidate-results secondary-preview">
           <div class="group-header">
@@ -752,14 +645,17 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
         </section>
       )}
 
-      {!address && hasDirectoryFilters && (
+      {!address && (
         <section class="filtered-directory">
           <div class="results-heading">
             <div>
-              <p class="eyebrow">Filtered Current Legislators</p>
-              <h2><span data-fuzzy-count>{directoryReps.length}</span> Representatives and Senators</h2>
+              <p class="eyebrow">{hasDirectoryFilters ? "Filtered Current Legislators" : "Current Legislator Directory"}</p>
+              <h2><span data-fuzzy-count>{Math.min(directoryReps.length, 12)}</span> Representatives and Senators Shown</h2>
+              <p class="result-note">
+                <span data-fuzzy-matched-count>{directoryReps.length}</span> loaded matches
+              </p>
             </div>
-            <a class="secondary-link" href="/my-state-rep#rep-results">Clear filters</a>
+            {hasDirectoryFilters && <a class="secondary-link" href="/my-state-rep#rep-results">Clear filters</a>}
           </div>
 
           {directoryError ? (
@@ -1164,6 +1060,53 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     margin: 14px 0 0;
   }
 
+  .hero :global(.nhdb-filter-bar) {
+    background: #fbfdff;
+    border-color: #dbe7f3;
+    gap: 12px;
+    margin-top: 18px;
+    padding: 14px;
+  }
+
+  .hero :global(.nhdb-filter-fields) {
+    gap: 10px;
+    grid-template-columns: repeat(5, minmax(126px, 1fr));
+  }
+
+  .hero :global(.nhdb-filter-bar label) {
+    gap: 5px;
+    letter-spacing: 0.06em;
+  }
+
+  .hero :global(.nhdb-filter-bar label > span) {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+  }
+
+  .hero :global(.nhdb-filter-bar input),
+  .hero :global(.nhdb-filter-bar select) {
+    background-color: white;
+    border-color: #c7d7e8;
+    font-size: 0.88rem;
+    font-weight: 750;
+    min-height: 40px;
+    padding-bottom: 8px;
+    padding-top: 8px;
+  }
+
+  .hero :global(.nhdb-filter-bar select) {
+    padding-right: 34px;
+  }
+
+  .hero :global(.nhdb-filter-actions) {
+    justify-content: flex-end;
+  }
+
+  .hero :global(.nhdb-filter-actions button) {
+    min-height: 40px;
+    padding: 8px 14px;
+  }
+
   .status-message {
     color: #4b5563;
     font-size: 1.1rem;
@@ -1330,6 +1273,49 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
     grid-template-columns: repeat(2, 1fr);
     gap: 18px;
     margin-top: 24px;
+  }
+
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 10px;
+  }
+
+  .filter-chips button {
+    align-items: center;
+    background: white;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1f2933;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 7px;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 900;
+    line-height: 1.1;
+    padding: 5px 8px 5px 10px;
+  }
+
+  .filter-chips b {
+    align-items: center;
+    background: #eff6ff;
+    border-radius: 999px;
+    color: #9f1239;
+    display: inline-flex;
+    font-size: 0.9rem;
+    height: 18px;
+    justify-content: center;
+    line-height: 1;
+    width: 18px;
+  }
+
+  .result-note {
+    color: #6b7280;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    margin: 6px 0 0;
   }
 
   .candidate-grid {
@@ -1575,8 +1561,12 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
       width: 100%;
     }
 
-    .filters {
+    .hero :global(.nhdb-filter-fields) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .hero :global(.nhdb-filter-actions button) {
+      width: auto;
     }
 
     .ward-filter {
@@ -1601,14 +1591,22 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
       padding-top: 32px;
     }
 
-    .filters,
+    .hero :global(.nhdb-filter-fields),
     .results-heading {
       grid-template-columns: 1fr;
     }
 
-    .filters,
     .results-heading {
       display: grid;
+    }
+
+    .hero :global(.nhdb-filter-actions),
+    .hero :global(.nhdb-filter-actions button) {
+      width: 100%;
+    }
+
+    .filter-chips {
+      gap: 6px;
     }
   }
 </style>
