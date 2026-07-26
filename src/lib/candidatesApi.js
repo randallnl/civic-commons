@@ -201,11 +201,98 @@ export function isLegislativeCandidate(candidate = {}) {
 }
 
 function uniqueCandidates(candidates = []) {
-  const seen = new Set();
-  return candidates.filter((candidate) => {
-    const key = candidateSlug(candidate);
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const seen = new Map();
+  const unique = [];
+
+  for (const candidate of candidates) {
+    const keys = candidateIdentityKeys(candidate);
+    const existingIndex = keys
+      .map((key) => seen.get(key))
+      .find((index) => index !== undefined);
+
+    if (existingIndex !== undefined) {
+      const merged = mergeCandidateRecords(unique[existingIndex], candidate);
+      unique[existingIndex] = merged;
+      candidateIdentityKeys(merged).forEach((key) => seen.set(key, existingIndex));
+      continue;
+    }
+
+    const index = unique.length;
+    unique.push(candidate);
+    keys.forEach((key) => seen.set(key, index));
+  }
+
+  return unique;
+}
+
+function candidateIdentityKeys(candidate = {}) {
+  const keys = new Set();
+  const personId = candidate.personId || candidate.person_id;
+  const filerEntityNumber = candidate.filerEntityNumber || candidate.filer_entity_number;
+  const slug = candidateSlug(candidate);
+  const role = [
+    candidate.office,
+    candidate.county,
+    candidate.district,
+    candidate.electionYear || candidate.election_year,
+  ].map(normalizeIdentityPart).join("|");
+  const signature = [
+    candidateName(candidate),
+    candidate.office,
+    candidate.county,
+    candidate.district,
+    candidate.electionYear || candidate.election_year,
+  ].map(normalizeIdentityPart).join("|");
+
+  if (filerEntityNumber) keys.add(`filer:${normalizeIdentityPart(filerEntityNumber)}`);
+  if (slug) keys.add(`slug:${slug}`);
+  if (personId && role.replace(/\|/g, "")) {
+    keys.add(`person-role:${normalizeIdentityPart(personId)}|${role}`);
+  }
+  if (signature.replace(/\|/g, "")) keys.add(`signature:${signature}`);
+
+  return [...keys];
+}
+
+function mergeCandidateRecords(current = {}, incoming = {}) {
+  const primary =
+    candidateCompletenessScore(incoming) > candidateCompletenessScore(current)
+      ? incoming
+      : current;
+  const secondary = primary === incoming ? current : incoming;
+  const merged = { ...secondary, ...primary };
+
+  for (const [key, value] of Object.entries(secondary)) {
+    if (!hasCandidateValue(merged[key]) && hasCandidateValue(value)) {
+      merged[key] = value;
+    }
+  }
+
+  return merged;
+}
+
+function candidateCompletenessScore(candidate = {}) {
+  return [
+    candidate.personId || candidate.person_id,
+    candidate.filerEntityNumber || candidate.filer_entity_number,
+    candidate.legislatorProfileUrl,
+    candidate.currentLegislator || candidate.is_current_legislator,
+    candidate.candidateWebsite || candidate.website,
+    candidate.candidateEmail || candidate.email,
+    candidate.photoUrl || candidate.photo_url,
+    candidate.nameAliases || candidate.name_aliases,
+  ].filter(hasCandidateValue).length;
+}
+
+function hasCandidateValue(value) {
+  return value !== undefined && value !== null && String(value).trim() !== "";
+}
+
+function normalizeIdentityPart(value = "") {
+  return cleanText(value)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }

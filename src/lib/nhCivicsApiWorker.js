@@ -2739,8 +2739,10 @@ async function handleCandidates(request, env) {
     .bind(...binds, limit, offset)
     .all();
 
+  const candidates = uniqueFormattedCandidates((result.results || []).map(formatCandidate));
+
   return json({
-    candidates: (result.results || []).map(formatCandidate),
+    candidates,
     meta: {
       q,
       officeType,
@@ -2751,7 +2753,7 @@ async function handleCandidates(request, env) {
       electionYear: electionYear ? Number(electionYear) : null,
       limit,
       offset,
-      count: result.results?.length || 0,
+      count: candidates.length,
     },
   });
 }
@@ -2878,7 +2880,108 @@ async function getCandidatesForAddressDistricts(
     .bind(electionYear, ...binds)
     .all();
 
-  return (result.results || []).map(formatCandidate);
+  return uniqueFormattedCandidates((result.results || []).map(formatCandidate));
+}
+
+function uniqueFormattedCandidates(candidates = []) {
+  const seen = new Map();
+  const unique = [];
+
+  for (const candidate of candidates) {
+    const keys = formattedCandidateIdentityKeys(candidate);
+    const existingIndex = keys
+      .map((key) => seen.get(key))
+      .find((index) => index !== undefined);
+
+    if (existingIndex !== undefined) {
+      const merged = mergeFormattedCandidates(unique[existingIndex], candidate);
+      unique[existingIndex] = merged;
+      formattedCandidateIdentityKeys(merged).forEach((key) => seen.set(key, existingIndex));
+      continue;
+    }
+
+    const index = unique.length;
+    unique.push(candidate);
+    keys.forEach((key) => seen.set(key, index));
+  }
+
+  return unique;
+}
+
+function formattedCandidateIdentityKeys(candidate = {}) {
+  const keys = new Set();
+  const personId = candidate.personId || candidate.person_id;
+  const filerEntityNumber = candidate.filerEntityNumber || candidate.filer_entity_number;
+  const slug = normalizeCandidateIdentity(candidate.slug);
+  const name = normalizeCandidateIdentity(
+    candidate.name ||
+      [candidate.candidateFirstName, candidate.candidateLastName]
+        .filter(Boolean)
+        .join(" ")
+  );
+  const role = [
+    candidate.office,
+    candidate.county,
+    candidate.district,
+    candidate.electionYear || candidate.election_year,
+  ].map(normalizeCandidateIdentity).join("|");
+
+  if (filerEntityNumber) keys.add(`filer:${normalizeCandidateIdentity(filerEntityNumber)}`);
+  if (slug) keys.add(`slug:${slug}`);
+  if (personId && role.replace(/\|/g, "")) {
+    keys.add(`person-role:${normalizeCandidateIdentity(personId)}|${role}`);
+  }
+  if (name && role.replace(/\|/g, "")) keys.add(`signature:${name}|${role}`);
+
+  return [...keys];
+}
+
+function mergeFormattedCandidates(current = {}, incoming = {}) {
+  const primary =
+    formattedCandidateCompletenessScore(incoming) > formattedCandidateCompletenessScore(current)
+      ? incoming
+      : current;
+  const secondary = primary === incoming ? current : incoming;
+  const merged = { ...secondary, ...primary };
+
+  for (const [key, value] of Object.entries(secondary)) {
+    if (!hasCandidateField(merged[key]) && hasCandidateField(value)) {
+      merged[key] = value;
+    }
+  }
+
+  return merged;
+}
+
+function formattedCandidateCompletenessScore(candidate = {}) {
+  return [
+    candidate.personId || candidate.person_id,
+    candidate.filerEntityNumber || candidate.filer_entity_number,
+    candidate.legislatorProfileUrl,
+    candidate.currentLegislator || candidate.is_current_legislator,
+    candidate.candidateWebsite || candidate.website,
+    candidate.candidateEmail || candidate.email,
+    candidate.photoUrl || candidate.photo_url,
+    candidate.nameAliases || candidate.name_aliases,
+  ].filter(hasCandidateField).length;
+}
+
+function hasCandidateField(value) {
+  return value !== undefined && value !== null && String(value).trim() !== "";
+}
+
+function normalizeCandidateIdentity(value = "") {
+  return String(value || "")
+    .replace(/â€™|â€˜/g, "'")
+    .replace(/â€œ|â€/g, "\"")
+    .replace(/â€“|â€”/g, "-")
+    .replace(/Â·/g, " ")
+    .replace(/Â/g, "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 function candidateBaseCte() {

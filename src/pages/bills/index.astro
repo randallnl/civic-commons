@@ -11,6 +11,7 @@ import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const year = Astro.url.searchParams.get("year")?.trim() || "";
+const sort = Astro.url.searchParams.get("sort")?.trim() || "";
 
 let bills = [];
 let meta = {};
@@ -19,7 +20,7 @@ let trackedBills = new Map();
 
 try {
   const [data, tracked] = await Promise.all([
-    getBills({ q, year, limit: 100 }),
+    getBills({ limit: 500 }),
     getTrackedBills(),
   ]);
   bills = data.bills || [];
@@ -65,7 +66,7 @@ function previewText(text = "", maxLength = 180) {
 
   <body>
     <TopNav />
-    <main class="page">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.bill-card[data-fuzzy-item]' })">
       <PageHero
         backHref="/"
         backLabel="Back home"
@@ -77,6 +78,7 @@ function previewText(text = "", maxLength = 180) {
           submitLabel="Filter bills"
           clearHref={q || year ? "/bills" : ""}
           columns="dense"
+          live
         >
           <label>
             <span>Search</span>
@@ -85,6 +87,7 @@ function previewText(text = "", maxLength = 180) {
               name="q"
               value={q}
               placeholder="HB699, education, labor..."
+              data-fuzzy-search
             />
           </label>
 
@@ -97,10 +100,24 @@ function previewText(text = "", maxLength = 180) {
               placeholder="2025"
               min="2020"
               max="2030"
+              data-fuzzy-filter-field
+              data-fuzzy-field="year"
+              data-fuzzy-match="exact"
             />
           </label>
 
+          <label>
+            <span>Sort</span>
+            <select name="sort" data-fuzzy-sort>
+              <option value="" selected={!sort}>Default</option>
+              <option value="name:asc" selected={sort === "name:asc"}>Title A-Z</option>
+              <option value="bill:asc" selected={sort === "bill:asc"}>Bill code</option>
+              <option value="updated:desc" selected={sort === "updated:desc"}>Recently updated</option>
+            </select>
+          </label>
+
         </FilterBar>
+        <div class="filter-chips" data-fuzzy-chips hidden></div>
       </PageHero>
 
       {error && <p class="status-message">{error}</p>}
@@ -108,7 +125,7 @@ function previewText(text = "", maxLength = 180) {
       {!error && (
         <section class="results">
           <div class="results-heading">
-            <h2>{meta.count ?? bills.length} Bills</h2>
+            <h2><span data-fuzzy-count>{meta.count ?? bills.length}</span> Bills</h2>
             {(q || year) && <a href="/bills">Clear filters</a>}
           </div>
 
@@ -118,7 +135,27 @@ function previewText(text = "", maxLength = 180) {
                 const trackedBill = trackedBillFor(bill);
 
                 return (
-                  <article class="bill-card">
+                  <article
+                    class="bill-card"
+                    data-fuzzy-item
+                    data-fuzzy-title={bill.name || bill.title || trackedBill?.name || bill.condensedbillno}
+                    data-fuzzy-bill={bill.condensedbillno}
+                    data-fuzzy-year={bill.sessionyear}
+                    data-fuzzy-sort-name={bill.name || bill.title || trackedBill?.name || bill.condensedbillno}
+                    data-fuzzy-sort-bill={bill.condensedbillno}
+                    data-fuzzy-sort-updated={Date.parse(bill.statusdate || bill.updated_at || bill.updatedAt || "") || 0}
+                    data-fuzzy-text={[
+                      bill.condensedbillno,
+                      bill.sessionyear,
+                      bill.name,
+                      bill.title,
+                      trackedBill?.name,
+                      bill.summary,
+                      trackedBill?.summary,
+                      bill.description,
+                      bill.legislativebody,
+                    ].filter(Boolean).join(" ")}
+                  >
                     <div class="bill-topline">
                       <strong>{bill.condensedbillno}</strong>
                       <span>{bill.sessionyear}</span>
@@ -146,8 +183,23 @@ function previewText(text = "", maxLength = 180) {
               })}
             </div>
           ) : (
-            <p class="status-message">No bills found.</p>
+            <div class="status-message empty-state">
+              <strong>No bills found.</strong>
+              <ul>
+                <li>Try a bill code like HB155 or SB134.</li>
+                <li>Remove the year filter.</li>
+                <li>Search by issue keywords like housing, schools, or labor.</li>
+              </ul>
+            </div>
           )}
+          <div class="status-message empty-state" data-fuzzy-empty hidden>
+            <strong>No bills matched those filters.</strong>
+            <ul>
+              <li>Try a bill code like HB155 or SB134.</li>
+              <li>Remove the year chip above.</li>
+              <li>Search by issue keywords like housing, schools, or labor.</li>
+            </ul>
+          </div>
         </section>
       )}
     </main>
@@ -196,6 +248,34 @@ function previewText(text = "", maxLength = 180) {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
 
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .filter-chips button {
+    align-items: center;
+    background: #eef6ff;
+    border: 1px solid #93c5fd;
+    border-radius: 999px;
+    color: #1f2933;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 8px;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 900;
+    padding: 7px 10px;
+  }
+
+  .filter-chips b {
+    color: #b91c1c;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
   .bill-card,
   .status-message {
     background: white;
@@ -236,6 +316,19 @@ function previewText(text = "", maxLength = 180) {
     color: #4b5563;
     line-height: 1.55;
     margin: 0 0 14px;
+  }
+
+  .empty-state strong {
+    color: #1f2933;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .empty-state ul {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding-left: 20px;
   }
 
   .bill-meta {
