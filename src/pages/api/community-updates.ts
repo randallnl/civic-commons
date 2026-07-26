@@ -5,6 +5,7 @@ import { adminR2Bucket } from "../../lib/adminAuth";
 import {
   ensureCommunityUpdatesTable,
   communityUpdatesDb,
+  saveCommunityUpdatePhotos,
   saveCommunityUpdateMentions,
 } from "../../lib/communityUpdates";
 
@@ -21,21 +22,26 @@ export async function POST({ request }) {
     const email = String(form.get("email") || "").trim();
     const comment = String(form.get("comment") || "").trim();
     const linkUrl = normalizeLinkUrl(form.get("linkUrl"));
-    const file = form.get("photo");
+    const files = form
+      .getAll("photos")
+      .concat(form.getAll("photo"))
+      .filter((file) => file && typeof file !== "string" && file.size);
     redirectTo = safeRedirectPath(form.get("redirectTo")) || pageUrl || "/";
 
     if (!["candidate", "representative"].includes(entityType)) {
       throw new Error("Choose a candidate or legislator page.");
     }
     if (!entityKey) throw new Error("Profile identifier is required.");
-    if (!comment && !linkUrl && (!file || typeof file === "string" || !file.size)) {
+    if (!comment && !linkUrl && !files.length) {
       throw new Error("Add a comment, link, or photo.");
     }
 
-    const photoUrl =
-      file && typeof file !== "string" && file.size
-        ? await uploadCommunityPhoto(file, entityType, entityKey)
-        : "";
+    const photoUrls = await Promise.all(
+      files.slice(0, 8).map((file, index) =>
+        uploadCommunityPhoto(file, entityType, entityKey, index),
+      ),
+    );
+    const photoUrl = photoUrls[0] || "";
 
     const db = communityUpdatesDb();
     if (!db) throw new Error("D1 database binding is not configured.");
@@ -65,6 +71,9 @@ export async function POST({ request }) {
     if (updateId && comment) {
       await saveCommunityUpdateMentions(updateId, comment, db);
     }
+    if (updateId && photoUrls.length) {
+      await saveCommunityUpdatePhotos(updateId, photoUrls, db);
+    }
 
     return redirectWithMessage(
       request,
@@ -76,7 +85,7 @@ export async function POST({ request }) {
   }
 }
 
-async function uploadCommunityPhoto(file, entityType, entityKey) {
+async function uploadCommunityPhoto(file, entityType, entityKey, index = 0) {
   const bucket = adminR2Bucket();
   if (!bucket) throw new Error("Photo uploads are temporarily unavailable.");
 
@@ -84,7 +93,7 @@ async function uploadCommunityPhoto(file, entityType, entityKey) {
     "community-updates",
     entityType,
     slugify(entityKey),
-    `${Date.now()}-${sanitizeFilename(file.name || "photo.jpg")}`,
+    `${Date.now()}-${index + 1}-${sanitizeFilename(file.name || "photo.jpg")}`,
   ].join("/");
 
   await bucket.put(key, await file.arrayBuffer(), {

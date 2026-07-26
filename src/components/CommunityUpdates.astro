@@ -161,8 +161,9 @@ function escapeRegExp(value = "") {
       </div>
 
       <label>
-        Photo
-        <input name="photo" type="file" accept="image/*" />
+        Photos
+        <input name="photos" type="file" accept="image/*" multiple />
+        <small>Select up to 8 images for moderation.</small>
       </label>
 
       <label>
@@ -177,18 +178,22 @@ function escapeRegExp(value = "") {
   {updates.length ? (
     <div class="community-update-list">
       {updates.map((update) => (
-        <article class:list={["community-update-card", update.photoUrl && "has-photo"]}>
-          {update.photoUrl && (
+        <article class:list={["community-update-card", update.photoUrls?.length && "has-photo"]}>
+          {update.photoUrls?.length > 0 && (
             <div class="community-update-media">
-              <button
-                class="community-photo-button"
-                type="button"
-                data-community-photo={update.photoUrl}
-                aria-label="Open community update photo"
-              >
-                <img src={update.photoUrl} alt="" loading="lazy" />
-              </button>
-              <span>Photo update</span>
+              <div class="community-photo-grid">
+                {update.photoUrls.map((photoUrl) => (
+                  <button
+                    class="community-photo-button"
+                    type="button"
+                    data-community-photo={photoUrl}
+                    aria-label="Open community update photo"
+                  >
+                    <img src={photoUrl} alt="" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+              <span>{update.photoUrls.length === 1 ? "Photo update" : `${update.photoUrls.length} photo updates`}</span>
             </div>
           )}
           <div class="community-update-copy">
@@ -475,9 +480,19 @@ function escapeRegExp(value = "") {
     border-radius: 8px;
     cursor: zoom-in;
     display: block;
-    margin: 0 0 12px;
+    margin: 0;
     padding: 0;
     width: 100%;
+  }
+
+  .community-photo-grid {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  }
+
+  .community-photo-grid .community-photo-button:first-child {
+    grid-column: 1 / -1;
   }
 
   .community-photo-button:focus-visible {
@@ -492,9 +507,13 @@ function escapeRegExp(value = "") {
     border-radius: 8px;
     display: block;
     height: 100%;
-    min-height: 130px;
+    min-height: 92px;
     object-fit: cover;
     width: 100%;
+  }
+
+  .community-photo-grid .community-photo-button:first-child img {
+    min-height: 130px;
   }
 
   .community-update-copy {

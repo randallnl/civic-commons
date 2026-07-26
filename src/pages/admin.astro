@@ -608,7 +608,13 @@ function reviewDate(value = "") {
                       </div>
                     )}
                     {update.linkUrl && <a href={update.linkUrl}>Open submitted link</a>}
-                    {update.photoUrl && <img src={update.photoUrl} alt="" loading="lazy" />}
+                    {update.photoUrls?.length > 0 && (
+                      <div class="moderation-photo-grid">
+                        {update.photoUrls.map((photoUrl) => (
+                          <img src={photoUrl} alt="" loading="lazy" />
+                        ))}
+                      </div>
+                    )}
                   </article>
                 ))}
               </div>
@@ -2116,14 +2122,21 @@ function reviewDate(value = "") {
     font-weight: 900;
   }
 
+  .moderation-photo-grid {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    margin-top: 12px;
+    max-width: 640px;
+  }
+
   .moderation-list img {
     aspect-ratio: 16 / 9;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     display: block;
-    margin-top: 12px;
     object-fit: cover;
-    width: min(420px, 100%);
+    width: 100%;
   }
 
   .moderation-actions {

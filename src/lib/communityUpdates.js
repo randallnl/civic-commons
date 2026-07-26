@@ -34,6 +34,14 @@ const MENTIONS_TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_update_mentions
   PRIMARY KEY(update_id, personid)
 )`;
 
+const PHOTOS_TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_update_photos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  update_id INTEGER NOT NULL,
+  photo_url TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+)`;
+
 export function communityUpdatesDb() {
   return env.d1_db;
 }
@@ -42,6 +50,7 @@ export async function ensureCommunityUpdatesTable(db = communityUpdatesDb()) {
   if (!db) throw new Error("D1 database binding is not configured.");
   await db.prepare(TABLE_SQL).run();
   await db.prepare(MENTIONS_TABLE_SQL).run();
+  await db.prepare(PHOTOS_TABLE_SQL).run();
   await addColumnIfMissing(db, "community_updates", "link_url", "TEXT");
   await addColumnIfMissing(db, "community_update_mentions", "person_id", "INTEGER");
   await addColumnIfMissing(db, "community_update_mentions", "filer_entity_number", "TEXT");
@@ -57,6 +66,12 @@ export async function ensureCommunityUpdatesTable(db = communityUpdatesDb()) {
     .prepare(
       `CREATE INDEX IF NOT EXISTS idx_community_update_mentions_update
        ON community_update_mentions(update_id)`,
+    )
+    .run();
+  await db
+    .prepare(
+      `CREATE INDEX IF NOT EXISTS idx_community_update_photos_update
+       ON community_update_photos(update_id, sort_order)`,
     )
     .run();
 }
@@ -81,7 +96,7 @@ export async function getApprovedCommunityUpdates(entityType, entityKey, { limit
     .bind(entityType, String(entityKey), limit)
     .all();
 
-  return hydrateUpdateMentions((result.results || []).map(normalizeUpdate), db);
+  return hydrateUpdatePhotosAndMentions((result.results || []).map(normalizeUpdate), db);
 }
 
 export async function getRecentApprovedCommunityUpdates({ limit = 6 } = {}) {
@@ -102,7 +117,7 @@ export async function getRecentApprovedCommunityUpdates({ limit = 6 } = {}) {
     .bind(limit)
     .all();
 
-  return hydrateUpdateMentions((result.results || []).map(normalizeUpdate), db);
+  return hydrateUpdatePhotosAndMentions((result.results || []).map(normalizeUpdate), db);
 }
 
 export async function getPendingCommunityUpdates({ limit = 25 } = {}) {
@@ -123,7 +138,7 @@ export async function getPendingCommunityUpdates({ limit = 25 } = {}) {
     .bind(limit)
     .all();
 
-  return hydrateUpdateMentions((result.results || []).map(normalizeUpdate), db);
+  return hydrateUpdatePhotosAndMentions((result.results || []).map(normalizeUpdate), db);
 }
 
 export function communityUpdateEntityKey(value = "") {
@@ -131,6 +146,11 @@ export function communityUpdateEntityKey(value = "") {
 }
 
 export function normalizeUpdate(update = {}) {
+  const photoUrls = Array.isArray(update.photoUrls)
+    ? update.photoUrls.filter(Boolean)
+    : [];
+  const primaryPhoto = update.photo_url || update.photoUrl || photoUrls[0] || "";
+
   return {
     ...update,
     entityType: update.entity_type || update.entityType,
@@ -140,10 +160,29 @@ export function normalizeUpdate(update = {}) {
     displayName: cleanText(update.display_name || update.displayName || "Community member"),
     comment: cleanText(update.comment || ""),
     linkUrl: update.link_url || update.linkUrl || "",
-    photoUrl: update.photo_url || update.photoUrl || "",
+    photoUrl: primaryPhoto,
+    photoUrls: photoUrls.length ? photoUrls : primaryPhoto ? [primaryPhoto] : [],
     mentions: Array.isArray(update.mentions) ? update.mentions : [],
     createdAt: update.created_at || update.createdAt || "",
   };
+}
+
+export async function saveCommunityUpdatePhotos(updateId, photoUrls = [], db = communityUpdatesDb()) {
+  const urls = photoUrls.map((url) => String(url || "").trim()).filter(Boolean);
+  if (!db || !updateId || !urls.length) return [];
+
+  await ensureCommunityUpdatesTable(db);
+  const statements = urls.map((url, index) =>
+    db
+      .prepare(
+        `INSERT INTO community_update_photos (update_id, photo_url, sort_order)
+         VALUES (?, ?, ?)`,
+      )
+      .bind(updateId, url, index),
+  );
+
+  await db.batch(statements);
+  return urls;
 }
 
 export async function saveCommunityUpdateMentions(updateId, comment = "", db = communityUpdatesDb()) {
@@ -305,6 +344,47 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
     ...update,
     mentions: mentionsByUpdate.get(update.id) || [],
   }));
+}
+
+async function hydrateUpdatePhotos(updates = [], db = communityUpdatesDb()) {
+  if (!updates.length || !db) return updates;
+  const ids = updates.map((update) => update.id).filter(Boolean);
+  if (!ids.length) return updates;
+
+  const result = await db
+    .prepare(
+      `SELECT update_id, photo_url
+       FROM community_update_photos
+       WHERE update_id IN (${ids.map(() => "?").join(", ")})
+       ORDER BY sort_order, id`,
+    )
+    .bind(...ids)
+    .all();
+  const photosByUpdate = new Map();
+
+  for (const photo of result.results || []) {
+    const list = photosByUpdate.get(photo.update_id) || [];
+    if (photo.photo_url) list.push(photo.photo_url);
+    photosByUpdate.set(photo.update_id, list);
+  }
+
+  return updates.map((update) => {
+    const photoUrls = [
+      ...(photosByUpdate.get(update.id) || []),
+      update.photoUrl,
+    ].filter(Boolean);
+    const uniquePhotoUrls = [...new Set(photoUrls)];
+
+    return {
+      ...update,
+      photoUrl: uniquePhotoUrls[0] || "",
+      photoUrls: uniquePhotoUrls,
+    };
+  });
+}
+
+async function hydrateUpdatePhotosAndMentions(updates = [], db = communityUpdatesDb()) {
+  return hydrateUpdateMentions(await hydrateUpdatePhotos(updates, db), db);
 }
 
 export function communityUpdateDate(value = "") {
