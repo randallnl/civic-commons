@@ -95,7 +95,7 @@ if (address) {
 try {
   const [candidateData, repOptionData] = await Promise.all([
     getCandidates({ electionYear: 2026, limit: 8 }),
-    getRepresentatives({ limit: 600 }),
+    getRepresentatives({ limit: 600, voteLimit: 100 }),
   ]);
   previewCandidates = (candidateData.candidates || []).filter(isLegislativeCandidate).slice(0, 6);
   const optionReps = repOptionData.representatives || [];
@@ -113,6 +113,7 @@ if (!address && hasDirectoryFilters) {
         body: normalizedBodyFilter,
         q: filters.name,
         county: filters.county,
+        voteLimit: 100,
         limit: 600,
       }),
       getCandidates({
@@ -129,7 +130,7 @@ if (!address && hasDirectoryFilters) {
       ? matchedReps
       : allCurrentReps.filter((rep) => matchesDirectoryFilters(rep, filters));
 
-    directoryReps = await hydrateVotePreviewDetails(fallbackReps);
+    directoryReps = fallbackReps;
     directoryCandidates = await enrichCandidatesWithLegislators(
       (candidateData.candidates || [])
         .filter(isLegislativeCandidate)
@@ -141,7 +142,7 @@ if (!address && hasDirectoryFilters) {
 }
 
 if (!address && !hasDirectoryFilters) {
-  directoryReps = await hydrateVotePreviewDetails(allCurrentReps);
+  directoryReps = allCurrentReps;
 }
 
 if (lookupData || directoryReps.length > 0) {
@@ -208,7 +209,9 @@ if (lookupData && trackedBills.size) {
 }
 
 if (!lookupData && directoryReps.length > 0 && trackedBills.size) {
-  await hydrateMissingBillSummaries(directoryReps, billSummaries);
+  await hydrateMissingBillSummaries(directoryReps, billSummaries, {
+    limit: hasDirectoryFilters ? 400 : 220,
+  });
 }
 
 if (lookupData) {

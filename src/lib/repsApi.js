@@ -13,6 +13,7 @@ export async function getRepresentatives({
   county = "",
   district = "",
   include = "",
+  voteLimit = "",
   limit = 200,
   offset = 0,
   runtimeEnv,
@@ -24,6 +25,7 @@ export async function getRepresentatives({
   if (county) params.set("county", county);
   if (district) params.set("district", district);
   if (include) params.set("include", include);
+  if (voteLimit) params.set("voteLimit", String(voteLimit));
   if (limit) params.set("limit", String(limit));
   if (offset) params.set("offset", String(offset));
 

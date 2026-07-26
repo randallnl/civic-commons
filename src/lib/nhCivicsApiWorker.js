@@ -3288,6 +3288,7 @@ async function handleReps(request, env) {
   const q = String(url.searchParams.get("q") || "").trim();
   const county = String(url.searchParams.get("county") || "").trim();
   const district = String(url.searchParams.get("district") || "").trim();
+  const voteLimit = boundedNumber(url.searchParams.get("voteLimit"), 0, 0, 100);
   const where = ["r.active = 1"];
   const params = [];
 
@@ -3420,13 +3421,16 @@ async function handleReps(request, env) {
     .bind(...params)
     .first();
 
-  const representatives = reps.results.map((rep) => ({
+  const representativeRows = reps.results.map((rep) => ({
     ...rep,
     sourceUrls: {
       generalCourt: buildGeneralCourtUrl(rep),
       photo: rep.photo || null,
     },
   }));
+  const representatives = voteLimit
+    ? await attachVoteHistory(env, representativeRows, voteLimit)
+    : representativeRows;
 
   return json({
     representatives,
@@ -3440,6 +3444,7 @@ async function handleReps(request, env) {
         q: q || null,
         county: county || null,
         district: district || null,
+        voteLimit: voteLimit || null,
       },
     },
   });
