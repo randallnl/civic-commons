@@ -3,6 +3,7 @@ export const prerender = false;
 
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import ArticleList from "../../components/ArticleList.astro";
+import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import { currentAdminSession } from "../../lib/adminAuth";
@@ -54,6 +55,12 @@ const previousRollCalls = sortedRollCalls.slice(1);
 const visibleTestimony = testimony.slice(0, 15);
 const remainingTestimony = testimony.slice(15);
 const currentPath = `${Astro.url.pathname}${Astro.url.search}`;
+const billEntityKey = bill
+  ? `${bill.sessionyear || year || ""}:${normalizeBillCode(bill.condensedbillno || billCode)}`
+  : "";
+const billEntityName = bill
+  ? `${bill.condensedbillno || billCode}: ${billTitle()}`
+  : billCode;
 
 function formatDate(value) {
   if (!value) return "";
@@ -470,6 +477,13 @@ function commentsForBill(organizations = [], code = "") {
               )}
             </section>
           </section>
+
+          <CommunityUpdates
+            entityType="bill"
+            entityKey={billEntityKey}
+            entityName={billEntityName}
+            pageUrl={currentPath}
+          />
         </>
       ) : (
         <p class="status-message">Bill not found.</p>
