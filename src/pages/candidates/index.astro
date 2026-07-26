@@ -198,7 +198,7 @@ async function getCandidatePages({
     });
     const pageCandidates = data.candidates || [];
     candidates.push(...pageCandidates);
-    if (pageCandidates.length < pageSize) break;
+    if (pageCandidates.length === 0) break;
   }
 
   return candidates;
