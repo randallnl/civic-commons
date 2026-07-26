@@ -24,11 +24,6 @@ const name = Astro.url.searchParams.get("name")?.trim() || "";
 const office = Astro.url.searchParams.get("office")?.trim() || "";
 const town = Astro.url.searchParams.get("town")?.trim() || "";
 const electionYear = "2026";
-const requestedLimit = Math.min(
-  Math.max(Number(Astro.url.searchParams.get("limit") || 24), 12),
-  120,
-);
-const nextLimit = Math.min(requestedLimit + 24, 120);
 const officeOptions = [
   "State Representative",
   "State Senate",
@@ -79,15 +74,20 @@ try {
     meta = data.meta || {};
     resultContext = data.town?.name || data.community?.name || town;
   } else {
-    const data = await getDirectoryCandidates({
-      q: name || town,
-      county,
-      office: selectedOffice,
-      electionYear,
-      limit: requestedLimit,
-    });
-    candidates = data.candidates || [];
-    meta = data.meta || {};
+    if (!name && !county && !selectedOffice) {
+      candidates = await getAllLegislativeCandidates({ electionYear });
+      meta = { count: candidates.length };
+    } else {
+      const data = await getDirectoryCandidates({
+        q: name || town,
+        county,
+        office: selectedOffice,
+        electionYear,
+        limit: 500,
+      });
+      candidates = data.candidates || [];
+      meta = data.meta || {};
+    }
   }
 } catch (loadError) {
   error = loadError?.message || "Unable to load candidates.";
@@ -113,15 +113,6 @@ try {
 
 const hasFilters = address || county || selectedOffice || town || name;
 const resultCount = candidates.length;
-const seeMoreParams = new URLSearchParams();
-if (address) seeMoreParams.set("address", address);
-if (county) seeMoreParams.set("county", county);
-if (name) seeMoreParams.set("name", name);
-if (selectedOffice) seeMoreParams.set("office", selectedOffice);
-if (town) seeMoreParams.set("town", town);
-seeMoreParams.set("limit", String(nextLimit));
-const seeMoreHref = `/candidates?${seeMoreParams.toString()}#candidate-results`;
-const hasMoreServerResults = !address && requestedLimit < 120 && candidates.length >= Math.min(requestedLimit, 24);
 
 async function getDirectoryCandidates({
   q = "",
@@ -168,6 +159,47 @@ async function getDirectoryCandidates({
       count: candidates.length,
     },
   };
+}
+
+async function getAllLegislativeCandidates({ electionYear = 2026 } = {}) {
+  const [houseData, senateData] = await Promise.all([
+    getCandidatePages({
+      office: "State Representative",
+      electionYear,
+      limit: 100,
+      maxPages: 20,
+    }),
+    getCandidatePages({
+      office: "State Senate",
+      electionYear,
+      limit: 100,
+      maxPages: 20,
+    }),
+  ]);
+
+  return uniqueCandidates([...houseData, ...senateData]).filter(isLegislativeCandidate);
+}
+
+async function getCandidatePages({
+  limit = 100,
+  maxPages = 20,
+  ...query
+} = {}) {
+  const pageSize = Math.max(1, Math.min(Number(limit) || 100, 100));
+  const candidates = [];
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const data = await getCandidates({
+      ...query,
+      limit: pageSize,
+      offset: page * pageSize,
+    });
+    const pageCandidates = data.candidates || [];
+    candidates.push(...pageCandidates);
+    if (pageCandidates.length < pageSize) break;
+  }
+
+  return candidates;
 }
 
 function candidatesFromLookup(data = {}) {
@@ -399,7 +431,7 @@ function uniqueOptions(values = []) {
 
   <body>
     <TopNav />
-    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.candidate-card[data-fuzzy-item]', pageSize: 12 })">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.candidate-card[data-fuzzy-item]', idleLimit: 12 })">
       <PageHero
         backHref="/"
         backLabel="Back home"
@@ -519,10 +551,6 @@ function uniqueOptions(values = []) {
                 ))}
               </div>
               <p class="status-message" data-fuzzy-empty hidden>No State House or State Senate candidates found.</p>
-              <div class="see-more-row">
-                <button type="button" data-fuzzy-more hidden>Show more loaded results</button>
-                {hasMoreServerResults && <a class="see-more-button" href={seeMoreHref}>Load more from database</a>}
-              </div>
             </>
           ) : (
             <p class="status-message">No State House or State Senate candidates found.</p>

@@ -253,7 +253,7 @@ function bodyFilterToCandidateOffice(value = "") {
 function matchesDirectoryFilters(rep = {}, values = {}) {
   return (
     matchesBody(rep, values.body) &&
-    matchesText(repName(rep), values.name) &&
+    matchesText([repName(rep), rep.nameAliases, rep.name_aliases].filter(Boolean).join(" "), values.name) &&
     matchesText(locationLabel(rep), values.town) &&
     matchesCounty(rep, values.county)
   );
@@ -262,7 +262,11 @@ function matchesDirectoryFilters(rep = {}, values = {}) {
 function matchesCandidateFilters(candidate = {}, values = {}) {
   return (
     matchesCandidateBody(candidate, values.body) &&
-    matchesText(candidate.name || `${candidate.candidateFirstName || ""} ${candidate.candidateLastName || ""}`, values.name) &&
+    matchesText([
+      candidate.name || `${candidate.candidateFirstName || ""} ${candidate.candidateLastName || ""}`,
+      candidate.nameAliases,
+      candidate.name_aliases,
+    ].filter(Boolean).join(" "), values.name) &&
     matchesText(candidate.county, values.county) &&
     (!values.town || matchesText(recordText(candidate), values.town))
   );
@@ -569,22 +573,36 @@ async function hydrateMissingBillSummaries(reps, tracked, summaries) {
           </label>
           <label>
             <span>County</span>
-            <select name="county" data-fuzzy-filter-field data-fuzzy-field="county" data-fuzzy-match="exact">
-              <option value="">All counties</option>
-              {countyOptions.map((option) => (
-                <option value={option} selected={filters.county.toLowerCase() === option.toLowerCase()}>
-                  {option}
-                </option>
-              ))}
-            </select>
+            <input
+              type="search"
+              name="county"
+              value={filters.county}
+              list="legislatorCountyOptions"
+              placeholder="Start typing a county"
+              autocomplete="off"
+              data-fuzzy-filter-field
+              data-fuzzy-field="county"
+            />
+            <datalist id="legislatorCountyOptions">
+              {countyOptions.map((option) => <option value={option} />)}
+            </datalist>
           </label>
           <label>
             <span>Body / office</span>
-            <select name="body" data-fuzzy-filter-field data-fuzzy-field="body" data-fuzzy-match="exact">
-              <option value="">House and Senate</option>
-              <option value="house" selected={normalizedBodyFilter === "house"}>House</option>
-              <option value="senate" selected={normalizedBodyFilter === "senate"}>Senate</option>
-            </select>
+            <input
+              type="search"
+              name="body"
+              value={normalizedBodyFilter}
+              list="legislatorBodyOptions"
+              placeholder="House or Senate"
+              autocomplete="off"
+              data-fuzzy-filter-field
+              data-fuzzy-field="body"
+            />
+            <datalist id="legislatorBodyOptions">
+              <option value="house" />
+              <option value="senate" />
+            </datalist>
           </label>
           <label>
             <span>Town</span>
