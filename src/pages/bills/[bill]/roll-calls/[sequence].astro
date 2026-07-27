@@ -5,7 +5,7 @@ import { billDetailPath, getRollCallVotes } from "../../../../lib/billsApi";
 import TopNav from "../../../../components/TopNav.astro";
 import SiteFooter from "../../../../components/SiteFooter.astro";
 import profileIcon from "../../../../assets/profile icon.png";
-import { isFreeStater } from "../../../../lib/civicTags";
+import { isFreeStater, isTpActionAligned } from "../../../../lib/civicTags";
 import { profilePhotoUrl } from "../../../../lib/photos";
 import { cleanText } from "../../../../lib/text";
 import { getTrackedBills, normalizeBillCode } from "../../../../lib/trackedBills";
@@ -396,6 +396,9 @@ function slugify(value = "") {
                               Free State Aligned
                             </a>
                           )}
+                          {isTpActionAligned(vote) && (
+                            <span class="free-stater-pill tpaction-pill">TPAction Aligned</span>
+                          )}
                         </div>
                       </div>
                       <a
@@ -735,6 +738,14 @@ function slugify(value = "") {
   .free-stater-pill:hover {
     background: #991b1b;
     text-decoration: underline;
+  }
+
+  .tpaction-pill,
+  .tpaction-pill:hover {
+    background: #172554;
+    border-color: #f59e0b;
+    color: #fef3c7 !important;
+    text-decoration: none;
   }
 
   .card-meta {

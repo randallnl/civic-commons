@@ -26,6 +26,7 @@ export async function ensureUnifiedPeopleTables(db = adminDb()) {
         is_2026_legislator INTEGER NOT NULL DEFAULT 0,
         is_2026_candidate INTEGER NOT NULL DEFAULT 0,
         is_free_state_aligned_2026 INTEGER NOT NULL DEFAULT 0,
+        is_tpaction_aligned_2026 INTEGER NOT NULL DEFAULT 0,
         is_free_stater INTEGER NOT NULL DEFAULT 0,
         source TEXT NOT NULL DEFAULT 'runtime',
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -36,6 +37,7 @@ export async function ensureUnifiedPeopleTables(db = adminDb()) {
 
   await ensureColumn(db, "d1_people", "name_aliases", "TEXT");
   await ensureColumn(db, "d1_people", "is_free_state_aligned_2026", "INTEGER NOT NULL DEFAULT 0");
+  await ensureColumn(db, "d1_people", "is_tpaction_aligned_2026", "INTEGER NOT NULL DEFAULT 0");
 
   await db
     .prepare(

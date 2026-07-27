@@ -6,7 +6,7 @@ import {
   partyClassName,
 } from "../lib/candidatesApi";
 import profileIcon from "../assets/profile icon.png";
-import { isFreeStater } from "../lib/civicTags";
+import { isFreeStater, isTpActionAligned } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
 
 const { candidate } = Astro.props;
@@ -47,6 +47,7 @@ const searchableText = [
   candidate.candidateWebsite,
   candidate.currentLegislator ? "Current Legislator" : "",
   isFreeStater(candidate) ? "Free State Aligned" : "",
+  isTpActionAligned(candidate) ? "TPAction Aligned" : "",
 ].flat().filter(Boolean).join(" ");
 const searchableTown = [
   candidate.town,
@@ -141,6 +142,9 @@ function formatCurrency(value) {
         >
           Free State Aligned
         </a>
+      )}
+      {isTpActionAligned(candidate) && (
+        <span class="tpaction-pill">TPAction Aligned</span>
       )}
       {officeTypeLabel && <span>{officeTypeLabel}</span>}
       {candidate.currentLegislator && <span>Current Legislator</span>}
@@ -260,6 +264,13 @@ function formatCurrency(value) {
 
   .pill-row .free-stater-pill:hover {
     background: #450a0a;
+  }
+
+  .pill-row .tpaction-pill {
+    background: #172554;
+    border-color: #f59e0b;
+    color: #fef3c7;
+    text-transform: uppercase;
   }
 
   .office-line {

@@ -31,6 +31,7 @@ export const people = sqliteTable(
     is2026Legislator: integer("is_2026_legislator").notNull().default(0),
     is2026Candidate: integer("is_2026_candidate").notNull().default(0),
     isFreeStateAligned2026: integer("is_free_state_aligned_2026").notNull().default(0),
+    isTpActionAligned2026: integer("is_tpaction_aligned_2026").notNull().default(0),
     isFreeStater: integer("is_free_stater").notNull().default(0),
     source: text("source").notNull().default("runtime"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),

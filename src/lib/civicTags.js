@@ -16,3 +16,18 @@ export function isFreeStater(record = {}) {
 
   return ["1", "true", "yes", "y"].includes(String(value).trim().toLowerCase());
 }
+
+export function isTpActionAligned(record = {}) {
+  if (!record || typeof record !== "object") return false;
+
+  const value =
+    record.is_tpaction_aligned_2026 ??
+    record.isTpActionAligned2026 ??
+    record.tpaction_aligned_2026 ??
+    record.tpActionAligned2026;
+
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+
+  return ["1", "true", "yes", "y"].includes(String(value).trim().toLowerCase());
+}

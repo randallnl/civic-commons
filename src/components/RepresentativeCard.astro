@@ -2,7 +2,7 @@
 import BillPositionSummary from "./BillPositionSummary.astro";
 import profileIcon from "../assets/profile icon.png";
 import { billDetailPath } from "../lib/billsApi";
-import { isFreeStater } from "../lib/civicTags";
+import { isFreeStater, isTpActionAligned } from "../lib/civicTags";
 import { profilePhotoUrl } from "../lib/photos";
 import { cleanText } from "../lib/text";
 import {
@@ -100,6 +100,7 @@ const searchableText = cleanText([
   rep.townsRepresented,
   rep.email,
   isFreeStater(rep) ? "Free State Aligned" : "",
+  isTpActionAligned(rep) ? "TPAction Aligned" : "",
 ].flat().filter(Boolean).join(" "));
 const searchableTown = cleanText([
   rep.location_text,
@@ -209,6 +210,9 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
           >
             Free State Aligned
           </a>
+        )}
+        {isTpActionAligned(rep) && (
+          <span class="tpaction-pill">TPAction Aligned</span>
         )}
       </div>
 
@@ -445,6 +449,13 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
 
   .rep-meta .free-stater-pill:hover {
     background: #450a0a;
+  }
+
+  .rep-meta .tpaction-pill {
+    background: #172554;
+    border-color: #f59e0b;
+    color: #fef3c7;
+    text-transform: uppercase;
   }
 
   .district-line,

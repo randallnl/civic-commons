@@ -6,7 +6,7 @@ import SiteFooter from "../components/SiteFooter.astro";
 import profileIcon from "../assets/profile icon.png";
 import { articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills } from "../lib/billsApi";
-import { isFreeStater } from "../lib/civicTags";
+import { isFreeStater, isTpActionAligned } from "../lib/civicTags";
 import { communityPath, getCommunities } from "../lib/communitiesApi";
 import { profilePhotoUrl } from "../lib/photos";
 import { getRepresentatives, repName, repSlug } from "../lib/repsApi";
@@ -209,6 +209,11 @@ function previewText(text = "", maxLength = 170) {
                           >
                             Free State Aligned
                           </a>
+                        )}
+                        {isTpActionAligned(person) && (
+                          <span class="free-stater-inline tpaction-inline">
+                            TPAction Aligned
+                          </span>
                         )}
                       </div>
                     </li>
@@ -426,6 +431,13 @@ function previewText(text = "", maxLength = 170) {
 
   .free-stater-inline:hover {
     background: #450a0a;
+  }
+
+  .tpaction-inline,
+  .tpaction-inline:hover {
+    background: #172554;
+    border-color: #f59e0b;
+    color: #fef3c7;
   }
 
   @media (max-width: 600px) {

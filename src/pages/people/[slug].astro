@@ -17,7 +17,7 @@ import {
   getCandidates,
   isLegislativeCandidate,
 } from "../../lib/candidatesApi";
-import { isFreeStater } from "../../lib/civicTags";
+import { isFreeStater, isTpActionAligned } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
 import { getRepresentative } from "../../lib/repsApi";
 import {
@@ -390,6 +390,9 @@ function candidateOptionLabel(candidate = {}) {
               >
                 Free State Aligned
               </a>
+            )}
+            {isTpActionAligned(representative) && (
+              <span class="meta-pill tpaction-pill">TPAction Aligned</span>
             )}
             <span class="meta-pill">{bodyLabel}</span>
             <span class="meta-pill district-pill">{districtLabel}</span>
@@ -1160,6 +1163,13 @@ function candidateOptionLabel(candidate = {}) {
 
   .free-stater-pill:hover {
     background: #450a0a;
+  }
+
+  .tpaction-pill {
+    background: #172554;
+    border-color: #f59e0b;
+    color: #fef3c7;
+    text-transform: uppercase;
   }
 
   .bio {

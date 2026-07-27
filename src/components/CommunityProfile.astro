@@ -7,7 +7,7 @@ import { articlePublishDate, articleSourceName } from "../lib/articlesApi";
 import { getBillSummaries } from "../lib/billsApi";
 import { enrichCandidatesWithLegislators } from "../lib/candidateLegislators";
 import { candidateName, candidatePath, isLegislativeCandidate } from "../lib/candidatesApi";
-import { isFreeStater } from "../lib/civicTags";
+import { isFreeStater, isTpActionAligned } from "../lib/civicTags";
 import { countyForCommunity, countyImageUrl } from "../lib/communityImages";
 import { communityPath } from "../lib/communitiesApi";
 import { profilePhotoUrl } from "../lib/photos";
@@ -387,6 +387,14 @@ try {
                               >
                                 Free State Aligned
                               </a>
+                              {isTpActionAligned(rep) && (
+                                <span>TPAction Aligned</span>
+                              )}
+                            </div>
+                          )}
+                          {!isFreeStater(rep) && isTpActionAligned(rep) && (
+                            <div class="mini-tags">
+                              <span>TPAction Aligned</span>
                             </div>
                           )}
                         </div>
@@ -456,6 +464,14 @@ try {
                               >
                                 Free State Aligned
                               </a>
+                              {isTpActionAligned(candidate) && (
+                                <span>TPAction Aligned</span>
+                              )}
+                            </div>
+                          )}
+                          {!isFreeStater(candidate) && isTpActionAligned(candidate) && (
+                            <div class="mini-tags">
+                              <span>TPAction Aligned</span>
                             </div>
                           )}
                         </div>
@@ -807,7 +823,8 @@ try {
     color: white;
   }
 
-  .mini-tags a {
+  .mini-tags a,
+  .mini-tags span {
     background: #7f1d1d;
     border: 1px solid #111827;
     border-radius: 999px;
@@ -821,6 +838,13 @@ try {
 
   .mini-tags a:hover {
     background: #450a0a;
+  }
+
+  .mini-tags span {
+    background: #172554;
+    border-color: #f59e0b;
+    color: #fef3c7;
+    text-transform: uppercase;
   }
 
   .profile-photo-link {

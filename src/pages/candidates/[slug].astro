@@ -18,7 +18,7 @@ import {
   partyClassName,
 } from "../../lib/candidatesApi";
 import { enrichCandidateWithLegislator } from "../../lib/candidateLegislators";
-import { isFreeStater } from "../../lib/civicTags";
+import { isFreeStater, isTpActionAligned } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
 import { getRepresentative, getRepresentatives, repName } from "../../lib/repsApi";
 import {
@@ -89,6 +89,7 @@ const officeParts = [
 ].filter(Boolean);
 const candidateRoles = uniqueCandidateRoles(candidate.candidateRoles?.length ? candidate.candidateRoles : [candidate]);
 const hasFreeStaterTag = isFreeStater(candidate) || isFreeStater(currentLegislator);
+const hasTpActionTag = isTpActionAligned(candidate) || isTpActionAligned(currentLegislator);
 
 function externalProfileUrl(entity = {}, names = []) {
   return names
@@ -300,6 +301,9 @@ function uniqueArticles(articles = []) {
               >
                 Free State Aligned
               </a>
+            )}
+            {hasTpActionTag && (
+              <span class="meta-pill tpaction-pill">TPAction Aligned</span>
             )}
             {officeTypeLabel && <span class="meta-pill">{officeTypeLabel}</span>}
             {candidate.electionYear && <span class="meta-pill">{candidate.electionYear}</span>}
@@ -740,6 +744,13 @@ function uniqueArticles(articles = []) {
 
   .free-stater-pill:hover {
     background: #450a0a;
+  }
+
+  .tpaction-pill {
+    background: #172554;
+    border-color: #f59e0b;
+    color: #fef3c7;
+    text-transform: uppercase;
   }
 
   .legislator-grade-pill {
