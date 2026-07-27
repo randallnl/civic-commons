@@ -1,0 +1,25 @@
+FullName,LastFirst,FirstName,LastName,Party,County,District,FormattedDistrict,EmployeeNo,InOfficeCount,PossibleVoteCount,CorrectVoteCount,IncorrectVoteCount,AbsenceCount,PresidingCount,MaxLegislatorScore,RawScore,PercentMissed,VotingPercent,VotingGrade,SponsorRawScore,CombinedPercent,CombinedGrade
+Sen. Keith Murphy (R),"Murphy, Keith",Keith,Murphy,R,,16,Senate-16,218758,28,28,26,2,0,0,36,33,0,92,A-,5,97,A
+Sen. Daniel Innis (R),"Innis, Daniel",Daniel,Innis,R,,7,Senate-07,218747,28,28,24,3,0,0,36,32,0,89,A-,4,93,A
+Sen. Victoria Sullivan (R),"Sullivan, Victoria",Victoria,Sullivan,R,,18,Senate-18,218766,28,28,24,4,0,0,36,31,0,86,B+,5,91,A-
+Sen. James Gray (R),"Gray, James",James,Gray,R,,6,Senate-06,218739,28,28,24,4,0,0,36,31,0,86,B+,2,88,A-
+Sen. Ruth Ward (R),"Ward, Ruth",Ruth,Ward,R,,8,Senate-08,218740,28,28,24,4,0,0,36,31,0,86,B+,2,88,A-
+Sen. Tim McGough (R),"McGough, Tim",Tim,McGough,R,,11,Senate-11,218764,28,28,24,4,0,0,36,31,0,86,B+,1,87,A-
+Sen. Sharon Carson (R),"Carson, Sharon",Sharon,Carson,R,,14,Senate-14,209076,28,28,24,4,0,0,36,31,0,86,B+,-0,86,B+
+Sen. Kevin Avard (R),"Avard, Kevin",Kevin,Avard,R,,12,Senate-12,209099,28,28,22,4,2,0,36,30,7,83,B,2,86,B+
+Sen. Regina Birdsell (R),"Birdsell, Regina",Regina,Birdsell,R,,19,Senate-19,209101,28,28,24,4,0,0,36,31,0,86,B+,-1,86,B+
+Sen. Bill Gannon (R),"Gannon, Bill",Bill,Gannon,R,,23,Senate-23,218745,28,28,24,4,0,0,36,31,0,86,B+,-1,85,B+
+Sen. Timothy Lang (R),"Lang, Timothy",Timothy,Lang,R,,2,Senate-02,218756,28,28,23,5,0,0,36,28,0,78,B-,2,80,B
+Sen. Daryl Abbas (R),"Abbas, Daryl",Daryl,Abbas,R,,22,Senate-22,218760,28,28,22,6,0,0,36,29,0,81,B,-1,80,B-
+Sen. Howard Pearl (R),"Pearl, Howard",Howard,Pearl,R,,17,Senate-17,218759,28,28,23,5,0,0,36,28,0,78,B-,1,79,B-
+Sen. David Rochefort (R),"Rochefort, David",David,Rochefort,R,,1,Senate-01,218762,28,28,23,5,0,0,36,28,0,78,B-,0,78,B-
+Sen. Mark McConkey (R),"McConkey, Mark",Mark,McConkey,R,,3,Senate-03,218763,28,28,21,6,1,0,36,26,4,71,C,0,71,C
+Sen. Denise Ricciardi (R),"Ricciardi, Denise",Denise,Ricciardi,R,,9,Senate-09,218752,28,28,16,6,6,0,36,23,21,64,C,-2,62,C-
+Sen. Pat Long (D),"Long, Pat",Pat,Long,D,,20,Senate-20,218767,28,28,4,24,0,0,36,5,0,14,F,-2,12,CT
+Sen. Tara Reardon (D),"Reardon, Tara",Tara,Reardon,D,,15,Senate-15,218765,28,28,4,24,0,0,36,5,0,14,F,-3,11,CT
+Sen. Suzanne Prentiss (D),"Prentiss, Suzanne",Suzanne,Prentiss,D,,5,Senate-05,218751,28,28,4,24,0,0,36,5,0,14,F,-3,11,CT
+Sen. David Watters (D),"Watters, David",David,Watters,D,,4,Senate-04,209091,28,28,4,24,0,0,36,5,0,14,F,-5,9,CT
+Sen. Donovan Fenton (D),"Fenton, Donovan",Donovan,Fenton,D,,10,Senate-10,218757,28,28,4,24,0,0,36,5,0,14,F,-5,9,CT
+Sen. Cindy Rosenwald (D),"Rosenwald, Cindy",Cindy,Rosenwald,D,,13,Senate-13,209106,28,28,4,24,0,0,36,5,0,14,F,-5,9,CT
+Sen. Rebecca Perkins Kwoka (D),"Perkins Kwoka, Rebecca",Rebecca,Perkins Kwoka,D,,21,Senate-21,218754,28,28,4,24,0,0,36,5,0,14,F,-5,9,CT
+Sen. Debra Altschiller (D),"Altschiller, Debra",Debra,Altschiller,D,,24,Senate-24,218761,28,28,4,24,0,0,36,5,0,14,F,-5,9,CT

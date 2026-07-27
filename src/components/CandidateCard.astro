@@ -46,7 +46,7 @@ const searchableText = [
   candidate.candidateEmail,
   candidate.candidateWebsite,
   candidate.currentLegislator ? "Current Legislator" : "",
-  isFreeStater(candidate) ? "Free Stater" : "",
+  isFreeStater(candidate) ? "Free State Aligned" : "",
 ].flat().filter(Boolean).join(" ");
 const searchableTown = [
   candidate.town,
@@ -139,7 +139,7 @@ function formatCurrency(value) {
           title="What is a Free Stater?"
           aria-label="What is a Free Stater?"
         >
-          Free Stater
+          Free State Aligned
         </a>
       )}
       {officeTypeLabel && <span>{officeTypeLabel}</span>}

@@ -611,7 +611,7 @@ function handleVotingWidgetScript(request) {
     const partyTone = getPartyTone(rep.party);
     const districtLine = getDistrictLine(rep);
     const freeStaterTag = isFreeStater(rep)
-      ? \`<span class="nhcc-free-stater-tag">Free Stater</span>\`
+      ? \`<span class="nhcc-free-stater-tag">Free State Aligned</span>\`
       : "";
 
     card.className = "nhcc-rep-card";
@@ -1478,7 +1478,7 @@ async function handleRepProfile(request, env) {
       l.lastname,
       l.middlename,
       l.party,
-      ${isFreeStaterSelectExpression("l.is_free_stater")},
+      ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "l.is_free_stater"))},
       COALESCE(dm.district_label, l.district) AS district,
       l.district AS raw_district,
       l.countycode,
@@ -2450,7 +2450,7 @@ async function getRepresentativesForDistrict(env, district) {
       l.firstname,
       l.lastname,
       l.party,
-      ${isFreeStaterSelectExpression("l.is_free_stater")},
+      ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "l.is_free_stater"))},
       COALESCE(p.photo_url, '') AS photo,
       l.emailaddress AS email,
       l.district AS raw_district,
@@ -2458,6 +2458,9 @@ async function getRepresentativesForDistrict(env, district) {
     FROM d1_legislators l
     LEFT JOIN d1_legislator_photos p
       ON p.employeeno = l.employeeno
+    LEFT JOIN d1_people people
+      ON people.gc_personid = l.personid
+      OR people.employeeno = l.employeeno
     WHERE l.active = 1
       AND l.legislativebody = ?
       AND CAST(l.district AS INTEGER) = ?
@@ -2612,6 +2615,10 @@ function isFreeStaterSelectExpression(column) {
       ELSE 'no'
     END AS is_free_stater
   `;
+}
+
+function freeStateAlignedExpression(newColumn, legacyColumn) {
+  return `COALESCE(${newColumn}, ${legacyColumn})`;
 }
 
 function summarizeParties(representatives) {
@@ -3028,7 +3035,7 @@ function candidateBaseCte() {
         COALESCE(NULLIF(p.photo_url, ''), c.photo_url, '') AS photo_url,
         p.slug AS slug,
         c.slug AS legacy_slug,
-        p.is_free_stater AS is_free_stater,
+        ${freeStateAlignedExpression("p.is_free_state_aligned_2026", "p.is_free_stater")} AS is_free_stater,
         cc.source_county_id AS source_county_id
       FROM d1_people p
       LEFT JOIN d1_person_candidate_roles cr
@@ -3231,7 +3238,7 @@ async function handleTownSearch(request, env) {
       r.firstname,
       r.lastname,
       r.party,
-      ${isFreeStaterSelectExpression("r.is_free_stater")},
+      ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "r.is_free_stater"))},
       COALESCE(dm.district_label, r.district) AS district,
       r.district AS raw_district,
       r.countycode,
@@ -3383,7 +3390,7 @@ async function handleReps(request, env) {
       r.lastname,
       r.middlename,
       r.party,
-      ${isFreeStaterSelectExpression("r.is_free_stater")},
+      ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "r.is_free_stater"))},
       r.preferred_vote_alignment_pct AS alignment_percent,
       COALESCE(dm.district_label, r.district) AS district,
       r.district AS raw_district,
@@ -3890,7 +3897,7 @@ async function handleBillRollCall(request, env) {
       COALESCE(cc.name, '') AS county,
       COALESCE(dm.communities_represented, l.city, '') AS location_text,
       COALESCE(dm.communities_represented, l.city, '') AS towns_represented,
-      ${isFreeStaterSelectExpression("COALESCE(p.is_free_stater, l.is_free_stater)")},
+      ${isFreeStaterSelectExpression(freeStateAlignedExpression("p.is_free_state_aligned_2026", "COALESCE(p.is_free_stater, l.is_free_stater)"))},
       l.personid,
       COALESCE(p.slug, l.slug, '') AS slug,
       COALESCE(p.photo_url, lp.photo_url, '') AS photo
@@ -4520,7 +4527,7 @@ async function findHouseRepsFromDistrictMappings(env, districts) {
         l.firstname,
         l.lastname,
         l.party,
-        ${isFreeStaterSelectExpression("l.is_free_stater")},
+        ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "l.is_free_stater"))},
         COALESCE(dm.district_label, l.district) AS district,
         l.district AS raw_district,
         l.countycode,
@@ -4568,7 +4575,7 @@ async function findSenators(env, senate) {
       l.firstname,
       l.lastname,
       l.party,
-      ${isFreeStaterSelectExpression("l.is_free_stater")},
+      ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "l.is_free_stater"))},
       COALESCE(dm.district_label, l.district) AS district,
       l.district AS raw_district,
       l.countycode,
@@ -4647,12 +4654,15 @@ async function handleRepVotes(request, env) {
       firstname,
       lastname,
       party,
-      ${isFreeStaterSelectExpression("is_free_stater")},
-      legislativebody,
-      district,
-      countycode
-    FROM d1_legislators
-    WHERE employeeno = ?
+      ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "l.is_free_stater"))},
+      l.legislativebody,
+      l.district,
+      l.countycode
+    FROM d1_legislators l
+    LEFT JOIN d1_people people
+      ON people.gc_personid = l.personid
+      OR people.employeeno = l.employeeno
+    WHERE l.employeeno = ?
     LIMIT 1
   `)
     .bind(employeeno)

@@ -99,7 +99,7 @@ const searchableText = cleanText([
   rep.towns_represented,
   rep.townsRepresented,
   rep.email,
-  isFreeStater(rep) ? "Free Stater" : "",
+  isFreeStater(rep) ? "Free State Aligned" : "",
 ].flat().filter(Boolean).join(" "));
 const searchableTown = cleanText([
   rep.location_text,
@@ -207,7 +207,7 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
             title="What is a Free Stater?"
             aria-label="What is a Free Stater?"
           >
-            Free Stater
+            Free State Aligned
           </a>
         )}
       </div>
