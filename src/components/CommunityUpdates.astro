@@ -476,16 +476,18 @@ function escapeRegExp(value = "") {
   .community-update-list {
     display: grid;
     gap: 12px;
-    margin-top: 16px;
+    margin-top: 18px;
   }
 
   .community-update-card {
-    background: #f8fafc;
-    border: 1px solid #d1d5db;
-    border-radius: 12px;
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, rgba(96, 165, 250, 0.68), rgba(191, 219, 254, 0.42)) border-box;
+    border: 1px solid transparent;
+    border-radius: 16px;
     display: grid;
     gap: 14px;
-    padding: 14px;
+    padding: 16px;
   }
 
   .community-update-card.has-photo {
@@ -541,8 +543,8 @@ function escapeRegExp(value = "") {
   .community-photo-button img {
     aspect-ratio: 16 / 9;
     background: #ffffff;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
     display: block;
     height: 100%;
     min-height: 92px;
@@ -605,7 +607,7 @@ function escapeRegExp(value = "") {
   }
 
   .community-update-meta span {
-    color: #6b7280;
+    color: #64748b;
     font-size: 0.8rem;
     font-weight: 900;
   }
@@ -660,10 +662,10 @@ function escapeRegExp(value = "") {
   }
 
   .community-update-link {
-    background: #ffffff;
-    border: 1px solid #9ca3af;
+    background: #eff6ff;
+    border: 1px solid #93c5fd;
     border-radius: 999px;
-    color: #1f2933;
+    color: #1e3a8a;
     display: inline-flex;
     gap: 8px;
     align-items: center;
@@ -675,7 +677,7 @@ function escapeRegExp(value = "") {
   }
 
   .community-update-link small {
-    color: #6b7280;
+    color: #64748b;
     font-size: 0.74rem;
     font-weight: 900;
   }
@@ -759,9 +761,13 @@ function escapeRegExp(value = "") {
   }
 
   .community-update-form {
+    background: rgba(239, 246, 255, 0.72);
+    border: 1px solid #bfdbfe;
+    border-radius: 16px;
     display: grid;
     gap: 14px;
-    padding-top: 14px;
+    margin-top: 12px;
+    padding: 16px;
   }
 
   .form-grid {
@@ -793,9 +799,9 @@ function escapeRegExp(value = "") {
 
   .mention-result-list {
     background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 10px;
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    border: 1px solid #93c5fd;
+    border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.12);
     display: grid;
     gap: 4px;
     max-height: 220px;
@@ -805,7 +811,7 @@ function escapeRegExp(value = "") {
 
   .mention-suggestion {
     align-items: start;
-    background: #f8fafc;
+    background: #f8fbff;
     border: 1px solid transparent;
     border-radius: 8px;
     color: #1f2933;
@@ -819,8 +825,8 @@ function escapeRegExp(value = "") {
 
   .mention-suggestion:hover,
   .mention-suggestion:focus-visible {
-    background: #fff7ed;
-    border-color: #fed7aa;
+    background: #eff6ff;
+    border-color: #60a5fa;
     outline: none;
   }
 
@@ -844,7 +850,7 @@ function escapeRegExp(value = "") {
   }
 
   label {
-    color: #374151;
+    color: #1e3a8a;
     display: grid;
     font-size: 0.78rem;
     font-weight: 900;
@@ -855,8 +861,8 @@ function escapeRegExp(value = "") {
 
   input,
   textarea {
-    background: #f8fafc;
-    border: 1px solid #9ca3af;
+    background: #ffffff;
+    border: 1px solid rgba(37, 99, 235, 0.35);
     border-radius: 12px;
     box-sizing: border-box;
     color: #1f2933;
@@ -868,13 +874,31 @@ function escapeRegExp(value = "") {
     width: 100%;
   }
 
+  input:focus,
+  textarea:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+    outline: none;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #94a3b8;
+  }
+
+  input[type="file"] {
+    background: #f8fbff;
+    border-style: dashed;
+    color: #475569;
+  }
+
   textarea {
     resize: vertical;
   }
 
   button {
-    background: #1f2933;
-    border: 1px solid #e2e8f0;
+    background: #1d4ed8;
+    border: 1px solid #1e40af;
     border-radius: 999px;
     color: white;
     cursor: pointer;
@@ -882,6 +906,10 @@ function escapeRegExp(value = "") {
     font-weight: 900;
     justify-self: start;
     padding: 12px 16px;
+  }
+
+  button:hover {
+    background: #1e40af;
   }
 
   @media (max-width: 720px) {
