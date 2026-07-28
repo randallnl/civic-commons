@@ -3,11 +3,21 @@ export const prerender = false;
 
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
+import profileIcon from "../../assets/profile icon.png";
 import { currentAdminSession } from "../../lib/adminAuth";
+import {
+  candidateName,
+  candidatePath,
+  formatCandidateParty,
+  getCandidate,
+  partyClassName,
+} from "../../lib/candidatesApi";
+import { isFreeStater, isTpActionAligned } from "../../lib/civicTags";
 import {
   getOrganization,
   normalizeBillCode,
 } from "../../lib/organizationsApi";
+import { profilePhotoUrl } from "../../lib/photos";
 
 const { slug = "" } = Astro.params;
 
@@ -25,6 +35,24 @@ try {
 }
 
 const title = organization?.name || "Organization";
+const enrichedEndorsements = organization
+  ? await Promise.all(
+      (organization.endorsements || []).map(async (endorsement) => {
+        if (!endorsement.candidateSlug) return { ...endorsement, candidateProfile: null };
+
+        try {
+          const data = await getCandidate(endorsement.candidateSlug);
+          return {
+            ...endorsement,
+            candidateProfile: data.candidate || data,
+          };
+        } catch (error) {
+          console.error(error?.message || "Unable to load endorsed candidate.");
+          return { ...endorsement, candidateProfile: null };
+        }
+      }),
+    )
+  : [];
 const contactLinks = organization
   ? [
       organization.website && { href: organization.website, label: "Website" },
@@ -67,6 +95,39 @@ function endorsementPillClass(endorsement = {}) {
   }
 
   return "endorse";
+}
+
+function endorsedCandidateName(endorsement = {}) {
+  return candidateName(endorsement.candidateProfile || {}) || endorsement.candidateName || "Candidate";
+}
+
+function endorsedCandidateHref(endorsement = {}) {
+  if (endorsement.candidateProfile) return candidatePath(endorsement.candidateProfile);
+  return endorsement.candidateSlug ? `/candidates/${endorsement.candidateSlug}` : "/candidates";
+}
+
+function endorsedCandidatePhoto(endorsement = {}) {
+  const candidate = endorsement.candidateProfile || {};
+  return profilePhotoUrl(candidate.photoUrl) || profilePhotoUrl(candidate.legislatorPhotoUrl);
+}
+
+function endorsedCandidateOfficeLine(endorsement = {}) {
+  const candidate = endorsement.candidateProfile || {};
+  return [
+    candidate.office || endorsement.office,
+    candidate.county,
+    candidate.district ? `District ${candidate.district}` : endorsement.district,
+  ].filter(Boolean).join(", ");
+}
+
+function endorsedCandidateParty(endorsement = {}) {
+  const candidate = endorsement.candidateProfile || {};
+  return candidate.politicalParty || candidate.party || "";
+}
+
+function endorsedCandidateIsCurrentLegislator(endorsement = {}) {
+  const candidate = endorsement.candidateProfile || {};
+  return Boolean(candidate.currentLegislator || candidate.legislatorPersonId || candidate.legislatorProfileUrl);
 }
 ---
 
@@ -310,31 +371,74 @@ function endorsementPillClass(endorsement = {}) {
               <section class="panel">
                 <div class="section-heading">
                   <p class="eyebrow">Endorsements</p>
-                  <h2>{organization.endorsements.length} Candidate Endorsements</h2>
+                  <h2>{enrichedEndorsements.length} Candidate Endorsements</h2>
                 </div>
 
-                {organization.endorsements.length ? (
-                  <div class="comment-list">
-                    {organization.endorsements.map((endorsement) => (
-                      <article>
-                        <div class="comment-topline">
-                          <a class="bill-link" href={`/candidates/${endorsement.candidateSlug}`}>
-                            {endorsement.candidateName}
-                          </a>
-                          {endorsement.position && (
-                            <span class:list={["position-pill", endorsementPillClass(endorsement)]}>
-                              {endorsement.position}
-                            </span>
+                {enrichedEndorsements.length ? (
+                  <div class="endorsement-card-list">
+                    {enrichedEndorsements.map((endorsement) => (
+                      <article class="endorsement-person-card">
+                        <a class="endorsement-photo" href={endorsedCandidateHref(endorsement)}>
+                          {endorsedCandidatePhoto(endorsement) ? (
+                            <img
+                              src={endorsedCandidatePhoto(endorsement)}
+                              alt={`Photo of ${endorsedCandidateName(endorsement)}`}
+                              loading="lazy"
+                            />
+                          ) : (
+                            <img class="photo-fallback" src={profileIcon.src} alt="" loading="lazy" />
                           )}
-                        </div>
+                        </a>
 
-                        {endorsement.statement && <p class="endorsement-preview">{endorsement.statement}</p>}
+                        <div class="endorsement-person-copy">
+                          <div class="endorsement-person-topline">
+                            <div>
+                              <h3>
+                                <a href={endorsedCandidateHref(endorsement)}>
+                                  {endorsedCandidateName(endorsement)}
+                                </a>
+                              </h3>
+                              <p class="endorsement-office-line">
+                                {endorsedCandidateOfficeLine(endorsement) || "Office not listed"}
+                              </p>
+                            </div>
+                            {endorsement.position && (
+                              <span class:list={["position-pill", endorsementPillClass(endorsement)]}>
+                                {endorsement.position}
+                              </span>
+                            )}
+                          </div>
 
-                        <div class="comment-meta">
-                          {endorsement.office && <span>{endorsement.office}</span>}
-                          {endorsement.district && <span>{endorsement.district}</span>}
-                          {endorsement.electionYear && <span>{endorsement.electionYear}</span>}
-                          {endorsement.date && <span>{endorsement.date}</span>}
+                          <div class="endorsement-pill-row">
+                            {endorsedCandidateParty(endorsement) && (
+                              <span class:list={["party-pill", partyClassName(endorsedCandidateParty(endorsement))]}>
+                                {formatCandidateParty(endorsedCandidateParty(endorsement))}
+                              </span>
+                            )}
+                            {endorsedCandidateIsCurrentLegislator(endorsement) && (
+                              <span>Current Legislator</span>
+                            )}
+                            {isFreeStater(endorsement.candidateProfile) && (
+                              <a
+                                class="warning-tag"
+                                href="/free-staters"
+                                title="What is a Free Stater?"
+                                aria-label="What is a Free Stater?"
+                              >
+                                Free State Aligned
+                              </a>
+                            )}
+                            {isTpActionAligned(endorsement.candidateProfile) && (
+                              <span class="warning-tag">TPAction Aligned</span>
+                            )}
+                          </div>
+
+                          {endorsement.statement && <p class="endorsement-preview">{endorsement.statement}</p>}
+
+                          <div class="comment-meta">
+                            {endorsement.electionYear && <span>{endorsement.electionYear}</span>}
+                            {endorsement.date && <span>{endorsement.date}</span>}
+                          </div>
                         </div>
                       </article>
                     ))}
@@ -550,6 +654,7 @@ function endorsementPillClass(endorsement = {}) {
 
   .stack,
   .comment-list,
+  .endorsement-card-list,
   .link-list {
     display: grid;
     gap: 14px;
@@ -587,6 +692,116 @@ function endorsementPillClass(endorsement = {}) {
     border: 1px solid #d1d5db;
     border-radius: 8px;
     padding: 14px;
+  }
+
+  .endorsement-person-card {
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: 82px minmax(0, 1fr);
+    padding: 14px;
+  }
+
+  .endorsement-photo,
+  .endorsement-photo img {
+    width: 82px;
+  }
+
+  .endorsement-photo img {
+    aspect-ratio: 4 / 5;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-sizing: border-box;
+    display: block;
+    height: 103px;
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  .endorsement-photo img.photo-fallback {
+    background: transparent;
+    object-fit: cover;
+    padding: 0;
+  }
+
+  .endorsement-person-copy {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .endorsement-person-topline {
+    align-items: start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+  }
+
+  .endorsement-person-topline h3 {
+    font-size: 1.15rem;
+    line-height: 1.12;
+    margin: 0;
+  }
+
+  .endorsement-office-line {
+    color: #4b5563;
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1.35;
+    margin: 5px 0 0;
+  }
+
+  .endorsement-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .endorsement-pill-row span,
+  .endorsement-pill-row a,
+  .party-pill,
+  .warning-tag {
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.78rem;
+    font-weight: 900;
+    padding: 5px 8px;
+    text-decoration: none;
+  }
+
+  .party-republican {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
+  }
+
+  .party-democrat {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+  }
+
+  .party-libertarian {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    color: #92400e;
+  }
+
+  .party-unknown {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
+  }
+
+  .warning-tag {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    color: #92400e;
   }
 
   .comment-topline {
@@ -640,6 +855,21 @@ function endorsementPillClass(endorsement = {}) {
     font-weight: 900;
     gap: 10px;
     margin-top: 12px;
+  }
+
+  @media (max-width: 620px) {
+    .endorsement-person-card {
+      grid-template-columns: 64px minmax(0, 1fr);
+    }
+
+    .endorsement-photo,
+    .endorsement-photo img {
+      width: 64px;
+    }
+
+    .endorsement-photo img {
+      height: 80px;
+    }
   }
 
   .comment-photo {
