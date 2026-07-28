@@ -5,6 +5,7 @@ import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import ArticleList from "../../components/ArticleList.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
+import FilterBar from "../../components/FilterBar.astro";
 import profileIcon from "../../assets/profile icon.png";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
@@ -405,11 +406,19 @@ function uniqueArticles(articles = []) {
         </div>
 
         <aside class="stack">
-          <section class="panel compact-panel endorsements-panel">
+          <section
+            class="panel compact-panel endorsements-panel"
+            x-data="nhdbFuzzyFilter({ itemSelector: '.endorsement-card[data-fuzzy-item]', syncUrl: false })"
+          >
             <div class="section-heading">
               <div>
                 <p class="eyebrow">Endorsements</p>
-                <h2>Organizational Endorsements</h2>
+                <h2>
+                  Organizational Endorsements
+                  {endorsements.length > 0 && (
+                    <span class="inline-count">(<span data-fuzzy-count>{endorsements.length}</span>)</span>
+                  )}
+                </h2>
               </div>
               <a class="section-action" href={`/endorsements/submit?candidate=${encodeURIComponent(candidateSlug(candidate))}`}>
                 Submit
@@ -417,9 +426,54 @@ function uniqueArticles(articles = []) {
             </div>
 
             {endorsements.length ? (
-              <div class="endorsement-list">
+              <>
+                <FilterBar submitLabel="Apply" columns="dense" live={true}>
+                  <label>
+                    Search
+                    <input name="q" type="search" placeholder="Organization or note" data-fuzzy-search />
+                  </label>
+                  <label>
+                    Position
+                    <select name="position" data-fuzzy-filter-field data-fuzzy-field="position">
+                      <option value="">All positions</option>
+                      <option value="Endorsed">Endorsed</option>
+                      <option value="Recommended">Recommended</option>
+                      <option value="Supported">Supported</option>
+                      <option value="Opposed">Opposed</option>
+                    </select>
+                  </label>
+                  <label>
+                    Sort
+                    <select name="sort" data-fuzzy-sort>
+                      <option value="name">Organization A-Z</option>
+                      <option value="updated:desc">Newest first</option>
+                      <option value="position">Position</option>
+                    </select>
+                  </label>
+                </FilterBar>
+
+                <div class="filter-chips" data-fuzzy-chips hidden></div>
+
+                <div class="endorsement-list">
                 {endorsements.map((endorsement) => (
-                  <article>
+                  <article
+                    class="endorsement-card"
+                    data-fuzzy-item
+                    data-fuzzy-name={endorsement.organization.name}
+                    data-fuzzy-position={endorsement.position || ""}
+                    data-fuzzy-sort-name={endorsement.organization.name}
+                    data-fuzzy-sort-position={endorsement.position || ""}
+                    data-fuzzy-sort-updated={Date.parse(endorsement.date || endorsement.createdAt || "") || 0}
+                    data-fuzzy-text={[
+                      endorsement.organization.name,
+                      endorsement.position,
+                      endorsement.statement,
+                      endorsement.office,
+                      endorsement.district,
+                      endorsement.electionYear,
+                      endorsement.date,
+                    ].filter(Boolean).join(" ")}
+                  >
                     <div class="endorsement-card-main">
                       <a class="endorsement-media" href={organizationPath(endorsement.organization)}>
                         {endorsementMediaUrl(endorsement) ? (
@@ -454,7 +508,13 @@ function uniqueArticles(articles = []) {
                     </div>
                   </article>
                 ))}
-              </div>
+                </div>
+
+                <div class="status-message empty-state" data-fuzzy-empty hidden>
+                  <strong>No endorsements match those filters.</strong>
+                  <span>Try searching by organization name, position, or note.</span>
+                </div>
+              </>
             ) : (
               <p class="empty">No organizational endorsements have been published yet.</p>
             )}

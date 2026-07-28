@@ -3,6 +3,7 @@ export const prerender = false;
 
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
+import FilterBar from "../../components/FilterBar.astro";
 import profileIcon from "../../assets/profile icon.png";
 import { currentAdminSession } from "../../lib/adminAuth";
 import {
@@ -368,16 +369,75 @@ function endorsedCandidateIsCurrentLegislator(endorsement = {}) {
                 )}
               </section>
 
-              <section class="panel">
+              <section
+                class="panel endorsements-panel"
+                x-data="nhdbFuzzyFilter({ itemSelector: '.endorsement-person-card[data-fuzzy-item]', syncUrl: false })"
+              >
                 <div class="section-heading">
                   <p class="eyebrow">Endorsements</p>
-                  <h2>{enrichedEndorsements.length} Candidate Endorsements</h2>
+                  <h2>
+                    <span data-fuzzy-count>{enrichedEndorsements.length}</span>
+                    Candidate Endorsements
+                  </h2>
                 </div>
 
                 {enrichedEndorsements.length ? (
-                  <div class="endorsement-card-list">
+                  <>
+                    <FilterBar submitLabel="Apply" columns="dense" live={true}>
+                      <label>
+                        Search
+                        <input
+                          name="q"
+                          type="search"
+                          placeholder="Candidate, office, note..."
+                          data-fuzzy-search
+                        />
+                      </label>
+
+                      <label>
+                        Position
+                        <select name="position" data-fuzzy-filter-field data-fuzzy-field="position">
+                          <option value="">All positions</option>
+                          <option value="Endorsed">Endorsed</option>
+                          <option value="Recommended">Recommended</option>
+                          <option value="Supported">Supported</option>
+                          <option value="Opposed">Opposed</option>
+                        </select>
+                      </label>
+
+                      <label>
+                        Sort
+                        <select name="sort" data-fuzzy-sort>
+                          <option value="name">Name A-Z</option>
+                          <option value="updated:desc">Newest first</option>
+                          <option value="position">Position</option>
+                        </select>
+                      </label>
+                    </FilterBar>
+
+                    <div class="filter-chips" data-fuzzy-chips hidden></div>
+
+                    <div class="endorsement-card-list">
                     {enrichedEndorsements.map((endorsement) => (
-                      <article class="endorsement-person-card">
+                      <article
+                        class="endorsement-person-card"
+                        data-fuzzy-item
+                        data-fuzzy-name={endorsedCandidateName(endorsement)}
+                        data-fuzzy-position={endorsement.position || ""}
+                        data-fuzzy-office={endorsedCandidateOfficeLine(endorsement)}
+                        data-fuzzy-sort-name={endorsedCandidateName(endorsement)}
+                        data-fuzzy-sort-position={endorsement.position || ""}
+                        data-fuzzy-sort-updated={Date.parse(endorsement.date || endorsement.createdAt || "") || 0}
+                        data-fuzzy-text={[
+                          endorsedCandidateName(endorsement),
+                          endorsedCandidateOfficeLine(endorsement),
+                          endorsedCandidateParty(endorsement),
+                          endorsement.position,
+                          endorsement.statement,
+                          endorsement.electionYear,
+                          endorsement.date,
+                        ].filter(Boolean).join(" ")}
+                      >
                         <a class="endorsement-photo" href={endorsedCandidateHref(endorsement)}>
                           {endorsedCandidatePhoto(endorsement) ? (
                             <img
@@ -442,7 +502,13 @@ function endorsedCandidateIsCurrentLegislator(endorsement = {}) {
                         </div>
                       </article>
                     ))}
-                  </div>
+                    </div>
+
+                    <div class="status-message empty-state" data-fuzzy-empty hidden>
+                      <strong>No endorsements match those filters.</strong>
+                      <span>Try searching by candidate name, office, or endorsement note.</span>
+                    </div>
+                  </>
                 ) : (
                   <p class="empty">No candidate endorsements have been published yet.</p>
                 )}
