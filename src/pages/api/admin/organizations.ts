@@ -69,6 +69,13 @@ export async function POST({ request }) {
       throw new Error("Choose a valid organization admin action.");
     }
 
+    const organizationSlug = String(form.get("slug") || form.get("name") || "").trim();
+    const uploadedLogoUrl = await uploadOrganizationLogo({
+      file: form.get("logoFile"),
+      organizationSlug,
+      key: form.get("logoKey"),
+    });
+
     const result = await saveOrganizationProfile({
       name: form.get("name"),
       slug: form.get("slug"),
@@ -86,7 +93,7 @@ export async function POST({ request }) {
       state: form.get("state"),
       serviceArea: form.get("serviceArea"),
       issueArea: form.get("issueArea"),
-      logoUrl: form.get("logoUrl"),
+      logoUrl: uploadedLogoUrl || form.get("logoUrl"),
       bannerImageUrl: form.get("bannerImageUrl"),
       foundedYear: form.get("foundedYear"),
       approved: form.get("approved") || "0",
@@ -172,6 +179,33 @@ async function uploadCommentPhoto({ file, organizationSlug = "", bill = "" } = {
     .split("/")
     .map((part) => encodeURIComponent(part))
     .join("/")}`;
+}
+
+async function uploadOrganizationLogo({ file, organizationSlug = "", key = "" } = {}) {
+  if (!file || typeof file === "string" || !file.size) return "";
+  const bucket = env["organization-assets"];
+  if (!bucket) throw new Error("Organization asset bucket is not configured.");
+
+  const assetKey = sanitizeKey(key) || [
+    "organizations",
+    "logos",
+    `${slugify(organizationSlug || "organization")}-${sanitizeFilename(file.name || "logo")}`,
+  ].join("/");
+
+  await bucket.put(assetKey, await file.arrayBuffer(), {
+    httpMetadata: {
+      contentType: file.type || contentTypeFor(assetKey),
+      cacheControl: "public, max-age=86400",
+    },
+  });
+
+  return assetKey;
+}
+
+function sanitizeKey(value = "") {
+  const key = String(value || "").trim();
+  if (!key || key.startsWith("/") || key.includes("..") || key.includes("\\")) return "";
+  return key;
 }
 
 function sanitizeFilename(value = "") {

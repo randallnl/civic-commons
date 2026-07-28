@@ -91,7 +91,12 @@ function endorsementPillClass(endorsement = {}) {
     endorsement.statement,
   ].filter(Boolean).join(" ").toLowerCase();
 
-  if (text.includes("tpaction") || text.includes("tp action") || text.includes("free state")) {
+  if (
+    text.includes("tpaction") ||
+    text.includes("tp action") ||
+    text.includes("turning point action") ||
+    text.includes("free state")
+  ) {
     return "warning";
   }
 
@@ -194,7 +199,7 @@ function endorsedCandidateIsCurrentLegislator(endorsement = {}) {
                     </p>
                   </div>
 
-                  <form class="admin-org-form" action="/api/admin/organizations" method="post">
+                  <form class="admin-org-form" action="/api/admin/organizations" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="save" />
                     <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
 
@@ -273,6 +278,20 @@ function endorsedCandidateIsCurrentLegislator(endorsement = {}) {
                       <label>
                         Banner filename or URL
                         <input name="bannerImageUrl" value={organization.bannerImageUrl} />
+                      </label>
+                    </div>
+
+                    <div class="form-grid two">
+                      <label>
+                        Upload logo
+                        <input name="logoFile" type="file" accept="image/*" />
+                      </label>
+                      <label>
+                        Logo R2 key <span>Optional</span>
+                        <input
+                          name="logoKey"
+                          placeholder={`organizations/logos/${organization.slug || "organization"}-logo.png`}
+                        />
                       </label>
                     </div>
 

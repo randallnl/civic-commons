@@ -814,7 +814,7 @@ function reviewDate(value = "") {
               ))}
             </datalist>
 
-            <form class="stack-form organization-admin-form" action="/api/admin/organizations" method="post">
+            <form class="stack-form organization-admin-form" action="/api/admin/organizations" method="post" enctype="multipart/form-data">
               <input type="hidden" name="action" value="save" />
               <input type="hidden" name="redirectTo" value="/admin" />
 
@@ -906,6 +906,17 @@ function reviewDate(value = "") {
                 <label>
                   Banner filename or URL
                   <input name="bannerImageUrl" placeholder="org-banner.png" />
+                </label>
+              </div>
+
+              <div class="form-grid two">
+                <label>
+                  Upload logo
+                  <input name="logoFile" type="file" accept="image/*" />
+                </label>
+                <label>
+                  Logo R2 key <span>Optional</span>
+                  <input name="logoKey" placeholder="organizations/logos/example-logo.png" />
                 </label>
               </div>
 

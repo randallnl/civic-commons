@@ -210,7 +210,12 @@ function endorsementPillClass(endorsement = {}) {
     endorsement.statement,
   ].filter(Boolean).join(" ").toLowerCase();
 
-  if (text.includes("tpaction") || text.includes("tp action") || text.includes("free state")) {
+  if (
+    text.includes("tpaction") ||
+    text.includes("tp action") ||
+    text.includes("turning point action") ||
+    text.includes("free state")
+  ) {
     return "warning";
   }
 
