@@ -201,6 +201,21 @@ function endorsementMediaUrl(endorsement = {}) {
   return endorsement.photoUrl || endorsement.organization?.logoUrl || "";
 }
 
+function endorsementPillClass(endorsement = {}) {
+  const text = [
+    endorsement.position,
+    endorsement.organization?.name,
+    endorsement.organization,
+    endorsement.statement,
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  if (text.includes("tpaction") || text.includes("tp action") || text.includes("free state")) {
+    return "warning";
+  }
+
+  return "endorse";
+}
+
 function formatDate(value) {
   if (!value) return "";
 
@@ -420,10 +435,14 @@ function uniqueArticles(articles = []) {
                               {endorsement.organization.name}
                             </a>
                           </strong>
-                          {endorsement.position && <span>{endorsement.position}</span>}
+                          {endorsement.position && (
+                            <span class:list={[endorsementPillClass(endorsement)]}>
+                              {endorsement.position}
+                            </span>
+                          )}
                         </div>
 
-                        {endorsement.statement && <p>{endorsement.statement}</p>}
+                        {endorsement.statement && <p class="endorsement-preview">{endorsement.statement}</p>}
 
                         <div class="endorsement-meta">
                           {endorsement.office && <span>{endorsement.office}</span>}
@@ -1155,6 +1174,19 @@ function uniqueArticles(articles = []) {
     font-size: 0.82rem;
     font-weight: 900;
     padding: 6px 9px;
+  }
+
+  .endorsement-topline span.warning {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    color: #92400e;
+  }
+
+  .endorsement-preview {
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    display: -webkit-box;
+    overflow: hidden;
   }
 
   .endorsement-list p,
