@@ -5,7 +5,6 @@ import TopNav from "../components/TopNav.astro";
 import BillPositionSummary from "../components/BillPositionSummary.astro";
 import RepresentativeCard from "../components/RepresentativeCard.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-import headingBanner from "../assets/heading_banner.png";
 import { articleDetailPath, articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
 import { billDetailPath, getBills, getBillSummaries } from "../lib/billsApi";
 import { getRepresentatives } from "../lib/repsApi";
@@ -175,22 +174,49 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     <TopNav />
     <main class="page">
       <section class="hero">
-        <img
-          class="hero-banner"
-          src={headingBanner.src}
-          alt="NH Deserves Better"
-          width="2000"
-          height="500"
-        />
         <div class="hero-copy">
           <p class="eyebrow">Community-powered civic information</p>
-          <h1>Know your State Representatives, State Senator, and who wants the job next.</h1>
+          <h1>Start with your address.</h1>
           <p class="lede">
-            NH Deserves Better is a public directory focused on New Hampshire
-            State Representatives, State Senators, and candidates for those
-            offices, with legislative districts, bills, testimony, and civic
-            coverage connected to them.
+            Find your New Hampshire State Representatives, State Senator, and
+            the candidates running for those offices.
           </p>
+
+          <form class="hero-lookup" action="/my-state-rep" method="get" data-hero-lookup>
+            <div class="lookup-tabs" role="tablist" aria-label="Choose lookup type">
+              <button
+                class="active"
+                type="button"
+                data-lookup-target="legislators"
+                aria-selected="true"
+              >
+                Legislators
+              </button>
+              <button
+                type="button"
+                data-lookup-target="candidates"
+                aria-selected="false"
+              >
+                Candidates
+              </button>
+            </div>
+
+            <label for="hero-address">Enter your address</label>
+            <div class="hero-address-row">
+              <input
+                id="hero-address"
+                name="address"
+                type="search"
+                placeholder="82 Bobcat Way, Manchester, NH"
+                autocomplete="street-address"
+                required
+              />
+              <button type="submit">Find Matches</button>
+            </div>
+            <p data-lookup-help>
+              See your current State Representative and State Senator districts.
+            </p>
+          </form>
         </div>
       </section>
 
@@ -505,6 +531,45 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
         <a href="/suggest-update">Suggest an update</a>
       </section>
     </main>
+    <script>
+      const lookupForm = document.querySelector("[data-hero-lookup]");
+      const lookupHelp = lookupForm?.querySelector("[data-lookup-help]");
+      const lookupTabs = lookupForm?.querySelectorAll("[data-lookup-target]");
+      let lookupTarget = "legislators";
+
+      function setLookupTarget(nextTarget) {
+        lookupTarget = nextTarget === "candidates" ? "candidates" : "legislators";
+        lookupForm?.setAttribute(
+          "action",
+          lookupTarget === "candidates" ? "/candidates" : "/my-state-rep",
+        );
+        if (lookupHelp) {
+          lookupHelp.textContent =
+            lookupTarget === "candidates"
+              ? "See State House and State Senate candidates for your address."
+              : "See your current State Representative and State Senator districts.";
+        }
+
+        lookupTabs?.forEach((tab) => {
+          const active = tab.getAttribute("data-lookup-target") === lookupTarget;
+          tab.classList.toggle("active", active);
+          tab.setAttribute("aria-selected", String(active));
+        });
+      }
+
+      lookupTabs?.forEach((tab) => {
+        tab.addEventListener("click", () => setLookupTarget(tab.getAttribute("data-lookup-target")));
+      });
+
+      lookupForm?.addEventListener("submit", (event) => {
+        if (lookupTarget !== "legislators") return;
+        event.preventDefault();
+        const formData = new FormData(lookupForm);
+        const address = String(formData.get("address") || "").trim();
+        if (!address) return;
+        window.location.href = `/my-state-rep?address=${encodeURIComponent(address)}#rep-results`;
+      });
+    </script>
     <SiteFooter />
   </body>
 </html>
@@ -517,41 +582,51 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   }
 
   .hero {
-    align-items: end;
-    aspect-ratio: 4 / 1;
+    align-items: center;
+    background:
+      radial-gradient(circle at 82% 18%, rgba(220, 77, 9, 0.16), transparent 28%),
+      linear-gradient(135deg, #eff6ff 0%, #ffffff 48%, #f8fbff 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 18px;
     box-sizing: border-box;
     display: grid;
     margin: 0;
-    min-height: clamp(420px, 42vw, 560px);
+    min-height: clamp(430px, 42vw, 540px);
     overflow: hidden;
-    padding: clamp(36px, 5vw, 64px);
+    padding: clamp(28px, 5vw, 62px);
     position: relative;
     width: 100%;
+  }
+
+  .hero::before {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(96, 165, 250, 0.04));
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    border-radius: 999px;
+    content: "";
+    height: 320px;
+    position: absolute;
+    right: -120px;
+    top: -130px;
+    width: 320px;
   }
 
   .hero::after {
-    background:
-      linear-gradient(90deg, rgba(17, 24, 39, 0.82), rgba(17, 24, 39, 0.55) 48%, rgba(17, 24, 39, 0.2)),
-      linear-gradient(0deg, rgba(17, 24, 39, 0.58), rgba(17, 24, 39, 0.1));
+    background: rgba(220, 77, 9, 0.13);
+    border-radius: 999px;
+    bottom: -90px;
     content: "";
-    inset: 0;
+    height: 220px;
+    left: -80px;
     position: absolute;
-    z-index: 1;
-  }
-
-  .hero-banner {
-    height: 100%;
-    inset: 0;
-    object-fit: cover;
-    position: absolute;
-    width: 100%;
-    z-index: 0;
+    width: 220px;
   }
 
   .hero-copy {
-    color: #fefce8;
+    color: #1f2933;
+    display: grid;
+    gap: 18px;
     position: relative;
-    width: min(760px, 100%);
+    width: min(900px, 100%);
     z-index: 2;
   }
 
@@ -565,7 +640,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   }
 
   .hero .eyebrow {
-    color: #fde68a;
+    color: #1d4ed8;
   }
 
   h1 {
@@ -576,8 +651,8 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   }
 
   .hero h1 {
-    color: #fffaf1;
-    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+    color: #1f2933;
+    text-shadow: none;
   }
 
   .lede {
@@ -589,8 +664,104 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   }
 
   .hero .lede {
-    color: #f8fafc;
-    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
+    color: #334155;
+    margin-top: 0;
+    text-shadow: none;
+  }
+
+  .hero-lookup {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, rgba(37, 99, 235, 0.62), rgba(220, 77, 9, 0.38)) border-box;
+    border: 1px solid transparent;
+    border-radius: 18px;
+    box-shadow: 0 18px 50px rgba(37, 99, 235, 0.12);
+    display: grid;
+    gap: 14px;
+    margin-top: 8px;
+    padding: clamp(16px, 2vw, 22px);
+  }
+
+  .lookup-tabs {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    display: inline-flex;
+    gap: 4px;
+    justify-self: start;
+    padding: 4px;
+  }
+
+  .lookup-tabs button {
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    color: #1e3a8a;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 950;
+    padding: 10px 14px;
+  }
+
+  .lookup-tabs button.active {
+    background: #1d4ed8;
+    color: #ffffff;
+  }
+
+  .hero-lookup label {
+    color: #1e3a8a;
+    font-size: 0.78rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .hero-address-row {
+    align-items: stretch;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .hero-address-row input,
+  .hero-address-row button {
+    border-radius: 999px;
+    box-sizing: border-box;
+    font: inherit;
+    min-height: 56px;
+  }
+
+  .hero-address-row input {
+    background: #f8fbff;
+    border: 1px solid rgba(37, 99, 235, 0.38);
+    color: #1f2933;
+    font-size: 1.05rem;
+    font-weight: 800;
+    padding: 14px 18px;
+    width: 100%;
+  }
+
+  .hero-address-row input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+    outline: none;
+  }
+
+  .hero-address-row button {
+    background: #dc4d09;
+    border: 1px solid #b83f07;
+    color: #ffffff;
+    cursor: pointer;
+    font-weight: 950;
+    padding: 14px 22px;
+  }
+
+  .hero-lookup p {
+    color: #475569;
+    font-size: 0.94rem;
+    font-weight: 850;
+    line-height: 1.4;
+    margin: 0;
   }
 
   .cta a {
@@ -1653,7 +1824,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
     .hero {
       aspect-ratio: auto;
-      min-height: 430px;
+      min-height: auto;
       padding: 38px 22px;
     }
 
@@ -1665,6 +1836,32 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     .hero .lede {
       font-size: 1rem;
       line-height: 1.5;
+    }
+
+    .hero-lookup {
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .lookup-tabs {
+      justify-self: stretch;
+      width: 100%;
+    }
+
+    .lookup-tabs button {
+      flex: 1 1 0;
+      padding: 10px 8px;
+    }
+
+    .hero-address-row {
+      grid-template-columns: 1fr;
+    }
+
+    .hero-address-row input,
+    .hero-address-row button {
+      border-radius: 14px;
+      min-height: 52px;
+      width: 100%;
     }
 
     .pathway,
