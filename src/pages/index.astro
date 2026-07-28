@@ -207,7 +207,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
                 id="hero-address"
                 name="address"
                 type="search"
-                placeholder="82 Bobcat Way, Manchester, NH"
+                placeholder="107 North Main Street, Concord, New Hampshire"
                 autocomplete="street-address"
                 required
               />
@@ -218,29 +218,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
             </p>
           </form>
         </div>
-      </section>
-
-      <section class="rep-preview">
-          <div>
-            <p class="eyebrow">Representative Lookup</p>
-            <h2>Start with an address. See the right districts.</h2>
-            <p>
-              The tool identifies ward-specific House districts, Senate districts,
-              State Representative and State Senator cards, contact details,
-              and recent vote summaries.
-            </p>
-            <a href="/my-state-rep">Open My Legislator</a>
-          </div>
-
-          <div class="preview-panel">
-            <span>Example result</span>
-            <strong>72 Concord St, Manchester</strong>
-            <ul>
-              <li>Ward 3</li>
-              <li>Senate District 20</li>
-              <li>House HIL 23 + HIL 40</li>
-            </ul>
-          </div>
       </section>
 
       <section class="pathway">
@@ -326,139 +303,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
                 />
               );
             })}
-          </div>
-        </div>
-
-        <div class="homepage-panel">
-          <h2>Then: Track Bills and Votes</h2>
-          <div class="bill-preview-grid">
-            {recentBills.length === 0 ? (
-              <p class="empty-note">No bills added yet.</p>
-            ) : (
-              recentBills.map((bill) => {
-                const trackedBill = trackedBillFor(bill);
-
-                return (
-                  <article class="bill-preview-card">
-                    <a href={billDetailPath(bill.condensedbillno || bill.bill_number, bill.sessionyear || bill.session_year)}>
-                      {bill.name || bill.title || trackedBill?.name || bill.condensedbillno || bill.bill_number}
-                    </a>
-                    <p>
-                      {previewText(
-                        bill.summary ||
-                          trackedBill?.summary ||
-                          bill.description ||
-                          bill.title ||
-                          "No tracker summary available yet.",
-                      )}
-                    </p>
-                    <BillPositionSummary bill={bill} compact={true} />
-                  </article>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        <div class="homepage-panel">
-          <h2>Finally: Read Community Updates</h2>
-          <ul class="list stacked-list">
-            {recentArticles.length === 0 ? (
-              <li>No articles added yet.</li>
-            ) : (
-              recentArticles.map((article) => (
-                <li class:list={["article-update", article.preview?.imageUrl && "has-image"]}>
-                  {article.preview?.imageUrl && (
-                    <a class="article-thumb" href={articleDetailPath(article)} tabindex="-1" aria-hidden="true">
-                      <img src={article.preview.imageUrl} alt="" loading="lazy" />
-                    </a>
-                  )}
-                  <div>
-                    <a href={articleDetailPath(article)}>{cleanText(article.preview?.title || article.title)}</a>
-                    <div class="article-meta-inline">
-                      {articleSourceName(article) && <em>Source: {articleSourceName(article)}</em>}
-                      {articlePublishDate(article) && <em>Published: {articlePublishDate(article)}</em>}
-                    </div>
-                    <span>
-                      {previewText(
-                        article.preview?.description ||
-                          article.summary ||
-                          article.publisher ||
-                          article.resource_type ||
-                          "Community update",
-                        170,
-                      )}
-                    </span>
-                  </div>
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
-
-        <div class="homepage-panel">
-          <div class="section-intro">
-            <p class="eyebrow">Community Updates</p>
-            <h2>Recent profile updates from the community.</h2>
-            <p>
-              Approved community updates help add local context to legislator,
-              candidate, and bill profiles. These are submitted by residents
-              and reviewed before publication.
-            </p>
-          </div>
-
-          <div class="comment-list stacked-comment-list">
-            {recentCommunityUpdates.length ? (
-              recentCommunityUpdates.map((update) => (
-                <article class:list={["comment-card", "community-update-card", update.photoUrl && "has-photo"]}>
-                  {update.photoUrl && (
-                    <a class="community-update-thumb" href={update.pageUrl || update.linkUrl || "/articles"} aria-label={`Open ${update.entityName || "community update"}`}>
-                      <img src={update.photoUrl} alt="" loading="lazy" />
-                      <span>Photo update</span>
-                    </a>
-                  )}
-                  <div class="community-update-copy">
-                    <div class="comment-topline">
-                      <a href={update.pageUrl || update.linkUrl || "/articles"}>
-                        {update.entityName || "Community update"}
-                      </a>
-                      <span class="position-pill neutral">
-                        {cleanText(update.entityType || "Profile")}
-                      </span>
-                    </div>
-                    <p>{previewText(update.comment || update.linkUrl || "Community-submitted context.", 210)}</p>
-                    <div class="article-meta-inline">
-                      <em>{cleanText(update.displayName || "Community member")}</em>
-                      {communityUpdateDate(update.createdAt) && <em>{communityUpdateDate(update.createdAt)}</em>}
-                    </div>
-                    {update.linkUrl && (
-                      instagramPreview(update.linkUrl) ? (
-                        <a class="instagram-preview-card compact" href={update.linkUrl}>
-                          <span class="instagram-icon" aria-hidden="true">IG</span>
-                          <span>
-                            <strong>{instagramPreview(update.linkUrl)?.label}</strong>
-                            <small>
-                              {instagramPreview(update.linkUrl)?.handle
-                                ? `@${instagramPreview(update.linkUrl)?.handle}`
-                                : instagramPreview(update.linkUrl)?.host}
-                            </small>
-                          </span>
-                          <em>Open</em>
-                        </a>
-                      ) : (
-                        <a class="bill-comment-link" href={update.linkUrl}>Open submitted link</a>
-                      )
-                    )}
-                  </div>
-                </article>
-              ))
-            ) : (
-              <article class="comment-card placeholder">
-                <span>Community updates</span>
-                <strong>No approved updates yet</strong>
-                <p>Recent community updates to legislator, candidate, and bill profiles will appear here after review.</p>
-              </article>
-            )}
           </div>
         </div>
 
@@ -590,6 +434,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     border-radius: 18px;
     box-sizing: border-box;
     display: grid;
+    justify-items: center;
     margin: 0;
     min-height: clamp(430px, 42vw, 540px);
     overflow: hidden;
@@ -625,7 +470,9 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     color: #1f2933;
     display: grid;
     gap: 18px;
+    justify-items: center;
     position: relative;
+    text-align: center;
     width: min(900px, 100%);
     z-index: 2;
   }
@@ -680,6 +527,8 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     gap: 14px;
     margin-top: 8px;
     padding: clamp(16px, 2vw, 22px);
+    text-align: left;
+    width: min(760px, 100%);
   }
 
   .lookup-tabs {
@@ -688,7 +537,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     border-radius: 999px;
     display: inline-flex;
     gap: 4px;
-    justify-self: start;
+    justify-self: center;
     padding: 4px;
   }
 
@@ -762,6 +611,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     font-weight: 850;
     line-height: 1.4;
     margin: 0;
+    text-align: center;
   }
 
   .cta a {
