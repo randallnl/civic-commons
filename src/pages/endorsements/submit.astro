@@ -85,7 +85,7 @@ const selectedOption = candidateOptions.find((option) =>
       {error && <p class="status-message error">{cleanText(error)}</p>}
 
       <section class="panel">
-        <form class="endorsement-form" action="/api/endorsements/submit" method="post">
+        <form class="endorsement-form" action="/api/endorsements/submit" method="post" enctype="multipart/form-data">
           <input type="hidden" name="redirectTo" value="/endorsements/submit" />
           <input id="candidateSlug" type="hidden" name="candidateSlug" value={selectedOption?.slug || ""} />
           <input id="candidateName" type="hidden" name="candidateName" value={selectedOption?.name || ""} />
@@ -144,6 +144,11 @@ const selectedOption = candidateOptions.find((option) =>
           <label>
             Notes or endorsement text
             <textarea name="statement" rows="5" placeholder="Paste the endorsement language or explain where it was published."></textarea>
+          </label>
+
+          <label>
+            Endorsement image <span>Optional</span>
+            <input name="photo" type="file" accept="image/*" />
           </label>
 
           <div class="form-grid two">

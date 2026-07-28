@@ -93,6 +93,7 @@ export async function ensureOrganizationTables(db = organizationsDb()) {
         election_year TEXT,
         position TEXT,
         statement TEXT,
+        photo_url TEXT,
         date TEXT,
         status TEXT NOT NULL DEFAULT 'published',
         source TEXT NOT NULL DEFAULT 'admin',
@@ -109,6 +110,7 @@ export async function ensureOrganizationTables(db = organizationsDb()) {
 
   await ensureColumn(db, "organization_endorsements", "organization_website", "TEXT");
   await ensureColumn(db, "organization_endorsements", "organization_email", "TEXT");
+  await ensureColumn(db, "organization_endorsements", "photo_url", "TEXT");
   await ensureColumn(db, "organization_endorsements", "submitter_name", "TEXT");
   await ensureColumn(db, "organization_endorsements", "submitter_email", "TEXT");
   await ensureColumn(db, "organization_endorsements", "reviewed_by", "TEXT");
@@ -389,10 +391,10 @@ export async function saveOrganizationEndorsement(data = {}, {
       `INSERT INTO organization_endorsements (
          organization_slug, organization_name, organization_website,
          organization_email, candidate_name, candidate_slug, candidate_slug_key,
-         office, district, election_year, position, statement, date, status,
-         source, submitter_name, submitter_email, updated_at
+         office, district, election_year, position, statement, photo_url, date,
+         status, source, submitter_name, submitter_email, updated_at
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
        ON CONFLICT(organization_slug, candidate_slug_key, position, statement) DO UPDATE SET
          organization_name = excluded.organization_name,
          organization_website = excluded.organization_website,
@@ -402,6 +404,7 @@ export async function saveOrganizationEndorsement(data = {}, {
          office = excluded.office,
          district = excluded.district,
          election_year = excluded.election_year,
+         photo_url = COALESCE(NULLIF(excluded.photo_url, ''), organization_endorsements.photo_url),
          date = excluded.date,
          status = excluded.status,
          source = excluded.source,
@@ -422,6 +425,7 @@ export async function saveOrganizationEndorsement(data = {}, {
       cleanText(data.electionYear || data.election_year || ""),
       cleanText(data.position || "Endorsed"),
       cleanText(data.statement || ""),
+      String(data.photoUrl || data.photo_url || "").trim(),
       cleanText(data.date || ""),
       status,
       source,
@@ -573,9 +577,9 @@ async function importOrganizationEndorsements(endorsements = [], db) {
         `INSERT INTO organization_endorsements (
            organization_slug, organization_name, candidate_name, candidate_slug,
            candidate_slug_key, office, district, election_year, position,
-           statement, date, status, source, updated_at
+           statement, photo_url, date, status, source, updated_at
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', 'google-sheet', CURRENT_TIMESTAMP)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published', 'google-sheet', CURRENT_TIMESTAMP)
          ON CONFLICT(organization_slug, candidate_slug_key, position, statement) DO UPDATE SET
            organization_name = excluded.organization_name,
            candidate_name = excluded.candidate_name,
@@ -583,6 +587,7 @@ async function importOrganizationEndorsements(endorsements = [], db) {
            office = excluded.office,
            district = excluded.district,
            election_year = excluded.election_year,
+           photo_url = COALESCE(NULLIF(excluded.photo_url, ''), organization_endorsements.photo_url),
            date = excluded.date,
            status = 'published',
            source = 'google-sheet',
@@ -599,6 +604,7 @@ async function importOrganizationEndorsements(endorsements = [], db) {
         endorsement.electionYear,
         endorsement.position,
         endorsement.statement,
+        endorsement.photoUrl || "",
         endorsement.date,
       )
       .run();
@@ -757,6 +763,7 @@ function normalizeEndorsementRow(row = {}) {
     electionYear: cleanText(row.election_year),
     position: cleanText(row.position),
     statement: cleanText(row.statement),
+    photoUrl: organizationAssetUrl(row.photo_url || ""),
     date: cleanText(row.date),
     status: cleanText(row.status),
     submitterName: cleanText(row.submitter_name),

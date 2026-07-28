@@ -14,11 +14,17 @@ import { candidateFilerForRepresentative } from "../../lib/candidateLegislatorLi
 import { candidateProfileForLegislator } from "../../lib/candidateLegislators";
 import {
   candidateName,
+  candidateSlug,
   getCandidates,
   isLegislativeCandidate,
 } from "../../lib/candidatesApi";
 import { isFreeStater, isTpActionAligned } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
+import {
+  endorsementsForCandidate,
+  getOrganizations,
+  organizationPath,
+} from "../../lib/organizationsApi";
 import { getRepresentative } from "../../lib/repsApi";
 import {
   getTrackedBills,
@@ -124,6 +130,9 @@ if (representative?.towns_represented || representative?.location_text) {
 const sourceLinks = sourceUrlsToLinks(representative?.sourceUrls);
 const portraitUrl = profilePhotoUrl(person.photo_url);
 const currentCandidateProfile = await candidateProfileForLegislator(representative);
+const linkedCandidateForEndorsements = currentCandidateProfile?.candidate || null;
+let organizations = [];
+let endorsements = [];
 if (adminSession) {
   try {
     const [candidateData, explicitCandidateId] = await Promise.all([
@@ -139,6 +148,20 @@ if (adminSession) {
     console.error(error?.message || "Unable to load candidate link options.");
   }
 }
+
+if (linkedCandidateForEndorsements) {
+  try {
+    organizations = await getOrganizations();
+    endorsements = endorsementsForCandidate(
+      organizations,
+      linkedCandidateForEndorsements,
+      candidateSlug(linkedCandidateForEndorsements),
+    );
+  } catch (error) {
+    console.error(error?.message || "Unable to load organization endorsements.");
+  }
+}
+
 let relatedArticles =
   apiData?.relatedArticles ||
   representative?.relatedArticles ||
@@ -323,6 +346,10 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function endorsementMediaUrl(endorsement = {}) {
+  return endorsement.photoUrl || endorsement.organization?.logoUrl || "";
 }
 
 function contactHref(type, value) {
@@ -894,6 +921,66 @@ function candidateOptionLabel(candidate = {}) {
             )}
           </section>
 
+          <section class="panel compact-panel endorsements-panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Endorsements</p>
+                <h2>Organizational Endorsements</h2>
+              </div>
+              {linkedCandidateForEndorsements && (
+                <a
+                  class="section-action"
+                  href={`/endorsements/submit?candidate=${encodeURIComponent(candidateSlug(linkedCandidateForEndorsements))}`}
+                >
+                  Submit
+                </a>
+              )}
+            </div>
+
+            {endorsements.length ? (
+              <div class="endorsement-list">
+                {endorsements.map((endorsement) => (
+                  <article>
+                    <div class="endorsement-card-main">
+                      <a class="endorsement-media" href={organizationPath(endorsement.organization)}>
+                        {endorsementMediaUrl(endorsement) ? (
+                          <img src={endorsementMediaUrl(endorsement)} alt="" loading="lazy" />
+                        ) : (
+                          <span>{endorsement.organization.name.slice(0, 1)}</span>
+                        )}
+                      </a>
+                      <div>
+                        <div class="endorsement-topline">
+                          <strong>
+                            <a href={organizationPath(endorsement.organization)}>
+                              {endorsement.organization.name}
+                            </a>
+                          </strong>
+                          {endorsement.position && <span>{endorsement.position}</span>}
+                        </div>
+
+                        {endorsement.statement && <p>{endorsement.statement}</p>}
+
+                        <div class="endorsement-meta">
+                          {endorsement.office && <span>{endorsement.office}</span>}
+                          {endorsement.district && <span>{endorsement.district}</span>}
+                          {endorsement.electionYear && <span>{endorsement.electionYear}</span>}
+                          {endorsement.date && <span>{formatDate(endorsement.date)}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">
+                {linkedCandidateForEndorsements
+                  ? "No organizational endorsements have been published yet."
+                  : "No linked candidate profile for endorsements yet."}
+              </p>
+            )}
+          </section>
+
           <section class="panel compact-panel">
             <div class="section-heading">
               <p class="eyebrow">Articles</p>
@@ -1419,6 +1506,92 @@ function candidateOptionLabel(candidate = {}) {
 
   .section-action:hover {
     background: #374151;
+  }
+
+  .endorsements-panel .section-heading {
+    align-items: start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+  }
+
+  .endorsement-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .endorsement-list article {
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 14px;
+  }
+
+  .endorsement-card-main {
+    align-items: start;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+
+  .endorsement-media {
+    align-items: center;
+    aspect-ratio: 1;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    color: #1f2933;
+    display: inline-flex;
+    justify-content: center;
+    overflow: hidden;
+    text-decoration: none;
+  }
+
+  .endorsement-media img {
+    height: 100%;
+    object-fit: contain;
+    padding: 6px;
+    width: 100%;
+  }
+
+  .endorsement-media span {
+    font-size: 1.35rem;
+    font-weight: 950;
+  }
+
+  .endorsement-topline {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  .endorsement-topline span {
+    background: #e7f7ec;
+    border: 1px solid #86c894;
+    border-radius: 999px;
+    color: #166534;
+    font-size: 0.78rem;
+    font-weight: 900;
+    padding: 5px 8px;
+  }
+
+  .endorsement-list p {
+    color: #4b5563;
+    font-weight: 800;
+    line-height: 1.5;
+    margin: 8px 0 0;
+  }
+
+  .endorsement-meta {
+    color: #6b7280;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+    font-weight: 900;
+    gap: 8px;
+    margin-top: 10px;
   }
 
   .timeline-list,

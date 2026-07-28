@@ -1116,7 +1116,7 @@ function reviewDate(value = "") {
               <button type="submit">Save Organization Comment</button>
             </form>
 
-            <form class="stack-form endorsement-admin-form" action="/api/admin/endorsements" method="post">
+            <form class="stack-form endorsement-admin-form" action="/api/admin/endorsements" method="post" enctype="multipart/form-data">
               <input type="hidden" name="action" value="save" />
               <input type="hidden" name="redirectTo" value="/admin#organizations-admin" />
               <input id="endorsementCandidateSlug" type="hidden" name="candidateSlug" />
@@ -1191,6 +1191,11 @@ function reviewDate(value = "") {
                   <input name="statement" placeholder="Optional endorsement note" />
                 </label>
               </div>
+
+              <label>
+                Endorsement image
+                <input name="photo" type="file" accept="image/*" />
+              </label>
 
               <button type="submit">Save Endorsement</button>
             </form>

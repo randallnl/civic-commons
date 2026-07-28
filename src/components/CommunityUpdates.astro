@@ -101,7 +101,7 @@ function escapeRegExp(value = "") {
 
 <section class="panel community-updates-panel">
   <div class="section-heading">
-    <p class="eyebrow">Community Updates</p>
+    <p class="eyebrow">Share Your Thoughts</p>
     <h2>Community context</h2>
     <p>
       Share a local note, article, social post, image, or correction connected
@@ -113,7 +113,10 @@ function escapeRegExp(value = "") {
 
   <details class="community-update-disclosure">
     <summary>
-      <span>Suggest a community update or add a photo</span>
+      <span class="thought-input-preview">
+        <strong>What should neighbors know?</strong>
+        <small>Add a thought, photo, link, or correction</small>
+      </span>
       <strong>+</strong>
     </summary>
 
@@ -125,7 +128,7 @@ function escapeRegExp(value = "") {
       <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
 
       <label>
-        Comment
+        Your thought
         <div class="mention-field" data-mention-field>
           <textarea
             name="comment"
@@ -380,6 +383,8 @@ function escapeRegExp(value = "") {
 
 <style>
   .community-updates-panel {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border-color: #bfdbfe;
     margin-top: 0;
   }
 
@@ -396,28 +401,61 @@ function escapeRegExp(value = "") {
 
   .community-update-disclosure summary {
     align-items: center;
-    background: #f8fafc;
-    border: 1px solid #9ca3af;
-    border-radius: 12px;
+    background: #eff6ff;
+    border: 1px solid #60a5fa;
+    border-radius: 16px;
     box-sizing: border-box;
-    color: #4b5563;
+    color: #1e3a8a;
     cursor: pointer;
     display: flex;
     gap: 12px;
     justify-content: space-between;
     list-style: none;
-    padding: 12px 14px;
+    padding: 10px;
   }
 
   .community-update-disclosure summary::-webkit-details-marker {
     display: none;
   }
 
-  .community-update-disclosure summary span {
-    font-weight: 800;
+  .thought-input-preview {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid rgba(37, 99, 235, 0.42);
+    border-radius: 999px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    box-sizing: border-box;
+    color: #64748b;
+    display: flex;
+    flex: 1 1 auto;
+    gap: 10px;
+    min-width: 0;
+    padding: 11px 14px;
   }
 
-  .community-update-disclosure summary strong {
+  .thought-input-preview strong {
+    background: transparent;
+    border-radius: 0;
+    color: #1f2933;
+    display: inline;
+    flex: 0 0 auto;
+    font-size: 0.92rem;
+    font-weight: 950;
+    height: auto;
+    line-height: 1.2;
+    width: auto;
+  }
+
+  .thought-input-preview small {
+    color: #64748b;
+    font-size: 0.86rem;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .community-update-disclosure summary > strong {
     align-items: center;
     background: #1f2933;
     border-radius: 999px;
@@ -431,7 +469,7 @@ function escapeRegExp(value = "") {
     width: 24px;
   }
 
-  .community-update-disclosure[open] summary strong {
+  .community-update-disclosure[open] summary > strong {
     transform: rotate(45deg);
   }
 
@@ -847,6 +885,17 @@ function escapeRegExp(value = "") {
   }
 
   @media (max-width: 720px) {
+    .thought-input-preview {
+      align-items: start;
+      border-radius: 14px;
+      display: grid;
+      gap: 3px;
+    }
+
+    .thought-input-preview small {
+      white-space: normal;
+    }
+
     .community-update-card.has-photo {
       grid-template-columns: 1fr;
     }

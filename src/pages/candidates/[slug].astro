@@ -197,6 +197,10 @@ function formatCurrency(value) {
   }).format(amount);
 }
 
+function endorsementMediaUrl(endorsement = {}) {
+  return endorsement.photoUrl || endorsement.organization?.logoUrl || "";
+}
+
 function formatDate(value) {
   if (!value) return "";
 
@@ -375,21 +379,78 @@ function uniqueArticles(articles = []) {
         </div>
       </section>
 
-      <section class="panel articles-panel">
-        <div class="section-heading">
-          <p class="eyebrow">Articles</p>
-          <h2>Related Coverage</h2>
+      <section class="content-grid">
+        <div class="stack">
+          <CommunityUpdates
+            entityType="candidate"
+            entityKey={candidateEntityKey}
+            entityName={name}
+            pageUrl={Astro.url.pathname}
+          />
         </div>
 
-        <ArticleList articles={relatedArticles} emptyText="No related articles returned yet." />
-      </section>
+        <aside class="stack">
+          <section class="panel compact-panel endorsements-panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Endorsements</p>
+                <h2>Organizational Endorsements</h2>
+              </div>
+              <a class="section-action" href={`/endorsements/submit?candidate=${encodeURIComponent(candidateSlug(candidate))}`}>
+                Submit
+              </a>
+            </div>
 
-      <CommunityUpdates
-        entityType="candidate"
-        entityKey={candidateEntityKey}
-        entityName={name}
-        pageUrl={Astro.url.pathname}
-      />
+            {endorsements.length ? (
+              <div class="endorsement-list">
+                {endorsements.map((endorsement) => (
+                  <article>
+                    <div class="endorsement-card-main">
+                      <a class="endorsement-media" href={organizationPath(endorsement.organization)}>
+                        {endorsementMediaUrl(endorsement) ? (
+                          <img src={endorsementMediaUrl(endorsement)} alt="" loading="lazy" />
+                        ) : (
+                          <span>{endorsement.organization.name.slice(0, 1)}</span>
+                        )}
+                      </a>
+                      <div>
+                        <div class="endorsement-topline">
+                          <strong>
+                            <a href={organizationPath(endorsement.organization)}>
+                              {endorsement.organization.name}
+                            </a>
+                          </strong>
+                          {endorsement.position && <span>{endorsement.position}</span>}
+                        </div>
+
+                        {endorsement.statement && <p>{endorsement.statement}</p>}
+
+                        <div class="endorsement-meta">
+                          {endorsement.office && <span>{endorsement.office}</span>}
+                          {endorsement.district && <span>{endorsement.district}</span>}
+                          {endorsement.electionYear && <span>{endorsement.electionYear}</span>}
+                          {endorsement.date && <span>{formatDate(endorsement.date)}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No organizational endorsements have been published yet.</p>
+            )}
+          </section>
+
+          <section class="panel compact-panel articles-panel">
+            <div class="section-heading">
+              <p class="eyebrow">Articles</p>
+              <h2>Related Coverage</h2>
+            </div>
+
+            <ArticleList articles={relatedArticles} compact={true} emptyText="No related articles returned yet." />
+          </section>
+        </aside>
+      </section>
 
       {adminSession && (
         <section class="panel admin-edit-panel">
@@ -600,45 +661,6 @@ function uniqueArticles(articles = []) {
         </section>
       )}
 
-      <section class="panel endorsements-panel">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Endorsements</p>
-            <h2>Organizational Endorsements</h2>
-          </div>
-          <a class="section-action" href={`/endorsements/submit?candidate=${encodeURIComponent(candidateSlug(candidate))}`}>
-            Submit an Endorsement
-          </a>
-        </div>
-
-        {endorsements.length ? (
-          <div class="endorsement-list">
-            {endorsements.map((endorsement) => (
-              <article>
-                <div class="endorsement-topline">
-                  <strong>
-                    <a href={organizationPath(endorsement.organization)}>
-                      {endorsement.organization.name}
-                    </a>
-                  </strong>
-                  {endorsement.position && <span>{endorsement.position}</span>}
-                </div>
-
-                {endorsement.statement && <p>{endorsement.statement}</p>}
-
-                <div class="endorsement-meta">
-                  {endorsement.office && <span>{endorsement.office}</span>}
-                  {endorsement.district && <span>{endorsement.district}</span>}
-                  {endorsement.electionYear && <span>{endorsement.electionYear}</span>}
-                  {endorsement.date && <span>{formatDate(endorsement.date)}</span>}
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p class="empty">No organizational endorsements have been published yet.</p>
-        )}
-      </section>
     </main>
     <SiteFooter />
   </body>
@@ -832,6 +854,23 @@ function uniqueArticles(articles = []) {
   .page > section + section,
   .page > .community-updates + section {
     margin-top: 24px;
+  }
+
+  .content-grid {
+    align-items: start;
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    margin-top: 24px;
+  }
+
+  .stack {
+    display: grid;
+    gap: 24px;
+  }
+
+  .compact-panel {
+    padding: 20px;
   }
 
   .summary-strip article,
@@ -1056,10 +1095,6 @@ function uniqueArticles(articles = []) {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .endorsements-panel {
-    margin-top: 24px;
-  }
-
   .endorsement-list {
     display: grid;
     gap: 12px;
@@ -1070,6 +1105,38 @@ function uniqueArticles(articles = []) {
     border: 1px solid #d1d5db;
     border-radius: 12px;
     padding: 14px;
+  }
+
+  .endorsement-card-main {
+    align-items: start;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+
+  .endorsement-media {
+    align-items: center;
+    aspect-ratio: 1;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    color: #1f2933;
+    display: inline-flex;
+    justify-content: center;
+    overflow: hidden;
+    text-decoration: none;
+  }
+
+  .endorsement-media img {
+    height: 100%;
+    object-fit: contain;
+    padding: 6px;
+    width: 100%;
+  }
+
+  .endorsement-media span {
+    font-size: 1.35rem;
+    font-weight: 950;
   }
 
   .endorsement-topline {
@@ -1112,6 +1179,7 @@ function uniqueArticles(articles = []) {
     .profile-hero,
     .summary-strip,
     .detail-grid,
+    .content-grid,
     .form-grid {
       grid-template-columns: 1fr;
     }
