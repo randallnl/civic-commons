@@ -2693,10 +2693,13 @@ async function handleCandidates(request, env) {
         OR c.slug LIKE ?
         OR c.office LIKE ?
         OR c.county LIKE ?
+        OR COALESCE(c.communities_represented, '') LIKE ?
+        OR COALESCE(c.towns_represented, '') LIKE ?
+        OR COALESCE(c.district_label, '') LIKE ?
         OR COALESCE(c.name_aliases, '') LIKE ?
       )
     `);
-    binds.push(search, search, search, search, search, search, search);
+    binds.push(search, search, search, search, search, search, search, search, search, search);
   }
 
   if (officeType) {
@@ -3049,7 +3052,10 @@ function candidateBaseCte() {
         c.slug AS legacy_slug,
         ${freeStateAlignedExpression("p.is_free_state_aligned_2026", "p.is_free_stater")} AS is_free_stater,
         p.is_tpaction_aligned_2026 AS is_tpaction_aligned_2026,
-        cc.source_county_id AS source_county_id
+        cc.source_county_id AS source_county_id,
+        COALESCE(dm.district_label, '') AS district_label,
+        COALESCE(dm.communities_represented, '') AS communities_represented,
+        COALESCE(dm.communities_represented, '') AS towns_represented
       FROM d1_people p
       LEFT JOIN d1_person_candidate_roles cr
         ON cr.person_id = p.id
@@ -3059,6 +3065,30 @@ function candidateBaseCte() {
       LEFT JOIN county_codes cc
         ON cc.source_county_id = CAST(lr.countycode AS INTEGER)
         OR LOWER(cc.name) = LOWER(cr.county)
+      LEFT JOIN d1_district_mapping dm
+        ON (
+          dm.body = 'H'
+          AND LOWER(COALESCE(
+            NULLIF(cr.office, ''),
+            CASE WHEN lr.legislativebody = 'H' THEN 'State Representative' ELSE '' END
+          )) LIKE '%representative%'
+          AND dm.county = cc.source_county_id
+          AND dm.district = CAST(COALESCE(NULLIF(cr.district, ''), lr.district, '0') AS INTEGER)
+        )
+        OR (
+          dm.body = 'S'
+          AND (
+            LOWER(COALESCE(
+              NULLIF(cr.office, ''),
+              CASE WHEN lr.legislativebody = 'S' THEN 'State Senate' ELSE '' END
+            )) LIKE '%senate%'
+            OR LOWER(COALESCE(
+              NULLIF(cr.office, ''),
+              CASE WHEN lr.legislativebody = 'S' THEN 'State Senator' ELSE '' END
+            )) LIKE '%senator%'
+          )
+          AND dm.district = CAST(COALESCE(NULLIF(cr.district, ''), lr.district, '0') AS INTEGER)
+        )
       LEFT JOIN candidates c
         ON c.filer_entity_number = cr.filer_entity_number
         OR c.filer_entity_number = p.filer_entity_number
@@ -3091,6 +3121,9 @@ function candidateBaseSelectColumns(tableAlias = "c") {
     isFreeStaterSelectExpression(`${prefix}is_free_stater`),
     isTpActionAlignedSelectExpression(`${prefix}is_tpaction_aligned_2026`),
     "source_county_id",
+    "district_label",
+    "communities_represented",
+    "towns_represented",
   ]
     .map((column) =>
       column.includes(" AS ") ? column : `${prefix}${column}`
@@ -3120,6 +3153,9 @@ function candidateSelectColumns(tableAlias = "") {
     "slug",
     isFreeStaterSelectExpression(`${prefix}is_free_stater`),
     isTpActionAlignedSelectExpression(`${prefix}is_tpaction_aligned_2026`),
+    "district_label",
+    "communities_represented",
+    "towns_represented",
   ]
     .map((column) =>
       column.includes(" AS ") ? column : `${prefix}${column}`
@@ -3155,6 +3191,12 @@ function formatCandidate(candidate) {
     isFreeStater: candidate.is_free_stater || "no",
     is_tpaction_aligned_2026: candidate.is_tpaction_aligned_2026 || "no",
     isTpActionAligned2026: candidate.is_tpaction_aligned_2026 || "no",
+    districtLabel: candidate.district_label,
+    district_label: candidate.district_label,
+    communitiesRepresented: candidate.communities_represented,
+    communities_represented: candidate.communities_represented,
+    townsRepresented: candidate.towns_represented,
+    towns_represented: candidate.towns_represented,
   };
 }
 
@@ -3170,6 +3212,12 @@ function formatCandidateRole(candidate) {
     electionCycle: candidate.election_cycle,
     totalRaised: candidate.total_raised,
     totalSpent: candidate.total_spent,
+    districtLabel: candidate.district_label,
+    district_label: candidate.district_label,
+    communitiesRepresented: candidate.communities_represented,
+    communities_represented: candidate.communities_represented,
+    townsRepresented: candidate.towns_represented,
+    towns_represented: candidate.towns_represented,
   };
 }
 
