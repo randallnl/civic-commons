@@ -67,6 +67,52 @@ function candidatesFor() {
   ]).filter(isLegislativeCandidate);
 }
 
+function candidateTowns(candidate = {}) {
+  const towns = [
+    candidate.townsRepresented,
+    candidate.towns_represented,
+    candidate.communitiesRepresented,
+    candidate.communities_represented,
+    candidate.locationText,
+    candidate.location_text,
+    candidate.legislatorTownsRepresented,
+    candidate.legislatorLocationText,
+    candidate.towns,
+  ].flatMap(townParts);
+
+  const unique = uniqueLabels(towns);
+  if (unique.length) return unique.join(", ");
+
+  return townsFor().join(", ");
+}
+
+function townParts(value = "") {
+  if (Array.isArray(value)) return value.flatMap(townParts);
+  if (typeof value === "object" && value !== null) {
+    return townParts(value.town || value.name || value.label || "");
+  }
+
+  const text = cleanText(value).trim();
+  if (!text) return [];
+  const delimiter = /ward/i.test(text) ? /;|\||\s+and\s+/i : /[,;|]|\s+and\s+/i;
+  return text.split(delimiter).map((town) => town.trim()).filter(Boolean);
+}
+
+function uniqueLabels(values = []) {
+  const seen = new Set();
+  const labels = [];
+
+  for (const value of values) {
+    const label = cleanText(value).trim();
+    const key = label.toLowerCase();
+    if (!label || seen.has(key)) continue;
+    seen.add(key);
+    labels.push(label);
+  }
+
+  return labels;
+}
+
 function bodyLabel() {
   const body = String(community?.chamber || community?.body || "").toLowerCase();
   if (body === "senate" || body === "s") return "Senate";
@@ -428,6 +474,7 @@ try {
                       const photoUrl =
                         profilePhotoUrl(candidate.photoUrl || candidate.photo || candidate.photo_url) ||
                         profilePhotoUrl(candidate.legislatorPhotoUrl);
+                      const towns = candidateTowns(candidate);
 
                       return (
                       <article>
@@ -450,6 +497,9 @@ try {
                               candidate.district && `District ${candidate.district}`,
                             ])}
                           </p>
+                          {towns && (
+                            <p class="preview-towns">{towns}</p>
+                          )}
                           {candidate.legislatorProfileUrl && (
                             <div class="profile-preview-actions">
                               <a href={candidate.legislatorProfileUrl}>Legislator Profile</a>
@@ -737,6 +787,15 @@ try {
     display: flex;
     gap: 10px;
     justify-content: space-between;
+  }
+
+  .preview-towns {
+    color: #4b5563;
+    font-size: 0.82rem;
+    font-style: italic;
+    font-weight: 750;
+    line-height: 1.35;
+    margin: 5px 0 0;
   }
 
   .mini-grade {
