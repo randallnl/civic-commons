@@ -1,7 +1,11 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
-import { saveOrganizationEndorsementSubmission } from "../../../lib/organizationsApi";
+import {
+  getOrganization,
+  saveOrganizationEndorsementSubmission,
+  slugify,
+} from "../../../lib/organizationsApi";
 
 export async function POST({ request }) {
   let redirectTo = "/endorsements/submit";
@@ -11,24 +15,34 @@ export async function POST({ request }) {
     redirectTo = safeRedirectPath(form.get("redirectTo")) || redirectTo;
 
     const organizationName = String(form.get("organizationName") || "").trim();
+    const organizationSlug = String(form.get("organizationSlug") || "").trim();
     const candidateName = String(form.get("candidateName") || "").trim();
     const candidateSlug = String(form.get("candidateSlug") || "").trim();
 
     if (!organizationName) throw new Error("Organization name is required.");
+    if (!organizationSlug) {
+      throw new Error("Choose an existing organization profile from the organization selector before submitting an endorsement.");
+    }
     if (!candidateName || !candidateSlug) {
       throw new Error("Choose a candidate from the candidate selector.");
     }
 
+    const organization = await getOrganization(organizationSlug);
+    if (!organization) {
+      throw new Error("That organization profile was not found. Create the organization profile before submitting an endorsement.");
+    }
+
     const photoUrl = await uploadEndorsementPhoto({
       file: form.get("photo"),
-      organizationName,
+      organizationName: organization.name,
       candidateSlug,
     });
 
     await saveOrganizationEndorsementSubmission({
-      organizationName,
-      organizationWebsite: form.get("organizationWebsite"),
-      organizationEmail: form.get("organizationEmail"),
+      organizationName: organization.name,
+      organizationSlug: organization.slug,
+      organizationWebsite: form.get("organizationWebsite") || organization.website,
+      organizationEmail: form.get("organizationEmail") || organization.email,
       candidateName,
       candidateSlug,
       office: form.get("office"),
@@ -90,15 +104,6 @@ function sanitizeFilename(value = "") {
     .replace(/[^a-zA-Z0-9._ -]+/g, "")
     .replace(/\s+/g, " ")
     .slice(0, 120);
-}
-
-function slugify(value = "") {
-  return String(value)
-    .toLowerCase()
-    .trim()
-    .replace(/['']/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
 }
 
 function contentTypeFor(key = "") {

@@ -8,17 +8,25 @@ import {
   candidateSlug,
   getLegislativeCandidates,
 } from "../../lib/candidatesApi";
+import { getOrganizations } from "../../lib/organizationsApi";
 import { cleanText } from "../../lib/text";
 
 const submitted = Astro.url.searchParams.get("submitted") === "1";
 const error = Astro.url.searchParams.get("error") || "";
 const requestedCandidate = Astro.url.searchParams.get("candidate") || "";
 let candidates = [];
+let organizations = [];
 
 try {
   candidates = await getLegislativeCandidates({ electionYear: 2026 });
 } catch (error) {
   console.error(error?.message || "Unable to load candidate selector.");
+}
+
+try {
+  organizations = await getOrganizations();
+} catch (error) {
+  console.error(error?.message || "Unable to load organization selector.");
 }
 
 const candidateOptions = candidates.map((candidate) => {
@@ -49,6 +57,15 @@ const selectedOption = candidateOptions.find((option) =>
     .map((value) => String(value || "").toLowerCase())
     .includes(String(requestedCandidate || "").toLowerCase()),
 );
+
+const organizationOptions = organizations.map((organization) => ({
+  name: organization.name,
+  value: organization.name,
+  slug: organization.slug,
+  website: organization.website || "",
+  email: organization.email || "",
+  type: organization.type || "Organization",
+})).sort((first, second) => first.name.localeCompare(second.name));
 ---
 
 <html lang="en">
@@ -73,7 +90,8 @@ const selectedOption = candidateOptions.find((option) =>
         <p class="lede">
           Submit endorsements from advocacy organizations, unions, community
           groups, or other public organizations. Submissions are reviewed before
-          they appear on candidate profiles.
+          they appear on candidate profiles. Choose from an existing organization
+          profile first so endorsements stay connected to the right organization page.
         </p>
       </section>
 
@@ -87,6 +105,7 @@ const selectedOption = candidateOptions.find((option) =>
       <section class="panel">
         <form class="endorsement-form" action="/api/endorsements/submit" method="post" enctype="multipart/form-data">
           <input type="hidden" name="redirectTo" value="/endorsements/submit" />
+          <input id="organizationSlug" type="hidden" name="organizationSlug" value="" />
           <input id="candidateSlug" type="hidden" name="candidateSlug" value={selectedOption?.slug || ""} />
           <input id="candidateName" type="hidden" name="candidateName" value={selectedOption?.name || ""} />
           <input id="candidateOffice" type="hidden" name="office" value={selectedOption?.office || ""} />
@@ -96,13 +115,31 @@ const selectedOption = candidateOptions.find((option) =>
           <div class="form-grid two">
             <label>
               Organization name
-              <input name="organizationName" placeholder="Organization name" required />
+              <input
+                id="organizationSearch"
+                name="organizationName"
+                list="organizationOptions"
+                placeholder="Start typing an existing organization"
+                autocomplete="off"
+                required
+              />
+              <datalist id="organizationOptions">
+                {organizationOptions.map((option) => (
+                  <option value={option.value} label={[option.type, option.website].filter(Boolean).join(" | ")} />
+                ))}
+              </datalist>
             </label>
             <label>
               Organization website
-              <input name="organizationWebsite" type="url" placeholder="https://example.org" />
+              <input id="organizationWebsite" name="organizationWebsite" type="url" placeholder="https://example.org" />
             </label>
           </div>
+
+          <p class="form-note">
+            Organization profiles need to be created before endorsements can be entered.
+            If the organization is not listed yet, <a href="/suggest-update">suggest an organization profile</a>
+            before submitting the endorsement.
+          </p>
 
           <label>
             Candidate
@@ -137,7 +174,7 @@ const selectedOption = candidateOptions.find((option) =>
             </label>
             <label>
               Organization contact email
-              <input name="organizationEmail" type="email" />
+              <input id="organizationEmail" name="organizationEmail" type="email" />
             </label>
           </div>
 
@@ -167,8 +204,9 @@ const selectedOption = candidateOptions.find((option) =>
       </section>
     </main>
 
-    <script define:vars={{ candidateOptions }}>
+    <script define:vars={{ candidateOptions, organizationOptions }}>
       const candidateSearch = document.getElementById("candidateSearch");
+      const organizationSearch = document.getElementById("organizationSearch");
       const fields = {
         slug: document.getElementById("candidateSlug"),
         name: document.getElementById("candidateName"),
@@ -176,7 +214,13 @@ const selectedOption = candidateOptions.find((option) =>
         district: document.getElementById("candidateDistrict"),
         electionYear: document.getElementById("candidateElectionYear"),
       };
+      const organizationFields = {
+        slug: document.getElementById("organizationSlug"),
+        website: document.getElementById("organizationWebsite"),
+        email: document.getElementById("organizationEmail"),
+      };
       const optionMap = new Map(candidateOptions.map((option) => [option.value, option]));
+      const organizationMap = new Map(organizationOptions.map((option) => [option.value, option]));
 
       function syncCandidate() {
         const selected = optionMap.get(candidateSearch?.value || "");
@@ -187,8 +231,22 @@ const selectedOption = candidateOptions.find((option) =>
         fields.electionYear.value = selected?.electionYear || "2026";
       }
 
+      function syncOrganization() {
+        const selected = organizationMap.get(organizationSearch?.value || "");
+        organizationFields.slug.value = selected?.slug || "";
+
+        if (selected?.website) {
+          organizationFields.website.value = selected.website;
+        }
+        if (selected?.email) {
+          organizationFields.email.value = selected.email;
+        }
+      }
+
       candidateSearch?.addEventListener("input", syncCandidate);
+      organizationSearch?.addEventListener("input", syncOrganization);
       candidateSearch?.form?.addEventListener("submit", syncCandidate);
+      organizationSearch?.form?.addEventListener("submit", syncOrganization);
     </script>
     <SiteFooter />
   </body>
@@ -256,6 +314,22 @@ const selectedOption = candidateOptions.find((option) =>
 
   .endorsement-form {
     gap: 16px;
+  }
+
+  .form-note {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    color: #1e3a8a;
+    font-size: 0.92rem;
+    font-weight: 800;
+    line-height: 1.45;
+    margin: -4px 0 0;
+    padding: 12px 14px;
+  }
+
+  .form-note a {
+    color: #1d4ed8;
   }
 
   label {
