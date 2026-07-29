@@ -143,10 +143,15 @@ function townsLine(vote = {}) {
 function testimonyPositionForBill(bill = {}) {
   const support = Number(bill?.support_count || bill?.supportCount || 0);
   const oppose = Number(bill?.oppose_count || bill?.opposeCount || 0);
+  const total = support + oppose;
 
-  if (!Number.isFinite(support + oppose) || support + oppose === 0 || support === oppose) {
+  if (!Number.isFinite(total) || total === 0 || support === oppose) {
     return "";
   }
+
+  const margin = Math.abs(support - oppose) / total;
+  if (total < 50 && margin <= 0.25) return "";
+  if (margin <= 0.1) return "";
 
   return support > oppose ? "support" : "oppose";
 }

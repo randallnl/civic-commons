@@ -500,6 +500,8 @@ export function publicTestimonyPositionForBill(bill = {}) {
   if (!total || support === oppose) return "";
 
   const margin = Math.abs(support - oppose) / total;
+
+  // Divided online testimony should not move a legislator's alignment score.
   if (total < 50 && margin <= 0.25) return "neutral";
   if (margin <= 0.1) return "neutral";
 
