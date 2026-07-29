@@ -103,6 +103,28 @@ export function isKnownVote(vote = {}) {
   return Boolean(value && !["unknown", "not listed"].includes(value));
 }
 
+export function representativeVoteAttendance(votes = []) {
+  const votingActions = votes.filter(isVotingAction);
+  const recorded = votingActions.filter((vote) => normalizeVoteStance(vote)).length;
+  const documentedNonVotes = votingActions.filter((vote) => !normalizeVoteStance(vote) && isDocumentedNonVote(vote));
+  const notVoting = documentedNonVotes.length;
+  const unknown = Math.max(0, votingActions.length - recorded - notVoting);
+  const accountableTotal = recorded + notVoting;
+  const percent = accountableTotal ? recorded / accountableTotal : null;
+
+  return {
+    recorded,
+    notVoting,
+    unknown,
+    total: votingActions.length,
+    accountableTotal,
+    percent,
+    label: percent === null
+      ? "No voting actions returned yet"
+      : `${Math.round(percent * 100)}% vote attendance across ${accountableTotal} documented voting actions`,
+  };
+}
+
 export function representativeVoteStance(vote = {}, trackedBill = {}) {
   const analysis = representativeVoteAnalysis(vote, trackedBill);
 

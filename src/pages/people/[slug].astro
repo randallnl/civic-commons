@@ -32,6 +32,7 @@ import {
   isVotingAction,
   normalizeBillCode,
   representativeGradeFor,
+  representativeVoteAttendance,
   representativeVoteImpact,
   representativeVoteStance,
   trackedBillForVote,
@@ -90,6 +91,7 @@ try {
 }
 
 const voteHistory = apiData?.voteHistory || [];
+const voteAttendance = representativeVoteAttendance(voteHistory);
 let trackedVotes = voteHistory
   .map((vote) => normalizeVote(vote, trackedBills, billSummaries))
   .filter((vote) => vote.trackedBill && isVotingAction(vote));
@@ -459,6 +461,22 @@ function candidateOptionLabel(candidate = {}) {
             <p>{voteGrade.label}</p>
           </div>
 
+          <div class="attendance-card" aria-label={voteAttendance.label}>
+            <div>
+              <span>Vote Attendance</span>
+              <strong>
+                {voteAttendance.percent === null
+                  ? "No data"
+                  : `${Math.round(voteAttendance.percent * 100)}%`}
+              </strong>
+            </div>
+            <p>
+              {voteAttendance.recorded} recorded votes out of {voteAttendance.accountableTotal} documented voting actions.
+              {voteAttendance.notVoting > 0 && ` ${voteAttendance.notVoting} listed as absent, excused, or not voting.`}
+              {voteAttendance.unknown > 0 && ` ${voteAttendance.unknown} voting actions have unknown vote data.`}
+            </p>
+          </div>
+
           {person.bio ? (
             <p class="bio">{person.bio}</p>
           ) : (
@@ -494,6 +512,14 @@ function candidateOptionLabel(candidate = {}) {
         <article>
           <span>Current Offices</span>
           <strong>{currentOfficeTerms.length}</strong>
+        </article>
+        <article class="attendance-summary-card">
+          <span>Vote Attendance</span>
+          <strong>
+            {voteAttendance.percent === null
+              ? "N/A"
+              : `${Math.round(voteAttendance.percent * 100)}%`}
+          </strong>
         </article>
         <a class="summary-card" href={trackedVotesHref}>
           <span>Tracked Votes</span>
@@ -1301,6 +1327,51 @@ function candidateOptionLabel(candidate = {}) {
     text-transform: uppercase;
   }
 
+  .attendance-card {
+    align-items: center;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 16px;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(130px, auto) minmax(0, 1fr);
+    margin-top: 16px;
+    padding: 16px;
+  }
+
+  .attendance-card > div {
+    background: #1d4ed8;
+    border-radius: 14px;
+    color: #fffaf1;
+    display: grid;
+    gap: 4px;
+    min-width: 128px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .attendance-card span {
+    color: #dbeafe;
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .attendance-card strong {
+    color: #fffaf1;
+    font-size: clamp(2rem, 4vw, 3.1rem);
+    font-weight: 950;
+    line-height: 1;
+  }
+
+  .attendance-card p {
+    color: #1e3a8a;
+    font-weight: 850;
+    line-height: 1.45;
+    margin: 0;
+  }
+
   .grade-a {
     background: #166534;
   }
@@ -1916,6 +1987,10 @@ function candidateOptionLabel(candidate = {}) {
     }
 
     .summary-strip {
+      grid-template-columns: 1fr;
+    }
+
+    .attendance-card {
       grid-template-columns: 1fr;
     }
 
