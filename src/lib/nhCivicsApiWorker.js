@@ -3071,21 +3071,22 @@ function candidateBaseCte() {
           AND LOWER(COALESCE(
             NULLIF(cr.office, ''),
             CASE WHEN lr.legislativebody = 'H' THEN 'State Representative' ELSE '' END
-          )) LIKE '%representative%'
+          )) IN (
+            'state representative',
+            'representative to the general court',
+            'representative in general court'
+          )
           AND dm.county = cc.source_county_id
           AND dm.district = CAST(COALESCE(NULLIF(cr.district, ''), lr.district, '0') AS INTEGER)
         )
         OR (
           dm.body = 'S'
-          AND (
-            LOWER(COALESCE(
-              NULLIF(cr.office, ''),
-              CASE WHEN lr.legislativebody = 'S' THEN 'State Senate' ELSE '' END
-            )) LIKE '%senate%'
-            OR LOWER(COALESCE(
-              NULLIF(cr.office, ''),
-              CASE WHEN lr.legislativebody = 'S' THEN 'State Senator' ELSE '' END
-            )) LIKE '%senator%'
+          AND LOWER(COALESCE(
+            NULLIF(cr.office, ''),
+            CASE WHEN lr.legislativebody = 'S' THEN 'State Senate' ELSE '' END
+          )) IN (
+            'state senate',
+            'state senator'
           )
           AND dm.district = CAST(COALESCE(NULLIF(cr.district, ''), lr.district, '0') AS INTEGER)
         )
