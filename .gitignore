@@ -14,6 +14,13 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# local audits and generated reports
+audits/
+reports/
+tmp/
+__pycache__/
+scripts/__pycache__/
+
 # environment variables
 .env
 .env.production
