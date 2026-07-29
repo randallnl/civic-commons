@@ -109,6 +109,8 @@ export function attachLegislatorMatch(candidate = {}, representatives = [], link
     legislatorPersonId: match.personid || match.id || "",
     legislatorProfileUrl: `/people/${repSlug(match) || match.personid || match.id}`,
     legislatorPhotoUrl: match.photo || match.photo_url || "",
+    legislatorTownsRepresented: match.towns_represented || match.townsRepresented || "",
+    legislatorLocationText: match.location_text || match.locationText || "",
   };
 }
 

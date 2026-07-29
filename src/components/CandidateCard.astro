@@ -26,6 +26,7 @@ const districtLabel = [
   candidate.county,
   candidate.district ? `District ${candidate.district}` : "",
 ].filter(Boolean).join(" ");
+const townsRepresented = candidateTownsRepresented(candidate);
 const aliases = [candidate.nameAliases, candidate.name_aliases].filter(Boolean).join(" ");
 const searchableText = [
   name,
@@ -43,6 +44,14 @@ const searchableText = [
   candidate.city,
   candidate.towns,
   candidate.townsRepresented,
+  candidate.towns_represented,
+  candidate.communitiesRepresented,
+  candidate.communities_represented,
+  candidate.locationText,
+  candidate.location_text,
+  candidate.legislatorTownsRepresented,
+  candidate.legislatorLocationText,
+  townsRepresented,
   candidate.candidateEmail,
   candidate.candidateWebsite,
   candidate.currentLegislator ? "Current Legislator" : "",
@@ -54,6 +63,14 @@ const searchableTown = [
   candidate.city,
   candidate.towns,
   candidate.townsRepresented,
+  candidate.towns_represented,
+  candidate.communitiesRepresented,
+  candidate.communities_represented,
+  candidate.locationText,
+  candidate.location_text,
+  candidate.legislatorTownsRepresented,
+  candidate.legislatorLocationText,
+  townsRepresented,
 ].flat().filter(Boolean).join(" ");
 const searchableBody = /senate/i.test(`${candidate.office || ""} ${candidate.officeType || ""}`)
   ? "senate"
@@ -94,6 +111,62 @@ function formatCurrency(value) {
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+function candidateTownsRepresented(candidate = {}) {
+  const towns = [
+    candidate.townsRepresented,
+    candidate.towns_represented,
+    candidate.communitiesRepresented,
+    candidate.communities_represented,
+    candidate.towns,
+    candidate.locationText,
+    candidate.location_text,
+    candidate.legislatorTownsRepresented,
+    candidate.legislatorLocationText,
+    candidate.legislator?.towns_represented,
+    candidate.legislator?.location_text,
+  ].flatMap(townsFromValue);
+
+  return uniqueTowns(towns).join(", ");
+}
+
+function townsFromValue(value = "") {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => {
+      if (typeof item === "object" && item !== null) {
+        return item.town || item.name || item.label || "";
+      }
+      return item;
+    }).flatMap(townsFromValue);
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return townsFromValue(value.town || value.name || value.label || "");
+  }
+
+  const text = String(value || "").trim();
+  const delimiter = /ward/i.test(text) ? /;|\||\s+and\s+/i : /[,;|]|\s+and\s+/i;
+
+  return text
+    .split(delimiter)
+    .map((town) => town.trim())
+    .filter(Boolean);
+}
+
+function uniqueTowns(towns = []) {
+  const seen = new Set();
+  const unique = [];
+
+  for (const town of towns) {
+    const label = String(town || "").trim();
+    const key = label.toLowerCase();
+    if (!label || seen.has(key)) continue;
+    seen.add(key);
+    unique.push(label);
+  }
+
+  return unique;
 }
 ---
 
@@ -151,6 +224,12 @@ function formatCurrency(value) {
     </div>
 
     <p class="office-line">{officeParts.join(", ") || "Office not listed"}</p>
+    {townsRepresented && (
+      <p class="towns-line">
+        <span>Towns represented</span>
+        {townsRepresented}
+      </p>
+    )}
 
     {contactLinks.length > 0 && (
       <div class="actions">
@@ -278,6 +357,24 @@ function formatCurrency(value) {
     font-weight: 800;
     line-height: 1.4;
     margin: 12px 0 0;
+  }
+
+  .towns-line {
+    color: #4b5563;
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1.4;
+    margin: 8px 0 0;
+  }
+
+  .towns-line span {
+    color: #6b4f2a;
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    margin-bottom: 2px;
+    text-transform: uppercase;
   }
 
   .actions {
