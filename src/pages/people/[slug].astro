@@ -471,9 +471,8 @@ function candidateOptionLabel(candidate = {}) {
               </strong>
             </div>
             <p>
-              {voteAttendance.recorded} recorded votes out of {voteAttendance.accountableTotal} documented voting actions.
-              {voteAttendance.notVoting > 0 && ` ${voteAttendance.notVoting} listed as absent, excused, or not voting.`}
-              {voteAttendance.unknown > 0 && ` ${voteAttendance.unknown} voting actions have unknown vote data.`}
+              {voteAttendance.recorded} recorded of {voteAttendance.accountableTotal} documented voting actions.
+              {voteAttendance.notVoting > 0 && ` ${voteAttendance.notVoting} absent, excused, or not voting.`}
             </p>
           </div>
 
@@ -1331,44 +1330,46 @@ function candidateOptionLabel(candidate = {}) {
     align-items: center;
     background: #eff6ff;
     border: 1px solid #bfdbfe;
-    border-radius: 16px;
+    border-radius: 12px;
     display: grid;
-    gap: 14px;
-    grid-template-columns: minmax(130px, auto) minmax(0, 1fr);
-    margin-top: 16px;
-    padding: 16px;
+    gap: 10px;
+    grid-template-columns: auto minmax(0, 1fr);
+    margin-top: 12px;
+    max-width: 520px;
+    padding: 10px;
   }
 
   .attendance-card > div {
     background: #1d4ed8;
-    border-radius: 14px;
+    border-radius: 10px;
     color: #fffaf1;
     display: grid;
-    gap: 4px;
-    min-width: 128px;
-    padding: 14px;
+    gap: 2px;
+    min-width: 92px;
+    padding: 9px 10px;
     text-align: center;
   }
 
   .attendance-card span {
     color: #dbeafe;
-    font-size: 0.68rem;
+    font-size: 0.56rem;
     font-weight: 950;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
   }
 
   .attendance-card strong {
     color: #fffaf1;
-    font-size: clamp(2rem, 4vw, 3.1rem);
+    font-size: 1.55rem;
     font-weight: 950;
     line-height: 1;
   }
 
   .attendance-card p {
     color: #1e3a8a;
+    font-size: 0.88rem;
     font-weight: 850;
-    line-height: 1.45;
+    line-height: 1.3;
     margin: 0;
   }
 
