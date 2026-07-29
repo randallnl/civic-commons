@@ -3,7 +3,8 @@ export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-import { articlePublishDate, articleSourceName } from "../lib/articlesApi";
+import FilterBar from "../components/FilterBar.astro";
+import { getRecentApprovedCommunityUpdates } from "../lib/communityUpdates";
 import {
   communityPath,
   getCountyCommunity,
@@ -27,17 +28,27 @@ const COUNTY_NAMES = [
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const articleLimit = Number(Astro.url.searchParams.get("articleLimit") || 3);
+const updateType = Astro.url.searchParams.get("type")?.trim() || "";
+const countyFilter = Astro.url.searchParams.get("county")?.trim() || "";
+const sort = Astro.url.searchParams.get("sort")?.trim() || "updated:desc";
 
 let countyGroups = [];
+let communityUpdates = [];
 let meta = {};
 let loadError = "";
+let updatesError = "";
 
 try {
-  const data = await getCountyGroups({
-    q,
-    articleLimit,
-  });
+  const [data, updates] = await Promise.all([
+    getCountyGroups({
+      q,
+      county: countyFilter,
+      articleLimit,
+    }),
+    getRecentApprovedCommunityUpdates({ limit: 100 }),
+  ]);
   countyGroups = data.counties || [];
+  communityUpdates = updates || [];
   meta = data.meta || {};
 } catch (error) {
   loadError = cleanApiError(error?.message) || "Unable to load communities.";
@@ -45,6 +56,7 @@ try {
 
 async function getCountyGroups({
   q = "",
+  county = "",
   articleLimit = 3,
 } = {}) {
   const countyResults = await Promise.allSettled(
@@ -63,6 +75,9 @@ async function getCountyGroups({
     .filter(Boolean);
 
   if (q) counties = counties.filter((county) => countyMatchesQuery(county, q));
+  if (county) counties = counties.filter((countyGroup) =>
+    countyGroup.county.toLowerCase() === county.toLowerCase(),
+  );
 
   return {
     counties,
@@ -252,7 +267,61 @@ function cleanApiError(message = "") {
   return message;
 }
 
-const total = Number(meta.total || meta.count || countyGroups.length);
+function updateDate(value = "") {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function updateSortValue(value = "") {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function updateTypeLabel(value = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return "Community update";
+  if (normalized === "person" || normalized === "people") return "Legislator update";
+  if (normalized === "candidate") return "Candidate update";
+  if (normalized === "bill") return "Bill update";
+  if (normalized === "community") return "Community update";
+  return `${normalized.charAt(0).toUpperCase()}${normalized.slice(1)} update`;
+}
+
+function updateHref(update = {}) {
+  return update.pageUrl || update.linkUrl || "/communities";
+}
+
+function updateCountyText(update = {}) {
+  const haystack = [
+    update.entityName,
+    update.entityKey,
+    update.pageUrl,
+    update.comment,
+    ...(update.mentions || []).map((mention) => [
+      mention.county,
+      mention.district,
+      mention.roleLabel,
+    ].filter(Boolean).join(" ")),
+  ].filter(Boolean).join(" ");
+
+  return COUNTY_NAMES.filter((county) =>
+    haystack.toLowerCase().includes(county.toLowerCase()),
+  ).join(" ");
+}
+
+const updateTypeOptions = [
+  ["", "All update types"],
+  ["person", "Legislator updates"],
+  ["candidate", "Candidate updates"],
+  ["bill", "Bill updates"],
+  ["community", "Community updates"],
+];
 ---
 
 <html lang="en">
@@ -273,114 +342,241 @@ const total = Number(meta.total || meta.count || countyGroups.length);
     <main class="page">
       <section class="hero">
         <p class="eyebrow">Communities</p>
-        <h1>Explore communities by county.</h1>
+        <h1>Explore community updates and county profiles.</h1>
 
-        <form class="search" action="/communities" method="get">
-          <input
-            type="search"
-            name="q"
-            value={q}
-            placeholder="Search town, county, or district"
-          />
-          <input type="hidden" name="articleLimit" value={articleLimit} />
-          <button type="submit">Search</button>
-        </form>
+        <p class="lede">
+          Browse recent community-submitted context, then use the county panel
+          to drill into town, House district, and county profiles.
+        </p>
       </section>
 
-      <section class="results">
-        <div class="results-heading">
-          <h2>{countyGroups.length} Counties</h2>
-          {q && <a href="/communities">Clear search</a>}
-        </div>
+      <section
+        class="community-browser"
+        x-data="nhdbFuzzyFilter({ itemSelector: '[data-community-feed-item]', pageSize: 12, threshold: 0.32 })"
+      >
+        <FilterBar action="/communities" submitLabel="Apply filters" clearHref="/communities" columns="wide" live={true}>
+          <label for="q">
+            <span>Search</span>
+            <input
+              id="q"
+              type="search"
+              name="q"
+              value={q}
+              placeholder="Town, county, person, bill, or keyword"
+              data-fuzzy-search
+            />
+          </label>
 
-        {loadError ? (
-          <p class="status-message">{loadError}</p>
-        ) : countyGroups.length ? (
-          <div class="county-grid">
-            {countyGroups.map((countyGroup) => {
-              const towns = [...countyGroup.towns].sort((a, b) => a.localeCompare(b));
-              const houseDistricts = countyGroup.communities.filter((community) =>
-                !String(community.body || community.chamber).toLowerCase().startsWith("s"),
-              );
-              const previewDistricts = houseDistricts.slice(0, 8);
-              const districtTotal = houseDistricts.length;
-              const hiddenDistrictCount = Math.max(
-                0,
-                districtTotal - previewDistricts.length,
-              );
-              const profileHref = countyProfilePath(countyGroup);
-              const imageUrl = countyImageUrl(countyGroup.county);
-              const representativeCount = countyGroup.representativeCount;
-              const updateCount = countyGroup.updateCount || countyGroup.articles.length;
+          <label for="type">
+            <span>Update type</span>
+            <select id="type" name="type" data-fuzzy-filter-field data-fuzzy-field="type" data-fuzzy-match="exact">
+              {updateTypeOptions.map(([value, label]) => (
+                <option value={value} selected={updateType === value}>{label}</option>
+              ))}
+            </select>
+          </label>
 
-              return (
-              <article class="county-card">
-                <a class="county-image" href={profileHref}>
-                  {imageUrl && <img src={imageUrl} alt="" loading="lazy" />}
-                  <div>
-                    <span>County Profile</span>
-                    <h3>{countyGroup.county}</h3>
-                  </div>
-                </a>
+          <label for="county">
+            <span>County</span>
+            <input
+              id="county"
+              name="county"
+              value={countyFilter}
+              list="countyOptions"
+              placeholder="County"
+              data-fuzzy-filter-field
+              data-fuzzy-field="county"
+            />
+          </label>
 
-                <div class="county-summary">
-                  <p>
-                    Explore towns, House districts, State Representatives,
-                    State Senators, legislative candidates, and
-                    local updates connected to {countyGroup.county} County.
-                  </p>
-                  <div class="county-stats">
-                    <span><strong>{towns.length}</strong> Towns</span>
-                    <span><strong>{districtTotal}</strong> House districts</span>
-                    <span><strong>{representativeCount}</strong> Legislators</span>
-                    <span><strong>{updateCount}</strong> Updates</span>
-                  </div>
-                </div>
+          <label for="sort">
+            <span>Sort</span>
+            <select id="sort" name="sort" data-fuzzy-sort>
+              <option value="updated:desc" selected={sort === "updated:desc"}>Newest first</option>
+              <option value="updated:asc" selected={sort === "updated:asc"}>Oldest first</option>
+              <option value="name:asc" selected={sort === "name:asc"}>Name A-Z</option>
+              <option value="county:asc" selected={sort === "county:asc"}>County A-Z</option>
+            </select>
+          </label>
 
-                {towns.length > 0 && (
-                  <div class="towns">
-                    {towns.slice(0, 12).map((town) => (
-                      <a href={townProfilePath(town)}>{town}</a>
-                    ))}
-                    {towns.length > 12 && (
-                      <a href={profileHref}>+{towns.length - 12} more</a>
-                    )}
-                  </div>
-                )}
+          <input type="hidden" name="articleLimit" value={articleLimit} />
+        </FilterBar>
+        <datalist id="countyOptions">
+          {COUNTY_NAMES.map((county) => <option value={county} />)}
+        </datalist>
+        <div class="filter-chips" data-fuzzy-chips hidden></div>
 
-                <div class="district-links">
-                  <strong>District profiles</strong>
-                  {previewDistricts.map((community) => (
-                    <a href={communityPath(community)}>{communityName(community)}</a>
-                  ))}
-                  {hiddenDistrictCount > 0 && (
-                    <a href={profileHref}>+{hiddenDistrictCount} more districts</a>
-                  )}
-                </div>
+        <div class="community-layout">
+          <section class="update-feed" aria-labelledby="community-updates-heading">
+            <div class="results-heading">
+              <div>
+                <p class="eyebrow">Recent Updates</p>
+                <h2 id="community-updates-heading">
+                  <span data-fuzzy-count>{communityUpdates.length}</span> Community Updates
+                </h2>
+              </div>
+              <a href="/suggest-update">Suggest an update</a>
+            </div>
 
-                {countyGroup.articles.length > 0 && (
-                  <div class="articles">
-                    <strong>Recent articles</strong>
-                    {countyGroup.articles.map((article) => (
-                      <a href={article.url}>
-                        <span>{cleanText(article.title)}</span>
-                        <small>
-                          {[articleSourceName(article), articlePublishDate(article)]
-                            .filter(Boolean)
-                            .join(" - ")}
-                        </small>
+            {updatesError ? (
+              <p class="status-message">{updatesError}</p>
+            ) : communityUpdates.length ? (
+              <div class="feed-list">
+                {communityUpdates.map((update) => {
+                  const countyText = updateCountyText(update);
+                  const photoUrls = update.photoUrls?.length ? update.photoUrls : update.photoUrl ? [update.photoUrl] : [];
+                  const mentions = (update.mentions || []).filter((mention) => mention.name && mention.path);
+
+                  return (
+                    <article
+                      class:list={["update-card", photoUrls[0] && "has-photo"]}
+                      data-community-feed-item
+                      data-fuzzy-text={[
+                        update.entityName,
+                        update.entityKey,
+                        update.displayName,
+                        update.comment,
+                        update.linkUrl,
+                        countyText,
+                        mentions.map((mention) => mention.name).join(" "),
+                      ].filter(Boolean).join(" ")}
+                      data-fuzzy-name={update.entityName || update.displayName || ""}
+                      data-fuzzy-type={update.entityType || ""}
+                      data-fuzzy-county={countyText}
+                      data-fuzzy-sort-name={update.entityName || update.displayName || ""}
+                      data-fuzzy-sort-updated={updateSortValue(update.createdAt)}
+                      data-fuzzy-sort-county={countyText}
+                    >
+                      {photoUrls[0] && (
+                        <a class="update-photo" href={updateHref(update)} tabindex="-1" aria-hidden="true">
+                          <img src={photoUrls[0]} alt="" loading="lazy" />
+                        </a>
+                      )}
+                      <div class="update-copy">
+                        <div class="update-topline">
+                          <span>{updateTypeLabel(update.entityType)}</span>
+                          {countyText && <span>{countyText}</span>}
+                          {updateDate(update.createdAt) && <time datetime={update.createdAt}>{updateDate(update.createdAt)}</time>}
+                        </div>
+                        <h3>
+                          <a href={updateHref(update)}>{update.entityName || "Community update"}</a>
+                        </h3>
+                        <p>{cleanText(update.comment || update.linkUrl || "Community-submitted context.")}</p>
+                        <div class="update-meta">
+                          <span>Submitted by {cleanText(update.displayName || "Community member")}</span>
+                          {update.linkUrl && <a href={update.linkUrl}>Open submitted link</a>}
+                        </div>
+                        {mentions.length > 0 && (
+                          <div class="mention-list" aria-label="Mentioned people">
+                            {mentions.slice(0, 4).map((mention) => (
+                              <a href={mention.path}>{cleanText(mention.name)}</a>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <p class="status-message">No approved community updates yet.</p>
+            )}
+
+            <p class="empty-state" data-fuzzy-empty hidden>
+              No community updates match those filters. Try a broader town,
+              county, person, bill, or keyword.
+            </p>
+            <button class="show-more-button" type="button" data-fuzzy-more hidden>Show more</button>
+          </section>
+
+          <aside class="county-panel" aria-labelledby="county-panel-heading">
+            <div class="panel-heading">
+              <p class="eyebrow">County Communities</p>
+              <h2 id="county-panel-heading">{countyGroups.length} Counties</h2>
+            </div>
+
+            {loadError ? (
+              <p class="status-message">{loadError}</p>
+            ) : countyGroups.length ? (
+              <div class="county-list">
+                {countyGroups.map((countyGroup) => {
+                  const towns = [...countyGroup.towns].sort((a, b) => a.localeCompare(b));
+                  const houseDistricts = countyGroup.communities.filter((community) =>
+                    !String(community.body || community.chamber).toLowerCase().startsWith("s"),
+                  );
+                  const previewDistricts = houseDistricts.slice(0, 4);
+                  const districtTotal = houseDistricts.length;
+                  const hiddenDistrictCount = Math.max(
+                    0,
+                    districtTotal - previewDistricts.length,
+                  );
+                  const profileHref = countyProfilePath(countyGroup);
+                  const imageUrl = countyImageUrl(countyGroup.county);
+                  const representativeCount = countyGroup.representativeCount;
+                  const updateCount = countyGroup.updateCount || countyGroup.articles.length;
+
+                  return (
+                    <article
+                      class="county-card"
+                      data-county-card
+                      data-fuzzy-text={[
+                        countyGroup.county,
+                        ...towns,
+                        ...countyGroup.communities.map(communityName),
+                      ].filter(Boolean).join(" ")}
+                      data-fuzzy-name={countyGroup.county}
+                      data-fuzzy-county={countyGroup.county}
+                      data-fuzzy-type="county"
+                      data-fuzzy-sort-name={countyGroup.county}
+                      data-fuzzy-sort-updated="0"
+                      data-fuzzy-sort-county={countyGroup.county}
+                    >
+                      <a class="county-image" href={profileHref}>
+                        {imageUrl && <img src={imageUrl} alt="" loading="lazy" />}
+                        <div>
+                          <span>County Profile</span>
+                          <h3>{countyGroup.county}</h3>
+                        </div>
                       </a>
-                    ))}
-                  </div>
-                )}
-              </article>
-              );
-            })}
-          </div>
-        ) : (
-          <p class="status-message">No counties found.</p>
-        )}
 
+                      <div class="county-summary">
+                        <div class="county-stats">
+                          <span><strong>{towns.length}</strong> Towns</span>
+                          <span><strong>{districtTotal}</strong> House districts</span>
+                          <span><strong>{representativeCount}</strong> Legislators</span>
+                          <span><strong>{updateCount}</strong> Updates</span>
+                        </div>
+                      </div>
+
+                      {towns.length > 0 && (
+                        <div class="towns">
+                          {towns.slice(0, 8).map((town) => (
+                            <a href={townProfilePath(town)}>{town}</a>
+                          ))}
+                          {towns.length > 8 && (
+                            <a href={profileHref}>+{towns.length - 8} more</a>
+                          )}
+                        </div>
+                      )}
+
+                      <div class="district-links">
+                        <strong>House districts</strong>
+                        {previewDistricts.map((community) => (
+                          <a href={communityPath(community)}>{communityName(community)}</a>
+                        ))}
+                        {hiddenDistrictCount > 0 && (
+                          <a href={profileHref}>+{hiddenDistrictCount} more</a>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <p class="status-message">No counties found.</p>
+            )}
+          </aside>
+        </div>
       </section>
     </main>
     <SiteFooter />
@@ -414,28 +610,58 @@ const total = Number(meta.total || meta.count || countyGroups.length);
     max-width: 920px;
   }
 
-  .search {
-    display: grid;
-    gap: 12px;
-    grid-template-columns: minmax(0, 1fr) auto;
-    max-width: 720px;
-  }
-
-  input,
-  button {
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    box-sizing: border-box;
-    font: inherit;
+  .lede {
+    color: #4b5563;
+    font-size: 1.05rem;
     font-weight: 800;
-    min-height: 48px;
-    padding: 10px 12px;
+    line-height: 1.55;
+    margin: 0;
+    max-width: 760px;
   }
 
-  button {
-    background: #1f2933;
-    color: white;
+  .community-browser {
+    display: grid;
+    gap: 18px;
+  }
+
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filter-chips button {
+    align-items: center;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1e3a8a;
     cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 900;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .filter-chips b {
+    color: #dc4d09;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .community-layout {
+    align-items: start;
+    display: grid;
+    gap: 22px;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  }
+
+  .update-feed,
+  .county-panel {
+    display: grid;
+    gap: 16px;
   }
 
   .results-heading {
@@ -446,19 +672,31 @@ const total = Number(meta.total || meta.count || countyGroups.length);
     margin-bottom: 18px;
   }
 
+  .results-heading a {
+    background: #dc4d09;
+    border-radius: 999px;
+    color: #fffaf1;
+    font-size: 0.88rem;
+    padding: 10px 14px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
   .results-heading h2 {
     font-size: 1.6rem;
     margin: 0;
   }
 
-  .county-grid {
+  .feed-list,
+  .county-list {
     display: grid;
     gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
 
+  .update-card,
   .county-card,
-  .status-message {
+  .status-message,
+  .empty-state {
     background: white;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -466,9 +704,97 @@ const total = Number(meta.total || meta.count || countyGroups.length);
     padding: 18px;
   }
 
-  .county-card {
+  .update-card {
     display: grid;
     gap: 16px;
+    grid-template-columns: minmax(140px, 190px) minmax(0, 1fr);
+  }
+
+  .update-card:not(.has-photo) {
+    grid-template-columns: 1fr;
+  }
+
+  .update-photo {
+    align-self: start;
+    aspect-ratio: 4 / 3;
+    background: #eff6ff;
+    border-radius: 8px;
+    display: block;
+    overflow: hidden;
+  }
+
+  .update-photo img {
+    height: 100%;
+    object-fit: contain;
+    width: 100%;
+  }
+
+  .update-copy {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .update-topline,
+  .update-meta,
+  .mention-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .update-topline span,
+  .update-topline time,
+  .mention-list a {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    color: #334155;
+    font-size: 0.76rem;
+    font-weight: 900;
+    padding: 6px 9px;
+    text-decoration: none;
+  }
+
+  .update-card h3 {
+    font-size: 1.35rem;
+    line-height: 1.1;
+    margin: 0;
+  }
+
+  .update-card p {
+    color: #4b5563;
+    font-weight: 750;
+    line-height: 1.5;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .update-meta {
+    color: #64748b;
+    font-size: 0.84rem;
+    font-weight: 850;
+  }
+
+  .update-meta a {
+    color: #1d4ed8;
+  }
+
+  .panel-heading {
+    background: #f8fbff;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .panel-heading h2 {
+    font-size: 1.35rem;
+    margin: 0;
+  }
+
+  .county-card {
+    display: grid;
+    gap: 12px;
     overflow: hidden;
     padding: 0;
   }
@@ -483,8 +809,8 @@ const total = Number(meta.total || meta.count || countyGroups.length);
 
   .county-image {
     align-items: end;
-    aspect-ratio: 16 / 8;
-    background: #1f2933;
+    aspect-ratio: 16 / 7;
+    background: #dbeafe;
     color: white;
     display: grid;
     overflow: hidden;
@@ -494,8 +820,8 @@ const total = Number(meta.total || meta.count || countyGroups.length);
 
   .county-image::after {
     background:
-      linear-gradient(180deg, rgba(15, 23, 42, 0.1), rgba(15, 23, 42, 0.82)),
-      linear-gradient(90deg, rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.15));
+      linear-gradient(180deg, rgba(15, 23, 42, 0.05), rgba(15, 23, 42, 0.68)),
+      linear-gradient(90deg, rgba(15, 23, 42, 0.5), rgba(15, 23, 42, 0.12));
     content: "";
     inset: 0;
     position: absolute;
@@ -513,8 +839,8 @@ const total = Number(meta.total || meta.count || countyGroups.length);
 
   .county-image div {
     display: grid;
-    gap: 6px;
-    padding: 18px;
+    gap: 4px;
+    padding: 14px;
     position: relative;
     z-index: 2;
   }
@@ -529,8 +855,8 @@ const total = Number(meta.total || meta.count || countyGroups.length);
 
   .county-image h3 {
     color: #fffaf1;
-    font-size: clamp(1.8rem, 5vw, 3rem);
-    line-height: 0.95;
+    font-size: 1.7rem;
+    line-height: 1;
     margin: 0;
     text-shadow: 0 2px 14px rgba(0, 0, 0, 0.38);
   }
@@ -545,19 +871,12 @@ const total = Number(meta.total || meta.count || countyGroups.length);
 
   .county-summary {
     display: grid;
-    gap: 12px;
-  }
-
-  .county-summary p {
-    color: #4b5563;
-    font-weight: 800;
-    line-height: 1.5;
-    margin: 0;
+    gap: 10px;
   }
 
   .county-stats {
     display: grid;
-    gap: 8px;
+    gap: 6px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -567,16 +886,16 @@ const total = Number(meta.total || meta.count || countyGroups.length);
     border-radius: 8px;
     color: #4b5563;
     display: grid;
-    font-size: 0.75rem;
+    font-size: 0.68rem;
     font-weight: 900;
     gap: 2px;
-    padding: 10px;
+    padding: 8px;
     text-transform: uppercase;
   }
 
   .county-stats strong {
     color: #1f2933;
-    font-size: 1.35rem;
+    font-size: 1.05rem;
     line-height: 1;
   }
 
@@ -588,25 +907,14 @@ const total = Number(meta.total || meta.count || countyGroups.length);
     border-radius: 999px;
     font-size: 0.78rem;
     font-weight: 900;
-    padding: 6px 9px;
+    padding: 5px 8px;
     text-decoration: none;
-  }
-
-  .county-card h3 {
-    font-size: 1.6rem;
-    margin: 14px 0 12px;
-  }
-
-  .county-card p {
-    color: #4b5563;
-    font-weight: 800;
-    margin: 14px 0 0;
   }
 
   .district-links {
     border-top: 1px solid #d1d5db;
-    margin-top: 16px;
-    padding-top: 14px;
+    margin-top: 4px;
+    padding-top: 12px;
   }
 
   .district-links strong {
@@ -624,60 +932,43 @@ const total = Number(meta.total || meta.count || countyGroups.length);
     border-radius: 999px;
     font-size: 0.78rem;
     font-weight: 900;
-    padding: 6px 9px;
+    padding: 5px 8px;
     text-decoration: none;
   }
 
-  .articles {
-    border-top: 1px solid #d1d5db;
-    display: grid;
-    gap: 8px;
-    margin-top: 16px;
-    padding-top: 14px;
-    padding-bottom: 18px;
-  }
-
-  .articles strong {
-    color: #6b4f2a;
-    font-size: 0.78rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-  }
-
-  .articles a {
-    color: #1f2933;
-    display: grid;
-    gap: 3px;
-    font-weight: 800;
-    line-height: 1.35;
-  }
-
-  .articles small {
-    color: #4b5563;
-    font-size: 0.74rem;
-    font-weight: 850;
-  }
-
-  .show-more,
-  .pagination {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
+  .show-more-button {
+    justify-self: center;
     margin-top: 24px;
   }
 
-  .show-more a,
-  .pagination a {
+  .show-more-button {
     background: #1f2933;
     border: 1px solid #e2e8f0;
     border-radius: 999px;
     color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
     padding: 10px 14px;
-    text-decoration: none;
+  }
+
+  @media (max-width: 920px) {
+    .community-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .county-panel {
+      order: -1;
+    }
   }
 
   @media (max-width: 640px) {
-    .search {
+    .results-heading {
+      align-items: start;
+      flex-direction: column;
+    }
+
+    .update-card {
       grid-template-columns: 1fr;
     }
   }
