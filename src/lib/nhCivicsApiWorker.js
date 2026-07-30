@@ -1631,7 +1631,7 @@ async function handleCommunities(request, env) {
       COALESCE(dm.district_label, d.name) AS district_label,
       COALESCE(dm.communities_represented, d.towns_represented, '') AS communities_represented,
       d.towns_represented,
-      d.floterial,
+      COALESCE(dm.is_floterial_district, d.floterial, 0) AS floterial,
       d.seats
     FROM divisions d
     LEFT JOIN county_codes cc
@@ -1964,7 +1964,7 @@ async function getHouseDistrictsForCounty(env, county) {
       COALESCE(dm.district_label, d.name) AS district_label,
       COALESCE(dm.communities_represented, d.towns_represented, '') AS communities_represented,
       d.towns_represented,
-      d.floterial,
+      COALESCE(dm.is_floterial_district, d.floterial, 0) AS floterial,
       d.seats
     FROM divisions d
     LEFT JOIN county_codes cc
@@ -2018,7 +2018,9 @@ async function findTownDistricts(env, townName) {
       cc.name AS county_name,
       dm.district,
       dm.district_label,
-      dm.communities_represented
+      dm.communities_represented,
+      COALESCE(dm.is_floterial_district, 0) AS is_floterial_district,
+      COALESCE(dm.is_floterial_district, 0) AS floterial
     FROM d1_district_mapping dm
     LEFT JOIN county_codes cc
       ON cc.source_county_id = dm.county
@@ -2039,7 +2041,7 @@ async function findTownDistricts(env, townName) {
 
   const seen = new Set();
 
-  return (result.results || []).filter((district) => {
+  const matchedDistricts = (result.results || []).filter((district) => {
     if (!townDistrictMatches(district.communities_represented, normalizedTown)) {
       return false;
     }
@@ -2049,6 +2051,8 @@ async function findTownDistricts(env, townName) {
     seen.add(key);
     return true;
   });
+
+  return expandFloterialDistricts(env, matchedDistricts);
 }
 
 function getTownSearchPatterns(normalizedTown) {
@@ -2122,6 +2126,7 @@ function formatTownDistrict(district) {
     countyNumber: district.county || null,
     district: district.district,
     label: district.district_label,
+    floterial: parseBooleanText(district.floterial ?? district.is_floterial_district),
     path:
       district.body === "S"
         ? `/communities/senate/${district.district}`
@@ -2332,7 +2337,7 @@ async function getCommunityDistrict(env, { body, county, districtNumber }) {
       COALESCE(dm.district_label, d.name) AS district_label,
       COALESCE(dm.communities_represented, d.towns_represented, '') AS communities_represented,
       d.towns_represented,
-      d.floterial,
+      COALESCE(dm.is_floterial_district, d.floterial, 0) AS floterial,
       d.seats
     FROM divisions d
     LEFT JOIN county_codes cc
@@ -2381,7 +2386,7 @@ async function buildCommunityResponse(env, district, articleLimit, options = {})
     townsRepresented: splitCommunityList(
       district.communities_represented || district.towns_represented
     ),
-    floterial: parseBooleanText(district.floterial),
+    floterial: parseBooleanText(district.floterial ?? district.is_floterial_district),
     seats: district.seats || representatives.length || null,
     representativeSummary: {
       count: representatives.length,
@@ -2606,7 +2611,7 @@ function getCommunityArticleSearchTerms(district) {
 
 function parseBooleanText(value) {
   if (value === null || value === undefined || value === "") return null;
-  return String(value).toLowerCase() === "true";
+  return ["1", "true", "yes", "y"].includes(String(value).toLowerCase());
 }
 
 function isFreeStaterSelectExpression(column) {
@@ -4455,7 +4460,7 @@ async function findAddressDistricts(env, house, place, ward) {
     if (houseDistrict) districts.push(houseDistrict);
   }
 
-  return dedupeDistrictMappings(districts);
+  return expandFloterialDistricts(env, dedupeDistrictMappings(districts));
 }
 
 async function findDistrictMapping(env, body, county, district) {
@@ -4465,7 +4470,9 @@ async function findDistrictMapping(env, body, county, district) {
       county,
       district,
       district_label,
-      communities_represented
+      communities_represented,
+      COALESCE(is_floterial_district, 0) AS is_floterial_district,
+      COALESCE(is_floterial_district, 0) AS floterial
     FROM d1_district_mapping
     WHERE body = ?
       AND county = ?
@@ -4489,6 +4496,56 @@ function dedupeDistrictMappings(districts) {
   });
 }
 
+async function expandFloterialDistricts(env, districts) {
+  const dedupedDistricts = dedupeDistrictMappings(districts);
+  const houseDistricts = dedupedDistricts.filter(
+    (district) =>
+      district.body === "H" &&
+      Number.isFinite(Number(district.county)) &&
+      Number.isFinite(Number(district.district))
+  );
+
+  if (!houseDistricts.length) return dedupedDistricts;
+
+  const conditions = [];
+  const binds = [];
+
+  for (const district of houseDistricts) {
+    conditions.push(
+      "(fc.component_county_code = ? AND fc.component_district = ?)"
+    );
+    binds.push(Number(district.county), Number(district.district));
+  }
+
+  const result = await env.DB.prepare(`
+    SELECT DISTINCT
+      dm.body,
+      dm.county,
+      cc.name AS county_name,
+      dm.district,
+      dm.district_label,
+      dm.communities_represented,
+      COALESCE(dm.is_floterial_district, 1) AS is_floterial_district,
+      1 AS floterial
+    FROM d1_floterial_components fc
+    JOIN d1_district_mapping dm
+      ON dm.body = 'H'
+      AND dm.county = fc.floterial_county_code
+      AND dm.district = fc.floterial_district
+    LEFT JOIN county_codes cc
+      ON cc.source_county_id = dm.county
+    WHERE ${conditions.join(" OR ")}
+    ORDER BY dm.county, dm.district
+  `)
+    .bind(...binds)
+    .all();
+
+  return dedupeDistrictMappings([
+    ...dedupedDistricts,
+    ...(result.results || []),
+  ]);
+}
+
 async function findDistrictsFromPlace(env, place, ward) {
   const placeName = normalizeCommunityText(place?.name || "");
   const wardNumber = ward?.number ? String(ward.number).trim() : "";
@@ -4504,7 +4561,9 @@ async function findDistrictsFromPlace(env, place, ward) {
         county,
         district,
         district_label,
-        communities_represented
+        communities_represented,
+        COALESCE(is_floterial_district, 0) AS is_floterial_district,
+        COALESCE(is_floterial_district, 0) AS floterial
       FROM d1_district_mapping
       WHERE LOWER(communities_represented) LIKE LOWER(?)
         AND (
@@ -4539,7 +4598,9 @@ async function findDistrictsFromPlace(env, place, ward) {
         county,
         district,
         district_label,
-        communities_represented
+        communities_represented,
+        COALESCE(is_floterial_district, 0) AS is_floterial_district,
+        COALESCE(is_floterial_district, 0) AS floterial
       FROM d1_district_mapping
       WHERE LOWER(communities_represented) LIKE LOWER(?)
       ORDER BY
