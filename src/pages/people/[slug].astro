@@ -8,6 +8,13 @@ import FilterBar from "../../components/FilterBar.astro";
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import profileIcon from "../../assets/profile icon.png";
+import {
+  ExternalLink,
+  Globe,
+  Mail,
+  Phone,
+  UserRoundCheck,
+} from "@lucide/astro";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
@@ -340,6 +347,33 @@ const citizensCountProfileUrl = externalProfileUrl(representative, [
   "citizens_count_url",
   "citizenscount_url",
 ]);
+const profileResourceLinks = [
+  person.email && {
+    href: contactHref("email", person.email),
+    label: "Email",
+    icon: Mail,
+  },
+  person.phone && {
+    href: contactHref("phone", person.phone),
+    label: "Call",
+    icon: Phone,
+  },
+  person.website_url && {
+    href: contactHref("web", person.website_url),
+    label: "Website",
+    icon: Globe,
+  },
+  ballotpediaProfileUrl && {
+    href: ballotpediaProfileUrl,
+    label: "Ballotpedia",
+    icon: ExternalLink,
+  },
+  citizensCountProfileUrl && {
+    href: citizensCountProfileUrl,
+    label: "Citizens Count",
+    icon: ExternalLink,
+  },
+].filter(Boolean);
 
 function formatDate(value) {
   if (!value) return "";
@@ -484,28 +518,33 @@ function candidateOptionLabel(candidate = {}) {
             </p>
           )}
 
-          <div class="contact-actions">
-            {person.email && (
-              <a href={contactHref("email", person.email)}>Email</a>
-            )}
-            {person.phone && (
-              <a href={contactHref("phone", person.phone)}>Call</a>
-            )}
-            {person.website_url && (
-              <a href={contactHref("web", person.website_url)}>Website</a>
-            )}
-            {currentCandidateProfile && (
-              <a href={currentCandidateProfile.href}>{currentCandidateProfile.label}</a>
-            )}
-            {ballotpediaProfileUrl && (
-              <a href={ballotpediaProfileUrl}>Ballotpedia</a>
-            )}
-            {citizensCountProfileUrl && (
-              <a href={citizensCountProfileUrl}>Citizens Count</a>
-            )}
-          </div>
+          {currentCandidateProfile && (
+            <a class="linked-profile-action" href={currentCandidateProfile.href}>
+              <span class="link-icon" aria-hidden="true">
+                <UserRoundCheck size={19} stroke-width={2.4} />
+              </span>
+              <span>{currentCandidateProfile.label}</span>
+            </a>
+          )}
         </div>
       </section>
+
+      {profileResourceLinks.length > 0 && (
+        <nav class="resource-link-bar" aria-label="Profile links">
+          {profileResourceLinks.map((link) => {
+            const Icon = link.icon;
+
+            return (
+              <a href={link.href}>
+                <span class="link-icon" aria-hidden="true">
+                  <Icon size={17} stroke-width={2.3} />
+                </span>
+                <span>{link.label}</span>
+              </a>
+            );
+          })}
+        </nav>
+      )}
 
       <section class="summary-strip">
         <article>
@@ -1255,6 +1294,65 @@ function candidateOptionLabel(candidate = {}) {
   .meta-pill,
   .vote-meta span {
     background: #f8fafc;
+  }
+
+  .linked-profile-action {
+    align-items: center;
+    background: #1f2933;
+    border: 1px solid #111827;
+    border-radius: 999px;
+    color: #fffaf0;
+    display: inline-flex;
+    font-size: 0.95rem;
+    font-weight: 950;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 11px 16px;
+    text-decoration: none;
+    width: fit-content;
+  }
+
+  .linked-profile-action:hover {
+    background: #dc4d09;
+    border-color: #b6390a;
+  }
+
+  .resource-link-bar {
+    align-items: center;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 18px 0 24px;
+    padding: 14px;
+  }
+
+  .resource-link-bar a {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    display: inline-flex;
+    font-size: 0.86rem;
+    font-weight: 900;
+    gap: 8px;
+    padding: 8px 11px;
+    text-decoration: none;
+  }
+
+  .resource-link-bar a:hover {
+    border-color: #dc4d09;
+    color: #b6390a;
+  }
+
+  .link-icon {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    justify-content: center;
   }
 
   .party-pill {

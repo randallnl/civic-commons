@@ -7,6 +7,12 @@ import ArticleList from "../../components/ArticleList.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import FilterBar from "../../components/FilterBar.astro";
 import profileIcon from "../../assets/profile icon.png";
+import {
+  ExternalLink,
+  Globe,
+  Mail,
+  UserRoundCheck,
+} from "@lucide/astro";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
 import { getBillSummaries } from "../../lib/billsApi";
@@ -111,30 +117,39 @@ const sourceLinks = [
   candidate.candidateWebsite && {
     href: candidate.candidateWebsite,
     label: "Campaign Website",
+    icon: Globe,
   },
   candidate.candidateEmail && {
     href: `mailto:${candidate.candidateEmail}`,
     label: "Email Campaign",
+    icon: Mail,
   },
   candidate.legislatorProfileUrl && {
     href: candidate.legislatorProfileUrl,
     label: "Legislator Profile",
+    icon: UserRoundCheck,
+    primary: true,
   },
   {
     href: "https://cfs.sos.nh.gov/public/cf/reports",
     label: "Search candidate finance filings",
+    icon: ExternalLink,
   },
   {
     href:
       externalProfileUrl(candidate, ["ballotpediaUrl", "ballotpedia_url"]) ||
       ballotpediaUrlForName(name),
     label: "Ballotpedia",
+    icon: ExternalLink,
   },
   externalProfileUrl(candidate, ["citizensCountUrl", "citizens_count_url", "citizenscount_url"]) && {
     href: externalProfileUrl(candidate, ["citizensCountUrl", "citizens_count_url", "citizenscount_url"]),
     label: "Citizens Count",
+    icon: ExternalLink,
   },
 ].filter(Boolean);
+const linkedLegislatorProfile = sourceLinks.find((link) => link.primary);
+const candidateResourceLinks = sourceLinks.filter((link) => !link.primary);
 
 if (adminSession) {
   try {
@@ -419,15 +434,33 @@ function uniqueArticles(articles = []) {
             </p>
           )}
 
-          {sourceLinks.length > 0 && (
-            <div class="contact-actions">
-              {sourceLinks.map((link) => (
-                <a href={link.href}>{link.label}</a>
-              ))}
-            </div>
+          {linkedLegislatorProfile && (
+            <a class="linked-profile-action" href={linkedLegislatorProfile.href}>
+              <span class="link-icon" aria-hidden="true">
+                <UserRoundCheck size={19} stroke-width={2.4} />
+              </span>
+              <span>{linkedLegislatorProfile.label}</span>
+            </a>
           )}
         </div>
       </section>
+
+      {candidateResourceLinks.length > 0 && (
+        <nav class="resource-link-bar" aria-label="Candidate links">
+          {candidateResourceLinks.map((link) => {
+            const Icon = link.icon || ExternalLink;
+
+            return (
+              <a href={link.href}>
+                <span class="link-icon" aria-hidden="true">
+                  <Icon size={17} stroke-width={2.3} />
+                </span>
+                <span>{link.label}</span>
+              </a>
+            );
+          })}
+        </nav>
+      )}
 
       <section class="panel">
         <p class="eyebrow">Ballot Details</p>
@@ -458,26 +491,6 @@ function uniqueArticles(articles = []) {
               </article>
             );
           })}
-          {(candidate.candidateWebsite || candidate.candidateEmail) && (
-            <article class="role-card candidate-contact-details">
-              {candidate.candidateWebsite && (
-                <div>
-                  <span>Campaign Website</span>
-                  <strong>
-                    <a href={candidate.candidateWebsite}>{candidate.candidateWebsite}</a>
-                  </strong>
-                </div>
-              )}
-              {candidate.candidateEmail && (
-                <div>
-                  <span>Email</span>
-                  <strong>
-                    <a href={`mailto:${candidate.candidateEmail}`}>{candidate.candidateEmail}</a>
-                  </strong>
-                </div>
-              )}
-            </article>
-          )}
         </div>
       </section>
 
@@ -1030,6 +1043,65 @@ function uniqueArticles(articles = []) {
     border-radius: 999px;
     padding: 10px 14px;
     text-decoration: none;
+  }
+
+  .linked-profile-action {
+    align-items: center;
+    background: #1f2933;
+    border: 1px solid #111827;
+    border-radius: 999px;
+    color: #fffaf0;
+    display: inline-flex;
+    font-size: 0.95rem;
+    font-weight: 950;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 11px 16px;
+    text-decoration: none;
+    width: fit-content;
+  }
+
+  .linked-profile-action:hover {
+    background: #dc4d09;
+    border-color: #b6390a;
+  }
+
+  .resource-link-bar {
+    align-items: center;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 18px 0 24px;
+    padding: 14px;
+  }
+
+  .resource-link-bar a {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    display: inline-flex;
+    font-size: 0.86rem;
+    font-weight: 900;
+    gap: 8px;
+    padding: 8px 11px;
+    text-decoration: none;
+  }
+
+  .resource-link-bar a:hover {
+    border-color: #dc4d09;
+    color: #b6390a;
+  }
+
+  .link-icon {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    justify-content: center;
   }
 
   .summary-strip {
