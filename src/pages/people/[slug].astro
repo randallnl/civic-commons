@@ -546,29 +546,6 @@ function candidateOptionLabel(candidate = {}) {
         </nav>
       )}
 
-      <section class="summary-strip">
-        <article>
-          <span>Current Offices</span>
-          <strong>{currentOfficeTerms.length}</strong>
-        </article>
-        <article class="attendance-summary-card">
-          <span>Vote Attendance</span>
-          <strong>
-            {voteAttendance.percent === null
-              ? "N/A"
-              : `${Math.round(voteAttendance.percent * 100)}%`}
-          </strong>
-        </article>
-        <a class="summary-card" href={trackedVotesHref}>
-          <span>Tracked Votes</span>
-          <strong>{trackedVotes.length}</strong>
-        </a>
-        <article>
-          <span>Sources</span>
-          <strong>{sourceLinks.length}</strong>
-        </article>
-      </section>
-
       {adminSession && (
         <section class="panel admin-edit-panel">
           <div class="section-heading">
@@ -1531,15 +1508,6 @@ function candidateOptionLabel(candidate = {}) {
     text-decoration: none;
   }
 
-  .summary-strip {
-    display: grid;
-    gap: 12px;
-    grid-template-columns: repeat(3, 1fr);
-    margin: 18px 0 28px;
-  }
-
-  .summary-strip article,
-  .summary-card,
   .panel {
     background: white;
     border: 1px solid #e2e8f0;
@@ -1547,18 +1515,6 @@ function candidateOptionLabel(candidate = {}) {
     box-shadow: none;
   }
 
-  .summary-strip article,
-  .summary-card {
-    color: inherit;
-    padding: 18px;
-    text-decoration: none;
-  }
-
-  .summary-card:hover strong {
-    text-decoration: underline;
-  }
-
-  .summary-strip span,
   .detail-list dt {
     color: #6b7280;
     display: block;
@@ -1567,11 +1523,6 @@ function candidateOptionLabel(candidate = {}) {
     letter-spacing: 0.1em;
     margin-bottom: 8px;
     text-transform: uppercase;
-  }
-
-  .summary-strip strong {
-    font-size: 2.2rem;
-    line-height: 1;
   }
 
   .content-grid {
@@ -2083,10 +2034,6 @@ function candidateOptionLabel(candidate = {}) {
 
     .portrait-card {
       max-width: 220px;
-    }
-
-    .summary-strip {
-      grid-template-columns: 1fr;
     }
 
     .attendance-card {
