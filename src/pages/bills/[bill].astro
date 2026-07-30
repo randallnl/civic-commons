@@ -6,6 +6,7 @@ import ArticleList from "../../components/ArticleList.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
+import { ExternalLink } from "@lucide/astro";
 import { currentAdminSession } from "../../lib/adminAuth";
 import { getBillDetail, getBillTestimony, positionCounts, rollCallPath } from "../../lib/billsApi";
 import { getOrganizations, organizationPath } from "../../lib/organizationsApi";
@@ -94,6 +95,14 @@ function billTitle() {
   return bill?.name || bill?.title || trackedBill?.name || bill?.condensedbillno || billCode;
 }
 
+function legiscanBillUrl() {
+  const code = normalizeBillCode(bill?.condensedbillno || billCode);
+  const sessionYear = bill?.sessionyear || year || 2026;
+  return code && sessionYear
+    ? `https://legiscan.com/NH/bill/${encodeURIComponent(code)}/${encodeURIComponent(sessionYear)}`
+    : "";
+}
+
 function bodyLabel(value = "") {
   const body = String(value).trim().toUpperCase();
   if (body === "H") return "House";
@@ -153,6 +162,15 @@ function commentsForBill(organizations = [], code = "") {
               {bill.legislativebody && <span>{bill.legislativebody}</span>}
               {bill.statusdate && <span>{formatDate(bill.statusdate)}</span>}
             </div>
+
+            {legiscanBillUrl() && (
+              <div class="hero-actions">
+                <a href={legiscanBillUrl()}>
+                  <ExternalLink size={17} stroke-width={2.4} aria-hidden="true" />
+                  <span>Read full bill text on LegiScan</span>
+                </a>
+              </div>
+            )}
           </section>
 
           {adminSession && (
@@ -550,6 +568,32 @@ function commentsForBill(organizations = [], code = "") {
     font-size: 0.82rem;
     font-weight: 900;
     padding: 6px 9px;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .hero-actions a {
+    align-items: center;
+    background: #1f2933;
+    border: 1px solid #111827;
+    border-radius: 999px;
+    color: #fffaf0;
+    display: inline-flex;
+    font-size: 0.9rem;
+    font-weight: 950;
+    gap: 8px;
+    padding: 10px 14px;
+    text-decoration: none;
+  }
+
+  .hero-actions a:hover {
+    background: #dc4d09;
+    border-color: #b6390a;
   }
 
   .overview-grid,
