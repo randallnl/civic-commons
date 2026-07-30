@@ -662,7 +662,7 @@ function isVotingAction(vote = {}) {
       )}
 
       {!address && !hasDirectoryFilters && previewCandidates.length > 0 && (
-        <section class="candidate-results secondary-preview">
+        <section class="candidate-results secondary-preview" data-starter-preview>
           <div class="group-header">
             <h2>2026 Candidate Context</h2>
             <p>
@@ -886,6 +886,37 @@ function isVotingAction(vote = {}) {
     </main>
     <script>
       const resultsRegion = document.querySelector("[data-results-region]");
+      const starterPreview = document.querySelector("[data-starter-preview]");
+      const filterForm = document.querySelector("[data-fuzzy-live-form]");
+      const activeFilterNames = new Set(["name", "county", "body", "town", "sort"]);
+
+      function hasActiveFilterValue(form) {
+        if (!(form instanceof HTMLFormElement)) return false;
+
+        return Array.from(form.elements).some((element) => {
+          if (
+            !(element instanceof HTMLInputElement) &&
+            !(element instanceof HTMLSelectElement) &&
+            !(element instanceof HTMLTextAreaElement)
+          ) {
+            return false;
+          }
+
+          if (!activeFilterNames.has(element.name)) return false;
+          return String(element.value || "").trim() !== "";
+        });
+      }
+
+      function updateStarterPreviewVisibility() {
+        if (!starterPreview) return;
+        starterPreview.hidden = hasActiveFilterValue(filterForm);
+      }
+
+      updateStarterPreviewVisibility();
+
+      filterForm?.addEventListener("input", updateStarterPreviewVisibility);
+      filterForm?.addEventListener("change", updateStarterPreviewVisibility);
+
       document.addEventListener("submit", async (event) => {
         const form = event.target;
         if (!(form instanceof HTMLFormElement) || !form.matches("[data-results-form]") || !resultsRegion) {
