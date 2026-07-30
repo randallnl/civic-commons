@@ -109,7 +109,7 @@ export async function getCandidate(slugOrId, {
 } = {}) {
   const response = await civicApiFetch(
     `${apiBase}/candidates/${encodeURIComponent(slugOrId)}`,
-    { runtimeEnv },
+    { runtimeEnv, cache: "no-store" },
   );
   const data = await response.json().catch(() => ({}));
 
