@@ -65,6 +65,10 @@ if (!adminSession && candidate.currentLegislator && candidate.legislatorProfileU
   return Astro.redirect(candidate.legislatorProfileUrl, 302);
 }
 
+if (!adminSession) {
+  return Astro.redirect(`/people/${candidateSlug(candidate)}`, 302);
+}
+
 if (candidate.currentLegislator && candidate.legislatorPersonId) {
   try {
     const [representativeData, billSummaries] = await Promise.all([

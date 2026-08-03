@@ -24,6 +24,7 @@ import {
   candidateName,
   candidateSlug,
   formatCandidateParty,
+  getCandidate,
   getCandidates,
   isLegislativeCandidate,
 } from "../../lib/candidatesApi";
@@ -62,29 +63,45 @@ try {
 }
 
 const representative = apiData?.representative || null;
+let candidateFallback = null;
 
 if (!representative) {
+  try {
+    const candidateData = await getCandidate(slug);
+    candidateFallback = candidateData?.candidate || candidateData;
+  } catch (error) {
+    console.error(error?.message || "Unable to load candidate profile fallback.");
+  }
+}
+
+if (!representative && (!candidateFallback?.filerEntityNumber && !candidateFallback?.name)) {
   return Astro.redirect("/404");
 }
 
+const hasLegislatorProfile = Boolean(representative);
+const profileCandidate = candidateFallback || null;
 const person = {
-  id: representative?.personid || representative?.id,
-  full_name: representative?.name || "Representative",
+  id: representative?.personid || representative?.id || profileCandidate?.personId || profileCandidate?.filerEntityNumber || slug,
+  full_name: representative?.name || candidateName(profileCandidate) || "Civic Profile",
   slug,
-  bio: representative?.notes || "",
-  photo_url: representative?.photo || "",
-  party: representative?.party || "",
-  email: representative?.email || "",
+  bio: representative?.notes || profileCandidate?.notes || "",
+  photo_url: representative?.photo || profileCandidate?.photoUrl || profileCandidate?.legislatorPhotoUrl || "",
+  party: representative?.party || profileCandidate?.politicalParty || profileCandidate?.party || "",
+  email: representative?.email || profileCandidate?.candidateEmail || "",
   phone: representative?.phone || "",
-  website_url: representative?.sourceUrls?.generalCourt || "",
+  website_url: representative?.sourceUrls?.generalCourt || profileCandidate?.candidateWebsite || "",
 };
 const representativeEntityKey = representative?.personid || representative?.id || slug;
 const trackedVotesHref = `/people/${slug}/votes`;
 
-const apiTerm = representativeToTerm(representative);
+const apiTerm = representative
+  ? representativeToTerm(representative)
+  : candidateToTerm(profileCandidate);
 const officeTerms = [{ ...apiTerm, status: "current" }];
 const currentOfficeTerms = officeTerms;
-const candidacies = { results: [] };
+const candidacies = {
+  results: uniqueCandidateRoles(profileCandidate?.candidateRoles?.length ? profileCandidate.candidateRoles : profileCandidate ? [profileCandidate] : []),
+};
 
 let trackedBills = new Map();
 let billSummaries = new Map();
@@ -98,7 +115,7 @@ try {
   console.error(error?.message || "Unable to load tracked bill data.");
 }
 
-const voteHistory = apiData?.voteHistory || [];
+const voteHistory = representative ? apiData?.voteHistory || [] : [];
 const voteAttendance = representativeVoteAttendance(voteHistory);
 let trackedVotes = voteHistory
   .map((vote) => normalizeVote(vote, trackedBills, billSummaries))
@@ -137,19 +154,35 @@ if (representative?.towns_represented || representative?.location_text) {
         ? parseTownsServed(representative.towns_represented)
         : parseLocationText(representative.location_text),
   });
+} else if (profileCandidate) {
+  const candidateTowns = candidateTownsRepresented(profileCandidate);
+  if (candidateTowns) {
+    townServiceAreas.push({
+      district: candidateOfficeLine(profileCandidate),
+      towns: candidateTowns.split(/,\s*/).filter(Boolean),
+    });
+  }
 }
 const sourceLinks = sourceUrlsToLinks(representative?.sourceUrls);
 const portraitUrl = profilePhotoUrl(person.photo_url);
-const currentCandidateProfile = await candidateProfileForLegislator(representative);
+const currentCandidateProfile = representative
+  ? await candidateProfileForLegislator(representative)
+  : profileCandidate
+    ? {
+        candidate: profileCandidate,
+        href: `/people/${slug}`,
+        label: "Candidate Profile",
+      }
+    : null;
 const linkedCandidateForEndorsements = currentCandidateProfile?.candidate || null;
 const linkedCandidateOfficeLine = candidateOfficeLine(linkedCandidateForEndorsements);
 const linkedCandidateTowns = candidateTownsRepresented(linkedCandidateForEndorsements, representative);
 const recentlyViewedProfile = {
-  kind: "legislator",
+  kind: hasLegislatorProfile ? "legislator" : "candidate",
   name: person.full_name,
   href: `/people/${slug}`,
   photoUrl: portraitUrl || "",
-  party: formatParty(person.party),
+  party: hasLegislatorProfile ? formatParty(person.party) : formatCandidateParty(person.party),
   officeLine: [officeLabel, districtLabel].filter(Boolean).join(", "),
   towns: townServiceAreas.flatMap((area) => area.towns).join(", "),
   grade: voteGrade?.letter || "",
@@ -196,12 +229,21 @@ let relatedArticles =
 
 if (!relatedArticles.length && person.id) {
   try {
-    const articleData = await getArticles({
-      personid: person.id,
-      include: "relations",
-      limit: 6,
-    });
-    relatedArticles = articleData.articles || [];
+    if (hasLegislatorProfile) {
+      const articleData = await getArticles({
+        personid: person.id,
+        include: "relations",
+        limit: 6,
+      });
+      relatedArticles = articleData.articles || [];
+    } else if (profileCandidate) {
+      const articleData = await getArticles({
+        candidate: profileCandidate.filerEntityNumber || profileCandidate.filer_entity_number || person.full_name,
+        include: "relations",
+        limit: 6,
+      });
+      relatedArticles = articleData.articles || [];
+    }
   } catch (error) {
     console.error(error?.message || "Unable to load representative articles.");
   }
@@ -215,10 +257,20 @@ function formatParty(party) {
 }
 
 function partyClass(party) {
-  if (party === "R") return "party-republican";
-  if (party === "D") return "party-democrat";
-  if (party === "I") return "party-independent";
+  const normalized = String(party || "").toLowerCase();
+  if (party === "R" || normalized.includes("republican")) return "party-republican";
+  if (party === "D" || normalized.includes("democrat")) return "party-democrat";
+  if (party === "I" || normalized.includes("independent")) return "party-independent";
   return "party-unknown";
+}
+
+function candidateToTerm(candidate = {}) {
+  return {
+    title: candidate?.office || "Candidate Profile",
+    body: candidate?.officeType || "Candidate",
+    district: candidate?.district || "",
+    division_name: candidateOfficeLine(candidate),
+  };
 }
 
 function formatDistrictLabel(term = {}) {
@@ -458,6 +510,25 @@ function candidateOptionLabel(candidate = {}) {
   ].filter(Boolean).join(" - ");
 }
 
+function uniqueCandidateRoles(roles = []) {
+  const seen = new Set();
+
+  return roles.filter((role) => {
+    const key = [
+      role.filerEntityNumber,
+      role.office,
+      role.county,
+      role.district,
+      role.electionYear,
+    ]
+      .filter(Boolean)
+      .join("|");
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function candidateOfficeLine(candidate = {}) {
   if (!candidate) return "";
 
@@ -558,9 +629,10 @@ function uniqueTowns(towns = []) {
         </div>
 
         <div class="hero-copy">
-          <p class="eyebrow">{officeLabel}</p>
+          <p class="eyebrow">{hasLegislatorProfile ? officeLabel : "Candidate Profile"}</p>
           <h1>{person.full_name}</h1>
 
+          {hasLegislatorProfile && (
           <div class="profile-grade-row">
             <a
               class:list={["profile-grade", voteGrade.className]}
@@ -573,12 +645,13 @@ function uniqueTowns(towns = []) {
             </a>
             <p>{voteGrade.label}</p>
           </div>
+          )}
 
           <div class="hero-meta">
             <span class:list={["meta-pill", "party-pill", partyClass(person.party)]}>
-              {formatParty(person.party)}
+              {hasLegislatorProfile ? formatParty(person.party) : formatCandidateParty(person.party)}
             </span>
-            {isFreeStater(representative) && (
+            {(isFreeStater(representative) || isFreeStater(profileCandidate)) && (
               <a
                 class="meta-pill free-stater-pill"
                 href="/free-staters"
@@ -588,7 +661,7 @@ function uniqueTowns(towns = []) {
                 Free State Aligned
               </a>
             )}
-            {isTpActionAligned(representative) && (
+            {(isTpActionAligned(representative) || isTpActionAligned(profileCandidate)) && (
               <span class="meta-pill tpaction-pill">TPAction Aligned</span>
             )}
           </div>
@@ -601,7 +674,7 @@ function uniqueTowns(towns = []) {
             </p>
           )}
 
-          {currentCandidateProfile && (
+          {hasLegislatorProfile && currentCandidateProfile && (
             <a class="linked-profile-action" href="#candidate-role">
               <span class="link-icon" aria-hidden="true">
                 <UserRoundCheck size={19} stroke-width={2.4} />
@@ -624,7 +697,7 @@ function uniqueTowns(towns = []) {
             <dd>{officeLabel || "Not listed"}</dd>
           </div>
           <div>
-            <dt>Legislative Body</dt>
+            <dt>{hasLegislatorProfile ? "Legislative Body" : "Role Type"}</dt>
             <dd>{bodyLabel || "Not listed"}</dd>
           </div>
           <div>
@@ -633,7 +706,7 @@ function uniqueTowns(towns = []) {
           </div>
           <div>
             <dt>Party</dt>
-            <dd>{formatParty(person.party)}</dd>
+            <dd>{hasLegislatorProfile ? formatParty(person.party) : formatCandidateParty(person.party)}</dd>
           </div>
           {townServiceAreas.length ? (
             <div class="profile-detail-wide">
@@ -649,6 +722,7 @@ function uniqueTowns(towns = []) {
           ) : null}
         </dl>
 
+        {hasLegislatorProfile && (
         <div class="attendance-card" aria-label={voteAttendance.label}>
           <div>
             <span>Vote Attendance</span>
@@ -663,6 +737,7 @@ function uniqueTowns(towns = []) {
             {voteAttendance.notVoting > 0 && ` ${voteAttendance.notVoting} absent, excused, or not voting.`}
           </p>
         </div>
+        )}
       </section>
 
       {linkedCandidateForEndorsements && (
@@ -673,7 +748,10 @@ function uniqueTowns(towns = []) {
               <h2>Candidate information for this person</h2>
             </div>
             {adminSession && currentCandidateProfile && (
-              <a class="section-action" href={currentCandidateProfile.href}>
+              <a
+                class="section-action"
+                href={hasLegislatorProfile ? currentCandidateProfile.href : `/candidates/${candidateSlug(linkedCandidateForEndorsements)}`}
+              >
                 Edit candidate fields
               </a>
             )}
@@ -719,7 +797,7 @@ function uniqueTowns(towns = []) {
         </nav>
       )}
 
-      {adminSession && (
+      {adminSession && hasLegislatorProfile && (
         <section class="panel admin-edit-panel">
           <div class="section-heading">
             <p class="eyebrow">Admin</p>
@@ -939,6 +1017,7 @@ function uniqueTowns(towns = []) {
 
       <section class="content-grid">
         <div class="stack">
+          {hasLegislatorProfile && (
           <section class="panel">
             <div class="section-heading">
               <p class="eyebrow">Service</p>
@@ -965,7 +1044,9 @@ function uniqueTowns(towns = []) {
               <p class="empty">No office history is listed yet.</p>
             )}
           </section>
+          )}
 
+          {hasLegislatorProfile && (
           <section class="panel">
             <div class="section-heading split-heading">
               <div>
@@ -1080,10 +1161,11 @@ function uniqueTowns(towns = []) {
               </p>
             )}
           </section>
+          )}
 
           <CommunityUpdates
-            entityType="representative"
-            entityKey={representativeEntityKey}
+            entityType={hasLegislatorProfile ? "representative" : "candidate"}
+            entityKey={hasLegislatorProfile ? representativeEntityKey : profileCandidate?.filerEntityNumber || slug}
             entityName={person.full_name}
             pageUrl={Astro.url.pathname}
           />
