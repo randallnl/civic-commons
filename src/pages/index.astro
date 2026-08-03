@@ -413,6 +413,17 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
         return element;
       }
 
+      function previewTowns(value = "", maxLength = 92) {
+        const text = String(value || "").replace(/\s+/g, " ").trim();
+        if (text.length <= maxLength) return text;
+
+        const clipped = text.slice(0, maxLength + 1);
+        const commaBreak = clipped.lastIndexOf(",");
+        const spaceBreak = clipped.lastIndexOf(" ");
+        const breakAt = commaBreak > 42 ? commaBreak : spaceBreak;
+        return `${text.slice(0, breakAt > 42 ? breakAt : maxLength).trim().replace(/,+$/, "")}...`;
+      }
+
       function renderRecentlyViewedProfiles() {
         if (!recentlyViewedPanel || !recentlyViewedList) return;
 
@@ -477,7 +488,8 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
             const towns = document.createElement("span");
             towns.className = "recent-profile-towns";
             appendText(towns, "span", "Towns represented");
-            appendText(towns, "strong", profile.towns);
+            const townsText = appendText(towns, "strong", previewTowns(profile.towns));
+            if (townsText) townsText.title = profile.towns;
             copy.append(towns);
           }
 
