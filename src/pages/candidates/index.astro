@@ -26,6 +26,7 @@ const office = Astro.url.searchParams.get("office")?.trim() || "";
 const town = Astro.url.searchParams.get("town")?.trim() || "";
 const sort = Astro.url.searchParams.get("sort")?.trim() || "";
 const electionYear = "2026";
+const INITIAL_CANDIDATE_PREVIEW_LIMIT = 12;
 const officeOptions = [
   "State Representative",
   "State Senate",
@@ -77,8 +78,12 @@ try {
     resultContext = data.town?.name || data.community?.name || town;
   } else {
     if (!name && !county && !selectedOffice) {
-      candidates = await getAllLegislativeCandidates({ electionYear });
-      meta = { count: candidates.length };
+      const data = await getDirectoryCandidates({
+        electionYear,
+        limit: INITIAL_CANDIDATE_PREVIEW_LIMIT,
+      });
+      candidates = data.candidates || [];
+      meta = data.meta || {};
     } else {
       const data = await getDirectoryCandidates({
         q: name || town,

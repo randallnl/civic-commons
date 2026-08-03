@@ -16,6 +16,9 @@ import {
 } from "../lib/trackedBills";
 
 const API_BASE = civicApiBase();
+const INITIAL_REP_PREVIEW_LIMIT = 36;
+const FILTERED_REP_LIMIT = 160;
+const REP_OPTION_LIMIT = 240;
 const WARD_COMMUNITY_COUNTS = new Map([
   ["berlin", 4],
   ["claremont", 3],
@@ -90,7 +93,7 @@ if (address) {
 }
 
 try {
-  const repOptionData = await getRepresentatives({ limit: 600, voteLimit: 100 });
+  const repOptionData = await getRepresentatives({ limit: REP_OPTION_LIMIT });
   const optionReps = repOptionData.representatives || [];
   allCurrentReps = optionReps;
   nameOptions = uniqueOptions(optionReps.map(repName));
@@ -105,8 +108,8 @@ if (!address && hasDirectoryFilters) {
       body: normalizedBodyFilter,
       q: filters.name,
       county: filters.county,
-      voteLimit: 100,
-      limit: 600,
+      voteLimit: 30,
+      limit: FILTERED_REP_LIMIT,
     });
 
     const matchedReps = (repData.representatives || []).filter((rep) => matchesDirectoryFilters(rep, filters));
@@ -121,10 +124,10 @@ if (!address && hasDirectoryFilters) {
 }
 
 if (!address && !hasDirectoryFilters) {
-  directoryReps = allCurrentReps;
+  directoryReps = allCurrentReps.slice(0, INITIAL_REP_PREVIEW_LIMIT);
 }
 
-if (lookupData || directoryReps.length > 0) {
+if (lookupData || (hasDirectoryFilters && directoryReps.length > 0)) {
   try {
     trackedBills = await getTrackedBills();
     billSummaries = await getBillSummaries();
