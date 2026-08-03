@@ -461,6 +461,19 @@ function candidateOptionLabel(candidate = {}) {
           <p class="eyebrow">{officeLabel}</p>
           <h1>{person.full_name}</h1>
 
+          <div class="profile-grade-row">
+            <a
+              class:list={["profile-grade", voteGrade.className]}
+              href="/vote-grades"
+              title="How do we determine this?"
+              aria-label={`How do we determine this? ${voteGrade.label}`}
+            >
+              <span>{voteGrade.letter}</span>
+              <small>Vote Grade</small>
+            </a>
+            <p>{voteGrade.label}</p>
+          </div>
+
           <div class="hero-meta">
             <span class:list={["meta-pill", "party-pill", partyClass(person.party)]}>
               {formatParty(person.party)}
@@ -478,21 +491,6 @@ function candidateOptionLabel(candidate = {}) {
             {isTpActionAligned(representative) && (
               <span class="meta-pill tpaction-pill">TPAction Aligned</span>
             )}
-            <span class="meta-pill">{bodyLabel}</span>
-            <span class="meta-pill district-pill">{districtLabel}</span>
-          </div>
-
-          <div class="profile-grade-row">
-            <a
-              class:list={["profile-grade", voteGrade.className]}
-              href="/vote-grades"
-              title="How do we determine this?"
-              aria-label={`How do we determine this? ${voteGrade.label}`}
-            >
-              <span>{voteGrade.letter}</span>
-              <small>Vote Grade</small>
-            </a>
-            <p>{voteGrade.label}</p>
           </div>
 
           <div class="attendance-card" aria-label={voteAttendance.label}>
@@ -527,6 +525,44 @@ function candidateOptionLabel(candidate = {}) {
             </a>
           )}
         </div>
+      </section>
+
+      <section class="panel profile-details-panel">
+        <div class="section-heading">
+          <p class="eyebrow">Details</p>
+          <h2>Official Role</h2>
+        </div>
+
+        <dl class="detail-list profile-detail-list">
+          <div>
+            <dt>Office</dt>
+            <dd>{officeLabel || "Not listed"}</dd>
+          </div>
+          <div>
+            <dt>Legislative Body</dt>
+            <dd>{bodyLabel || "Not listed"}</dd>
+          </div>
+          <div>
+            <dt>District</dt>
+            <dd>{districtLabel || "Not listed"}</dd>
+          </div>
+          <div>
+            <dt>Party</dt>
+            <dd>{formatParty(person.party)}</dd>
+          </div>
+          {townServiceAreas.length ? (
+            <div class="profile-detail-wide">
+              <dt>Towns served</dt>
+              <dd>
+                {townServiceAreas.map((area) => (
+                  <span>
+                    <strong>{area.district}</strong>: {area.towns.join(", ")}
+                  </span>
+                ))}
+              </dd>
+            </div>
+          ) : null}
+        </dl>
       </section>
 
       {profileResourceLinks.length > 0 && (
@@ -1304,6 +1340,10 @@ function candidateOptionLabel(candidate = {}) {
     gap: 10px;
     margin: 18px 0 24px;
     padding: 14px;
+  }
+
+  .profile-details-panel {
+    margin-top: 24px;
   }
 
   .resource-link-bar a {
