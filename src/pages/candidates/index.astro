@@ -528,6 +528,7 @@ function uniqueOptions(values = []) {
           action="/candidates"
           submitLabel="Filter candidates"
           clearHref={hasFilters ? "/candidates" : ""}
+          dataResultsForm
           live
         >
           <label>
@@ -610,7 +611,7 @@ function uniqueOptions(values = []) {
       {error ? (
         <p class="status-message">{error}</p>
       ) : (
-        <section class="results" id="candidate-results">
+        <section class="results" id="candidate-results" data-results-region>
           <div class="results-heading">
             <div>
               <h2><span data-fuzzy-count>{Math.min(resultCount, 12)}</span> House and Senate Candidates Shown</h2>
@@ -647,6 +648,92 @@ function uniqueOptions(values = []) {
         </section>
       )}
     </main>
+    <script>
+      const resultsRegion = document.querySelector("[data-results-region]");
+      const filterForm = document.querySelector("[data-fuzzy-live-form]");
+      let filterTimeout = 0;
+      let latestRequestId = 0;
+
+      function resultsUrlFor(form) {
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+
+        for (const [key, value] of formData.entries()) {
+          const text = String(value || "").trim();
+          if (text && text.toLowerCase() !== "all") params.set(key, text);
+        }
+
+        return `/candidates${params.toString() ? `?${params}` : ""}`;
+      }
+
+      async function loadResultsFromForm(form, { push = true, scroll = true } = {}) {
+        if (!resultsRegion) return false;
+
+        const submitButton = form.querySelector("button[type='submit']");
+        const originalText = submitButton?.textContent || "";
+        const url = resultsUrlFor(form);
+        const requestId = latestRequestId + 1;
+        latestRequestId = requestId;
+        if (submitButton && scroll) {
+          submitButton.disabled = true;
+          submitButton.textContent = "Loading...";
+        }
+
+        try {
+          const response = await fetch(url, { headers: { "x-requested-with": "fetch" } });
+          if (!response.ok) throw new Error("Unable to load results.");
+
+          const html = await response.text();
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          const nextResults = doc.querySelector("[data-results-region]");
+          if (!nextResults) throw new Error("Unable to load results.");
+          if (requestId !== latestRequestId) return false;
+
+          resultsRegion.innerHTML = nextResults.innerHTML;
+          resultsRegion.closest("[x-data]")?.dispatchEvent(new CustomEvent("nhdb:fuzzy-refresh", { bubbles: true }));
+
+          if (push) {
+            window.history.pushState({}, "", url);
+          } else {
+            window.history.replaceState({}, "", url);
+          }
+          if (scroll) resultsRegion.scrollIntoView({ behavior: "smooth", block: "start" });
+          return true;
+        } catch (error) {
+          if (scroll) window.location.href = url;
+          return false;
+        } finally {
+          if (submitButton && scroll) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+          }
+        }
+      }
+
+      document.addEventListener("submit", async (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || !form.matches("[data-results-form]") || !resultsRegion) {
+          return;
+        }
+
+        event.preventDefault();
+        await loadResultsFromForm(form, { push: true, scroll: true });
+      });
+
+      filterForm?.addEventListener("input", () => {
+        window.clearTimeout(filterTimeout);
+        filterTimeout = window.setTimeout(() => {
+          loadResultsFromForm(filterForm, { push: false, scroll: false });
+        }, 260);
+      });
+
+      filterForm?.addEventListener("change", () => {
+        window.clearTimeout(filterTimeout);
+        filterTimeout = window.setTimeout(() => {
+          loadResultsFromForm(filterForm, { push: false, scroll: false });
+        }, 120);
+      });
+    </script>
     <SiteFooter />
   </body>
 </html>

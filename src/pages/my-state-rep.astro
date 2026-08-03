@@ -520,6 +520,7 @@ function isVotingAction(vote = {}) {
           submitLabel="Filter current legislators"
           clearHref={hasDirectoryFilters ? "/my-state-rep#rep-results" : ""}
           columns="dense"
+          dataResultsForm
           live
         >
           <label>
@@ -808,6 +809,65 @@ function isVotingAction(vote = {}) {
     <script>
       const resultsRegion = document.querySelector("[data-results-region]");
       const filterForm = document.querySelector("[data-fuzzy-live-form]");
+      let filterTimeout = 0;
+      let latestRequestId = 0;
+
+      function resultsUrlFor(form) {
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+
+        for (const [key, value] of formData.entries()) {
+          const text = String(value || "").trim();
+          if (text && text.toLowerCase() !== "all") params.set(key, text);
+        }
+
+        return `/my-state-rep${params.toString() ? `?${params}` : ""}`;
+      }
+
+      async function loadResultsFromForm(form, { push = true, scroll = true } = {}) {
+        if (!resultsRegion) return false;
+
+        const submitButton = form.querySelector("button[type='submit']");
+        const originalText = submitButton?.textContent || "";
+        const url = resultsUrlFor(form);
+        const requestId = latestRequestId + 1;
+        latestRequestId = requestId;
+        if (submitButton && scroll) {
+          submitButton.disabled = true;
+          submitButton.textContent = "Loading...";
+        }
+
+        try {
+          const response = await fetch(url, { headers: { "x-requested-with": "fetch" } });
+          if (!response.ok) throw new Error("Unable to load results.");
+
+          const html = await response.text();
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          const nextResults = doc.querySelector("[data-results-region]");
+          if (!nextResults) throw new Error("Unable to load results.");
+          if (requestId !== latestRequestId) return false;
+
+          resultsRegion.innerHTML = nextResults.innerHTML;
+          resultsRegion.closest("[x-data]")?.dispatchEvent(new CustomEvent("nhdb:fuzzy-refresh", { bubbles: true }));
+
+          const nextUrl = `${url}#rep-results`;
+          if (push) {
+            window.history.pushState({}, "", nextUrl);
+          } else {
+            window.history.replaceState({}, "", nextUrl);
+          }
+          if (scroll) resultsRegion.scrollIntoView({ behavior: "smooth", block: "start" });
+          return true;
+        } catch (error) {
+          if (scroll) window.location.href = `${url}#rep-results`;
+          return false;
+        } finally {
+          if (submitButton && scroll) {
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+          }
+        }
+      }
 
       document.addEventListener("submit", async (event) => {
         const form = event.target;
@@ -816,44 +876,21 @@ function isVotingAction(vote = {}) {
         }
 
           event.preventDefault();
+          await loadResultsFromForm(form, { push: true, scroll: true });
+      });
 
-          const submitButton = form.querySelector("button[type='submit']");
-          const originalText = submitButton?.textContent || "";
-          const formData = new FormData(form);
-          const params = new URLSearchParams();
+      filterForm?.addEventListener("input", () => {
+        window.clearTimeout(filterTimeout);
+        filterTimeout = window.setTimeout(() => {
+          loadResultsFromForm(filterForm, { push: false, scroll: false });
+        }, 260);
+      });
 
-          for (const [key, value] of formData.entries()) {
-            const text = String(value || "").trim();
-            if (text) params.set(key, text);
-          }
-
-          const url = `/my-state-rep${params.toString() ? `?${params}` : ""}`;
-          if (submitButton) {
-            submitButton.disabled = true;
-            submitButton.textContent = "Loading...";
-          }
-
-          try {
-            const response = await fetch(url, { headers: { "x-requested-with": "fetch" } });
-            if (!response.ok) throw new Error("Unable to load results.");
-
-            const html = await response.text();
-            const doc = new DOMParser().parseFromString(html, "text/html");
-            const nextResults = doc.querySelector("[data-results-region]");
-            if (!nextResults) throw new Error("Unable to load results.");
-
-            resultsRegion.innerHTML = nextResults.innerHTML;
-            resultsRegion.closest("[x-data]")?.dispatchEvent(new CustomEvent("nhdb:fuzzy-refresh", { bubbles: true }));
-            window.history.pushState({}, "", `${url}#rep-results`);
-            resultsRegion.scrollIntoView({ behavior: "smooth", block: "start" });
-          } catch (error) {
-            window.location.href = `${url}#rep-results`;
-          } finally {
-            if (submitButton) {
-              submitButton.disabled = false;
-              submitButton.textContent = originalText;
-            }
-          }
+      filterForm?.addEventListener("change", () => {
+        window.clearTimeout(filterTimeout);
+        filterTimeout = window.setTimeout(() => {
+          loadResultsFromForm(filterForm, { push: false, scroll: false });
+        }, 120);
       });
     </script>
     <SiteFooter />
