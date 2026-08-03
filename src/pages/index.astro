@@ -2,12 +2,8 @@
 export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
-import BillPositionSummary from "../components/BillPositionSummary.astro";
-import RepresentativeCard from "../components/RepresentativeCard.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import { articleDetailPath, articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
-import { billDetailPath, getBills, getBillSummaries } from "../lib/billsApi";
-import { getRepresentatives } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
 import { getOrganizations, organizationPath } from "../lib/organizationsApi";
@@ -19,15 +15,11 @@ import {
   getTrackedBills,
   normalizeBillCode,
 } from "../lib/trackedBills";
-import { getSpotlightLegislators } from "../lib/spotlightTracker";
 
 let recentArticles = [];
-let recentBills = [];
-let recentPeople = [];
 let organizationComments = [];
 let recentCommunityUpdates = [];
 let trackedBills = new Map();
-let billSummaries = new Map();
 const howToStepImages = [
   organizationAssetUrl("capital dome.png"),
   organizationAssetUrl("portsmouth.png"),
@@ -38,36 +30,22 @@ const howToStepImages = [
 try {
   const [
     articleResult,
-    billResult,
-    repResult,
     trackedBillResult,
-    billSummaryResult,
-    spotlightResult,
     organizationResult,
     communityUpdatesResult,
   ] = await Promise.allSettled([
     getArticles({ include: "relations", limit: 5 }),
-    getBills({ limit: 6 }),
-    getRepresentatives({ limit: 8 }),
     getTrackedBills(),
-    getBillSummaries(),
-    getSpotlightLegislators({ limit: 8 }),
     getOrganizations(),
     getRecentApprovedCommunityUpdates({ limit: 6 }),
   ]);
 
   const articleData = articleResult.status === "fulfilled" ? articleResult.value : {};
-  const billData = billResult.status === "fulfilled" ? billResult.value : {};
-  const repData = repResult.status === "fulfilled" ? repResult.value : {};
   trackedBills = trackedBillResult.status === "fulfilled" ? trackedBillResult.value : new Map();
-  billSummaries = billSummaryResult.status === "fulfilled" ? billSummaryResult.value : new Map();
-  const spotlightPeople = spotlightResult.status === "fulfilled" ? spotlightResult.value : [];
   const organizations = organizationResult.status === "fulfilled" ? organizationResult.value : [];
   recentCommunityUpdates = communityUpdatesResult.status === "fulfilled" ? communityUpdatesResult.value : [];
 
   recentArticles = articleData.articles || [];
-  recentBills = billData.bills || [];
-  recentPeople = spotlightPeople.length ? spotlightPeople : repData.representatives || [];
   organizationComments = organizations
     .flatMap((organization) =>
       (organization.comments || []).map((comment) => ({ ...comment, organization })),
@@ -79,10 +57,6 @@ try {
 }
 
 recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
-
-function trackedBillFor(bill = {}) {
-  return trackedBills.get(normalizeBillCode(bill.condensedbillno || bill.bill_number));
-}
 
 function trackedBillForCode(code = "") {
   const normalized = normalizeBillCode(code);
@@ -220,6 +194,17 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
         </div>
       </section>
 
+      <section class="recently-viewed-panel" data-recently-viewed hidden>
+        <div class="section-intro">
+          <p class="eyebrow">Recently viewed</p>
+          <h2>Pick up where you left off.</h2>
+        </div>
+        <div class="recently-viewed-grid" data-recently-viewed-list></div>
+        <button class="recently-viewed-clear" type="button" data-recently-viewed-clear>
+          Clear recently viewed
+        </button>
+      </section>
+
       <section class="pathway">
         <div class="section-intro">
           <p class="eyebrow">How to use NH Deserves Better</p>
@@ -289,23 +274,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
       </section>
 
       <section class="homepage-stack">
-        <div class="homepage-panel">
-          <h2>Representative Profiles</h2>
-          <div class="home-rep-list">
-            {recentPeople.length === 0 ? (
-              <p class="empty">No legislators returned yet.</p>
-            ) : recentPeople.map((person) => {
-              return (
-                <RepresentativeCard
-                  rep={person}
-                  trackedBills={trackedBills}
-                  billSummaries={billSummaries}
-                />
-              );
-            })}
-          </div>
-        </div>
-
         <div class="homepage-panel">
           <div class="section-intro">
           <p class="eyebrow">Community Comments</p>
@@ -413,6 +381,100 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
         if (!address) return;
         window.location.href = `/my-state-rep?address=${encodeURIComponent(address)}#rep-results`;
       });
+
+      const recentlyViewedPanel = document.querySelector("[data-recently-viewed]");
+      const recentlyViewedList = document.querySelector("[data-recently-viewed-list]");
+      const recentlyViewedClear = document.querySelector("[data-recently-viewed-clear]");
+      const recentlyViewedKey = "nhdb:recently-viewed-profiles";
+
+      function safeProfileHref(value) {
+        const href = String(value || "");
+        return href.startsWith("/people/") || href.startsWith("/candidates/")
+          ? href
+          : "";
+      }
+
+      function profileInitials(name = "") {
+        return String(name || "")
+          .trim()
+          .split(/\s+/)
+          .slice(0, 2)
+          .map((part) => part[0] || "")
+          .join("")
+          .toUpperCase() || "NH";
+      }
+
+      function appendText(parent, tagName, text, className = "") {
+        if (!text) return null;
+        const element = document.createElement(tagName);
+        if (className) element.className = className;
+        element.textContent = text;
+        parent.append(element);
+        return element;
+      }
+
+      function renderRecentlyViewedProfiles() {
+        if (!recentlyViewedPanel || !recentlyViewedList) return;
+
+        let profiles = [];
+        try {
+          profiles = JSON.parse(localStorage.getItem(recentlyViewedKey) || "[]");
+        } catch {
+          profiles = [];
+        }
+
+        profiles = profiles
+          .filter((profile) => profile && safeProfileHref(profile.href) && profile.name)
+          .slice(0, 6);
+
+        recentlyViewedList.replaceChildren();
+        recentlyViewedPanel.hidden = profiles.length === 0;
+        if (!profiles.length) return;
+
+        for (const profile of profiles) {
+          const link = document.createElement("a");
+          link.className = "recent-profile-card";
+          link.href = safeProfileHref(profile.href);
+
+          const photo = document.createElement("span");
+          photo.className = "recent-profile-photo";
+          if (profile.photoUrl) {
+            const image = document.createElement("img");
+            image.src = profile.photoUrl;
+            image.alt = "";
+            image.loading = "lazy";
+            photo.append(image);
+          } else {
+            photo.textContent = profileInitials(profile.name);
+          }
+          link.append(photo);
+
+          const copy = document.createElement("span");
+          copy.className = "recent-profile-copy";
+          appendText(copy, "small", profile.kind === "candidate" ? "Candidate" : "Legislator", "recent-profile-kind");
+          appendText(copy, "strong", profile.name);
+          appendText(copy, "span", profile.officeLine || profile.party, "recent-profile-office");
+
+          const meta = document.createElement("span");
+          meta.className = "recent-profile-meta";
+          appendText(meta, "span", profile.party);
+          if (profile.grade) appendText(meta, "span", `Grade ${profile.grade}`);
+          for (const tag of (profile.tags || []).slice(0, 2)) {
+            appendText(meta, "span", tag);
+          }
+          if (meta.childElementCount) copy.append(meta);
+
+          link.append(copy);
+          recentlyViewedList.append(link);
+        }
+      }
+
+      recentlyViewedClear?.addEventListener("click", () => {
+        localStorage.removeItem(recentlyViewedKey);
+        renderRecentlyViewedProfiles();
+      });
+
+      renderRecentlyViewedProfiles();
     </script>
     <SiteFooter />
   </body>
@@ -628,12 +690,130 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   .pathway,
   .rep-preview,
   .community-comments,
+  .recently-viewed-panel,
   .homepage-panel,
   .cta {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
     box-shadow: none;
+  }
+
+  .recently-viewed-panel {
+    display: grid;
+    gap: 18px;
+    margin: 24px 0 42px;
+    padding: 24px;
+  }
+
+  .recently-viewed-panel[hidden] {
+    display: none;
+  }
+
+  .recently-viewed-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  .recent-profile-card {
+    align-items: center;
+    background: #f8fbff;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    color: inherit;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 62px minmax(0, 1fr);
+    min-width: 0;
+    padding: 12px;
+    text-decoration: none;
+    transition: border-color 160ms ease, transform 160ms ease;
+  }
+
+  .recent-profile-card:hover {
+    border-color: #2563eb;
+    transform: translateY(-1px);
+  }
+
+  .recent-profile-photo {
+    align-items: center;
+    aspect-ratio: 4 / 5;
+    background: #dbeafe;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    color: #1d4ed8;
+    display: flex;
+    font-weight: 950;
+    justify-content: center;
+    overflow: hidden;
+    width: 62px;
+  }
+
+  .recent-profile-photo img {
+    display: block;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    width: 100%;
+  }
+
+  .recent-profile-copy {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .recent-profile-kind {
+    color: #6b4f2a;
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .recent-profile-copy strong {
+    color: #1f2933;
+    font-size: 1.02rem;
+    line-height: 1.15;
+  }
+
+  .recent-profile-office {
+    color: #4b5563;
+    font-size: 0.86rem;
+    font-weight: 750;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .recent-profile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .recent-profile-meta span {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.68rem;
+    font-weight: 900;
+    line-height: 1;
+    padding: 5px 7px;
+  }
+
+  .recently-viewed-clear {
+    background: transparent;
+    border: 0;
+    color: #4b5563;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 900;
+    justify-self: start;
+    padding: 0;
+    text-decoration: underline;
   }
 
   .homepage-panel h2,
@@ -904,32 +1084,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
   .homepage-panel h2 {
     margin-top: 0;
-  }
-
-  .home-rep-list {
-    display: grid;
-    gap: 18px;
-    grid-template-columns: repeat(2, 1fr);
-    align-items: stretch;
-  }
-
-  :global(.home-rep-list .rep-card) {
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    box-sizing: border-box;
-    box-shadow: none;
-    min-width: 0;
-    padding: 24px;
-    width: 100%;
-  }
-
-  :global(.home-rep-list .rep-card-top),
-  :global(.home-rep-list .rep-copy) {
-    min-width: 0;
-  }
-
-  :global(.home-rep-list .rep-photo) {
-    border-radius: 8px;
   }
 
   .stacked-list {
@@ -1649,7 +1803,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   @media (max-width: 900px) {
     .rep-preview,
     .comment-columns,
-    .home-rep-list,
     .portal-sidebar-row {
       grid-template-columns: 1fr;
     }

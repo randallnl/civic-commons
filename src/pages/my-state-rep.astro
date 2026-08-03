@@ -7,7 +7,6 @@ import RepresentativeCard from "../components/RepresentativeCard.astro";
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import { getBillDetail, getBillSummaries } from "../lib/billsApi";
-import { getCandidates, isLegislativeCandidate } from "../lib/candidatesApi";
 import { enrichCandidatesWithLegislators } from "../lib/candidateLegislators";
 import { civicApiBase, civicApiFetch } from "../lib/civicApi";
 import { getRepresentative, getRepresentatives, repName } from "../lib/repsApi";
@@ -59,9 +58,7 @@ const countyOptions = [
 
 let lookupData = null;
 let lookupError = "";
-let previewCandidates = [];
 let directoryReps = [];
-let directoryCandidates = [];
 let nameOptions = [];
 let townOptions = [];
 let allCurrentReps = [];
@@ -93,11 +90,7 @@ if (address) {
 }
 
 try {
-  const [candidateData, repOptionData] = await Promise.all([
-    getCandidates({ electionYear: 2026, limit: 8 }),
-    getRepresentatives({ limit: 600, voteLimit: 100 }),
-  ]);
-  previewCandidates = (candidateData.candidates || []).filter(isLegislativeCandidate).slice(0, 6);
+  const repOptionData = await getRepresentatives({ limit: 600, voteLimit: 100 });
   const optionReps = repOptionData.representatives || [];
   allCurrentReps = optionReps;
   nameOptions = uniqueOptions(optionReps.map(repName));
@@ -108,22 +101,13 @@ try {
 
 if (!address && hasDirectoryFilters) {
   try {
-    const [repData, candidateData] = await Promise.all([
-      getRepresentatives({
-        body: normalizedBodyFilter,
-        q: filters.name,
-        county: filters.county,
-        voteLimit: 100,
-        limit: 600,
-      }),
-      getCandidates({
-        q: filters.name,
-        county: filters.county,
-        office: bodyFilterToCandidateOffice(normalizedBodyFilter),
-        electionYear: 2026,
-        limit: 200,
-      }),
-    ]);
+    const repData = await getRepresentatives({
+      body: normalizedBodyFilter,
+      q: filters.name,
+      county: filters.county,
+      voteLimit: 100,
+      limit: 600,
+    });
 
     const matchedReps = (repData.representatives || []).filter((rep) => matchesDirectoryFilters(rep, filters));
     const fallbackReps = matchedReps.length
@@ -131,11 +115,6 @@ if (!address && hasDirectoryFilters) {
       : allCurrentReps.filter((rep) => matchesDirectoryFilters(rep, filters));
 
     directoryReps = fallbackReps;
-    directoryCandidates = await enrichCandidatesWithLegislators(
-      (candidateData.candidates || [])
-        .filter(isLegislativeCandidate)
-        .filter((candidate) => matchesCandidateFilters(candidate, filters)),
-    );
   } catch (error) {
     directoryError = error?.message || "Unable to load filtered profiles.";
   }
@@ -253,12 +232,6 @@ function normalizeBodyFilter(value = "") {
   return "";
 }
 
-function bodyFilterToCandidateOffice(value = "") {
-  if (value === "house") return "State Representative";
-  if (value === "senate") return "State Senate";
-  return "";
-}
-
 function matchesDirectoryFilters(rep = {}, values = {}) {
   return (
     matchesBody(rep, values.body) &&
@@ -268,31 +241,10 @@ function matchesDirectoryFilters(rep = {}, values = {}) {
   );
 }
 
-function matchesCandidateFilters(candidate = {}, values = {}) {
-  return (
-    matchesCandidateBody(candidate, values.body) &&
-    matchesText([
-      candidate.name || `${candidate.candidateFirstName || ""} ${candidate.candidateLastName || ""}`,
-      candidate.nameAliases,
-      candidate.name_aliases,
-    ].filter(Boolean).join(" "), values.name) &&
-    matchesText(candidate.county, values.county) &&
-    (!values.town || matchesText(recordText(candidate), values.town))
-  );
-}
-
 function matchesBody(rep = {}, query = "") {
   const normalized = normalizeBodyFilter(query);
   if (!normalized) return true;
   return legislativeBody(rep).toLowerCase() === (normalized === "house" ? "house" : "senate");
-}
-
-function matchesCandidateBody(candidate = {}, query = "") {
-  const normalized = normalizeBodyFilter(query);
-  if (!normalized) return true;
-  if (normalized === "house") return isHouseCandidate(candidate);
-  if (normalized === "senate") return isSenateCandidate(candidate);
-  return true;
 }
 
 function matchesCounty(record = {}, query = "") {
@@ -643,8 +595,7 @@ function isVotingAction(vote = {}) {
 
         <p class="help-text">
           Address lookups and filters focus on current New Hampshire State
-          Representatives and State Senators. Candidate previews appear as
-          supporting election context.
+          Representatives and State Senators.
         </p>
       </section>
 
@@ -659,23 +610,6 @@ function isVotingAction(vote = {}) {
         <div class="status-message" aria-live="polite">
           No State Representatives, State Senators, or legislative candidates found for that address.
         </div>
-      )}
-
-      {!address && !hasDirectoryFilters && previewCandidates.length > 0 && (
-        <section class="candidate-results secondary-preview" data-starter-preview>
-          <div class="group-header">
-            <h2>2026 Candidate Context</h2>
-            <p>
-              Candidate cards are included as election context, but this page
-              stays centered on current legislators and their voting records.
-            </p>
-          </div>
-          <div class="candidate-grid">
-            {previewCandidates.map((candidate) => (
-              <CandidateCard candidate={candidate} />
-            ))}
-          </div>
-        </section>
       )}
 
       {!address && (
@@ -716,22 +650,6 @@ function isVotingAction(vote = {}) {
             </p>
           )}
 
-          {directoryCandidates.length > 0 && (
-            <section class="candidate-results secondary-preview">
-              <div class="group-header">
-                <h2>Related 2026 Candidates</h2>
-                <p>
-                  These candidate previews match the same filter context where
-                  possible.
-                </p>
-              </div>
-              <div class="candidate-grid">
-                {directoryCandidates.map((candidate) => (
-                  <CandidateCard candidate={candidate} />
-                ))}
-              </div>
-            </section>
-          )}
         </section>
       )}
 
@@ -886,36 +804,7 @@ function isVotingAction(vote = {}) {
     </main>
     <script>
       const resultsRegion = document.querySelector("[data-results-region]");
-      const starterPreview = document.querySelector("[data-starter-preview]");
       const filterForm = document.querySelector("[data-fuzzy-live-form]");
-      const activeFilterNames = new Set(["name", "county", "body", "town", "sort"]);
-
-      function hasActiveFilterValue(form) {
-        if (!(form instanceof HTMLFormElement)) return false;
-
-        return Array.from(form.elements).some((element) => {
-          if (
-            !(element instanceof HTMLInputElement) &&
-            !(element instanceof HTMLSelectElement) &&
-            !(element instanceof HTMLTextAreaElement)
-          ) {
-            return false;
-          }
-
-          if (!activeFilterNames.has(element.name)) return false;
-          return String(element.value || "").trim() !== "";
-        });
-      }
-
-      function updateStarterPreviewVisibility() {
-        if (!starterPreview) return;
-        starterPreview.hidden = hasActiveFilterValue(filterForm);
-      }
-
-      updateStarterPreviewVisibility();
-
-      filterForm?.addEventListener("input", updateStarterPreviewVisibility);
-      filterForm?.addEventListener("change", updateStarterPreviewVisibility);
 
       document.addEventListener("submit", async (event) => {
         const form = event.target;

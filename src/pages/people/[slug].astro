@@ -141,6 +141,20 @@ const sourceLinks = sourceUrlsToLinks(representative?.sourceUrls);
 const portraitUrl = profilePhotoUrl(person.photo_url);
 const currentCandidateProfile = await candidateProfileForLegislator(representative);
 const linkedCandidateForEndorsements = currentCandidateProfile?.candidate || null;
+const recentlyViewedProfile = {
+  kind: "legislator",
+  name: person.full_name,
+  href: `/people/${slug}`,
+  photoUrl: portraitUrl || "",
+  party: formatParty(person.party),
+  officeLine: [officeLabel, districtLabel].filter(Boolean).join(", "),
+  towns: townServiceAreas.flatMap((area) => area.towns).join(", "),
+  grade: voteGrade?.letter || "",
+  tags: [
+    isFreeStater(representative) ? "Free State Aligned" : "",
+    isTpActionAligned(representative) ? "TPAction Aligned" : "",
+  ].filter(Boolean),
+};
 let organizations = [];
 let endorsements = [];
 if (adminSession) {
@@ -493,21 +507,6 @@ function candidateOptionLabel(candidate = {}) {
             )}
           </div>
 
-          <div class="attendance-card" aria-label={voteAttendance.label}>
-            <div>
-              <span>Vote Attendance</span>
-              <strong>
-                {voteAttendance.percent === null
-                  ? "No data"
-                  : `${Math.round(voteAttendance.percent * 100)}%`}
-              </strong>
-            </div>
-            <p>
-              {voteAttendance.recorded} recorded of {voteAttendance.accountableTotal} documented voting actions.
-              {voteAttendance.notVoting > 0 && ` ${voteAttendance.notVoting} absent, excused, or not voting.`}
-            </p>
-          </div>
-
           {person.bio ? (
             <p class="bio">{person.bio}</p>
           ) : (
@@ -563,6 +562,21 @@ function candidateOptionLabel(candidate = {}) {
             </div>
           ) : null}
         </dl>
+
+        <div class="attendance-card" aria-label={voteAttendance.label}>
+          <div>
+            <span>Vote Attendance</span>
+            <strong>
+              {voteAttendance.percent === null
+                ? "No data"
+                : `${Math.round(voteAttendance.percent * 100)}%`}
+            </strong>
+          </div>
+          <p>
+            {voteAttendance.recorded} recorded of {voteAttendance.accountableTotal} documented voting actions.
+            {voteAttendance.notVoting > 0 && ` ${voteAttendance.notVoting} absent, excused, or not voting.`}
+          </p>
+        </div>
       </section>
 
       {profileResourceLinks.length > 0 && (
@@ -1045,30 +1059,36 @@ function candidateOptionLabel(candidate = {}) {
 
             {endorsements.length ? (
               <>
-                <FilterBar submitLabel="Apply" columns="dense" live={true}>
-                  <label>
-                    Search
-                    <input name="q" type="search" placeholder="Organization or note" data-fuzzy-search />
-                  </label>
-                  <label>
-                    Position
-                    <select name="position" data-fuzzy-filter-field data-fuzzy-field="position">
-                      <option value="">All positions</option>
-                      <option value="Endorsed">Endorsed</option>
-                      <option value="Recommended">Recommended</option>
-                      <option value="Supported">Supported</option>
-                      <option value="Opposed">Opposed</option>
-                    </select>
-                  </label>
-                  <label>
-                    Sort
-                    <select name="sort" data-fuzzy-sort>
-                      <option value="name">Organization A-Z</option>
-                      <option value="updated:desc">Newest first</option>
-                      <option value="position">Position</option>
-                    </select>
-                  </label>
-                </FilterBar>
+                <details class="endorsement-filter-disclosure">
+                  <summary>
+                    <span>Filter options</span>
+                    <small>Search, position, and sort</small>
+                  </summary>
+                  <FilterBar submitLabel="Apply" columns="dense" live={true}>
+                    <label>
+                      Search
+                      <input name="q" type="search" placeholder="Organization or note" data-fuzzy-search />
+                    </label>
+                    <label>
+                      Position
+                      <select name="position" data-fuzzy-filter-field data-fuzzy-field="position">
+                        <option value="">All positions</option>
+                        <option value="Endorsed">Endorsed</option>
+                        <option value="Recommended">Recommended</option>
+                        <option value="Supported">Supported</option>
+                        <option value="Opposed">Opposed</option>
+                      </select>
+                    </label>
+                    <label>
+                      Sort
+                      <select name="sort" data-fuzzy-sort>
+                        <option value="name">Organization A-Z</option>
+                        <option value="updated:desc">Newest first</option>
+                        <option value="position">Position</option>
+                      </select>
+                    </label>
+                  </FilterBar>
+                </details>
 
                 <div class="filter-chips" data-fuzzy-chips hidden></div>
 
@@ -1212,6 +1232,25 @@ function candidateOptionLabel(candidate = {}) {
         </aside>
       </section>
     </main>
+    <script define:vars={{ recentlyViewedProfile }}>
+      const storageKey = "nhdb:recently-viewed-profiles";
+      const maxItems = 6;
+
+      try {
+        const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
+        const nextProfile = {
+          ...recentlyViewedProfile,
+          viewedAt: new Date().toISOString(),
+        };
+        const profiles = [
+          nextProfile,
+          ...existing.filter((item) => item?.href !== nextProfile.href),
+        ].slice(0, maxItems);
+        localStorage.setItem(storageKey, JSON.stringify(profiles));
+      } catch {
+        // Recently viewed profiles are a convenience; ignore storage failures.
+      }
+    </script>
     <SiteFooter />
   </body>
 </html>
@@ -1758,6 +1797,62 @@ function candidateOptionLabel(candidate = {}) {
     display: flex;
     gap: 12px;
     justify-content: space-between;
+  }
+
+  .endorsement-filter-disclosure {
+    margin-bottom: 12px;
+  }
+
+  .endorsement-filter-disclosure summary {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    cursor: pointer;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    justify-content: space-between;
+    list-style: none;
+    padding: 10px 13px;
+  }
+
+  .endorsement-filter-disclosure summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .endorsement-filter-disclosure summary::after {
+    content: "+";
+    font-size: 1.1rem;
+    font-weight: 950;
+    line-height: 1;
+  }
+
+  .endorsement-filter-disclosure[open] summary {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .endorsement-filter-disclosure[open] summary::after {
+    content: "-";
+  }
+
+  .endorsement-filter-disclosure summary span {
+    font-size: 0.84rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .endorsement-filter-disclosure summary small {
+    color: #6b7280;
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .endorsement-filter-disclosure :global(.nhdb-filter-bar) {
+    border-radius: 0 0 12px 12px;
+    border-top: 0;
   }
 
   .endorsement-list {

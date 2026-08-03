@@ -98,6 +98,21 @@ const townsRepresented = candidateTownsRepresented(candidate, currentLegislator)
 const candidateRoles = uniqueCandidateRoles(candidate.candidateRoles?.length ? candidate.candidateRoles : [candidate]);
 const hasFreeStaterTag = isFreeStater(candidate) || isFreeStater(currentLegislator);
 const hasTpActionTag = isTpActionAligned(candidate) || isTpActionAligned(currentLegislator);
+const recentlyViewedProfile = {
+  kind: "candidate",
+  name,
+  href: `/candidates/${candidateSlug(candidate)}`,
+  photoUrl: portraitUrl || "",
+  party: formatCandidateParty(candidate.politicalParty),
+  officeLine: officeParts.join(", ") || "Office not listed",
+  towns: townsRepresented,
+  grade: currentLegislatorGrade?.letter || "",
+  tags: [
+    hasFreeStaterTag ? "Free State Aligned" : "",
+    hasTpActionTag ? "TPAction Aligned" : "",
+    candidate.currentLegislator ? "Current Legislator" : "",
+  ].filter(Boolean),
+};
 
 function externalProfileUrl(entity = {}, names = []) {
   return names
@@ -866,6 +881,25 @@ function uniqueArticles(articles = []) {
       )}
 
     </main>
+    <script define:vars={{ recentlyViewedProfile }}>
+      const storageKey = "nhdb:recently-viewed-profiles";
+      const maxItems = 6;
+
+      try {
+        const existing = JSON.parse(localStorage.getItem(storageKey) || "[]");
+        const nextProfile = {
+          ...recentlyViewedProfile,
+          viewedAt: new Date().toISOString(),
+        };
+        const profiles = [
+          nextProfile,
+          ...existing.filter((item) => item?.href !== nextProfile.href),
+        ].slice(0, maxItems);
+        localStorage.setItem(storageKey, JSON.stringify(profiles));
+      } catch {
+        // Recently viewed profiles are a convenience; ignore storage failures.
+      }
+    </script>
     <SiteFooter />
   </body>
 </html>
