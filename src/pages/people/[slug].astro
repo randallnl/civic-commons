@@ -23,6 +23,7 @@ import { candidateProfileForLegislator } from "../../lib/candidateLegislators";
 import {
   candidateName,
   candidateSlug,
+  formatCandidateParty,
   getCandidates,
   isLegislativeCandidate,
 } from "../../lib/candidatesApi";
@@ -141,6 +142,8 @@ const sourceLinks = sourceUrlsToLinks(representative?.sourceUrls);
 const portraitUrl = profilePhotoUrl(person.photo_url);
 const currentCandidateProfile = await candidateProfileForLegislator(representative);
 const linkedCandidateForEndorsements = currentCandidateProfile?.candidate || null;
+const linkedCandidateOfficeLine = candidateOfficeLine(linkedCandidateForEndorsements);
+const linkedCandidateTowns = candidateTownsRepresented(linkedCandidateForEndorsements, representative);
 const recentlyViewedProfile = {
   kind: "legislator",
   name: person.full_name,
@@ -377,6 +380,21 @@ const profileResourceLinks = [
     label: "Website",
     icon: Globe,
   },
+  linkedCandidateForEndorsements?.candidateWebsite && {
+    href: linkedCandidateForEndorsements.candidateWebsite,
+    label: "Campaign Website",
+    icon: Globe,
+  },
+  linkedCandidateForEndorsements?.candidateEmail && {
+    href: `mailto:${linkedCandidateForEndorsements.candidateEmail}`,
+    label: "Campaign Email",
+    icon: Mail,
+  },
+  linkedCandidateForEndorsements && {
+    href: "https://cfs.sos.nh.gov/public/cf/reports",
+    label: "Search candidate finance filings",
+    icon: ExternalLink,
+  },
   ballotpediaProfileUrl && {
     href: ballotpediaProfileUrl,
     label: "Ballotpedia",
@@ -438,6 +456,74 @@ function candidateOptionLabel(candidate = {}) {
     candidate.district ? `District ${candidate.district}` : "",
     candidate.politicalParty,
   ].filter(Boolean).join(" - ");
+}
+
+function candidateOfficeLine(candidate = {}) {
+  if (!candidate) return "";
+
+  return [
+    candidate.office,
+    candidate.county,
+    candidate.district ? `District ${candidate.district}` : "",
+  ].filter(Boolean).join(", ");
+}
+
+function candidateTownsRepresented(candidate = {}, legislator = {}) {
+  const towns = [
+    candidate?.townsRepresented,
+    candidate?.towns_represented,
+    candidate?.communitiesRepresented,
+    candidate?.communities_represented,
+    candidate?.towns,
+    candidate?.locationText,
+    candidate?.location_text,
+    candidate?.legislatorTownsRepresented,
+    candidate?.legislatorLocationText,
+    legislator?.towns_represented,
+    legislator?.townsRepresented,
+    legislator?.location_text,
+    legislator?.locationText,
+  ].flatMap(townsFromValue);
+
+  return uniqueTowns(towns).join(", ");
+}
+
+function townsFromValue(value = "") {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => {
+      if (typeof item === "object" && item !== null) {
+        return item.town || item.name || item.label || "";
+      }
+      return item;
+    }).flatMap(townsFromValue);
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return townsFromValue(value.town || value.name || value.label || "");
+  }
+
+  const text = String(value || "").trim();
+  const delimiter = /ward/i.test(text) ? /;|\||\s+and\s+/i : /[,;|]|\s+and\s+/i;
+
+  return text
+    .split(delimiter)
+    .map((town) => town.trim())
+    .filter(Boolean);
+}
+
+function uniqueTowns(towns = []) {
+  const seen = new Set();
+  const unique = [];
+
+  for (const town of towns) {
+    const label = String(town || "").trim();
+    const key = label.toLowerCase();
+    if (!label || seen.has(key)) continue;
+    seen.add(key);
+    unique.push(label);
+  }
+
+  return unique;
 }
 ---
 
@@ -516,11 +602,11 @@ function candidateOptionLabel(candidate = {}) {
           )}
 
           {currentCandidateProfile && (
-            <a class="linked-profile-action" href={currentCandidateProfile.href}>
+            <a class="linked-profile-action" href="#candidate-role">
               <span class="link-icon" aria-hidden="true">
                 <UserRoundCheck size={19} stroke-width={2.4} />
               </span>
-              <span>{currentCandidateProfile.label}</span>
+              <span>2026 Candidate Role</span>
             </a>
           )}
         </div>
@@ -578,6 +664,43 @@ function candidateOptionLabel(candidate = {}) {
           </p>
         </div>
       </section>
+
+      {linkedCandidateForEndorsements && (
+        <section class="panel candidate-role-panel" id="candidate-role">
+          <div class="section-heading split-heading">
+            <div>
+              <p class="eyebrow">2026 Candidate Role</p>
+              <h2>Candidate information for this person</h2>
+            </div>
+            {adminSession && currentCandidateProfile && (
+              <a class="section-action" href={currentCandidateProfile.href}>
+                Edit candidate fields
+              </a>
+            )}
+          </div>
+
+          <div class="candidate-role-grid">
+            <article>
+              <span>Office sought</span>
+              <strong>{linkedCandidateOfficeLine || "Office not listed"}</strong>
+            </article>
+            <article>
+              <span>Party</span>
+              <strong>{formatCandidateParty(linkedCandidateForEndorsements.politicalParty)}</strong>
+            </article>
+            <article>
+              <span>Election year</span>
+              <strong>{linkedCandidateForEndorsements.electionYear || "2026"}</strong>
+            </article>
+            {linkedCandidateTowns && (
+              <article class="candidate-role-wide">
+                <span>Towns represented</span>
+                <strong>{linkedCandidateTowns}</strong>
+              </article>
+            )}
+          </div>
+        </section>
+      )}
 
       {profileResourceLinks.length > 0 && (
         <nav class="resource-link-bar" aria-label="Profile links">
@@ -1385,6 +1508,43 @@ function candidateOptionLabel(candidate = {}) {
     margin-top: 24px;
   }
 
+  .candidate-role-panel {
+    margin-top: 18px;
+  }
+
+  .candidate-role-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .candidate-role-grid article {
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: grid;
+    gap: 6px;
+    padding: 16px;
+  }
+
+  .candidate-role-grid span {
+    color: #6b7280;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .candidate-role-grid strong {
+    color: #1f2933;
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  .candidate-role-wide {
+    grid-column: 1 / -1;
+  }
+
   .resource-link-bar a {
     align-items: center;
     background: #f8fafc;
@@ -2172,6 +2332,10 @@ function candidateOptionLabel(candidate = {}) {
     }
 
     .attendance-card {
+      grid-template-columns: 1fr;
+    }
+
+    .candidate-role-grid {
       grid-template-columns: 1fr;
     }
 

@@ -61,6 +61,10 @@ if (!candidate?.filerEntityNumber && !candidate?.name) {
 
 candidate = await enrichCandidateWithLegislator(candidate);
 
+if (!adminSession && candidate.currentLegislator && candidate.legislatorProfileUrl) {
+  return Astro.redirect(candidate.legislatorProfileUrl, 302);
+}
+
 if (candidate.currentLegislator && candidate.legislatorPersonId) {
   try {
     const [representativeData, billSummaries] = await Promise.all([

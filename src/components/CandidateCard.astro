@@ -12,6 +12,7 @@ import { profilePhotoUrl } from "../lib/photos";
 const { candidate } = Astro.props;
 
 const name = candidateName(candidate);
+const profileHref = candidate.legislatorProfileUrl || candidatePath(candidate);
 const photoUrl = profilePhotoUrl(candidate.photoUrl) || profilePhotoUrl(candidate.legislatorPhotoUrl);
 const officeTypeLabel =
   String(candidate.officeType || "").trim().toLowerCase() === "general court"
@@ -188,7 +189,7 @@ function uniqueTowns(towns = []) {
   data-fuzzy-sort-missing={missingInfoCount}
   data-fuzzy-text={searchableText}
 >
-  <a class="photo-wrap" href={candidatePath(candidate)}>
+  <a class="photo-wrap" href={profileHref}>
     {photoUrl ? (
       <img src={photoUrl} alt={`Photo of ${name}`} loading="lazy" />
     ) : (
@@ -198,7 +199,7 @@ function uniqueTowns(towns = []) {
 
   <div class="candidate-copy">
     <h3>
-      <a href={candidatePath(candidate)}>{name}</a>
+      <a href={profileHref}>{name}</a>
     </h3>
 
     <div class="pill-row">
