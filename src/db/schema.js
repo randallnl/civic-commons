@@ -320,6 +320,40 @@ export const bills = sqliteTable(
   },
 );
 
+export const reportDownloads = sqliteTable(
+  "report_downloads",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    slug: text("slug").notNull(),
+    reportSlug: text("report_slug").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    category: text("category").notNull(),
+    fiscalYearStart: integer("fiscal_year_start"),
+    fiscalYearEnd: integer("fiscal_year_end"),
+    originalFilename: text("original_filename").notNull(),
+    objectKey: text("object_key").notNull(),
+    contentType: text("content_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    sha256: text("sha256").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    sourceName: text("source_name"),
+    sourceUrl: text("source_url"),
+    published: integer("published").notNull().default(1),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    slugIdx: uniqueIndex("idx_report_downloads_slug").on(table.slug),
+    objectKeyIdx: uniqueIndex("idx_report_downloads_object_key").on(table.objectKey),
+    reportIdx: index("idx_report_downloads_report").on(
+      table.reportSlug,
+      table.published,
+      table.sortOrder,
+    ),
+  }),
+);
+
 export const adminMagicLinks = sqliteTable("admin_magic_links", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   email: text("email").notNull(),
