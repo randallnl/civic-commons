@@ -104,12 +104,13 @@ try {
 
 if (!address && hasDirectoryFilters) {
   try {
+    const directoryQuery = filters.name || filters.town;
     const repData = await getRepresentatives({
       body: normalizedBodyFilter,
-      q: filters.name,
+      q: directoryQuery,
       county: filters.county,
       voteLimit: 30,
-      limit: FILTERED_REP_LIMIT,
+      limit: filters.town ? 600 : FILTERED_REP_LIMIT,
     });
 
     const matchedReps = (repData.representatives || []).filter((rep) => matchesDirectoryFilters(rep, filters));

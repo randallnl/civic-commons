@@ -72,10 +72,24 @@ try {
     meta = data.meta || {};
     resultContext = formatAddress(data.normalizedInput) || data.address || address;
   } else if (town) {
-    const data = await getTownCommunity(town, { articleLimit: 1 });
-    candidates = candidatesFromCommunity(data);
-    meta = data.meta || {};
-    resultContext = data.town?.name || data.community?.name || town;
+    const [townResult, directoryResult] = await Promise.allSettled([
+      getTownCommunity(town, { articleLimit: 1 }),
+      getDirectoryCandidates({
+        q: name || town,
+        county,
+        office: selectedOffice,
+        electionYear,
+        limit: 500,
+      }),
+    ]);
+    const townData = townResult.status === "fulfilled" ? townResult.value : {};
+    const directoryData = directoryResult.status === "fulfilled" ? directoryResult.value : {};
+    candidates = uniqueCandidates([
+      ...candidatesFromCommunity(townData),
+      ...(directoryData.candidates || []),
+    ]);
+    meta = townData.meta || directoryData.meta || {};
+    resultContext = townData.town?.name || townData.community?.name || town;
   } else {
     if (!name && !county && !selectedOffice) {
       const data = await getDirectoryCandidates({
