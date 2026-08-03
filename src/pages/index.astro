@@ -743,7 +743,7 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
   .recently-viewed-grid {
     display: grid;
     gap: 14px;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .recent-profile-card {
@@ -2058,9 +2058,27 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     }
 
   }
+
+  @media (max-width: 1100px) {
+    .recently-viewed-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px) {
+    .recently-viewed-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 
 <style is:global>
+  .recently-viewed-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .recent-profile-card {
     align-items: start;
     background: #ffffff;
@@ -2248,5 +2266,17 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
   .recent-profile-grade.grade-f {
     background: #b42318;
+  }
+
+  @media (max-width: 1100px) {
+    .recently-viewed-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px) {
+    .recently-viewed-grid {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
