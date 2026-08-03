@@ -2059,3 +2059,194 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
   }
 </style>
+
+<style is:global>
+  .recent-profile-card {
+    align-items: start;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    color: inherit;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: 92px minmax(0, 1fr);
+    min-width: 0;
+    padding: 16px;
+    transition: border-color 160ms ease, transform 160ms ease;
+  }
+
+  .recent-profile-card:hover {
+    border-color: #2563eb;
+    transform: translateY(-1px);
+  }
+
+  .recent-profile-card:has(.recent-profile-grade) {
+    grid-template-columns: 92px minmax(0, 1fr) auto;
+  }
+
+  .recent-profile-photo {
+    color: inherit;
+    display: block;
+    text-decoration: none;
+  }
+
+  .recent-profile-photo-inner {
+    align-items: center;
+    aspect-ratio: 4 / 5;
+    background: #dbeafe;
+    border-radius: 8px;
+    color: #1d4ed8;
+    display: flex;
+    font-weight: 950;
+    justify-content: center;
+    overflow: hidden;
+    width: 92px;
+  }
+
+  .recent-profile-photo-inner img {
+    display: block;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    width: 100%;
+  }
+
+  .recent-profile-copy {
+    display: grid;
+    gap: 8px;
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  .recent-profile-copy a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .recent-profile-copy a:hover {
+    color: #b6390a;
+    text-decoration: underline;
+  }
+
+  .recent-profile-kind {
+    color: #6b4f2a;
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .recent-profile-copy strong {
+    color: #1f2933;
+    font-size: 1.15rem;
+    line-height: 1.15;
+  }
+
+  .recent-profile-office {
+    color: #4b5563;
+    font-size: 0.86rem;
+    font-weight: 750;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .recent-profile-towns {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    color: #4b5563;
+    display: grid;
+    gap: 4px;
+    line-height: 1.35;
+    padding: 9px 10px;
+  }
+
+  .recent-profile-towns span {
+    color: #6b7280;
+    font-size: 0.62rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .recent-profile-towns strong {
+    color: #4b5563;
+    font-size: 0.86rem;
+  }
+
+  .recent-profile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .recent-profile-meta span {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.68rem;
+    font-weight: 900;
+    line-height: 1;
+    padding: 5px 7px;
+  }
+
+  .recent-profile-action {
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 950;
+    justify-self: start;
+    padding: 7px 10px;
+  }
+
+  .recent-profile-grade {
+    align-self: start;
+    border-radius: 12px;
+    color: #fefce8;
+    display: grid;
+    grid-column: 3;
+    grid-row: 1;
+    min-width: 66px;
+    padding: 9px 10px;
+    text-align: center;
+  }
+
+  .recent-profile-grade strong {
+    color: #fefce8;
+    font-size: 2rem;
+    font-weight: 950;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+
+  .recent-profile-grade small {
+    color: #fefce8;
+    font-size: 0.62rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .recent-profile-grade.grade-a {
+    background: #166534;
+  }
+
+  .recent-profile-grade.grade-b {
+    background: #65a30d;
+  }
+
+  .recent-profile-grade.grade-c {
+    background: #ca8a04;
+  }
+
+  .recent-profile-grade.grade-d {
+    background: #ea580c;
+  }
+
+  .recent-profile-grade.grade-f {
+    background: #b42318;
+  }
+</style>
