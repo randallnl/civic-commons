@@ -683,79 +683,79 @@ function uniqueTowns(towns = []) {
               <span>2026 Candidate Role</span>
             </a>
           )}
-        </div>
 
-        <aside class="hero-details" aria-label="Profile details">
-          <div class="hero-details-heading">
-            <p class="eyebrow">Details</p>
-            <h2>{hasLegislatorProfile ? "Official Role" : "Candidate Details"}</h2>
-          </div>
+          <aside class="hero-details" aria-label="Profile details">
+            <div class="hero-details-heading">
+              <p class="eyebrow">Details</p>
+              <h2>{hasLegislatorProfile ? "Official Role" : "Candidate Details"}</h2>
+            </div>
 
-          <dl class="detail-list profile-detail-list">
-            <div>
-              <dt>Office</dt>
-              <dd>{officeLabel || "Not listed"}</dd>
-            </div>
-            <div>
-              <dt>{hasLegislatorProfile ? "Legislative Body" : "Role Type"}</dt>
-              <dd>{bodyLabel || "Not listed"}</dd>
-            </div>
-            <div>
-              <dt>District</dt>
-              <dd>{districtLabel || "Not listed"}</dd>
-            </div>
-            <div>
-              <dt>Party</dt>
-              <dd>{hasLegislatorProfile ? formatParty(person.party) : formatCandidateParty(person.party)}</dd>
-            </div>
-            {townServiceAreas.length ? (
-              <div class="profile-detail-wide">
-                <dt>Towns served</dt>
-                <dd>
-                  {townServiceAreas.map((area) => (
-                    <span>
-                      <strong>{area.district}</strong>: {area.towns.join(", ")}
-                    </span>
-                  ))}
-                </dd>
-              </div>
-            ) : null}
-          </dl>
-
-          {hasLegislatorProfile && (
-            <div class="attendance-card" aria-label={voteAttendance.label}>
+            <dl class="detail-list profile-detail-list">
               <div>
-                <span>Vote Attendance</span>
-                <strong>
-                  {voteAttendance.percent === null
-                    ? "No data"
-                    : `${Math.round(voteAttendance.percent * 100)}%`}
-                </strong>
+                <dt>Office</dt>
+                <dd>{officeLabel || "Not listed"}</dd>
               </div>
-              <p>
-                {voteAttendance.recorded} recorded of {voteAttendance.accountableTotal} documented voting actions.
-                {voteAttendance.notVoting > 0 && ` ${voteAttendance.notVoting} absent, excused, or not voting.`}
-              </p>
-            </div>
-          )}
+              <div>
+                <dt>{hasLegislatorProfile ? "Legislative Body" : "Role Type"}</dt>
+                <dd>{bodyLabel || "Not listed"}</dd>
+              </div>
+              <div>
+                <dt>District</dt>
+                <dd>{districtLabel || "Not listed"}</dd>
+              </div>
+              <div>
+                <dt>Party</dt>
+                <dd>{hasLegislatorProfile ? formatParty(person.party) : formatCandidateParty(person.party)}</dd>
+              </div>
+              {townServiceAreas.length ? (
+                <div class="profile-detail-wide">
+                  <dt>Towns served</dt>
+                  <dd>
+                    {townServiceAreas.map((area) => (
+                      <span>
+                        <strong>{area.district}</strong>: {area.towns.join(", ")}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
 
-          {profileResourceLinks.length > 0 && (
-            <nav class="resource-link-bar" aria-label="Profile links">
-              {profileResourceLinks.map((link) => {
-                const Icon = link.icon;
+            {hasLegislatorProfile && (
+              <div class="attendance-card" aria-label={voteAttendance.label}>
+                <div>
+                  <span>Vote Attendance</span>
+                  <strong>
+                    {voteAttendance.percent === null
+                      ? "No data"
+                      : `${Math.round(voteAttendance.percent * 100)}%`}
+                  </strong>
+                </div>
+                <p>
+                  {voteAttendance.recorded} recorded of {voteAttendance.accountableTotal} documented voting actions.
+                  {voteAttendance.notVoting > 0 && ` ${voteAttendance.notVoting} absent, excused, or not voting.`}
+                </p>
+              </div>
+            )}
 
-                return (
-                  <a href={link.href}>
-                    <span class="link-icon" aria-hidden="true">
-                      <Icon size={17} stroke-width={2.3} />
-                    </span>
-                    <span>{link.label}</span>
-                  </a>
-                );
-              })}
-            </nav>
-          )}
-        </aside>
+            {profileResourceLinks.length > 0 && (
+              <nav class="resource-link-bar" aria-label="Profile links">
+                {profileResourceLinks.map((link) => {
+                  const Icon = link.icon;
+
+                  return (
+                    <a href={link.href}>
+                      <span class="link-icon" aria-hidden="true">
+                        <Icon size={17} stroke-width={2.3} />
+                      </span>
+                      <span>{link.label}</span>
+                    </a>
+                  );
+                })}
+              </nav>
+            )}
+          </aside>
+        </div>
       </section>
 
       {linkedCandidateForEndorsements && (
@@ -1472,7 +1472,7 @@ function uniqueTowns(towns = []) {
     align-items: stretch;
     display: grid;
     gap: 32px;
-    grid-template-columns: minmax(180px, 250px) minmax(0, 1fr) minmax(280px, 360px);
+    grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
     margin-top: 24px;
     padding: 32px;
   }
@@ -1594,6 +1594,8 @@ function uniqueTowns(towns = []) {
     border-radius: 12px;
     display: grid;
     gap: 14px;
+    margin-top: 22px;
+    max-width: 760px;
     padding: 18px;
   }
 
@@ -1609,6 +1611,7 @@ function uniqueTowns(towns = []) {
 
   .hero-details .detail-list {
     gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .hero-details .detail-list div {
@@ -1780,7 +1783,6 @@ function uniqueTowns(towns = []) {
   }
 
   .hero-details .attendance-card {
-    grid-template-columns: 1fr;
     margin-top: 0;
     max-width: none;
   }
@@ -2454,11 +2456,7 @@ function uniqueTowns(towns = []) {
 
   @media (max-width: 1120px) {
     .profile-hero {
-      grid-template-columns: minmax(170px, 230px) minmax(0, 1fr);
-    }
-
-    .hero-details {
-      grid-column: 1 / -1;
+      grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
     }
   }
 
@@ -2474,6 +2472,10 @@ function uniqueTowns(towns = []) {
     }
 
     .attendance-card {
+      grid-template-columns: 1fr;
+    }
+
+    .hero-details .detail-list {
       grid-template-columns: 1fr;
     }
 
