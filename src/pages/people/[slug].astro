@@ -686,6 +686,7 @@ function uniqueTowns(towns = []) {
         </div>
       </section>
 
+      {hasLegislatorProfile && (
       <section class="panel profile-details-panel">
         <div class="section-heading">
           <p class="eyebrow">Details</p>
@@ -723,7 +724,6 @@ function uniqueTowns(towns = []) {
           ) : null}
         </dl>
 
-        {hasLegislatorProfile && (
         <div class="attendance-card" aria-label={voteAttendance.label}>
           <div>
             <span>Vote Attendance</span>
@@ -738,8 +738,8 @@ function uniqueTowns(towns = []) {
             {voteAttendance.notVoting > 0 && ` ${voteAttendance.notVoting} absent, excused, or not voting.`}
           </p>
         </div>
-        )}
       </section>
+      )}
 
       {linkedCandidateForEndorsements && (
         <section class="panel candidate-role-panel" id="candidate-role">
