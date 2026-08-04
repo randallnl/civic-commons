@@ -42,18 +42,18 @@ const sourceFileCount = sourceDownloadGroups.reduce(
 );
 
 const fundingData = [
-  { year: 2016, calculatedCost: 758.455507, districtGrant: 570.120846, swept: 363.137923, charterDirect: 22.953740, charterSped: 0.366312, efaPayments: 0, districtAdm: 172363.77, charterAdm: 4035.97, efaMembership: 0 },
-  { year: 2017, calculatedCost: 745.216971, districtGrant: 564.007588, swept: 363.431572, charterDirect: 28.427990, charterSped: 0.681184, efaPayments: 0, districtAdm: 169793.46, charterAdm: 4462.07, efaMembership: 0 },
-  { year: 2018, calculatedCost: 750.668490, districtGrant: 561.750905, swept: 363.148601, charterDirect: 31.607906, charterSped: 0.716837, efaPayments: 0, districtAdm: 167655.54, charterAdm: 4803.95, efaMembership: 0 },
-  { year: 2019, calculatedCost: 747.686406, districtGrant: 552.624220, swept: 363.099673, charterDirect: 35.110841, charterSped: 0.849814, efaPayments: 0, districtAdm: 166095.9071, charterAdm: 5236.28, efaMembership: 0 },
-  { year: 2020, calculatedCost: 779.389670, districtGrant: 599.249581, swept: 363.246023, charterDirect: 38.126966, charterSped: 1.116616, efaPayments: 0, districtAdm: 168724.3621, charterAdm: 5546.5, efaMembership: 0 },
-  { year: 2021, calculatedCost: 769.142374, districtGrant: 649.510186, swept: 363.068238, charterDirect: 45.295477, charterSped: 1.234294, efaPayments: 0, districtAdm: 167284.2825, charterAdm: 6509.0212, efaMembership: 0 },
-  { year: 2022, calculatedCost: 788.588331, districtGrant: 624.823445, swept: 363.283230, charterDirect: 45.319324, charterSped: 1.426062, efaPayments: 9.004046, districtAdm: 167498.5789, charterAdm: 6266.7174, efaMembership: 1821 },
-  { year: 2023, calculatedCost: 753.439489, districtGrant: 707.519581, swept: 263.098498, charterDirect: 49.333428, charterSped: 1.569299, efaPayments: 15.533106, districtAdm: 159396.57, charterAdm: 6761.22, efaMembership: 3196.2 },
-  { year: 2024, calculatedCost: 810.282624, districtGrant: 701.480825, swept: 363.786975, charterDirect: 60.227733, charterSped: 1.770082, efaPayments: 24.467290, districtAdm: 157396.84, charterAdm: 6940, efaMembership: 4663.5 },
-  { year: 2025, calculatedCost: 817.869206, districtGrant: 700.016284, swept: 364.350537, charterDirect: 66.215276, charterSped: 2.061786, efaPayments: 30.059063, districtAdm: 154925.43, charterAdm: 7513.8678, efaMembership: 5794 },
-  { year: 2026, calculatedCost: 819.756298, districtGrant: 716.082728, swept: 363.516836, charterDirect: null, charterSped: null, efaPayments: 51.626095, districtAdm: 152139.6182, charterAdm: null, efaMembership: 10708 },
-  { year: 2027, calculatedCost: 817.829476, districtGrant: 698.127641, swept: 364.075715, charterDirect: null, charterSped: null, efaPayments: null, districtAdm: 148918.1, charterAdm: null, efaMembership: null },
+  { year: 2016, calculatedCost: 758.455507, differentialAid: 144.621584, districtGrant: 570.120846, swept: 363.137923, charterDirect: 22.953740, charterSped: 0.366312, efaPayments: 0, districtAdm: 172363.77, charterAdm: 4035.97, efaMembership: 0 },
+  { year: 2017, calculatedCost: 745.216971, differentialAid: 140.536616, districtGrant: 564.007588, swept: 363.431572, charterDirect: 28.427990, charterSped: 0.681184, efaPayments: 0, districtAdm: 169793.46, charterAdm: 4462.07, efaMembership: 0 },
+  { year: 2018, calculatedCost: 750.668490, differentialAid: 141.062887, districtGrant: 561.750905, swept: 363.148601, charterDirect: 31.607906, charterSped: 0.716837, efaPayments: 0, districtAdm: 167655.54, charterAdm: 4803.95, efaMembership: 0 },
+  { year: 2019, calculatedCost: 747.686406, differentialAid: 143.751722, districtGrant: 552.624220, swept: 363.099673, charterDirect: 35.110841, charterSped: 0.849814, efaPayments: 0, districtAdm: 166095.9071, charterAdm: 5236.28, efaMembership: 0 },
+  { year: 2020, calculatedCost: 779.389670, differentialAid: 153.628130, districtGrant: 599.249581, swept: 363.246023, charterDirect: 38.126966, charterSped: 1.116616, efaPayments: 0, districtAdm: 168724.3621, charterAdm: 5546.5, efaMembership: 0 },
+  { year: 2021, calculatedCost: 769.142374, differentialAid: 148.721773, districtGrant: 649.510186, swept: 363.068238, charterDirect: 45.295477, charterSped: 1.234294, efaPayments: 0, districtAdm: 167284.2825, charterAdm: 6509.0212, efaMembership: 0 },
+  { year: 2022, calculatedCost: 788.588331, differentialAid: 154.328163, districtGrant: 624.823445, swept: 363.283230, charterDirect: 45.319324, charterSped: 1.426062, efaPayments: 9.004046, districtAdm: 167498.5789, charterAdm: 6266.7174, efaMembership: 1821 },
+  { year: 2023, calculatedCost: 753.439489, differentialAid: 149.858862, districtGrant: 707.519581, swept: 263.098498, charterDirect: 49.333428, charterSped: 1.569299, efaPayments: 15.533106, districtAdm: 159396.57, charterAdm: 6761.22, efaMembership: 3196.2 },
+  { year: 2024, calculatedCost: 810.282624, differentialAid: 164.955585, districtGrant: 701.480825, swept: 363.786975, charterDirect: 60.227733, charterSped: 1.770082, efaPayments: 24.467290, districtAdm: 157396.84, charterAdm: 6940, efaMembership: 4663.5 },
+  { year: 2025, calculatedCost: 817.869206, differentialAid: 169.971077, districtGrant: 700.016284, swept: 364.350537, charterDirect: 66.215276, charterSped: 2.061786, efaPayments: 30.059063, districtAdm: 154925.43, charterAdm: 7513.8678, efaMembership: 5794 },
+  { year: 2026, calculatedCost: 819.756298, differentialAid: 170.783457, districtGrant: 716.082728, swept: 363.516836, charterDirect: null, charterSped: null, efaPayments: 51.626095, districtAdm: 152139.6182, charterAdm: null, efaMembership: 10708 },
+  { year: 2027, calculatedCost: 817.829476, differentialAid: 169.886823, districtGrant: 698.127641, swept: 364.075715, charterDirect: null, charterSped: null, efaPayments: null, districtAdm: 148918.1, charterAdm: null, efaMembership: null },
 ];
 ---
 
@@ -73,12 +73,12 @@ const fundingData = [
 <div class="shell hero-grid">
 <div>
 <p class="eyebrow">New Hampshire education funding</p>
-<h1>Build your own definition of education aid.</h1>
-<p class="dek">Choose which dollars count, choose which students count, and apply the same rules from FY2016 through FY2027. Every result shows its formula and flags missing data.</p>
+<h1>Explore New Hampshire education aid.</h1>
+<p class="dek">Choose the aid and students to count. The tool applies the same choices from FY2016 through FY2027 and marks missing data.</p>
 <nav class="jump-links" aria-label="Jump to report section">
 <a href="#explorer">Build a calculation</a>
 <a href="#glossary">Funding dictionary</a>
-<a href="#finding">Why methods matter</a>
+<a href="#programs">Program totals</a>
 <a href="#sources">Sources &amp; downloads</a>
 <a href="#community-updates">Community updates</a>
 </nav>
@@ -86,9 +86,9 @@ const fundingData = [
 <aside class="hero-verdict" aria-label="How to use this page">
 <span class="verdict-label">Use the tool in three steps</span>
 <ol>
-  <li>Choose the funding programs.</li>
-  <li>Match the student population.</li>
-  <li>Keep that definition across years.</li>
+  <li>Choose the aid.</li>
+  <li>Choose the students.</li>
+  <li>Compare years.</li>
 </ol>
 <span>The page starts with all actual programs, excluding SWEPT, in the latest complete year.</span>
 </aside>
@@ -100,17 +100,18 @@ const fundingData = [
     <div class="section-heading light-heading explorer-heading">
       <p class="section-number">01</p>
       <div>
-        <h2 id="explorer-heading">Build a consistent calculation</h2>
-        <p>There is no single neutral meaning of “state aid per student.” Make the choices explicit, then see what they do to the total and the trend.</p>
+        <h2 id="explorer-heading">Choose what counts</h2>
+        <p>Select one district measure, add other programs, and see the total and per-student amount.</p>
       </div>
     </div>
 
     <div class="preset-row" aria-label="Calculation presets">
       <span>Start with a definition:</span>
-      <button type="button" data-preset="all-programs" aria-pressed="true">All actual programs · no SWEPT</button>
-      <button type="button" data-preset="district-only" aria-pressed="false">District grant only</button>
+      <button type="button" data-preset="all-programs" aria-pressed="true">All programs · no SWEPT</button>
+      <button type="button" data-preset="district-only" aria-pressed="false">District grant</button>
       <button type="button" data-preset="with-swept" aria-pressed="false">District grant + SWEPT</button>
-      <button type="button" data-preset="calculated-cost" aria-pressed="false">Calculated district cost</button>
+      <button type="button" data-preset="calculated-cost" aria-pressed="false">Formula cost</button>
+      <button type="button" data-preset="differential-aid" aria-pressed="false">Differential aid</button>
     </div>
 
     <div class="explorer-layout">
@@ -124,18 +125,22 @@ const fundingData = [
         </div>
 
         <fieldset>
-          <legend><span>1</span> District funding measure</legend>
+          <legend><span>1</span> Choose one district measure</legend>
           <label class="choice-row">
             <input type="radio" name="district-measure" value="districtGrant" checked>
-            <span><strong>Adequacy grant paid</strong><small>Actual district grant, excluding SWEPT</small></span>
+            <span><strong>District grant paid</strong><small>Actual grant, excluding SWEPT</small></span>
           </label>
           <label class="choice-row">
             <input type="radio" name="district-measure" value="calculatedCost">
-            <span><strong>Calculated adequate-education cost</strong><small>Formula estimate, not the state payment</small></span>
+            <span><strong>Formula cost</strong><small>Base adequacy plus differential aid</small></span>
+          </label>
+          <label class="choice-row">
+            <input type="radio" name="district-measure" value="differentialAid">
+            <span><strong>Differential aid</strong><small>Formula additions based on student needs</small></span>
           </label>
           <label class="choice-row">
             <input type="radio" name="district-measure" value="none">
-            <span><strong>No district measure</strong><small>Explore charter or EFA programs alone</small></span>
+            <span><strong>No district aid</strong><small>Show charter or EFA programs alone</small></span>
           </label>
         </fieldset>
 
@@ -237,127 +242,64 @@ const fundingData = [
   <div class="section-heading">
     <p class="section-number">02</p>
     <div>
-      <h2 id="glossary-heading">A plain-language funding dictionary</h2>
-      <p>The labels sound interchangeable, but they describe different formulas, payments, taxes, programs, and student counts.</p>
+      <h2 id="glossary-heading">Funding terms</h2>
+      <p>These terms describe different formulas, payments, taxes, programs, and student counts.</p>
     </div>
   </div>
   <div class="glossary-grid">
     <article id="glossary-base-adequacy">
       <span>Formula building block</span>
       <h3>Base adequacy</h3>
-      <p>The starting per-pupil amount in the district adequacy formula. It is one component of calculated cost—not, by itself, the final grant paid to a district or the total public investment in a student.</p>
+      <p>The starting amount for each district student in the adequacy formula. It is only one part of the formula cost.</p>
     </article>
     <article id="glossary-differential-aid">
       <span>Student-need additions</span>
       <h3>Differential aid</h3>
-      <p>Additional formula amounts tied to student characteristics and needs, such as free/reduced-price eligibility, special education, and English-learner status. These additions are embedded in calculated cost in this statewide dataset.</p>
+      <p>Added formula amounts for student needs, including income eligibility, special education, and English-learner status. The explorer can show this total by itself.</p>
     </article>
     <article id="glossary-calculated-cost">
       <span>District formula</span>
-      <h3>Calculated adequate-education cost</h3>
-      <p>A formula estimate built from base adequacy plus additions tied to student needs, including free/reduced-price eligibility, special education, English learners, and home education. It is not the amount of the state check.</p>
+      <h3>Formula cost</h3>
+      <p>Base adequacy plus differential aid. It is a formula result, not the amount paid to districts.</p>
     </article>
     <article id="glossary-district-grant">
       <span>District payment</span>
-      <h3>Adequacy grant paid</h3>
-      <p>The district grant after the formula is applied town by town. In this tool it excludes SWEPT and includes the town-level grant adjustments reflected in the state’s final statewide total.</p>
+      <h3>District grant paid</h3>
+      <p>The actual district grant after local calculations and adjustments. In this tool it excludes SWEPT.</p>
     </article>
     <article id="glossary-swept">
       <span>Property tax</span>
       <h3>SWEPT</h3>
-      <p>The Statewide Education Property Tax is assessed at a statewide rate, collected locally, and retained by the municipality. Some presentations count it as state education funding and others exclude it, so the choice must be disclosed.</p>
+      <p>The Statewide Education Property Tax is collected and kept locally. Some totals include it and others do not.</p>
     </article>
     <article id="glossary-charter">
       <span>Program</span>
       <h3>Charter-school aid</h3>
-      <p>Direct aid is paid to charter schools. The state files also show charter-related special-education aid paid to responsible public districts. This tool exposes both and counts each only once.</p>
+      <p>Direct aid goes to charter schools. Charter special-education aid goes to responsible public districts. The tool lists each once.</p>
     </article>
     <article id="glossary-efa">
       <span>Program</span>
       <h3>Education Freedom Accounts</h3>
-      <p>State-funded accounts used for eligible education expenses outside a traditional district-school placement. This tool uses scheduled payments and payment membership from the available state files beginning in FY2022.</p>
+      <p>State-funded accounts for eligible education expenses outside a traditional district-school placement. Data begins in FY2022.</p>
     </article>
     <article id="glossary-students">
       <span>Denominator</span>
       <h3>ADM and payment membership</h3>
-      <p>District and charter files use average daily membership (ADM); EFA files report payment membership. These funding counts are not the same as a one-day fall headcount, so numerator and denominator must come from matching programs.</p>
+      <p>District and charter files use average daily membership (ADM). EFA files use payment membership. Match the student count to the selected aid.</p>
     </article>
   </div>
   <aside class="definition-caution">
-    <strong>Why is there no separate differential-aid toggle?</strong>
-    <p>Student-need additions are part of calculated cost, while extraordinary-needs and hold-harmless adjustments affect the paid grant. Because labels and columns change across source files, this statewide explorer does not pretend they are one clean, separately comparable field across all twelve years.</p>
+    <strong>Avoid double counting.</strong>
+    <p>Formula cost already includes differential aid, so the explorer lets you choose one district measure at a time.</p>
   </aside>
-</section>
-
-<section class="shell section" id="finding" aria-labelledby="finding-heading">
-<div class="section-heading">
-<p class="section-number">03</p>
-<div>
-<h2 id="finding-heading">The claimed jump mostly disappears when the method stays the same</h2>
-<p>The post says aid rose from $5,251 to $7,100 in one year. That comparison changes what is counted.</p>
-</div>
-</div>
-<div class="finding-grid">
-<article class="finding-card bad-card">
-<span>Posted comparison</span>
-<strong>$5,251 → $7,100</strong>
-<b>+$1,849 · +35.2%</b>
-<p>FY2025 and FY2026 appear to use different numerators.</p>
-</article>
-<article class="finding-card good-card">
-<span>Same gross-district method</span>
-<strong>$6,870 → $7,096</strong>
-<b>+$226 · +3.3%</b>
-<p>District grant plus SWEPT, divided by district ADM, in both years.</p>
-</article>
-<article class="finding-card neutral-card">
-<span>Actual state grant, no SWEPT</span>
-<strong>$4,518 → $4,707</strong>
-<b>+$188 · +4.2%</b>
-<p>District adequacy grant paid, excluding the locally raised SWEPT amount.</p>
-</article>
-</div>
-<div class="formula-walkthrough" aria-label="FY2025 and FY2026 calculation walkthrough">
-<article>
-<span class="formula-year">FY2025 posted: $5,251</span>
-<h3>Closest match: calculated cost</h3>
-<div class="big-equation">
-<b>$817.9m</b>
-<i>÷</i>
-<b>154,925</b>
-<i>=</i>
-<strong>$5,279</strong>
-</div>
-<p>Calculated adequate-education cost ÷ district ADM. The $28 difference could reflect rounding or an earlier estimate.</p>
-</article>
-<div class="method-switch" aria-hidden="true">
-<span>method changes</span>
-</div>
-<article>
-<span class="formula-year">FY2026 posted: $7,100</span>
-<h3>Near-exact match: grant plus SWEPT</h3>
-<div class="big-equation">
-<b>$716.1m + $363.5m</b>
-<i>÷</i>
-<b>152,140</b>
-<i>=</i>
-<strong>$7,096</strong>
-</div>
-<p>Actual district grant plus SWEPT ÷ district ADM. FY2027 reproduces the same way: approximately $7,133.</p>
-</article>
-</div>
-<aside class="plain-callout">
-<strong>What is misleading?</strong>
-<p>The post compares a cost estimate in one year with a larger, SWEPT-inclusive funding measure in the next year and labels both “state aid per pupil.”</p>
-</aside>
 </section>
 <section class="programs-band" id="programs" aria-labelledby="programs-heading">
 <div class="shell section">
 <div class="section-heading">
-<p class="section-number">04</p>
+<p class="section-number">03</p>
 <div>
 <h2 id="programs-heading">Where the money and students went</h2>
-<p>Total education funding includes district schools, charter schools, and EFAs. Growth in the last two categories is part of the statewide increase.</p>
+<p>Statewide totals include district schools, charter schools, and EFAs.</p>
 </div>
 </div>
 <div class="impact-grid">
@@ -709,17 +651,17 @@ const fundingData = [
 </section>
 <section class="shell section" id="sources" aria-labelledby="sources-heading">
 <div class="section-heading">
-<p class="section-number">05</p>
+<p class="section-number">04</p>
 <div>
 <h2 id="sources-heading">How to fact-check every number</h2>
-<p>Start with the state files, find the statewide total, and keep the numerator and student count from the same program and year.</p>
+<p>Find the statewide total in each state file, then match the aid and student count from the same year.</p>
 </div>
 </div>
 <div class="download-panel">
 <div>
 <span>Downloadable audit data</span>
-<h3>Every value used in this report, one row per fiscal year</h3>
-<p>The CSV includes every explorer input, enrollment, reconstructed formulas, totals, and coverage notes.</p>
+<h3>Key report data, one row per fiscal year</h3>
+<p>The CSV includes the main aid totals, enrollment, calculations, and coverage notes.</p>
 </div>
 <div class="download-actions">
   <a href="/downloads/nh-education-aid-audit-data" download="">Download key data CSV</a>
@@ -785,7 +727,7 @@ const fundingData = [
 <h3>District adequacy</h3>
 </div>
 <p class="source-files">ad_ed_aid_fy2016_final.csv; ad_ed_aid_fy2017_final.csv; ad_ed_aid_fy2018_final.csv</p>
-<p>Find the State Total row. Read membership/ADM, Total Calculated Cost, SWEPT, and the final grant column.</p>
+<p>Find State Total. Differential aid is formula cost minus base adequacy. The same row includes ADM, SWEPT, and the final grant.</p>
 </article>
 <article>
 <div>
@@ -793,7 +735,7 @@ const fundingData = [
 <h3>District adequacy</h3>
 </div>
 <p class="source-files">ad_ed_aid_fy2019_final.xlsx; ad_ed_aid_fy2020_final.xlsx; ad_ed_aid_fy2021.xlsx</p>
-<p>Open the municipal-report sheet and find State Total near the top. Read ADM, calculated cost, SWEPT, and final grant.</p>
+<p>Find State Total near the top. Differential aid is formula cost minus base adequacy. The same row includes ADM, SWEPT, and final grant.</p>
 </article>
 <article>
 <div>
@@ -801,7 +743,7 @@ const fundingData = [
 <h3>District adequacy</h3>
 </div>
 <p class="source-files">adequacy-fy-22-muni-summary.xlsx; adequacy-fy23-muni-estimate-summary.csv; adequacy-fy-24-muni-summary-4.1.24_0.csv; adequacy-fy-25-muni-summary-4.1.25.csv; adequacy-fy-26-muni-summary-4.1.26-csv.csv; fy-27-adequacy-muni-summary.xlsx</p>
-<p>Find State Total. Use Total Calculated Cost, SWEPT, Adequacy Grant, Final State Grant, and the base ADM column.</p>
+<p>Find State Total. Differential aid is formula cost minus base adequacy. The same row includes ADM, SWEPT, and the district grant.</p>
 </article>
 <article>
 <div>
@@ -824,7 +766,7 @@ const fundingData = [
 <article>
 <span>1</span>
 <h3>Choose the measure</h3>
-<p>Calculated cost, actual grant excluding SWEPT, or grant including SWEPT. Do not switch mid-trend.</p>
+<p>Choose formula cost, differential aid, or the district grant. Add SWEPT only if you want it counted.</p>
 </article>
 <article>
 <span>2</span>
@@ -852,7 +794,7 @@ const fundingData = [
 <div class="shell footer-grid">
 <div>
 <strong>Method</strong>
-<p>Nominal statewide dollars. EFA figures use scheduled payments. Charter SPED sent to districts is counted once and shown separately.</p>
+<p>Nominal statewide dollars. Differential aid is formula cost minus base adequacy. EFA figures use scheduled payments. Charter SPED is counted once.</p>
 </div>
 <div>
 <strong>Limitations</strong>
@@ -881,8 +823,9 @@ const fundingData = [
     const presetButtons = Array.from(explorer.querySelectorAll("[data-preset]"));
 
     const fundingLabels = {
-      calculatedCost: "Calculated adequate-education cost",
-      districtGrant: "Adequacy grant paid",
+      calculatedCost: "Formula cost",
+      differentialAid: "Differential aid",
+      districtGrant: "District grant paid",
       swept: "SWEPT",
       charterDirect: "Charter direct aid",
       charterSped: "Charter special-education aid",
@@ -895,6 +838,7 @@ const fundingData = [
     };
     const componentColors = {
       calculatedCost: "#49a78e",
+      differentialAid: "#8b5cf6",
       districtGrant: "#49a78e",
       swept: "#c6952e",
       charterDirect: "#7aa5bd",
@@ -939,7 +883,7 @@ const fundingData = [
     function syncStudentPopulation() {
       if (!(autoMatch instanceof HTMLInputElement) || !autoMatch.checked) return;
       const keys = selectedFundingKeys();
-      setCheckbox("districtAdm", keys.includes("districtGrant") || keys.includes("calculatedCost") || keys.includes("swept"), "student");
+      setCheckbox("districtAdm", keys.includes("districtGrant") || keys.includes("calculatedCost") || keys.includes("differentialAid") || keys.includes("swept"), "student");
       setCheckbox("charterAdm", keys.includes("charterDirect") || keys.includes("charterSped"), "student");
       setCheckbox("efaMembership", keys.includes("efaPayments"), "student");
     }
@@ -1183,6 +1127,7 @@ const fundingData = [
         "district-only": automatic && measure === "districtGrant" && funding.size === 1 && students.size === 1 && students.has("districtAdm"),
         "with-swept": automatic && measure === "districtGrant" && funding.size === 2 && funding.has("swept") && students.size === 1 && students.has("districtAdm"),
         "calculated-cost": automatic && measure === "calculatedCost" && funding.size === 1 && students.size === 1 && students.has("districtAdm"),
+        "differential-aid": automatic && measure === "differentialAid" && funding.size === 1 && students.size === 1 && students.has("districtAdm"),
       };
       presetButtons.forEach((button) => {
         if (button instanceof HTMLButtonElement) button.setAttribute("aria-pressed", matches[button.dataset.preset] ? "true" : "false");
@@ -1211,7 +1156,7 @@ const fundingData = [
       setCheckbox("charterDirect", name === "all-programs", "funding");
       setCheckbox("charterSped", name === "all-programs", "funding");
       setCheckbox("efaPayments", name === "all-programs", "funding");
-      setDistrictMeasure(name === "calculated-cost" ? "calculatedCost" : "districtGrant");
+      setDistrictMeasure(name === "calculated-cost" ? "calculatedCost" : name === "differential-aid" ? "differentialAid" : "districtGrant");
       if (autoMatch instanceof HTMLInputElement) autoMatch.checked = true;
       render();
     }
@@ -1235,18 +1180,18 @@ const fundingData = [
 
 <style>
 :root {
-  --ink: #102c3b;
-  --ink-2: #24495b;
-  --paper: #f6f0e4;
-  --paper-2: #eae0ce;
-  --white: #fffdf8;
-  --red: #b64238;
-  --red-soft: #f3d7d1;
+  --ink: var(--nhdb-ink, #1f2933);
+  --ink-2: var(--nhdb-muted, #4b5563);
+  --paper: var(--nhdb-soft, #f8fafc);
+  --paper-2: #f1f5f9;
+  --white: var(--nhdb-panel, #ffffff);
+  --red: var(--nhdb-accent, #dc4d09);
+  --red-soft: var(--nhdb-accent-soft, #fff7ed);
   --green: #126f5d;
   --green-soft: #d8ebe4;
-  --gold: #c6952e;
-  --gold-soft: #f4e4b9;
-  --line: #cec3b1;
+  --gold: #9a6700;
+  --gold-soft: var(--nhdb-warm, #fffaf1);
+  --line: var(--nhdb-line, #e2e8f0);
 }
 
 * { box-sizing: border-box; }
@@ -1255,76 +1200,61 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: Arial, Arial, Helvetica, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.55;
 }
 main { overflow: hidden; }
 a { color: inherit; }
 .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
-.section { padding: 76px 0; }
+.section { padding: 64px 0; }
 h1, h2, h3, p { margin-top: 0; }
 h1 {
   max-width: 880px;
   margin-bottom: 24px;
-  font-size: clamp(3rem, 7vw, 6.3rem);
-  line-height: .94;
-  letter-spacing: -.065em;
+  font-size: clamp(2.5rem, 6vw, 4.8rem);
+  line-height: .98;
+  letter-spacing: -.045em;
 }
 h2 { margin-bottom: 10px; font-size: clamp(2rem, 4vw, 3.35rem); line-height: 1; letter-spacing: -.045em; }
 h3 { margin-bottom: 8px; font-size: 1.18rem; line-height: 1.25; }
 
 .education-report-hero {
-  position: relative;
-  padding: 94px 0 76px;
-  color: var(--white);
-  background:
-    radial-gradient(circle at 86% 12%, rgba(198,149,46,.28), transparent 30%),
-    linear-gradient(128deg, #0c2939 0%, #163d4e 67%, #1c4e55 100%);
+  padding: 40px 0 28px;
+  color: var(--ink);
+  background: var(--paper);
 }
-.education-report-hero::after {
-  content: "";
-  position: absolute;
-  right: -120px;
-  bottom: -170px;
-  width: 470px;
-  height: 470px;
-  border: 1px solid rgba(255,255,255,.16);
-  border-radius: 50%;
-  box-shadow: 0 0 0 48px rgba(255,255,255,.03), 0 0 0 96px rgba(255,255,255,.02);
-}
-.hero-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0,1fr) 310px; gap: 56px; align-items: end; }
-.eyebrow, .verdict-label, .section-number, .formula-year, .finding-card > span, .impact-grid span, .download-panel span, .source-list span {
-  font-family: "Courier New", monospace;
+.hero-grid { display: grid; grid-template-columns: minmax(0,1fr) 310px; gap: 48px; align-items: end; padding: 32px; background: var(--white); border: 1px solid var(--line); border-radius: 10px; }
+.eyebrow, .verdict-label, .section-number, .impact-grid span, .download-panel span, .source-list span {
   font-size: .73rem;
-  font-weight: 700;
-  letter-spacing: .08em;
+  font-weight: 900;
+  letter-spacing: .1em;
   text-transform: uppercase;
 }
 .eyebrow { margin-bottom: 16px; color: var(--gold); }
-.dek { max-width: 820px; margin-bottom: 24px; color: rgba(255,253,248,.82); font-size: clamp(1.08rem,2vw,1.35rem); }
+.dek { max-width: 820px; margin-bottom: 24px; color: var(--ink-2); font-size: clamp(1.05rem,2vw,1.25rem); }
 .jump-links { display: flex; flex-wrap: wrap; gap: 10px; }
-.jump-links a { padding: 8px 12px; border: 1px solid rgba(255,255,255,.28); color: rgba(255,253,248,.86); font-size: .78rem; text-decoration: none; }
-.jump-links a:hover, .jump-links a:focus-visible { background: var(--white); color: var(--ink); }
-.hero-verdict { padding: 25px; border-top: 5px solid var(--gold); background: rgba(255,255,255,.1); backdrop-filter: blur(8px); }
+.jump-links a { padding: 8px 13px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); font-size: .78rem; font-weight: 700; text-decoration: none; }
+.jump-links a:hover, .jump-links a:focus-visible { border-color: var(--red); background: var(--red-soft); color: var(--red); }
+.hero-verdict { padding: 24px; border: 1px solid var(--line); border-top: 4px solid var(--red); border-radius: 10px; background: var(--red-soft); }
 .hero-verdict span, .hero-verdict strong { display: block; }
 .hero-verdict strong { margin: 9px 0 11px; font-size: 1.32rem; line-height: 1.25; }
-.hero-verdict > span:last-child { color: rgba(255,253,248,.72); font-size: .9rem; }
-.verdict-label { color: var(--gold); }
+.hero-verdict > span:last-child { color: var(--ink-2); font-size: .9rem; }
+.verdict-label { color: var(--red); }
 .hero-verdict ol { margin: 14px 0 16px; padding-left: 22px; }
 .hero-verdict li { margin: 5px 0; font-weight: 700; }
 
-.explorer-band { color: var(--white); background: #0f3343; border-top: 1px solid rgba(255,255,255,.12); }
+.explorer-band { color: var(--ink); background: var(--paper-2); border-block: 1px solid var(--line); }
 .explorer-heading { margin-bottom: 24px; }
 .preset-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 18px; }
-.preset-row > span { margin-right: 4px; color: rgba(255,253,248,.68); font-family: "Courier New", monospace; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-.preset-row button { padding: 9px 12px; border: 1px solid rgba(255,255,255,.28); border-radius: 0; background: transparent; color: var(--white); cursor: pointer; font: inherit; font-size: .75rem; }
-.preset-row button:hover, .preset-row button:focus-visible { border-color: var(--gold); }
-.preset-row button[aria-pressed="true"] { border-color: var(--gold); background: var(--gold); color: #182c32; font-weight: 700; }
+.preset-row > span { margin-right: 4px; color: var(--ink-2); font-size: .7rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+.preset-row button { padding: 9px 13px; border: 1px solid #cbd5e1; border-radius: 999px; background: var(--white); color: var(--ink); cursor: pointer; font: inherit; font-size: .75rem; }
+.preset-row button:hover, .preset-row button:focus-visible { border-color: var(--red); }
+.preset-row button[aria-pressed="true"] { border-color: var(--red); background: var(--red); color: var(--white); font-weight: 800; }
 .explorer-layout { display: grid; grid-template-columns: minmax(320px,390px) minmax(0,1fr); gap: 18px; align-items: start; }
-.explorer-controls { color: var(--ink); background: var(--paper); border: 1px solid rgba(255,255,255,.18); }
+.explorer-controls { color: var(--ink); background: var(--white); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .control-intro { display: grid; gap: 7px; padding: 20px; background: var(--gold-soft); border-bottom: 1px solid var(--line); }
 .control-intro label { font-weight: 700; }
-.control-intro select { width: 100%; padding: 11px 38px 11px 12px; border: 1px solid #9f927e; border-radius: 0; background: var(--white); color: var(--ink); font: inherit; font-weight: 700; }
+.control-intro select { width: 100%; padding: 11px 38px 11px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: var(--white); color: var(--ink); font: inherit; font-weight: 700; }
 .control-intro small, .choice-row small, .auto-match small { color: var(--ink-2); font-size: .72rem; }
 .explorer-controls fieldset { margin: 0; padding: 19px 20px 20px; border: 0; border-bottom: 1px solid var(--line); }
 .explorer-controls fieldset:last-child { border-bottom: 0; }
@@ -1338,23 +1268,23 @@ h3 { margin-bottom: 8px; font-size: 1.18rem; line-height: 1.25; }
 .student-choices input:disabled { opacity: .72; }
 .manual-note { margin: 11px 0 0 28px; color: var(--ink-2); font-size: .69rem; }
 .explorer-output { display: grid; gap: 14px; }
-.result-status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; padding: 11px 15px; border-left: 5px solid; font-size: .78rem; }
+.result-status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; padding: 11px 15px; border: 1px solid var(--line); border-left: 5px solid; border-radius: 8px; background: var(--white); font-size: .78rem; }
 .result-status.complete { border-color: #65c0a7; background: rgba(73,167,142,.16); }
 .result-status.unavailable { border-color: #e2b75b; background: rgba(198,149,46,.16); }
 .result-status :global(strong) { font-size: .82rem; }
-.result-status :global(span) { color: rgba(255,253,248,.72); }
-.result-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1px; background: rgba(255,255,255,.18); }
-.result-metrics article { min-height: 124px; padding: 20px; background: #173f4f; }
-.result-metrics span, .formula-card > div > span, .trend-card figcaption span { display: block; color: rgba(255,253,248,.62); font-family: "Courier New", monospace; font-size: .66rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
-.result-metrics strong { display: block; margin-top: 14px; color: var(--white); font-size: clamp(1.35rem,2.3vw,2rem); line-height: 1; letter-spacing: -.04em; }
-.result-metrics .primary-result { background: var(--green); }
-.result-metrics .primary-result span { color: rgba(255,255,255,.74); }
-.result-metrics .primary-result strong { color: var(--white); }
-.formula-card { padding: 18px 20px; background: #092735; border-left: 4px solid var(--gold); }
+.result-status :global(span) { color: var(--ink-2); }
+.result-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1px; border: 1px solid var(--line); border-radius: 10px; background: var(--line); overflow: hidden; }
+.result-metrics article { min-height: 124px; padding: 20px; background: var(--white); }
+.result-metrics span, .formula-card > div > span, .trend-card figcaption span { display: block; color: var(--ink-2); font-size: .66rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.result-metrics strong { display: block; margin-top: 14px; color: var(--ink); font-size: clamp(1.35rem,2.3vw,2rem); line-height: 1; letter-spacing: -.04em; }
+.result-metrics .primary-result { background: var(--green-soft); }
+.result-metrics .primary-result span { color: var(--green); }
+.result-metrics .primary-result strong { color: var(--green); }
+.formula-card { padding: 18px 20px; background: var(--gold-soft); border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: 8px; }
 .formula-card > div { display: flex; justify-content: space-between; gap: 14px; align-items: center; }
-.formula-card a { color: var(--gold-soft); font-size: .72rem; }
-.formula-card p { margin: 11px 0 0; color: var(--white); font-family: "Courier New", monospace; font-size: .8rem; line-height: 1.65; overflow-wrap: anywhere; }
-.breakdown-card { padding: 20px; background: var(--white); color: var(--ink); }
+.formula-card a { color: var(--red); font-size: .72rem; font-weight: 700; }
+.formula-card p { margin: 11px 0 0; color: var(--ink); font-size: .8rem; line-height: 1.65; overflow-wrap: anywhere; }
+.breakdown-card { padding: 20px; background: var(--white); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; }
 .breakdown-card h3 { font-size: .98rem; }
 .breakdown-bar { display: flex; min-height: 16px; margin: 13px 0 12px; background: var(--paper-2); overflow: hidden; }
 .breakdown-bar :global(span) { min-width: 2px; }
@@ -1364,7 +1294,7 @@ h3 { margin-bottom: 8px; font-size: 1.18rem; line-height: 1.25; }
 .breakdown-card :global(li i) { flex: 0 0 auto; width: 9px; height: 9px; }
 .breakdown-card :global(li strong) { color: var(--ink); white-space: nowrap; }
 .breakdown-card :global(.missing-component strong) { color: var(--red); }
-.trend-card { margin: 0; padding: 20px 20px 12px; background: var(--white); color: var(--ink); }
+.trend-card { margin: 0; padding: 20px 20px 12px; background: var(--white); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; }
 .trend-card figcaption { display: flex; justify-content: space-between; gap: 20px; align-items: end; }
 .trend-card figcaption span { color: var(--red); }
 .trend-card figcaption strong { display: block; margin-top: 4px; font-size: 1.05rem; }
@@ -1378,7 +1308,7 @@ h3 { margin-bottom: 8px; font-size: 1.18rem; line-height: 1.25; }
 .trend-card :global(.chart-label), .trend-card :global(.chart-year), .trend-card :global(.chart-axis-title), .trend-card :global(.chart-empty) { fill: #536d78; font-family: "Courier New", monospace; font-size: 11px; }
 .trend-card :global(.chart-axis-title) { font-size: 9px; }
 .trend-card :global(.chart-empty) { font-size: 14px; }
-.trend-table-details { margin-top: 18px; color: var(--ink); background: var(--white); }
+.trend-table-details { margin-top: 18px; color: var(--ink); background: var(--white); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .trend-table-details summary { padding: 15px 18px; cursor: pointer; color: var(--green); font-weight: 700; }
 .explorer-table :global(td) { padding: 11px 14px; border-bottom: 1px solid var(--line); color: var(--ink); font-size: .78rem; }
 .explorer-table :global(tr:last-child td) { border-bottom: 0; }
@@ -1389,50 +1319,22 @@ h3 { margin-bottom: 8px; font-size: 1.18rem; line-height: 1.25; }
 
 .glossary-section { scroll-margin-top: 20px; }
 .glossary-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
-.glossary-grid article { padding: 24px; background: var(--white); border: 1px solid var(--line); border-top: 4px solid var(--green); }
-.glossary-grid span { color: var(--red); font-family: "Courier New", monospace; font-size: .68rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.glossary-grid article { padding: 24px; background: var(--white); border: 1px solid var(--line); border-top: 4px solid var(--red); border-radius: 10px; }
+.glossary-grid span { color: var(--red); font-size: .68rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .glossary-grid h3 { margin-top: 10px; }
 .glossary-grid p { margin-bottom: 0; color: var(--ink-2); font-size: .84rem; }
-.definition-caution { margin-top: 18px; padding: 21px 24px; background: var(--gold-soft); border-left: 5px solid var(--gold); }
+.definition-caution { margin-top: 18px; padding: 21px 24px; background: var(--gold-soft); border: 1px solid var(--line); border-left: 5px solid var(--gold); border-radius: 8px; }
 .definition-caution strong { display: block; }
 .definition-caution p { margin: 4px 0 0; color: #62450e; font-size: .86rem; }
 
 .section-heading { display: grid; grid-template-columns: 52px minmax(0,1fr); gap: 20px; max-width: 930px; margin-bottom: 38px; }
 .section-heading p:not(.section-number) { max-width: 790px; margin-bottom: 0; color: var(--ink-2); font-size: 1.05rem; }
 .section-number { margin: 4px 0 0; color: var(--red); }
-.light-heading { color: var(--white); }
-.light-heading .section-number { color: var(--gold); }
-.light-heading p:not(.section-number) { color: rgba(255,253,248,.7); }
+.light-heading { color: var(--ink); }
+.light-heading .section-number { color: var(--red); }
+.light-heading p:not(.section-number) { color: var(--ink-2); }
 
-.finding-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 18px; }
-.finding-card { padding: 26px; background: var(--white); border: 1px solid var(--line); border-top: 5px solid; box-shadow: 0 18px 48px rgba(16,44,59,.06); }
-.finding-card span, .finding-card strong, .finding-card b { display: block; }
-.finding-card strong { margin: 12px 0 4px; font-size: clamp(1.65rem,3vw,2.4rem); letter-spacing: -.035em; }
-.finding-card b { font-size: 1rem; }
-.finding-card p { margin: 18px 0 0; color: var(--ink-2); font-size: .88rem; }
-.bad-card { border-color: var(--red); }
-.bad-card strong, .bad-card b { color: var(--red); }
-.good-card { border-color: var(--green); }
-.good-card strong, .good-card b { color: var(--green); }
-.neutral-card { border-color: var(--gold); }
-.neutral-card strong, .neutral-card b { color: #73520f; }
-
-.formula-walkthrough { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 18px; align-items: center; margin-top: 28px; }
-.formula-walkthrough article { padding: 27px; background: var(--white); border: 1px solid var(--line); }
-.formula-year { color: var(--red); }
-.formula-walkthrough h3 { margin-top: 10px; font-size: 1.35rem; }
-.big-equation { display: flex; flex-wrap: wrap; gap: 9px; align-items: baseline; margin: 20px 0 14px; font-family: "Courier New", monospace; }
-.big-equation i { color: var(--gold); font-style: normal; }
-.big-equation strong { color: var(--green); font-size: 1.35rem; }
-.formula-walkthrough p { margin-bottom: 0; color: var(--ink-2); font-size: .87rem; }
-.method-switch { position: relative; height: 2px; background: var(--gold); }
-.method-switch::after { content: ""; position: absolute; right: 0; top: -4px; width: 9px; height: 9px; border-top: 2px solid var(--gold); border-right: 2px solid var(--gold); transform: rotate(45deg); }
-.method-switch span { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); color: var(--ink-2); font-family: "Courier New", monospace; font-size: .62rem; text-transform: uppercase; white-space: nowrap; }
-.plain-callout { margin-top: 26px; padding: 22px 26px; background: var(--red-soft); border-left: 6px solid var(--red); }
-.plain-callout strong { display: block; margin-bottom: 4px; }
-.plain-callout p { margin-bottom: 0; color: #67302c; }
-
-.table-wrap { overflow-x: auto; background: var(--white); border: 1px solid var(--line); }
+.table-wrap { overflow-x: auto; background: var(--white); border: 1px solid var(--line); border-radius: 10px; }
 table { width: 100%; min-width: 920px; border-collapse: collapse; font-size: .82rem; }
 th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 th { position: sticky; top: 0; background: var(--ink); color: var(--white); font-family: "Courier New", monospace; font-size: .65rem; letter-spacing: .035em; text-transform: uppercase; }
@@ -1445,21 +1347,21 @@ tbody tr:last-child td { border-bottom: 0; }
 
 .programs-band { background: var(--paper-2); }
 .impact-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; margin-bottom: 40px; }
-.impact-grid article { padding: 22px; background: var(--white); border-left: 5px solid var(--green); }
+.impact-grid article { padding: 22px; background: var(--white); border: 1px solid var(--line); border-left: 5px solid var(--green); border-radius: 8px; }
 .impact-grid span { color: var(--red); }
 .impact-grid strong { display: block; margin: 8px 0 4px; color: var(--green); font-size: 2rem; }
 .impact-grid p { margin-bottom: 0; color: var(--ink-2); font-size: .8rem; }
 .table-title { margin: 38px 0 5px; font-size: 1.55rem; }
 .table-intro { max-width: 850px; margin-bottom: 14px; color: var(--ink-2); font-size: .86rem; }
-.coverage-warning { margin-top: 22px; padding: 20px 24px; background: var(--gold-soft); border-left: 6px solid var(--gold); }
+.coverage-warning { margin-top: 22px; padding: 20px 24px; background: var(--gold-soft); border: 1px solid var(--line); border-left: 6px solid var(--gold); border-radius: 8px; }
 .coverage-warning strong { display: block; }
 .coverage-warning p { margin: 4px 0 0; color: #62450e; }
 
-.download-panel { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 30px; align-items: center; padding: 28px; background: var(--green); color: var(--white); }
+.download-panel { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 30px; align-items: center; padding: 28px; background: var(--green); color: var(--white); border-radius: 10px; }
 .download-panel span { color: var(--gold-soft); }
 .download-panel h3 { margin: 7px 0; font-size: 1.45rem; }
 .download-panel p { margin-bottom: 0; color: rgba(255,255,255,.74); font-size: .86rem; }
-.download-panel a { padding: 13px 17px; background: var(--white); color: var(--green); font-weight: 700; text-decoration: none; white-space: nowrap; }
+.download-panel a { padding: 13px 17px; background: var(--white); color: var(--green); border-radius: 999px; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .download-panel a:hover, .download-panel a:focus-visible { background: var(--gold-soft); }
 .download-actions { display: grid; gap: 8px; }
 .download-actions a:last-child { border: 1px solid rgba(255,255,255,.7); background: transparent; color: var(--white); text-align: center; }
@@ -1468,17 +1370,19 @@ tbody tr:last-child td { border-bottom: 0; }
 .official-links strong { margin-right: 4px; }
 .official-links a { color: var(--green); text-underline-offset: 3px; }
 .source-list { display: grid; gap: 10px; }
-.source-list article { display: grid; grid-template-columns: 180px minmax(0,1.3fr) minmax(0,1fr); gap: 20px; padding: 20px; background: var(--white); border: 1px solid var(--line); }
+.source-list article { display: grid; grid-template-columns: 180px minmax(0,1.3fr) minmax(0,1fr); gap: 20px; padding: 20px; background: var(--white); border: 1px solid var(--line); border-radius: 10px; }
 .source-list h3 { margin: 4px 0 0; }
 .source-list p { margin-bottom: 0; color: var(--ink-2); font-size: .8rem; }
 .source-files { font-family: "Courier New", monospace; overflow-wrap: anywhere; }
 .audit-steps { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1px; margin-top: 24px; background: var(--line); }
 .audit-steps article { padding: 23px; background: var(--white); }
+.audit-steps article:first-child { border-radius: 10px 0 0 10px; }
+.audit-steps article:last-child { border-radius: 0 10px 10px 0; }
 .audit-steps span { display: grid; place-items: center; width: 30px; height: 30px; margin-bottom: 15px; border-radius: 50%; background: var(--ink); color: var(--white); font-family: "Courier New", monospace; }
 .audit-steps p { margin-bottom: 0; color: var(--ink-2); font-size: .84rem; }
 
 .community-section { padding: 76px 0; background: var(--paper-2); }
-.community-section :global(.community-updates-panel) { padding: 28px; border: 1px solid #bfdbfe; }
+.community-section :global(.community-updates-panel) { padding: 28px; border: 1px solid var(--line); border-radius: 10px; }
 .community-section :global(.section-heading) { display: block; max-width: 820px; margin-bottom: 0; }
 .community-section :global(.section-heading h2) { margin-bottom: 10px; font-size: clamp(2rem,4vw,3.35rem); line-height: 1; letter-spacing: -.045em; }
 .community-section :global(.section-heading .eyebrow) { margin-bottom: 10px; color: var(--red); }
@@ -1496,11 +1400,6 @@ footer p { margin: 7px 0 0; color: rgba(255,253,248,.66); font-size: .77rem; }
   .control-intro { grid-column: 1 / -1; }
   .explorer-controls fieldset:last-child { grid-column: 1 / -1; }
   .glossary-grid { grid-template-columns: 1fr 1fr; }
-  .finding-grid { grid-template-columns: 1fr; }
-  .formula-walkthrough { grid-template-columns: 1fr; }
-  .method-switch { width: 2px; height: 45px; margin-left: 50%; }
-  .method-switch::after { right: -4px; top: auto; bottom: 0; transform: rotate(135deg); }
-  .method-switch span { left: 12px; bottom: 13px; transform: none; }
   .impact-grid { grid-template-columns: 1fr 1fr; }
   .source-list article { grid-template-columns: 150px 1fr; }
   .source-list article > p:last-child { grid-column: 1 / -1; }
@@ -1536,7 +1435,7 @@ footer p { margin: 7px 0 0; color: rgba(255,253,248,.66); font-size: .77rem; }
   .education-report-hero, .section, .community-section { padding-top: 36px; padding-bottom: 36px; }
   .jump-links, .preset-row, .explorer-controls, .download-panel a, .back-top { display: none; }
   .explorer-layout { display: block; }
-  .finding-card, .formula-walkthrough article, .table-wrap, .source-list article { break-inside: avoid; }
+  .table-wrap, .source-list article { break-inside: avoid; }
 }
 
 .database-downloads {
@@ -1544,6 +1443,7 @@ footer p { margin: 7px 0 0; color: rgba(255,253,248,.66); font-size: .77rem; }
   padding: 26px;
   background: var(--white);
   border: 1px solid var(--line);
+  border-radius: 10px;
 }
 .database-downloads-heading {
   display: grid;
@@ -1582,6 +1482,7 @@ footer p { margin: 7px 0 0; color: rgba(255,253,248,.66); font-size: .77rem; }
   padding: 18px;
   background: var(--paper);
   border-top: 4px solid var(--green);
+  border-radius: 8px;
   text-decoration: none;
 }
 .bundle-downloads > a:hover,
