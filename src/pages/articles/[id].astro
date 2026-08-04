@@ -44,7 +44,7 @@ if (adminSession) {
   try {
     const [billData, peopleData] = await Promise.all([
       getBills({ limit: 300 }),
-      getPeopleLinkOptions({ limit: 900 }),
+      getPeopleLinkOptions({ limit: 3000 }),
     ]);
 
     billOptions = billData.bills || [];

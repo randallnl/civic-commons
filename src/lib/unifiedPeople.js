@@ -265,7 +265,7 @@ export async function linkArticlePersonByPersonId(articleId, personId, rawName =
   return insertArticlePerson(articleId, personId, rawName, "manual", db);
 }
 
-export async function getPeopleLinkOptions({ limit = 900, db = adminDb() } = {}) {
+export async function getPeopleLinkOptions({ limit = 3000, db = adminDb() } = {}) {
   if (!db) return [];
   await ensureUnifiedPeopleTables(db);
 
