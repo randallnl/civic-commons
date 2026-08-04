@@ -193,7 +193,7 @@ const recentlyViewedProfile = {
 };
 let organizations = [];
 let endorsements = [];
-if (adminSession) {
+if (adminSession && hasLegislatorProfile) {
   try {
     const [candidateData, explicitCandidateId] = await Promise.all([
       getCandidates({ electionYear: 2026, limit: 700 }),
@@ -408,10 +408,11 @@ function ballotpediaUrlForName(value = "") {
   return slug ? `https://ballotpedia.org/${slug}` : "";
 }
 
+const profileLinkEntity = representative || profileCandidate || {};
 const ballotpediaProfileUrl =
-  externalProfileUrl(representative, ["ballotpediaUrl", "ballotpedia_url"]) ||
+  externalProfileUrl(profileLinkEntity, ["ballotpediaUrl", "ballotpedia_url"]) ||
   ballotpediaUrlForName(person.full_name);
-const citizensCountProfileUrl = externalProfileUrl(representative, [
+const citizensCountProfileUrl = externalProfileUrl(profileLinkEntity, [
   "citizensCountUrl",
   "citizens_count_url",
   "citizenscount_url",
