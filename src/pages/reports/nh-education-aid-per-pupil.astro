@@ -215,7 +215,7 @@ const fundingData = [
               <span>Same definition, every year</span>
               <strong data-chart-title>Per-student trend</strong>
             </div>
-            <small>Gaps mean data is unavailable or the selected program was not operating.</small>
+            <small>Hover or focus a point to see its value. Gaps mean data is unavailable or the selected program was not operating.</small>
           </figcaption>
           <svg data-trend-chart viewBox="0 0 760 270" role="img" aria-labelledby="trend-title trend-description">
             <title id="trend-title">Education aid per selected student by fiscal year</title>
@@ -1084,8 +1084,24 @@ const fundingData = [
       results.forEach((result, index) => {
         if (!result.available) return;
         const isSelected = result.row.year === selectedYear;
-        if (isSelected) parts.push(`<line x1="${x(index)}" y1="${top}" x2="${x(index)}" y2="${bottom}" class="chart-selected-line" />`);
-        parts.push(`<circle cx="${x(index)}" cy="${y(result.perStudent)}" r="${isSelected ? 6 : 4}" class="chart-point${isSelected ? " selected" : ""}"><title>FY${result.row.year}: ${moneyFormat.format(result.perStudent)} per student</title></circle>`);
+        const pointX = x(index);
+        const pointY = y(result.perStudent);
+        const tooltipWidth = 166;
+        const tooltipX = Math.max(0, Math.min(pointX - tooltipWidth / 2, 760 - tooltipWidth));
+        const tooltipY = pointY >= 72 ? pointY - 58 : pointY + 14;
+        const accessibleLabel = `FY${result.row.year}: ${moneyFormat.format(result.perStudent)} per student`;
+        if (isSelected) parts.push(`<line x1="${pointX}" y1="${top}" x2="${pointX}" y2="${bottom}" class="chart-selected-line" />`);
+        parts.push(`
+          <g class="chart-point-group" tabindex="0" role="img" aria-label="${accessibleLabel}">
+            <circle cx="${pointX}" cy="${pointY}" r="15" class="chart-hit-area" />
+            <circle cx="${pointX}" cy="${pointY}" r="${isSelected ? 6 : 4}" class="chart-point${isSelected ? " selected" : ""}" />
+            <g class="chart-tooltip" transform="translate(${tooltipX} ${tooltipY})" aria-hidden="true">
+              <rect width="${tooltipWidth}" height="44" rx="5" />
+              <text x="10" y="17" class="chart-tooltip-year">FY${result.row.year}</text>
+              <text x="10" y="34" class="chart-tooltip-value">${moneyFormat.format(result.perStudent)} per student</text>
+            </g>
+          </g>
+        `);
       });
       parts.push(`<text x="${left}" y="265" class="chart-axis-title">Fiscal year 20—</text>`);
       svg.innerHTML = parts.join("");
@@ -1321,8 +1337,17 @@ h3 { margin-bottom: 8px; font-size: 1.18rem; line-height: 1.25; }
 .trend-card svg { display: block; width: 100%; height: auto; min-height: 220px; margin-top: 6px; overflow: visible; }
 .trend-card :global(.chart-grid) { stroke: #ddd5c7; stroke-width: 1; }
 .trend-card :global(.chart-line) { fill: none; stroke: var(--green); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+.trend-card :global(.chart-point-group) { cursor: crosshair; outline: none; }
+.trend-card :global(.chart-hit-area) { fill: transparent; pointer-events: all; }
 .trend-card :global(.chart-point) { fill: var(--white); stroke: var(--green); stroke-width: 3; }
 .trend-card :global(.chart-point.selected) { fill: var(--gold); stroke: var(--ink); }
+.trend-card :global(.chart-point-group:focus-visible .chart-point) { stroke: var(--red); stroke-width: 4; }
+.trend-card :global(.chart-tooltip) { opacity: 0; pointer-events: none; transition: opacity .12s ease; }
+.trend-card :global(.chart-point-group:hover .chart-tooltip), .trend-card :global(.chart-point-group:focus .chart-tooltip) { opacity: 1; }
+.trend-card :global(.chart-tooltip rect) { fill: var(--ink); stroke: var(--white); stroke-width: 1; }
+.trend-card :global(.chart-tooltip text) { fill: var(--white); font-family: "Courier New", monospace; }
+.trend-card :global(.chart-tooltip-year) { font-size: 10px; font-weight: 700; letter-spacing: .06em; }
+.trend-card :global(.chart-tooltip-value) { font-size: 12px; font-weight: 700; }
 .trend-card :global(.chart-selected-line) { stroke: var(--gold); stroke-width: 1; stroke-dasharray: 4 4; }
 .trend-card :global(.chart-label), .trend-card :global(.chart-year), .trend-card :global(.chart-axis-title), .trend-card :global(.chart-empty) { fill: #536d78; font-family: "Courier New", monospace; font-size: 11px; }
 .trend-card :global(.chart-axis-title) { font-size: 9px; }
