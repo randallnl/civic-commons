@@ -135,10 +135,6 @@ const fundingData = [
             <span><strong>Formula cost</strong><small>Base adequacy plus differential aid</small></span>
           </label>
           <label class="choice-row">
-            <input type="radio" name="district-measure" value="differentialAid">
-            <span><strong>Differential aid</strong><small>Formula additions based on student needs</small></span>
-          </label>
-          <label class="choice-row">
             <input type="radio" name="district-measure" value="none">
             <span><strong>No district aid</strong><small>Show charter or EFA programs alone</small></span>
           </label>
@@ -146,6 +142,10 @@ const fundingData = [
 
         <fieldset>
           <legend><span>2</span> Other funding to include</legend>
+          <label class="choice-row">
+            <input type="checkbox" data-funding="differentialAid">
+            <span><strong>Differential aid</strong><small>Formula additions based on student needs</small></span>
+          </label>
           <label class="choice-row">
             <input type="checkbox" data-funding="swept">
             <span><strong>SWEPT</strong><small>Locally collected and retained property-tax revenue</small></span>
@@ -226,7 +226,7 @@ const fundingData = [
       </div>
     </div>
 
-    <details class="trend-table-details">
+    <details class="trend-table-details" open>
       <summary>See the calculation for every year</summary>
       <div class="table-wrap">
         <table class="explorer-table">
@@ -290,7 +290,7 @@ const fundingData = [
   </div>
   <aside class="definition-caution">
     <strong>Avoid double counting.</strong>
-    <p>Formula cost already includes differential aid, so the explorer lets you choose one district measure at a time.</p>
+    <p>Formula cost already includes differential aid. If you select both, the explorer adds both and shows that choice in the formula.</p>
   </aside>
 </section>
 <section class="programs-band" id="programs" aria-labelledby="programs-heading">
@@ -1123,11 +1123,11 @@ const fundingData = [
       const students = new Set(selectedStudentKeys());
       const automatic = autoMatch instanceof HTMLInputElement && autoMatch.checked;
       const matches = {
-        "all-programs": automatic && measure === "districtGrant" && !funding.has("swept") && funding.has("charterDirect") && funding.has("charterSped") && funding.has("efaPayments"),
+        "all-programs": automatic && measure === "districtGrant" && funding.size === 4 && !funding.has("swept") && !funding.has("differentialAid") && funding.has("charterDirect") && funding.has("charterSped") && funding.has("efaPayments"),
         "district-only": automatic && measure === "districtGrant" && funding.size === 1 && students.size === 1 && students.has("districtAdm"),
         "with-swept": automatic && measure === "districtGrant" && funding.size === 2 && funding.has("swept") && students.size === 1 && students.has("districtAdm"),
         "calculated-cost": automatic && measure === "calculatedCost" && funding.size === 1 && students.size === 1 && students.has("districtAdm"),
-        "differential-aid": automatic && measure === "differentialAid" && funding.size === 1 && students.size === 1 && students.has("districtAdm"),
+        "differential-aid": automatic && measure === "none" && funding.size === 1 && funding.has("differentialAid") && students.size === 1 && students.has("districtAdm"),
       };
       presetButtons.forEach((button) => {
         if (button instanceof HTMLButtonElement) button.setAttribute("aria-pressed", matches[button.dataset.preset] ? "true" : "false");
@@ -1153,10 +1153,11 @@ const fundingData = [
 
     function applyPreset(name) {
       setCheckbox("swept", name === "with-swept", "funding");
+      setCheckbox("differentialAid", name === "differential-aid", "funding");
       setCheckbox("charterDirect", name === "all-programs", "funding");
       setCheckbox("charterSped", name === "all-programs", "funding");
       setCheckbox("efaPayments", name === "all-programs", "funding");
-      setDistrictMeasure(name === "calculated-cost" ? "calculatedCost" : name === "differential-aid" ? "differentialAid" : "districtGrant");
+      setDistrictMeasure(name === "calculated-cost" ? "calculatedCost" : name === "differential-aid" ? "none" : "districtGrant");
       if (autoMatch instanceof HTMLInputElement) autoMatch.checked = true;
       render();
     }
@@ -1256,7 +1257,7 @@ h3 { margin-bottom: 8px; font-size: 1.18rem; line-height: 1.25; }
 .control-intro label { font-weight: 700; }
 .control-intro select { width: 100%; padding: 11px 38px 11px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: var(--white); color: var(--ink); font: inherit; font-weight: 700; }
 .control-intro small, .choice-row small, .auto-match small { color: var(--ink-2); font-size: .72rem; }
-.explorer-controls fieldset { margin: 0; padding: 19px 20px 20px; border: 0; border-bottom: 1px solid var(--line); }
+.explorer-controls fieldset { margin: 0; padding: 28px 20px 24px; border: 0; border-bottom: 1px solid var(--line); }
 .explorer-controls fieldset:last-child { border-bottom: 0; }
 .explorer-controls legend { width: 100%; padding: 0 0 11px; font-weight: 700; }
 .explorer-controls legend span { display: inline-grid; place-items: center; width: 25px; height: 25px; margin-right: 7px; border-radius: 50%; background: var(--ink); color: var(--white); font-family: "Courier New", monospace; font-size: .7rem; }
