@@ -42,18 +42,18 @@ const sourceFileCount = sourceDownloadGroups.reduce(
 );
 
 const fundingData = [
-  { year: 2016, calculatedCost: 758.455507, differentialAid: 144.621584, districtGrant: 570.120846, swept: 363.137923, charterDirect: 22.953740, charterSped: 0.366312, efaPayments: 0, districtAdm: 172363.77, charterAdm: 4035.97, efaMembership: 0 },
-  { year: 2017, calculatedCost: 745.216971, differentialAid: 140.536616, districtGrant: 564.007588, swept: 363.431572, charterDirect: 28.427990, charterSped: 0.681184, efaPayments: 0, districtAdm: 169793.46, charterAdm: 4462.07, efaMembership: 0 },
-  { year: 2018, calculatedCost: 750.668490, differentialAid: 141.062887, districtGrant: 561.750905, swept: 363.148601, charterDirect: 31.607906, charterSped: 0.716837, efaPayments: 0, districtAdm: 167655.54, charterAdm: 4803.95, efaMembership: 0 },
-  { year: 2019, calculatedCost: 747.686406, differentialAid: 143.751722, districtGrant: 552.624220, swept: 363.099673, charterDirect: 35.110841, charterSped: 0.849814, efaPayments: 0, districtAdm: 166095.9071, charterAdm: 5236.28, efaMembership: 0 },
-  { year: 2020, calculatedCost: 779.389670, differentialAid: 153.628130, districtGrant: 599.249581, swept: 363.246023, charterDirect: 38.126966, charterSped: 1.116616, efaPayments: 0, districtAdm: 168724.3621, charterAdm: 5546.5, efaMembership: 0 },
-  { year: 2021, calculatedCost: 769.142374, differentialAid: 148.721773, districtGrant: 649.510186, swept: 363.068238, charterDirect: 45.295477, charterSped: 1.234294, efaPayments: 0, districtAdm: 167284.2825, charterAdm: 6509.0212, efaMembership: 0 },
-  { year: 2022, calculatedCost: 788.588331, differentialAid: 154.328163, districtGrant: 624.823445, swept: 363.283230, charterDirect: 45.319324, charterSped: 1.426062, efaPayments: 9.004046, districtAdm: 167498.5789, charterAdm: 6266.7174, efaMembership: 1821 },
-  { year: 2023, calculatedCost: 753.439489, differentialAid: 149.858862, districtGrant: 707.519581, swept: 263.098498, charterDirect: 49.333428, charterSped: 1.569299, efaPayments: 15.533106, districtAdm: 159396.57, charterAdm: 6761.22, efaMembership: 3196.2 },
-  { year: 2024, calculatedCost: 810.282624, differentialAid: 164.955585, districtGrant: 701.480825, swept: 363.786975, charterDirect: 60.227733, charterSped: 1.770082, efaPayments: 24.467290, districtAdm: 157396.84, charterAdm: 6940, efaMembership: 4663.5 },
-  { year: 2025, calculatedCost: 817.869206, differentialAid: 169.971077, districtGrant: 700.016284, swept: 364.350537, charterDirect: 66.215276, charterSped: 2.061786, efaPayments: 30.059063, districtAdm: 154925.43, charterAdm: 7513.8678, efaMembership: 5794 },
-  { year: 2026, calculatedCost: 819.756298, differentialAid: 170.783457, districtGrant: 716.082728, swept: 363.516836, charterDirect: null, charterSped: null, efaPayments: 51.626095, districtAdm: 152139.6182, charterAdm: null, efaMembership: 10708 },
-  { year: 2027, calculatedCost: 817.829476, differentialAid: 169.886823, districtGrant: 698.127641, swept: 364.075715, charterDirect: null, charterSped: null, efaPayments: null, districtAdm: 148918.1, charterAdm: null, efaMembership: null },
+  { year: 2016, baseAdequacy: 613.833923, calculatedCost: 758.455507, differentialAid: 144.621584, districtGrant: 570.120846, swept: 363.137923, charterDirect: 22.953740, charterSped: 0.366312, efaPayments: 0, districtAdm: 172363.77, charterAdm: 4035.97, efaMembership: 0 },
+  { year: 2017, baseAdequacy: 604.680355, calculatedCost: 745.216971, differentialAid: 140.536616, districtGrant: 564.007588, swept: 363.431572, charterDirect: 28.427990, charterSped: 0.681184, efaPayments: 0, districtAdm: 169793.46, charterAdm: 4462.07, efaMembership: 0 },
+  { year: 2018, baseAdequacy: 609.605603, calculatedCost: 750.668490, differentialAid: 141.062887, districtGrant: 561.750905, swept: 363.148601, charterDirect: 31.607906, charterSped: 0.716837, efaPayments: 0, districtAdm: 167655.54, charterAdm: 4803.95, efaMembership: 0 },
+  { year: 2019, baseAdequacy: 603.934684, calculatedCost: 747.686406, differentialAid: 143.751722, districtGrant: 552.624220, swept: 363.099673, charterDirect: 35.110841, charterSped: 0.849814, efaPayments: 0, districtAdm: 166095.9071, charterAdm: 5236.28, efaMembership: 0 },
+  { year: 2020, baseAdequacy: 625.761540, calculatedCost: 779.389670, differentialAid: 153.628130, districtGrant: 599.249581, swept: 363.246023, charterDirect: 38.126966, charterSped: 1.116616, efaPayments: 0, districtAdm: 168724.3621, charterAdm: 5546.5, efaMembership: 0 },
+  { year: 2021, baseAdequacy: 620.420601, calculatedCost: 769.142374, differentialAid: 148.721773, districtGrant: 649.510186, swept: 363.068238, charterDirect: 45.295477, charterSped: 1.234294, efaPayments: 0, districtAdm: 167284.2825, charterAdm: 6509.0212, efaMembership: 0 },
+  { year: 2022, baseAdequacy: 634.260169, calculatedCost: 788.588331, differentialAid: 154.328163, districtGrant: 624.823445, swept: 363.283230, charterDirect: 45.319324, charterSped: 1.426062, efaPayments: 9.004046, districtAdm: 167498.5789, charterAdm: 6266.7174, efaMembership: 1821 },
+  { year: 2023, baseAdequacy: 603.580627, calculatedCost: 753.439489, differentialAid: 149.858862, districtGrant: 707.519581, swept: 263.098498, charterDirect: 49.333428, charterSped: 1.569299, efaPayments: 15.533106, districtAdm: 159396.57, charterAdm: 6761.22, efaMembership: 3196.2 },
+  { year: 2024, baseAdequacy: 645.327039, calculatedCost: 810.282624, differentialAid: 164.955585, districtGrant: 701.480825, swept: 363.786975, charterDirect: 60.227733, charterSped: 1.770082, efaPayments: 24.467290, districtAdm: 157396.84, charterAdm: 6940, efaMembership: 4663.5 },
+  { year: 2025, baseAdequacy: 647.898129, calculatedCost: 817.869206, differentialAid: 169.971077, districtGrant: 700.016284, swept: 364.350537, charterDirect: 66.215276, charterSped: 2.061786, efaPayments: 30.059063, districtAdm: 154925.43, charterAdm: 7513.8678, efaMembership: 5794 },
+  { year: 2026, baseAdequacy: 648.972841, calculatedCost: 819.756298, differentialAid: 170.783457, districtGrant: 716.082728, swept: 363.516836, charterDirect: null, charterSped: null, efaPayments: 51.626095, districtAdm: 152139.6182, charterAdm: null, efaMembership: 10708 },
+  { year: 2027, baseAdequacy: 647.942653, calculatedCost: 817.829476, differentialAid: 169.886823, districtGrant: 698.127641, swept: 364.075715, charterDirect: null, charterSped: null, efaPayments: null, districtAdm: 148918.1, charterAdm: null, efaMembership: null },
 ];
 ---
 
@@ -111,7 +111,6 @@ const fundingData = [
       <button type="button" data-preset="district-only" aria-pressed="false">District grant</button>
       <button type="button" data-preset="with-swept" aria-pressed="false">District grant + SWEPT</button>
       <button type="button" data-preset="calculated-cost" aria-pressed="false">Formula cost</button>
-      <button type="button" data-preset="differential-aid" aria-pressed="false">Differential aid</button>
     </div>
 
     <div class="explorer-layout">
@@ -130,6 +129,10 @@ const fundingData = [
             <input type="radio" name="district-measure" value="districtGrant" checked>
             <span><strong>District grant paid</strong><small>Actual grant, excluding SWEPT</small></span>
           </label>
+          <label class="choice-row nested-choice" data-district-addons-row>
+            <input type="checkbox" data-district-addons checked>
+            <span><strong>Differential aid + extraordinary-needs + hold-harmless grants</strong><small>Turn off to use base adequacy aid</small></span>
+          </label>
           <label class="choice-row">
             <input type="radio" name="district-measure" value="calculatedCost">
             <span><strong>Formula cost</strong><small>Base adequacy plus differential aid</small></span>
@@ -142,10 +145,6 @@ const fundingData = [
 
         <fieldset>
           <legend><span>2</span> Other funding to include</legend>
-          <label class="choice-row">
-            <input type="checkbox" data-funding="differentialAid">
-            <span><strong>Differential aid</strong><small>Formula additions based on student needs</small></span>
-          </label>
           <label class="choice-row">
             <input type="checkbox" data-funding="swept">
             <span><strong>SWEPT</strong><small>Locally collected and retained property-tax revenue</small></span>
@@ -255,7 +254,7 @@ const fundingData = [
     <article id="glossary-differential-aid">
       <span>Student-need additions</span>
       <h3>Differential aid</h3>
-      <p>Added formula amounts for student needs, including income eligibility, special education, and English-learner status. The explorer can show this total by itself.</p>
+      <p>Added formula amounts for student needs, including income eligibility, special education, and English-learner status. They are included in formula cost and in the district-grant add-on toggle.</p>
     </article>
     <article id="glossary-calculated-cost">
       <span>District formula</span>
@@ -289,8 +288,8 @@ const fundingData = [
     </article>
   </div>
   <aside class="definition-caution">
-    <strong>Avoid double counting.</strong>
-    <p>Formula cost already includes differential aid. If you select both, the explorer adds both and shows that choice in the formula.</p>
+    <strong>How the district-grant toggle works.</strong>
+    <p>Checked uses the final district grant paid. Unchecked uses base adequacy aid. Formula cost remains a separate measure and already includes differential aid.</p>
   </aside>
 </section>
 <section class="programs-band" id="programs" aria-labelledby="programs-heading">
@@ -766,7 +765,7 @@ const fundingData = [
 <article>
 <span>1</span>
 <h3>Choose the measure</h3>
-<p>Choose formula cost, differential aid, or the district grant. Add SWEPT only if you want it counted.</p>
+<p>Choose formula cost or the district grant. Turn off the district-grant add-on to use base adequacy aid. Add SWEPT only if you want it counted.</p>
 </article>
 <article>
 <span>2</span>
@@ -820,11 +819,13 @@ const fundingData = [
     const studentInputs = Array.from(explorer.querySelectorAll("[data-student]"));
     const fundingInputs = Array.from(explorer.querySelectorAll("[data-funding]"));
     const districtInputs = Array.from(explorer.querySelectorAll('input[name="district-measure"]'));
+    const districtAddons = explorer.querySelector("[data-district-addons]");
+    const districtAddonsRow = explorer.querySelector("[data-district-addons-row]");
     const presetButtons = Array.from(explorer.querySelectorAll("[data-preset]"));
 
     const fundingLabels = {
+      baseAdequacy: "Base adequacy aid",
       calculatedCost: "Formula cost",
-      differentialAid: "Differential aid",
       districtGrant: "District grant paid",
       swept: "SWEPT",
       charterDirect: "Charter direct aid",
@@ -837,8 +838,8 @@ const fundingData = [
       efaMembership: "EFA membership",
     };
     const componentColors = {
+      baseAdequacy: "#2563eb",
       calculatedCost: "#49a78e",
-      differentialAid: "#8b5cf6",
       districtGrant: "#49a78e",
       swept: "#c6952e",
       charterDirect: "#7aa5bd",
@@ -848,9 +849,17 @@ const fundingData = [
     const numberFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
     const moneyFormat = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
-    function selectedDistrictMeasure() {
+    function selectedDistrictRadio() {
       const selected = districtInputs.find((input) => input instanceof HTMLInputElement && input.checked);
       return selected instanceof HTMLInputElement ? selected.value : "none";
+    }
+
+    function selectedDistrictMeasure() {
+      const selected = selectedDistrictRadio();
+      if (selected === "districtGrant" && districtAddons instanceof HTMLInputElement && !districtAddons.checked) {
+        return "baseAdequacy";
+      }
+      return selected;
     }
 
     function selectedFundingKeys() {
@@ -880,10 +889,16 @@ const fundingData = [
       });
     }
 
+    function updateDistrictAddonControl() {
+      const enabled = selectedDistrictRadio() === "districtGrant";
+      if (districtAddons instanceof HTMLInputElement) districtAddons.disabled = !enabled;
+      if (districtAddonsRow instanceof HTMLElement) districtAddonsRow.classList.toggle("disabled-choice", !enabled);
+    }
+
     function syncStudentPopulation() {
       if (!(autoMatch instanceof HTMLInputElement) || !autoMatch.checked) return;
       const keys = selectedFundingKeys();
-      setCheckbox("districtAdm", keys.includes("districtGrant") || keys.includes("calculatedCost") || keys.includes("differentialAid") || keys.includes("swept"), "student");
+      setCheckbox("districtAdm", keys.includes("districtGrant") || keys.includes("baseAdequacy") || keys.includes("calculatedCost") || keys.includes("swept"), "student");
       setCheckbox("charterAdm", keys.includes("charterDirect") || keys.includes("charterSped"), "student");
       setCheckbox("efaMembership", keys.includes("efaPayments"), "student");
     }
@@ -1123,11 +1138,10 @@ const fundingData = [
       const students = new Set(selectedStudentKeys());
       const automatic = autoMatch instanceof HTMLInputElement && autoMatch.checked;
       const matches = {
-        "all-programs": automatic && measure === "districtGrant" && funding.size === 4 && !funding.has("swept") && !funding.has("differentialAid") && funding.has("charterDirect") && funding.has("charterSped") && funding.has("efaPayments"),
+        "all-programs": automatic && measure === "districtGrant" && funding.size === 4 && !funding.has("swept") && funding.has("charterDirect") && funding.has("charterSped") && funding.has("efaPayments"),
         "district-only": automatic && measure === "districtGrant" && funding.size === 1 && students.size === 1 && students.has("districtAdm"),
         "with-swept": automatic && measure === "districtGrant" && funding.size === 2 && funding.has("swept") && students.size === 1 && students.has("districtAdm"),
         "calculated-cost": automatic && measure === "calculatedCost" && funding.size === 1 && students.size === 1 && students.has("districtAdm"),
-        "differential-aid": automatic && measure === "none" && funding.size === 1 && funding.has("differentialAid") && students.size === 1 && students.has("districtAdm"),
       };
       presetButtons.forEach((button) => {
         if (button instanceof HTMLButtonElement) button.setAttribute("aria-pressed", matches[button.dataset.preset] ? "true" : "false");
@@ -1136,6 +1150,7 @@ const fundingData = [
 
     function render() {
       if (!(yearSelect instanceof HTMLSelectElement)) return;
+      updateDistrictAddonControl();
       syncStudentPopulation();
       updateStudentControls();
       const selectedYear = Number(yearSelect.value);
@@ -1153,16 +1168,17 @@ const fundingData = [
 
     function applyPreset(name) {
       setCheckbox("swept", name === "with-swept", "funding");
-      setCheckbox("differentialAid", name === "differential-aid", "funding");
       setCheckbox("charterDirect", name === "all-programs", "funding");
       setCheckbox("charterSped", name === "all-programs", "funding");
       setCheckbox("efaPayments", name === "all-programs", "funding");
-      setDistrictMeasure(name === "calculated-cost" ? "calculatedCost" : name === "differential-aid" ? "none" : "districtGrant");
+      setDistrictMeasure(name === "calculated-cost" ? "calculatedCost" : "districtGrant");
+      if (districtAddons instanceof HTMLInputElement) districtAddons.checked = true;
       if (autoMatch instanceof HTMLInputElement) autoMatch.checked = true;
       render();
     }
 
     [...fundingInputs, ...districtInputs].forEach((input) => input.addEventListener("change", render));
+    if (districtAddons) districtAddons.addEventListener("change", render);
     if (yearSelect) yearSelect.addEventListener("change", render);
     if (autoMatch) autoMatch.addEventListener("change", render);
     studentInputs.forEach((input) => input.addEventListener("change", render));
@@ -1264,6 +1280,8 @@ h3 { margin-bottom: 8px; font-size: 1.18rem; line-height: 1.25; }
 .choice-row, .auto-match { display: grid; grid-template-columns: 18px minmax(0,1fr); gap: 10px; align-items: start; padding: 8px 0; cursor: pointer; }
 .choice-row input, .auto-match input, .student-choices input { width: 16px; height: 16px; margin: 3px 0 0; accent-color: var(--green); }
 .choice-row strong, .choice-row small, .auto-match strong, .auto-match small { display: block; }
+.nested-choice { margin: 3px 0 10px 28px; padding: 12px 14px; border-left: 4px solid var(--red); border-radius: 0 8px 8px 0; background: var(--red-soft); }
+.nested-choice.disabled-choice { opacity: .5; cursor: default; }
 .student-choices { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 8px 0 0 28px; }
 .student-choices label { display: flex; gap: 8px; align-items: center; font-size: .8rem; }
 .student-choices input:disabled { opacity: .72; }
