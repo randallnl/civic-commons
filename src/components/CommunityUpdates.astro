@@ -14,6 +14,7 @@ const {
 
 const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
 const hasInstagramEmbeds = updates.some((update) => instagramPreview(update.linkUrl));
+const isReport = entityType === "report";
 
 function linkHost(value = "") {
   try {
@@ -101,13 +102,12 @@ function escapeRegExp(value = "") {
 
 <section class="panel community-updates-panel">
   <div class="section-heading">
-    <p class="eyebrow">Share Your Thoughts</p>
-    <h2>Community context</h2>
+    <p class="eyebrow">{isReport ? "Community updates" : "Share Your Thoughts"}</p>
+    <h2>{isReport ? "Help improve this public analysis" : "Community context"}</h2>
     <p>
-      Share a local note, article, social post, image, or correction connected
-      to this profile. These updates help neighbors understand how public
-      decisions affect people and communities. Submissions are reviewed before
-      they appear publicly.
+      {isReport
+        ? "Share a source, correction, alternate calculation, or local context connected to this report. Submissions are reviewed before they appear publicly."
+        : "Share a local note, article, social post, image, or correction connected to this profile. These updates help neighbors understand how public decisions affect people and communities. Submissions are reviewed before they appear publicly."}
     </p>
   </div>
 

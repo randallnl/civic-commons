@@ -28,10 +28,10 @@ export async function POST({ request }) {
       .filter((file) => file && typeof file !== "string" && file.size);
     redirectTo = safeRedirectPath(form.get("redirectTo")) || pageUrl || "/";
 
-    if (!["candidate", "representative", "bill"].includes(entityType)) {
-      throw new Error("Choose a candidate, legislator, or bill page.");
+    if (!["candidate", "representative", "bill", "report"].includes(entityType)) {
+      throw new Error("Choose a candidate, legislator, bill, or report page.");
     }
-    if (!entityKey) throw new Error("Profile identifier is required.");
+    if (!entityKey) throw new Error("Page identifier is required.");
     if (!comment && !linkUrl && !files.length) {
       throw new Error("Add a comment, link, or photo.");
     }
