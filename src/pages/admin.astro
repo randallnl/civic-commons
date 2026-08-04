@@ -569,7 +569,9 @@ function reviewDate(value = "") {
                       class="moderation-edit-form"
                       action="/api/admin/community-updates"
                       method="post"
+                      enctype="multipart/form-data"
                       hx-post="/api/admin/community-updates"
+                      hx-encoding="multipart/form-data"
                       hx-target="find .moderation-inline-status"
                       hx-swap="innerHTML"
                       x-data="{ busy: false, lastAction: '' }"
@@ -585,6 +587,11 @@ function reviewDate(value = "") {
                       <label>
                         Edit update text
                         <textarea name="comment" rows="4">{cleanText(update.comment)}</textarea>
+                      </label>
+                      <label class="moderation-file-field">
+                        Add photos
+                        <input name="photos" type="file" accept="image/*" multiple />
+                        <small>Optional. Uploaded photos are attached when you save or approve.</small>
                       </label>
                       <div class="moderation-actions">
                         <button type="submit" name="action" value="save" @click="lastAction = 'save'" :disabled="busy">Save edits</button>
@@ -2085,6 +2092,25 @@ function reviewDate(value = "") {
 
   .moderation-edit-form textarea {
     min-height: 112px;
+  }
+
+  .moderation-file-field {
+    background: #f8fafc;
+    border: 1px dashed #93c5fd;
+    border-radius: 10px;
+    padding: 10px;
+  }
+
+  .moderation-file-field input {
+    margin-top: 6px;
+  }
+
+  .moderation-file-field small {
+    color: #64748b;
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 800;
+    margin-top: 4px;
   }
 
   .moderation-inline-status {

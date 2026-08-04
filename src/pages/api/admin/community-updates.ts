@@ -1,9 +1,12 @@
 export const prerender = false;
 
+import { env } from "cloudflare:workers";
+import { adminR2Bucket } from "../../../lib/adminAuth";
 import { requireAdmin } from "../../../lib/adminAuth";
 import {
   ensureCommunityUpdatesTable,
   communityUpdatesDb,
+  saveCommunityUpdatePhotos,
   saveCommunityUpdateMentions,
 } from "../../../lib/communityUpdates";
 import { cleanText } from "../../../lib/text";
@@ -20,6 +23,10 @@ export async function POST({ request }) {
     const action = String(form.get("action") || "").trim();
     const comment = cleanText(form.get("comment") || "");
     const displayName = cleanText(form.get("displayName") || "") || "Community member";
+    const files = form
+      .getAll("photos")
+      .concat(form.getAll("photo"))
+      .filter((file) => file && typeof file !== "string" && file.size);
     redirectTo = safeRedirectPath(form.get("redirectTo")) || "/admin";
 
     if (!id) throw new Error("Community update id is required.");
@@ -32,14 +39,34 @@ export async function POST({ request }) {
     await ensureCommunityUpdatesTable(db);
 
     if (action === "save" || action === "approve") {
+      const existing = await db
+        .prepare("SELECT entity_type, entity_key, photo_url FROM community_updates WHERE id = ?")
+        .bind(id)
+        .first();
+      if (!existing) throw new Error("No matching community update was found.");
+
+      const photoUrls = files.length
+        ? await Promise.all(
+            files.slice(0, 8).map((file, index) =>
+              uploadCommunityPhoto(
+                file,
+                existing.entity_type || "community-update",
+                existing.entity_key || String(id),
+                index,
+              ),
+            ),
+          )
+        : [];
+
       await db
         .prepare(
           `UPDATE community_updates
            SET display_name = ?,
-               comment = ?
+               comment = ?,
+               photo_url = COALESCE(NULLIF(photo_url, ''), ?)
            WHERE id = ?`,
         )
-        .bind(displayName, comment, id)
+        .bind(displayName, comment, photoUrls[0] || "", id)
         .run();
 
       await db
@@ -49,6 +76,10 @@ export async function POST({ request }) {
 
       if (comment) {
         await saveCommunityUpdateMentions(id, comment, db);
+      }
+
+      if (photoUrls.length) {
+        await saveCommunityUpdatePhotos(id, photoUrls, db);
       }
     }
 
@@ -86,6 +117,70 @@ function safeRedirectPath(value) {
   const path = String(value || "").trim();
   if (!path.startsWith("/") || path.startsWith("//")) return "";
   return path;
+}
+
+async function uploadCommunityPhoto(file, entityType, entityKey, index = 0) {
+  const bucket = adminR2Bucket();
+  if (!bucket) throw new Error("Photo uploads are temporarily unavailable.");
+
+  const key = [
+    "community-updates",
+    String(entityType || "community-update"),
+    slugify(entityKey),
+    `${Date.now()}-${index + 1}-${sanitizeFilename(file.name || "photo.jpg")}`,
+  ].join("/");
+
+  await bucket.put(key, await file.arrayBuffer(), {
+    httpMetadata: {
+      contentType: file.type || contentTypeFor(key),
+      cacheControl: "public, max-age=86400",
+    },
+  });
+
+  return publicPhotoUrl(key);
+}
+
+function publicPhotoUrl(key = "") {
+  const base =
+    stringBinding(env.PHOTO_PUBLIC_BASE) ||
+    stringBinding(env.PHOTOS_PUBLIC_BASE) ||
+    "https://photos.nhdeservesbetter.com";
+  return `${base.replace(/\/+$/, "")}/${encodeAssetKey(key)}`;
+}
+
+function stringBinding(binding) {
+  if (!binding || typeof binding !== "string") return "";
+  return binding.trim();
+}
+
+function encodeAssetKey(key = "") {
+  return key.split("/").map((part) => encodeURIComponent(part)).join("/");
+}
+
+function sanitizeFilename(value = "") {
+  return String(value)
+    .trim()
+    .replace(/[/\\]/g, "-")
+    .replace(/[^a-zA-Z0-9._ -]+/g, "")
+    .replace(/\s+/g, " ")
+    .slice(0, 120);
+}
+
+function contentTypeFor(key = "") {
+  const extension = key.split(".").pop()?.toLowerCase();
+  if (extension === "png") return "image/png";
+  if (extension === "webp") return "image/webp";
+  if (extension === "gif") return "image/gif";
+  return "image/jpeg";
+}
+
+function slugify(value = "") {
+  return String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/['']/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function redirectWithMessage(request, path, message) {
