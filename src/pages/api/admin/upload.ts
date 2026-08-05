@@ -98,35 +98,96 @@ async function updateCandidatePhoto(entityKey, publicUrl) {
   if (!db) throw new Error("D1 database binding is not configured.");
 
   await ensureUnifiedPeopleTables(db);
+  const resolved = await resolveCandidatePhotoTarget(db, entityKey);
+  const identifiers = [...new Set([
+    String(entityKey),
+    resolved.filerEntityNumber,
+    resolved.personSlug,
+    resolved.candidateSlug,
+  ].filter(Boolean))];
 
-  const unifiedResult = await db
-    .prepare(
-      `UPDATE d1_people
-       SET photo_url = ?,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE filer_entity_number = ?
-          OR slug = ?
-          OR CAST(id AS TEXT) = ?`,
-    )
-    .bind(publicUrl, String(entityKey), String(entityKey), String(entityKey))
-    .run();
+  let unifiedChanges = 0;
+  if (resolved.personId) {
+    const unifiedResult = await db
+      .prepare(
+        `UPDATE d1_people
+         SET photo_url = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+      )
+      .bind(publicUrl, resolved.personId)
+      .run();
+    unifiedChanges = unifiedResult.meta?.changes ?? unifiedResult.changes ?? 0;
+  } else {
+    const unifiedResult = await db
+      .prepare(
+        `UPDATE d1_people
+         SET photo_url = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE filer_entity_number = ?
+            OR slug = ?
+            OR CAST(id AS TEXT) = ?`,
+      )
+      .bind(publicUrl, String(entityKey), String(entityKey), String(entityKey))
+      .run();
+    unifiedChanges = unifiedResult.meta?.changes ?? unifiedResult.changes ?? 0;
+  }
 
-  const unifiedChanges = unifiedResult.meta?.changes ?? unifiedResult.changes ?? 0;
+  let legacyChanges = 0;
+  for (const identifier of identifiers) {
+    const legacyResult = await db
+      .prepare(
+        `UPDATE candidates
+         SET photo_url = ?
+         WHERE filer_entity_number = ? OR slug = ?`,
+      )
+      .bind(publicUrl, identifier, identifier)
+      .run();
+    legacyChanges += legacyResult.meta?.changes ?? legacyResult.changes ?? 0;
+  }
 
-  const legacyResult = await db
-    .prepare(
-      `UPDATE candidates
-       SET photo_url = ?
-       WHERE filer_entity_number = ? OR slug = ?`,
-    )
-    .bind(publicUrl, String(entityKey), String(entityKey))
-    .run();
-
-  const legacyChanges = legacyResult.meta?.changes ?? legacyResult.changes ?? 0;
   const changes = unifiedChanges + legacyChanges;
   if (!changes) throw new Error("No matching candidate row was updated.");
-  if (legacyChanges) await upsertPersonFromCandidate(String(entityKey), db);
+  if (resolved.filerEntityNumber) await upsertPersonFromCandidate(resolved.filerEntityNumber, db);
   return "candidate photo_url";
+}
+
+async function resolveCandidatePhotoTarget(db, entityKey) {
+  const key = String(entityKey || "").trim();
+  const numericKey = numericId(key);
+
+  const person = await db
+    .prepare(
+      `SELECT id, filer_entity_number, slug
+       FROM d1_people
+       WHERE filer_entity_number = ?
+          OR slug = ?
+          OR CAST(id AS TEXT) = ?
+          OR gc_personid = ?
+          OR employeeno = ?
+       LIMIT 1`,
+    )
+    .bind(key, key, key, numericKey, numericKey)
+    .first();
+
+  const candidate = await db
+    .prepare(
+      `SELECT filer_entity_number, slug
+       FROM candidates
+       WHERE filer_entity_number = ?
+          OR slug = ?
+          OR (? != '' AND filer_entity_number = ?)
+       LIMIT 1`,
+    )
+    .bind(key, key, person?.filer_entity_number || "", person?.filer_entity_number || "")
+    .first();
+
+  return {
+    personId: person?.id || null,
+    personSlug: person?.slug || "",
+    filerEntityNumber: person?.filer_entity_number || candidate?.filer_entity_number || "",
+    candidateSlug: candidate?.slug || "",
+  };
 }
 
 async function updateRepresentativePhoto(entityKey, key, publicUrl) {
