@@ -243,6 +243,14 @@ export function reviewerRoleLabel(role = "") {
   return "Volunteer Reviewer";
 }
 
+export function reviewerStatusLabel(status = "") {
+  const value = String(status || "pending").trim().toLowerCase();
+  if (value === "approved") return "Approved";
+  if (value === "disabled") return "Disabled";
+  if (value === "rejected") return "Rejected";
+  return "Pending";
+}
+
 export function normalizeEmail(value = "") {
   return String(value || "").trim().toLowerCase();
 }

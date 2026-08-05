@@ -33,6 +33,7 @@ import {
   getVolunteerReviewers,
   reviewerCounts,
   reviewerRoleLabel,
+  reviewerStatusLabel,
   REVIEWER_ROLES,
   REVIEWER_STATUSES,
 } from "../lib/volunteerReviewers";
@@ -492,7 +493,7 @@ function workflowClass(value = "") {
                   Status
                   <select name="status">
                     {REVIEWER_STATUSES.map((status) => (
-                      <option value={status} selected={status === "approved"}>{workflowLabel(status)}</option>
+                      <option value={status} selected={status === "approved"}>{reviewerStatusLabel(status)}</option>
                     ))}
                   </select>
                 </label>
@@ -516,7 +517,7 @@ function workflowClass(value = "") {
                       <div class="reviewer-pills">
                         <span>{reviewerRoleLabel(reviewer.role)}</span>
                         <span class:list={["workflow-status", workflowClass(reviewer.status)]}>
-                          {workflowLabel(reviewer.status)}
+                          {reviewerStatusLabel(reviewer.status)}
                         </span>
                       </div>
                     </div>
@@ -544,7 +545,7 @@ function workflowClass(value = "") {
                           Status
                           <select name="status">
                             {REVIEWER_STATUSES.map((status) => (
-                              <option value={status} selected={status === reviewer.status}>{workflowLabel(status)}</option>
+                              <option value={status} selected={status === reviewer.status}>{reviewerStatusLabel(status)}</option>
                             ))}
                           </select>
                         </label>
