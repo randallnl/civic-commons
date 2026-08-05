@@ -28,8 +28,8 @@ const sent = Astro.url.searchParams.get("sent") === "1";
 const error = Astro.url.searchParams.get("error") || "";
 const message = Astro.url.searchParams.get("message") || "";
 const imageUrl = Astro.url.searchParams.get("imageUrl") || "";
-const gapType = Astro.url.searchParams.get("gapType") || "all";
-const gapMissing = Astro.url.searchParams.get("gapMissing") || "any";
+const gapType = Astro.url.searchParams.get("gapType") || "candidate";
+const gapMissing = Astro.url.searchParams.get("gapMissing") || "photoWebsite";
 const gapOffice = Astro.url.searchParams.get("gapOffice") || "";
 const gapProfile = Astro.url.searchParams.get("gapProfile") || "";
 const gapReview = Astro.url.searchParams.get("gapReview") || "needs-review";
@@ -420,10 +420,8 @@ function reviewDate(value = "") {
               <p class="eyebrow">Profile Cleanup</p>
               <h2>Missing profile info</h2>
               <p>
-                Find candidates and legislators missing photos, emails, or
-                websites. Legislator websites are not currently stored in the
-                source D1 legislator table, so the website filter applies to
-                candidates.
+                Defaults to candidates missing photos or websites. Email-only
+                gaps are still available as an explicit filter when needed.
               </p>
             </div>
 
@@ -441,6 +439,7 @@ function reviewDate(value = "") {
                 Missing field
                 <select name="gapMissing">
                   <option value="any" selected={gapMissing === "any"}>Any missing field</option>
+                  <option value="photoWebsite" selected={gapMissing === "photoWebsite"}>Photo or website</option>
                   <option value="photo" selected={gapMissing === "photo"}>Photo</option>
                   <option value="email" selected={gapMissing === "email"}>Email</option>
                   <option value="website" selected={gapMissing === "website"}>Website</option>

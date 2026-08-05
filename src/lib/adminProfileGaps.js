@@ -33,7 +33,7 @@ export async function getProfileGaps({
   const normalizedType = ["all", "representative", "candidate"].includes(profileType)
     ? profileType
     : "all";
-  const normalizedMissing = ["any", "photo", "email", "website"].includes(missing)
+  const normalizedMissing = ["any", "photoWebsite", "photo", "email", "website"].includes(missing)
     ? missing
     : "any";
   const normalizedOffice = normalizeOfficeFilter(office);
@@ -84,6 +84,7 @@ export async function getProfileGaps({
 
 async function getRepresentativeGaps(db, { missing, office, limit }) {
   if (missing === "website") return [];
+  if (missing === "photoWebsite") missing = "photo";
   const bodyFilter = representativeBodyForOffice(office);
   if (office && !bodyFilter) return [];
 
@@ -203,6 +204,13 @@ async function getCandidateGaps(db, { missing, office, limit }) {
        WHERE (? = '' OR LOWER(TRIM(office)) = ?)
        AND (
          ? = 'any'
+         OR (? = 'photoWebsite' AND (
+           photo_url IS NULL
+           OR TRIM(photo_url) = ''
+           OR TRIM(photo_url) IN (?, ?)
+           OR candidate_website IS NULL
+           OR TRIM(candidate_website) = ''
+         ))
          OR (? = 'photo' AND (
            photo_url IS NULL
            OR TRIM(photo_url) = ''
@@ -227,6 +235,9 @@ async function getCandidateGaps(db, { missing, office, limit }) {
       office,
       office,
       missing,
+      missing,
+      PHOTO_BASE_URLS[0],
+      PHOTO_BASE_URLS[1],
       missing,
       PHOTO_BASE_URLS[0],
       PHOTO_BASE_URLS[1],
