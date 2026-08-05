@@ -479,8 +479,11 @@ function cleanDate(value = "") {
     color: #1f2933;
     display: grid;
     gap: 10px;
+    justify-self: start;
+    max-width: min(520px, 100%);
     padding: 12px;
     text-decoration: none;
+    width: 100%;
   }
 
   .community-link-preview strong,
@@ -505,8 +508,10 @@ function cleanDate(value = "") {
     border-top: 1px solid #dbeafe;
     display: grid;
     gap: 8px;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 220px));
+    justify-content: start;
     margin-top: 4px;
+    max-width: 700px;
     padding-top: 12px;
   }
 
@@ -519,6 +524,7 @@ function cleanDate(value = "") {
     display: grid;
     gap: 10px;
     grid-template-columns: 42px minmax(0, 1fr);
+    max-width: 220px;
     min-width: 0;
     padding: 8px;
     text-decoration: none;
