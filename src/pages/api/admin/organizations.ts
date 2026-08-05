@@ -1,7 +1,12 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
-import { canUseSourceDataTools, forbiddenAdminResponse, requireAdmin } from "../../../lib/adminAuth";
+import {
+  canEditOrganizations,
+  canUseSourceDataTools,
+  forbiddenAdminResponse,
+  requireAdmin,
+} from "../../../lib/adminAuth";
 import {
   importOrganizationsFromSheets,
   saveOrganizationComment,
@@ -11,7 +16,6 @@ import {
 export async function POST({ request }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
-  if (!canUseSourceDataTools(auth.session)) return forbiddenAdminResponse();
 
   let redirectTo = "/admin";
 
@@ -21,6 +25,7 @@ export async function POST({ request }) {
     redirectTo = safeRedirectPath(form.get("redirectTo")) || "/admin";
 
     if (action === "import-sheets") {
+      if (!canUseSourceDataTools(auth.session)) return forbiddenAdminResponse();
       const result = await importOrganizationsFromSheets();
       return redirectWithMessage(
         request,
@@ -30,6 +35,7 @@ export async function POST({ request }) {
     }
 
     if (action === "save-comment") {
+      if (!canEditOrganizations(auth.session)) return forbiddenAdminResponse();
       const organizationSlug = String(form.get("organizationSlug") || "").trim();
       const billSelections = selectedBillsFromForm(form);
       const photoUrl = await uploadCommentPhoto({
@@ -69,6 +75,7 @@ export async function POST({ request }) {
     if (action !== "save") {
       throw new Error("Choose a valid organization admin action.");
     }
+    if (!canEditOrganizations(auth.session)) return forbiddenAdminResponse();
 
     const organizationSlug = String(form.get("slug") || form.get("name") || "").trim();
     const uploadedLogoUrl = await uploadOrganizationLogo({

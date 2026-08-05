@@ -1,7 +1,7 @@
 export const prerender = false;
 
 import {
-  canUseSourceDataTools,
+  canManageReviewers,
   forbiddenAdminResponse,
   requireAdmin,
 } from "../../../lib/adminAuth";
@@ -10,7 +10,7 @@ import { updateVolunteerReviewer } from "../../../lib/volunteerReviewers";
 export async function POST({ request }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
-  if (!canUseSourceDataTools(auth.session)) return forbiddenAdminResponse();
+  if (!canManageReviewers(auth.session)) return forbiddenAdminResponse();
 
   let redirectTo = "/admin#reviewer-access";
   try {

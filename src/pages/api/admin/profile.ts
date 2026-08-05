@@ -2,8 +2,8 @@ export const prerender = false;
 
 import {
   adminDb,
+  canEditProfiles,
   canReviewProfiles,
-  canUseSourceDataTools,
   forbiddenAdminResponse,
   requireAdmin,
 } from "../../../lib/adminAuth";
@@ -101,7 +101,7 @@ export async function POST({ request }) {
       );
     }
 
-    if (!canUseSourceDataTools(auth.session)) return forbiddenAdminResponse();
+    if (!canEditProfiles(auth.session)) return forbiddenAdminResponse();
 
     const data = {};
     for (const field of fields) {

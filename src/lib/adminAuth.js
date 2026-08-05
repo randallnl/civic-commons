@@ -225,7 +225,23 @@ export async function adminRoleForEmail(email = "") {
 }
 
 export function canUseSourceDataTools(session = {}) {
-  return ["super_admin", "org_editor"].includes(session.role);
+  return ["super_admin"].includes(session.role);
+}
+
+export function canManageReviewers(session = {}) {
+  return ["super_admin"].includes(session.role);
+}
+
+export function canEditOrganizations(session = {}) {
+  return ["super_admin", "org_editor", "volunteer"].includes(session.role);
+}
+
+export function canEditProfiles(session = {}) {
+  return ["super_admin", "profile_reviewer", "volunteer"].includes(session.role);
+}
+
+export function canUploadAssets(session = {}) {
+  return ["super_admin", "profile_reviewer", "org_editor", "volunteer"].includes(session.role);
 }
 
 export function canModerateContent(session = {}) {
@@ -252,6 +268,10 @@ async function withAdminRole(session = {}) {
     ...session,
     role,
     canUseSourceDataTools: canUseSourceDataTools({ role }),
+    canManageReviewers: canManageReviewers({ role }),
+    canEditOrganizations: canEditOrganizations({ role }),
+    canEditProfiles: canEditProfiles({ role }),
+    canUploadAssets: canUploadAssets({ role }),
     canModerateContent: canModerateContent({ role }),
     canReviewProfiles: canReviewProfiles({ role }),
   };

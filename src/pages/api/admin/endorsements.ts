@@ -2,8 +2,8 @@ export const prerender = false;
 
 import { env } from "cloudflare:workers";
 import {
+  canEditOrganizations,
   canModerateContent,
-  canUseSourceDataTools,
   forbiddenAdminResponse,
   requireAdmin,
 } from "../../../lib/adminAuth";
@@ -36,7 +36,7 @@ export async function POST({ request }) {
     if (action !== "save") {
       throw new Error("Choose a valid endorsement admin action.");
     }
-    if (!canUseSourceDataTools(auth.session)) return forbiddenAdminResponse();
+    if (!canEditOrganizations(auth.session)) return forbiddenAdminResponse();
 
     const photoUrl = await uploadEndorsementPhoto({
       file: form.get("photo"),

@@ -4,7 +4,7 @@ import { env } from "cloudflare:workers";
 import {
   adminDb,
   adminR2Bucket,
-  canUseSourceDataTools,
+  canUploadAssets,
   forbiddenAdminResponse,
   requireAdmin,
 } from "../../../lib/adminAuth";
@@ -21,7 +21,7 @@ import {
 export async function POST({ request }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
-  if (!canUseSourceDataTools(auth.session)) return forbiddenAdminResponse();
+  if (!canUploadAssets(auth.session)) return forbiddenAdminResponse();
 
   let redirectTo = "/admin";
   try {
