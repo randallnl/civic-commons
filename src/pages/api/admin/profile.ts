@@ -57,6 +57,7 @@ export async function POST({ request }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
 
+  const wantsHtml = request.headers.get("HX-Request") === "true";
   let redirectTo = "/admin";
   try {
     const form = await request.formData();
@@ -81,6 +82,12 @@ export async function POST({ request }) {
           String(form.get("reviewNote") || "").trim() ||
           "Reviewed for missing photo, website, or email; no update found.",
       });
+      if (wantsHtml) {
+        return htmlMessage(
+          "Profile marked reviewed. It will be hidden from the default cleanup queue for 30 days.",
+          "success",
+        );
+      }
       return redirectWithMessage(
         redirectTo,
         "Profile marked reviewed. It will be hidden from the default cleanup queue for 30 days.",
@@ -95,12 +102,14 @@ export async function POST({ request }) {
     }
 
     const sourceUpdate = await updateSourceProfile(entityType, entityKey, data);
+    const savedMessage = `Profile edits saved to source D1 tables. ${sourceUpdate.changed} row${sourceUpdate.changed === 1 ? "" : "s"} changed.`;
 
-    return redirectWithMessage(
-      redirectTo,
-      `Profile edits saved to source D1 tables. ${sourceUpdate.changed} row${sourceUpdate.changed === 1 ? "" : "s"} changed.`,
-    );
+    if (wantsHtml) return htmlMessage(savedMessage, "success");
+    return redirectWithMessage(redirectTo, savedMessage);
   } catch (error) {
+    if (wantsHtml) {
+      return htmlMessage(error?.message || "Unable to save profile edits.", "error");
+    }
     return redirectWithError(redirectTo, error?.message || "Unable to save profile edits.");
   }
 }
@@ -396,4 +405,26 @@ function redirectWithError(path, message) {
       Location: url.pathname + url.search,
     },
   });
+}
+
+function htmlMessage(message, status = "success", responseStatus = 200) {
+  return new Response(
+    `<span class="inline-status ${status}">${escapeHtml(message)}</span>`,
+    {
+      status: responseStatus,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    },
+  );
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

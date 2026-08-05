@@ -810,7 +810,14 @@ function uniqueTowns(towns = []) {
             </p>
           </div>
 
-          <form class="admin-edit-form" action="/api/admin/profile" method="post">
+          <form
+            class="admin-edit-form"
+            action="/api/admin/profile"
+            method="post"
+            hx-post="/api/admin/profile"
+            hx-target="find .admin-inline-status"
+            hx-swap="innerHTML"
+          >
             <input type="hidden" name="entityType" value="representative" />
             <input
               type="hidden"
@@ -954,6 +961,7 @@ function uniqueTowns(towns = []) {
               >
                 Confirm reviewed, no update found
               </button>
+              <span class="admin-inline-status" aria-live="polite"></span>
             </div>
           </form>
 
@@ -2016,9 +2024,24 @@ function uniqueTowns(towns = []) {
   }
 
   .admin-form-actions {
+    align-items: center;
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+  }
+
+  .admin-inline-status {
+    color: #4b5563;
+    font-size: 0.86rem;
+    font-weight: 900;
+  }
+
+  .admin-inline-status :global(.inline-status.success) {
+    color: #047857;
+  }
+
+  .admin-inline-status :global(.inline-status.error) {
+    color: #b91c1c;
   }
 
   .admin-edit-form .secondary-button {
