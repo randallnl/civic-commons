@@ -3,7 +3,10 @@ import {
   communityUpdateDate,
   getApprovedCommunityUpdates,
 } from "../lib/communityUpdates";
+import { getArticlePreview } from "../lib/articlePreviews";
+import { profilePhotoUrl } from "../lib/photos";
 import { cleanText } from "../lib/text";
+import profileIcon from "../assets/profile icon.png";
 
 const {
   entityType,
@@ -13,10 +16,59 @@ const {
 } = Astro.props;
 
 const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
-const hasInstagramEmbeds = updates.some((update) => instagramPreview(update.linkUrl));
-const hasTikTokEmbeds = updates.some((update) => tiktokPreview(update.linkUrl)?.videoId);
-const hasFacebookEmbeds = updates.some((update) => facebookPreview(update.linkUrl)?.embedUrl);
+const updateCards = await Promise.all(updates.map(updateViewModel));
+const hasInstagramEmbeds = updateCards.some((card) => card.social?.type === "instagram");
+const hasTikTokEmbeds = updateCards.some((card) => card.social?.type === "tiktok" && card.social.videoId);
+const hasFacebookEmbeds = updateCards.some((card) => card.social?.type === "facebook" && card.social.embedUrl);
 const isReport = entityType === "report";
+
+async function updateViewModel(update = {}) {
+  const social = socialPreview(update.linkUrl);
+  const linkPreview = update.linkUrl
+    ? await getArticlePreview(update.linkUrl)
+    : null;
+  const mentions = uniqueMentions(update.mentions || []);
+
+  return {
+    ...update,
+    social,
+    linkPreview: linkPreview || genericLinkPreview(update.linkUrl, social),
+    mentions,
+    people: mentions.map(personPreview),
+  };
+}
+
+function uniqueMentions(mentions = []) {
+  const seen = new Set();
+  return mentions.filter((mention) => {
+    const key = mention.personId || mention.personid || mention.filerEntityNumber || mention.path || mention.name;
+    if (!key || seen.has(String(key))) return false;
+    seen.add(String(key));
+    return true;
+  });
+}
+
+function personPreview(mention = {}) {
+  const photoUrl = profilePhotoUrl(mention.photoUrl);
+  const role =
+    mention.office ||
+    mention.roleLabel ||
+    mention.chamber ||
+    (mention.isCurrentLegislator ? "Legislator" : mention.is2026Candidate ? "Candidate" : "");
+  const district = mention.profileDistrict || mention.district || "";
+  const districtLabel = [
+    mention.county,
+    district ? `District ${district}` : "",
+  ].filter(Boolean).join(", ");
+
+  return {
+    ...mention,
+    photoUrl,
+    fallbackPhoto: profileIcon.src,
+    role,
+    districtLabel,
+  };
+}
 
 function linkHost(value = "") {
   try {
@@ -131,6 +183,33 @@ function facebookPermalink(url) {
   return cleanUrl.toString();
 }
 
+function socialPreview(value = "") {
+  const tikTok = tiktokPreview(value);
+  if (tikTok) return { ...tikTok, type: "tiktok" };
+  const facebook = facebookPreview(value);
+  if (facebook) return { ...facebook, type: "facebook" };
+  const instagram = instagramPreview(value);
+  if (instagram) return { ...instagram, type: "instagram" };
+  return null;
+}
+
+function genericLinkPreview(value = "", social = null) {
+  if (!value) return null;
+  return {
+    title: social?.label || "Linked context",
+    description: social?.handle ? `@${social.handle}` : linkHost(value),
+    imageUrl: "",
+  };
+}
+
+function previewTitle(preview = null, linkUrl = "") {
+  return cleanText(preview?.title || "Linked context");
+}
+
+function previewDescription(preview = null, linkUrl = "") {
+  return cleanText(preview?.description || linkHost(linkUrl));
+}
+
 function mentionParts(comment = "", mentions = []) {
   const text = cleanText(comment);
   const activeMentions = mentions.filter((mention) => mention.name && mention.path);
@@ -243,9 +322,9 @@ function escapeRegExp(value = "") {
     </form>
   </details>
 
-  {updates.length ? (
+  {updateCards.length ? (
     <div class="community-update-list">
-      {updates.map((update) => (
+      {updateCards.map((update) => (
         <article class:list={["community-update-card", update.photoUrls?.length && "has-photo"]}>
           {update.photoUrls?.length > 0 && (
             <div class="community-update-media">
@@ -296,48 +375,48 @@ function escapeRegExp(value = "") {
               </div>
             )}
             {update.linkUrl && (
-              tiktokPreview(update.linkUrl) ? (
+              update.social?.type === "tiktok" ? (
                 <div class="social-embed-wrap tiktok-embed-wrap">
-                  <div class="social-preview-card tiktok-preview-card">
+                  <a class="rich-link-preview social-preview-card tiktok-preview-card" href={update.social.permalink || update.linkUrl}>
                     <span class="social-icon tiktok-icon" aria-hidden="true">TT</span>
+                    {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
                     <span>
-                      <strong>{tiktokPreview(update.linkUrl)?.label}</strong>
+                      <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
                       <small>
-                        {tiktokPreview(update.linkUrl)?.handle
-                          ? `@${tiktokPreview(update.linkUrl)?.handle}`
-                          : tiktokPreview(update.linkUrl)?.host}
+                        {update.social.handle
+                          ? `@${update.social.handle}`
+                          : previewDescription(update.linkPreview, update.linkUrl)}
                       </small>
                     </span>
-                    <a href={tiktokPreview(update.linkUrl)?.permalink || update.linkUrl}>Open</a>
-                  </div>
-                  {tiktokPreview(update.linkUrl)?.videoId && (
+                  </a>
+                  {update.social.videoId && (
                     <blockquote
                       class="tiktok-embed"
-                      cite={tiktokPreview(update.linkUrl)?.permalink}
-                      data-video-id={tiktokPreview(update.linkUrl)?.videoId}
+                      cite={update.social.permalink}
+                      data-video-id={update.social.videoId}
                     >
                       <section>
-                        <a href={tiktokPreview(update.linkUrl)?.permalink || update.linkUrl}>
+                        <a href={update.social.permalink || update.linkUrl}>
                           View this video on TikTok
                         </a>
                       </section>
                     </blockquote>
                   )}
                 </div>
-              ) : facebookPreview(update.linkUrl) ? (
+              ) : update.social?.type === "facebook" ? (
                 <div class="social-embed-wrap facebook-embed-wrap">
-                  <div class="social-preview-card facebook-preview-card">
+                  <a class="rich-link-preview social-preview-card facebook-preview-card" href={update.social.permalink || update.linkUrl}>
                     <span class="social-icon facebook-icon" aria-hidden="true">FB</span>
+                    {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
                     <span>
-                      <strong>{facebookPreview(update.linkUrl)?.label}</strong>
-                      <small>{facebookPreview(update.linkUrl)?.host}</small>
+                      <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+                      <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
                     </span>
-                    <a href={facebookPreview(update.linkUrl)?.permalink || update.linkUrl}>Open</a>
-                  </div>
-                  {facebookPreview(update.linkUrl)?.embedUrl && (
+                  </a>
+                  {update.social.embedUrl && (
                     <iframe
                       class="facebook-embed"
-                      src={facebookPreview(update.linkUrl)?.embedUrl}
+                      src={update.social.embedUrl}
                       width="500"
                       height="520"
                       style="border:none;overflow:hidden"
@@ -350,37 +429,61 @@ function escapeRegExp(value = "") {
                     ></iframe>
                   )}
                 </div>
-              ) : instagramPreview(update.linkUrl) ? (
+              ) : update.social?.type === "instagram" ? (
                 <div class="instagram-embed-wrap">
-                  <div class="instagram-preview-card">
+                  <a class="rich-link-preview instagram-preview-card" href={update.social.permalink || update.linkUrl}>
                     <span class="instagram-icon" aria-hidden="true">IG</span>
+                    {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
                     <span>
-                      <strong>{instagramPreview(update.linkUrl)?.label}</strong>
+                      <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
                       <small>
-                        {instagramPreview(update.linkUrl)?.handle
-                          ? `@${instagramPreview(update.linkUrl)?.handle}`
-                          : instagramPreview(update.linkUrl)?.host}
+                        {update.social.handle
+                          ? `@${update.social.handle}`
+                          : previewDescription(update.linkPreview, update.linkUrl)}
                       </small>
                     </span>
-                    <a href={instagramPreview(update.linkUrl)?.permalink || update.linkUrl}>Open</a>
-                  </div>
+                  </a>
                   <blockquote
                     class="instagram-media"
                     data-instgrm-captioned
-                    data-instgrm-permalink={instagramPreview(update.linkUrl)?.permalink}
+                    data-instgrm-permalink={update.social.permalink}
                     data-instgrm-version="14"
                   >
-                    <a href={instagramPreview(update.linkUrl)?.permalink || update.linkUrl}>
+                    <a href={update.social.permalink || update.linkUrl}>
                       View this post on Instagram
                     </a>
                   </blockquote>
                 </div>
               ) : (
-                <a class="community-update-link" href={update.linkUrl}>
-                  <span>Open linked context</span>
-                  {linkHost(update.linkUrl) && <small>{linkHost(update.linkUrl)}</small>}
+                <a class="community-link-preview rich-link-preview" href={update.linkUrl}>
+                  {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+                  <span>
+                    <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+                    {previewDescription(update.linkPreview, update.linkUrl) && (
+                      <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
+                    )}
+                  </span>
                 </a>
               )
+            )}
+            {update.people?.length > 0 && (
+              <div class="community-people-preview" aria-label="People connected to this update">
+                {update.people.map((person) => (
+                  <a class="mini-person-card" href={person.path}>
+                    <img
+                      class:list={[!person.photoUrl && "profile-icon"]}
+                      src={person.photoUrl || person.fallbackPhoto}
+                      alt={person.photoUrl ? `Photo of ${person.name}` : ""}
+                      loading="lazy"
+                    />
+                    <span>
+                      <strong>{person.name}</strong>
+                      {person.role && <small>{person.role}</small>}
+                      {person.districtLabel && <small>{person.districtLabel}</small>}
+                    </span>
+                  </a>
+                ))}
+              </div>
             )}
           </div>
         </article>
@@ -823,9 +926,54 @@ function escapeRegExp(value = "") {
     color: #1f2933;
     display: grid;
     gap: 10px;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr);
     padding: 10px 12px;
     text-decoration: none;
+  }
+
+  .rich-link-preview {
+    overflow: hidden;
+  }
+
+  .rich-link-preview > img {
+    aspect-ratio: 16 / 9;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    grid-column: 1 / -1;
+    max-height: 220px;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  .community-link-preview {
+    background: #ffffff;
+    border: 1px solid #93c5fd;
+    border-radius: 14px;
+    color: #1f2933;
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 12px;
+    text-decoration: none;
+  }
+
+  .community-link-preview strong,
+  .community-link-preview small {
+    display: block;
+  }
+
+  .community-link-preview strong {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .community-link-preview small {
+    color: #64748b;
+    font-size: 0.84rem;
+    font-weight: 850;
+    line-height: 1.35;
+    margin-top: 4px;
   }
 
   .tiktok-preview-card {
@@ -883,20 +1031,81 @@ function escapeRegExp(value = "") {
     margin-top: 2px;
   }
 
-  .instagram-preview-card a,
-  .social-preview-card a {
+  a.instagram-preview-card,
+  a.social-preview-card {
     color: #db2777;
-    font-size: 0.78rem;
-    font-weight: 950;
     text-decoration: none;
   }
 
-  .tiktok-preview-card a {
+  a.tiktok-preview-card {
     color: #0f172a;
   }
 
-  .facebook-preview-card a {
+  a.facebook-preview-card {
     color: #1d4ed8;
+  }
+
+  .community-people-preview {
+    border-top: 1px solid #dbeafe;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+
+  .mini-person-card {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    color: #1f2933;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 48px minmax(0, 1fr);
+    min-width: 0;
+    padding: 8px;
+    text-decoration: none;
+  }
+
+  .mini-person-card img {
+    aspect-ratio: 4 / 5;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    display: block;
+    height: 60px;
+    object-fit: cover;
+    object-position: center top;
+    width: 48px;
+  }
+
+  .mini-person-card img.profile-icon {
+    object-fit: cover;
+  }
+
+  .mini-person-card span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .mini-person-card strong,
+  .mini-person-card small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mini-person-card strong {
+    font-size: 0.9rem;
+    line-height: 1.15;
+  }
+
+  .mini-person-card small {
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 850;
   }
 
   .instagram-media {

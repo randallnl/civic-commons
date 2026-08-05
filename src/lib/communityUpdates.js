@@ -332,11 +332,45 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
 
   const result = await db
     .prepare(
-      `SELECT update_id, personid, person_id, employeeno, filer_entity_number,
-              name, chamber, party, district, path, role_label
-       FROM community_update_mentions
-       WHERE update_id IN (${ids.map(() => "?").join(", ")})
-       ORDER BY name`,
+      `SELECT
+          m.update_id,
+          m.personid,
+          m.person_id,
+          m.employeeno,
+          m.filer_entity_number,
+          m.name,
+          m.chamber,
+          m.party,
+          m.district,
+          m.path,
+          m.role_label,
+          p.photo_url,
+          p.slug AS person_slug,
+          p.is_current_legislator,
+          p.is_2026_candidate,
+          COALESCE(NULLIF(cr.office, ''), CASE
+            WHEN lr.legislativebody = 'S' THEN 'State Senator'
+            WHEN lr.legislativebody = 'H' THEN 'State Representative'
+            ELSE ''
+          END) AS office,
+          COALESCE(NULLIF(cr.county, ''), cc.name, '') AS county,
+          COALESCE(NULLIF(cr.district, ''), NULLIF(lr.district, ''), m.district, '') AS profile_district
+       FROM community_update_mentions m
+       LEFT JOIN d1_people p
+         ON p.id = m.person_id
+         OR p.gc_personid = m.personid
+         OR p.employeeno = m.employeeno
+         OR p.filer_entity_number = m.filer_entity_number
+       LEFT JOIN d1_person_candidate_roles cr
+         ON cr.person_id = p.id
+         AND cr.election_year = 2026
+       LEFT JOIN d1_person_legislator_roles lr
+         ON lr.person_id = p.id
+         AND lr.active = 1
+       LEFT JOIN county_codes cc
+         ON cc.source_county_id = CAST(lr.countycode AS INTEGER)
+       WHERE m.update_id IN (${ids.map(() => "?").join(", ")})
+       ORDER BY m.name`,
     )
     .bind(...ids)
     .all();
@@ -355,6 +389,12 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
       district: cleanText(mention.district),
       path: mention.path || `/people/${encodeURIComponent(String(mention.personid))}`,
       roleLabel: cleanText(mention.role_label),
+      photoUrl: mention.photo_url || "",
+      office: cleanText(mention.office),
+      county: cleanText(mention.county),
+      profileDistrict: cleanText(mention.profile_district),
+      isCurrentLegislator: Number(mention.is_current_legislator) === 1,
+      is2026Candidate: Number(mention.is_2026_candidate) === 1,
     });
     mentionsByUpdate.set(mention.update_id, list);
   }
