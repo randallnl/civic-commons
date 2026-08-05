@@ -1,5 +1,8 @@
 ---
+import { civicGuides } from "../lib/civicGuides";
+
 const year = new Date().getFullYear();
+const footerGuides = civicGuides.slice(0, 4);
 ---
 
 <footer class="site-footer">
@@ -40,10 +43,10 @@ const year = new Date().getFullYear();
         </div>
         <div>
           <h2>Civic Guides</h2>
-          <a href="/state-government">State Government</a>
-          <a href="/how-bills-become-law">How Bills Become Law</a>
-          <a href="/vote-grades">Vote Grades</a>
-          <a href="/free-staters">Free Staters</a>
+          <a href="/civic-guides">All Civic Guides</a>
+          {footerGuides.map((guide) => (
+            <a href={guide.href}>{guide.title}</a>
+          ))}
         </div>
       </nav>
     </div>

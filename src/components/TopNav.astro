@@ -1,6 +1,7 @@
 ---
 import GlobalTheme from "./GlobalTheme.astro";
 import ClientEnhancements from "./ClientEnhancements.astro";
+import { civicGuides } from "../lib/civicGuides";
 
 const currentPath = Astro.url.pathname;
 const suggestHref = `/suggest-update?page=${encodeURIComponent(Astro.url.href)}`;
@@ -21,13 +22,8 @@ const exploreLinks = [
 ];
 
 const guideLinks = [
-  { href: "/state-government", label: "State Government" },
-  { href: "/how-bills-become-law", label: "How Bills Become Law" },
-  {
-    href: "/reports/nh-education-aid-per-pupil",
-    label: "Education Funding Report",
-  },
-  { href: "/free-staters", label: "Free Staters" },
+  { href: "/civic-guides", label: "All Civic Guides" },
+  ...civicGuides.map((guide) => ({ href: guide.href, label: guide.title })),
 ];
 
 function isActive(link) {
