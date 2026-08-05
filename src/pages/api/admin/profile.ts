@@ -309,10 +309,72 @@ async function updateCandidateSource(db, entityKey, data) {
   }
 
   await upsertPersonFromCandidate(String(entityKey), db);
-  changed += await updatePersonAliases(db, { filerEntityNumber: String(entityKey) }, data);
+  changed += await updateUnifiedCandidatePerson(db, entityKey, data);
+  changed += await updatePersonAliases(
+    db,
+    { filerEntityNumber: String(entityKey), slug: String(entityKey) },
+    data,
+  );
 
   if (!changed) throw new Error("No matching candidate source row was updated.");
   return { changed };
+}
+
+async function updateUnifiedCandidatePerson(db, entityKey, data = {}) {
+  const hasSuppliedValue = [
+    "name",
+    "candidateFirstName",
+    "candidateLastName",
+    "politicalParty",
+    "candidateEmail",
+    "candidateWebsite",
+    "photoUrl",
+    "is_free_stater",
+  ].some((field) => Object.prototype.hasOwnProperty.call(data, field));
+  if (!hasSuppliedValue) return 0;
+
+  const key = String(entityKey);
+  const firstName = data.candidateFirstName || firstNameFromFullName(data.name);
+  const lastName = data.candidateLastName || lastNameFromFullName(data.name);
+  const displayName = data.name || [firstName, lastName].filter(Boolean).join(" ");
+
+  return runSourceUpdate(
+    db,
+    `UPDATE d1_people
+     SET firstname = COALESCE(NULLIF(?, ''), firstname),
+         lastname = COALESCE(NULLIF(?, ''), lastname),
+         display_name = COALESCE(NULLIF(?, ''), display_name),
+         party = COALESCE(NULLIF(?, ''), party),
+         email = COALESCE(NULLIF(?, ''), email),
+         website_url = COALESCE(NULLIF(?, ''), website_url),
+         photo_url = COALESCE(NULLIF(?, ''), photo_url),
+         is_free_stater = CASE
+           WHEN ? IS NULL THEN is_free_stater
+           ELSE ?
+         END,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE filer_entity_number = ?
+        OR slug = ?
+        OR id IN (
+          SELECT person_id
+          FROM d1_person_candidate_roles
+          WHERE filer_entity_number = ?
+        )`,
+    [
+      firstName,
+      lastName,
+      displayName,
+      data.politicalParty || "",
+      data.candidateEmail || "",
+      data.candidateWebsite || "",
+      data.photoUrl || "",
+      freeStaterValue(data),
+      freeStaterValue(data),
+      key,
+      key,
+      key,
+    ],
+  );
 }
 
 async function updatePersonAliases(db, identifiers = {}, data = {}) {
@@ -328,6 +390,18 @@ async function updatePersonAliases(db, identifiers = {}, data = {}) {
   if (identifiers.filerEntityNumber) {
     clauses.push("filer_entity_number = ?");
     params.push(identifiers.filerEntityNumber);
+  }
+  if (identifiers.slug) {
+    clauses.push("slug = ?");
+    params.push(identifiers.slug);
+    clauses.push(
+      `id IN (
+        SELECT person_id
+        FROM d1_person_candidate_roles
+        WHERE filer_entity_number = ?
+      )`,
+    );
+    params.push(identifiers.slug);
   }
   if (!clauses.length) return 0;
 

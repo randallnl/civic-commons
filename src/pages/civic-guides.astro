@@ -3,11 +3,14 @@ export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
+import FilterBar from "../components/FilterBar.astro";
 import { civicGuides, featuredCivicGuides } from "../lib/civicGuides";
 
 const leadGuide = featuredCivicGuides[0] || civicGuides[0];
-const secondaryGuides = civicGuides.filter((guide) => guide.href !== leadGuide?.href);
 const categories = [...new Set(civicGuides.map((guide) => guide.category).filter(Boolean))];
+const q = Astro.url.searchParams.get("q")?.trim() || "";
+const category = Astro.url.searchParams.get("category")?.trim() || "";
+const sort = Astro.url.searchParams.get("sort")?.trim() || "featured:desc";
 ---
 
 <html lang="en">
@@ -50,16 +53,66 @@ const categories = [...new Set(civicGuides.map((guide) => guide.category).filter
         </section>
       )}
 
-      <section class="guide-layout">
+      <section
+        class="guide-layout"
+        x-data="nhdbFuzzyFilter({ itemSelector: '.guide-card[data-fuzzy-item]', pageSize: 12 })"
+      >
         <div class="guide-main">
           <div class="section-heading">
-            <p class="eyebrow">Latest Guides</p>
+            <p class="eyebrow">All Guides</p>
             <h2>Build your civic toolkit.</h2>
           </div>
 
+          <FilterBar action="/civic-guides" submitLabel="Filter guides" clearHref="/civic-guides" columns="wide" live={true}>
+            <label for="q">
+              <span>Search</span>
+              <input
+                id="q"
+                name="q"
+                type="search"
+                value={q}
+                placeholder="Bills, vote grades, state government..."
+                data-fuzzy-search
+              />
+            </label>
+            <label for="category">
+              <span>Topic</span>
+              <select id="category" name="category" data-fuzzy-filter-field data-fuzzy-field="category" data-fuzzy-match="exact">
+                <option value="" selected={!category}>All topics</option>
+                {categories.map((topic) => (
+                  <option value={topic} selected={category === topic}>{topic}</option>
+                ))}
+              </select>
+            </label>
+            <label for="sort">
+              <span>Sort</span>
+              <select id="sort" name="sort" data-fuzzy-sort>
+                <option value="featured:desc" selected={sort === "featured:desc"}>Featured first</option>
+                <option value="name:asc" selected={sort === "name:asc"}>Title A-Z</option>
+                <option value="category:asc" selected={sort === "category:asc"}>Topic A-Z</option>
+              </select>
+            </label>
+          </FilterBar>
+          <div class="filter-chips" data-fuzzy-chips hidden></div>
+
           <div class="guide-grid">
-            {secondaryGuides.map((guide) => (
-              <a class="guide-card" href={guide.href}>
+            {civicGuides.map((guide) => (
+              <a
+                class="guide-card"
+                href={guide.href}
+                data-fuzzy-item
+                data-fuzzy-text={[
+                  guide.title,
+                  guide.kicker,
+                  guide.category,
+                  guide.description,
+                  guide.readTime,
+                ].join(" ")}
+                data-fuzzy-category={guide.category}
+                data-fuzzy-sort-featured={guide.featured ? 1 : 0}
+                data-fuzzy-sort-name={guide.title}
+                data-fuzzy-sort-category={guide.category}
+              >
                 <img src={guide.image} alt="" loading="lazy" />
                 <div>
                   <span>{guide.kicker}</span>
@@ -69,6 +122,10 @@ const categories = [...new Set(civicGuides.map((guide) => guide.category).filter
                 </div>
               </a>
             ))}
+          </div>
+          <div class="status-message empty-state" data-fuzzy-empty hidden>
+            <strong>No guides matched those filters.</strong>
+            <p>Try a broader search, or clear the topic filter.</p>
           </div>
         </div>
 

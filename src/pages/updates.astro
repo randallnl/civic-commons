@@ -1,0 +1,466 @@
+---
+export const prerender = false;
+
+import TopNav from "../components/TopNav.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import FilterBar from "../components/FilterBar.astro";
+import { articleDetailPath, articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
+import {
+  communityUpdateDate,
+  getRecentApprovedCommunityUpdates,
+} from "../lib/communityUpdates";
+import { getRecentOrganizationComments } from "../lib/organizationsApi";
+import { cleanText } from "../lib/text";
+
+const q = Astro.url.searchParams.get("q")?.trim() || "";
+const typeParam = Astro.url.searchParams.get("type");
+const type = typeParam === null ? "community" : typeParam.trim();
+const sort = Astro.url.searchParams.get("sort")?.trim() || "updated:desc";
+
+let feedItems = [];
+let error = "";
+
+try {
+  const [communityUpdates, articleData, organizationComments] = await Promise.all([
+    getRecentApprovedCommunityUpdates({ limit: 80 }),
+    getArticles({ include: "relations", limit: 80 }),
+    getRecentOrganizationComments({ limit: 80 }),
+  ]);
+
+  feedItems = [
+    ...(communityUpdates || []).map((update) => communityFeedItem(update)),
+    ...((articleData.articles || []).map((article) => articleFeedItem(article))),
+    ...(organizationComments || []).map((comment) => organizationCommentFeedItem(comment)),
+  ].sort((a, b) => b.sortDate - a.sortDate);
+} catch (loadError) {
+  error = loadError?.message || "Unable to load updates.";
+}
+
+const typeOptions = [
+  ["community", "Community updates"],
+  ["article", "Articles"],
+  ["organization-comment", "Organization comments"],
+  ["", "Everything"],
+];
+
+function communityFeedItem(update = {}) {
+  const photos = update.photoUrls?.length ? update.photoUrls : update.photoUrl ? [update.photoUrl] : [];
+  const dateValue = update.createdAt || "";
+  return {
+    type: "community",
+    typeLabel: "Community update",
+    title: cleanText(update.entityName || "Community update"),
+    eyebrow: cleanText(update.entityType || "Community"),
+    body: cleanText(update.comment || update.linkUrl || "Community-submitted context."),
+    href: update.pageUrl || update.linkUrl || "/communities",
+    sourceHref: update.linkUrl || "",
+    sourceLabel: update.linkUrl ? "Open submitted link" : "",
+    meta: [
+      `Submitted by ${cleanText(update.displayName || "Community member")}`,
+      communityUpdateDate(dateValue),
+    ].filter(Boolean).join(" - "),
+    image: photos[0] || "",
+    text: [
+      update.entityName,
+      update.entityKey,
+      update.displayName,
+      update.comment,
+      update.linkUrl,
+      (update.mentions || []).map((mention) => mention.name).join(" "),
+    ].filter(Boolean).join(" "),
+    sortName: cleanText(update.entityName || update.displayName || ""),
+    sortDate: Date.parse(dateValue || "") || 0,
+  };
+}
+
+function articleFeedItem(article = {}) {
+  const dateText = articlePublishDate(article);
+  const source = articleSourceName(article);
+  const title = cleanText(article.preview?.title || article.title || "Article");
+  return {
+    type: "article",
+    typeLabel: "Article",
+    title,
+    eyebrow: source || "Article",
+    body: cleanText(article.preview?.description || article.summary || "Civic coverage tracked by NH Deserves Better."),
+    href: articleDetailPath(article),
+    sourceHref: article.url || "",
+    sourceLabel: source ? `Original source: ${source}` : "Open original article",
+    meta: [source, dateText].filter(Boolean).join(" - "),
+    image: article.preview?.imageUrl || "",
+    text: [
+      title,
+      source,
+      article.summary,
+      article.preview?.description,
+      (article.bills || []).map((bill) => bill.name || bill.title || bill.condensedbillno || bill).join(" "),
+      (article.legislators || []).map((person) => person.name || person.matched_name || person).join(" "),
+      (article.candidates || []).map((person) => person.name || person.candidate_name_raw || person).join(" "),
+      (article.towns || []).map((town) => town.town || town.name || town).join(" "),
+    ].filter(Boolean).join(" "),
+    sortName: title,
+    sortDate: articleDateSortValue(article),
+  };
+}
+
+function organizationCommentFeedItem(comment = {}) {
+  const billLabel = cleanText(comment.billLabel || comment.bill || "Tracked bill");
+  const organization = cleanText(comment.organization || "Organization");
+  const title = `${organization} on ${billLabel}`;
+  return {
+    type: "organization-comment",
+    typeLabel: "Organization comment",
+    title,
+    eyebrow: [comment.position, billLabel].filter(Boolean).join(" - "),
+    body: cleanText(comment.comment || "Organization position on a tracked bill."),
+    href: comment.bill ? `/bills/${encodeURIComponent(comment.bill)}` : `/organizations/${comment.organizationSlug}`,
+    sourceHref: comment.linkUrl || "",
+    sourceLabel: cleanText(comment.linkLabel || "Read source"),
+    meta: [organization, cleanDate(comment.date)].filter(Boolean).join(" - "),
+    image: comment.photoUrl || "",
+    text: [
+      organization,
+      billLabel,
+      comment.bill,
+      comment.position,
+      comment.comment,
+      comment.author,
+      (comment.issueAreas || []).join(" "),
+      (comment.towns || []).join(" "),
+    ].filter(Boolean).join(" "),
+    sortName: title,
+    sortDate: Date.parse(comment.date || "") || 0,
+  };
+}
+
+function articleDateSortValue(article = {}) {
+  const value =
+    article.published_at ||
+    article.publishedAt ||
+    article.published_date ||
+    article.publishedDate ||
+    article.publish_date ||
+    article.publishDate ||
+    article.date ||
+    article.created_at ||
+    article.createdAt ||
+    article.updated_at ||
+    article.updatedAt;
+  return Date.parse(value || "") || 0;
+}
+
+function cleanDate(value = "") {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return cleanText(value);
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/NH%20DB%20Logo.svg" />
+    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.svg" />
+    <title>Updates Feed | NH Deserves Better</title>
+    <meta
+      name="description"
+      content="A combined feed of community updates, civic articles, and organization comments on tracked bills."
+    />
+  </head>
+
+  <body>
+    <TopNav />
+    <main
+      class="page"
+      x-data="nhdbFuzzyFilter({ itemSelector: '.feed-card[data-fuzzy-item]', pageSize: 20, threshold: 0.32 })"
+    >
+      <section class="hero">
+        <p class="eyebrow">Updates Feed</p>
+        <h1>Follow community context, coverage, and organization comments.</h1>
+        <p class="lede">
+          Start with community updates, then filter into articles and
+          organizational comments connected to candidates, legislators,
+          communities, and tracked bills.
+        </p>
+      </section>
+
+      <FilterBar action="/updates" submitLabel="Filter feed" clearHref="/updates" columns="wide" live={true}>
+        <label for="q">
+          <span>Search</span>
+          <input
+            id="q"
+            name="q"
+            type="search"
+            value={q}
+            placeholder="Town, bill, person, organization, or keyword"
+            data-fuzzy-search
+          />
+        </label>
+        <label for="type">
+          <span>Feed type</span>
+          <select id="type" name="type" data-fuzzy-filter-field data-fuzzy-field="type" data-fuzzy-match="exact">
+            {typeOptions.map(([value, label]) => (
+              <option value={value} selected={type === value}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <label for="sort">
+          <span>Sort</span>
+          <select id="sort" name="sort" data-fuzzy-sort>
+            <option value="updated:desc" selected={sort === "updated:desc"}>Newest first</option>
+            <option value="updated:asc" selected={sort === "updated:asc"}>Oldest first</option>
+            <option value="name:asc" selected={sort === "name:asc"}>Title A-Z</option>
+            <option value="type:asc" selected={sort === "type:asc"}>Type A-Z</option>
+          </select>
+        </label>
+      </FilterBar>
+      <div class="filter-chips" data-fuzzy-chips hidden></div>
+
+      {error ? (
+        <p class="status-message">{error}</p>
+      ) : (
+        <section class="feed-panel">
+          <div class="results-heading">
+            <div>
+              <p class="eyebrow">Recent Context</p>
+              <h2><span data-fuzzy-count>{feedItems.length}</span> items shown</h2>
+            </div>
+            <a href="/suggest-update">Suggest an update</a>
+          </div>
+
+          <div class="feed-list">
+            {feedItems.map((item) => (
+              <article
+                class:list={["feed-card", item.image && "has-image"]}
+                data-fuzzy-item
+                data-fuzzy-text={item.text}
+                data-fuzzy-type={item.type}
+                data-fuzzy-sort-name={item.sortName}
+                data-fuzzy-sort-updated={item.sortDate}
+                data-fuzzy-sort-type={item.typeLabel}
+              >
+                {item.image && (
+                  <a class="feed-image" href={item.href} tabindex="-1" aria-hidden="true">
+                    <img src={item.image} alt="" loading="lazy" />
+                  </a>
+                )}
+                <div class="feed-copy">
+                  <div class="feed-topline">
+                    <span>{item.typeLabel}</span>
+                    {item.eyebrow && <span>{item.eyebrow}</span>}
+                  </div>
+                  <h3><a href={item.href}>{item.title}</a></h3>
+                  {item.meta && <p class="feed-meta">{item.meta}</p>}
+                  <p>{item.body}</p>
+                  <div class="feed-actions">
+                    <a href={item.href}>Open details</a>
+                    {item.sourceHref && <a href={item.sourceHref}>{item.sourceLabel}</a>}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div class="status-message empty-state" data-fuzzy-empty hidden>
+            <strong>No updates matched those filters.</strong>
+            <p>Try a broader keyword, clear the type chip, or switch the feed type to Everything.</p>
+          </div>
+          <div class="see-more-row">
+            <button type="button" class="see-more-button subtle" data-fuzzy-more hidden>Show more loaded updates</button>
+          </div>
+        </section>
+      )}
+    </main>
+    <SiteFooter />
+  </body>
+</html>
+
+<style>
+  a {
+    color: #1f2933;
+    font-weight: 800;
+  }
+
+  .hero {
+    margin-bottom: 18px;
+    padding: 32px;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.15rem, 5.25vw, 4rem);
+    line-height: 0.95;
+    margin: 0 0 18px;
+    max-width: 920px;
+  }
+
+  .lede {
+    color: #4b5563;
+    line-height: 1.6;
+    margin: 0;
+    max-width: 760px;
+  }
+
+  .feed-panel {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+  }
+
+  .results-heading {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid var(--nhdb-line);
+    border-radius: 10px;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    padding: 20px;
+  }
+
+  .results-heading h2 {
+    font-size: 1.55rem;
+    line-height: 1.05;
+    margin: 0;
+  }
+
+  .feed-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .feed-card {
+    background: #ffffff;
+    border: 1px solid var(--nhdb-line);
+    border-radius: 10px;
+    display: grid;
+    gap: 0;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .feed-card.has-image {
+    grid-template-columns: minmax(180px, 0.34fr) minmax(0, 1fr);
+  }
+
+  .feed-image {
+    background: #f8fafc;
+    min-height: 190px;
+  }
+
+  .feed-image img {
+    height: 100%;
+    object-fit: contain;
+    width: 100%;
+  }
+
+  .feed-copy {
+    display: grid;
+    gap: 10px;
+    padding: 20px;
+  }
+
+  .feed-topline,
+  .feed-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .feed-topline span {
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #475569;
+    font-size: 0.76rem;
+    font-weight: 950;
+    padding: 6px 9px;
+  }
+
+  .feed-topline span:first-child {
+    background: #fff7ed;
+    border-color: #f4b35f;
+    color: #8a3a05;
+  }
+
+  .feed-copy h3 {
+    font-size: clamp(1.18rem, 2vw, 1.6rem);
+    line-height: 1.08;
+    margin: 0;
+  }
+
+  .feed-copy p {
+    color: #4b5563;
+    line-height: 1.55;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .feed-meta {
+    color: #64748b !important;
+    font-size: 0.84rem;
+    font-weight: 850;
+  }
+
+  .feed-actions a {
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    padding: 8px 10px;
+    text-decoration: none;
+  }
+
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 0;
+  }
+
+  .status-message,
+  .empty-state {
+    background: #ffffff;
+    border: 1px solid var(--nhdb-line);
+    border-radius: 10px;
+    color: #4b5563;
+    line-height: 1.5;
+    padding: 16px;
+  }
+
+  .see-more-row {
+    display: flex;
+    justify-content: center;
+  }
+
+  .see-more-button {
+    background: #1f2933;
+    border: 1px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+    padding: 10px 14px;
+  }
+
+  @media (max-width: 760px) {
+    .feed-card.has-image {
+      grid-template-columns: 1fr;
+    }
+
+    .feed-image {
+      min-height: 220px;
+    }
+
+    .results-heading {
+      align-items: start;
+      display: grid;
+    }
+  }
+</style>

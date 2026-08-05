@@ -167,6 +167,26 @@ export async function getOrganization(slug, options = {}) {
   return organizations.find((organization) => organization.slug === slug);
 }
 
+export async function getRecentOrganizationComments({ limit = 50 } = {}) {
+  const db = organizationsDb();
+  if (!db) return [];
+
+  await ensureOrganizationTables(db);
+
+  const result = await db
+    .prepare(
+      `SELECT *
+       FROM organization_comments
+       WHERE status = 'published'
+       ORDER BY COALESCE(NULLIF(date, ''), updated_at, created_at) DESC, id DESC
+       LIMIT ?`,
+    )
+    .bind(Number(limit) || 50)
+    .all();
+
+  return (result.results || []).map(normalizeCommentRow);
+}
+
 export async function saveOrganizationProfile(data = {}, db = organizationsDb()) {
   if (!db) throw new Error("D1 database binding is not configured.");
   await ensureOrganizationTables(db);

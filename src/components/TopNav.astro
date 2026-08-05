@@ -1,7 +1,6 @@
 ---
 import GlobalTheme from "./GlobalTheme.astro";
 import ClientEnhancements from "./ClientEnhancements.astro";
-import { civicGuides } from "../lib/civicGuides";
 
 const currentPath = Astro.url.pathname;
 const suggestHref = `/suggest-update?page=${encodeURIComponent(Astro.url.href)}`;
@@ -15,15 +14,21 @@ const links = [
 
 const exploreLinks = [
   { href: "/communities", label: "Communities" },
+  { href: "/updates", label: "Updates Feed" },
   { href: "/people", label: "Legislators" },
   { href: "/bills", label: "Bills" },
   { href: "/organizations", label: "Organizations" },
   { href: "/articles", label: "Articles" },
+  { href: "/civic-guides", label: "Civic Guides" },
 ];
 
-const guideLinks = [
-  { href: "/civic-guides", label: "All Civic Guides" },
-  ...civicGuides.map((guide) => ({ href: guide.href, label: guide.title })),
+const guidePaths = [
+  "/state-government",
+  "/how-bills-become-law",
+  "/free-staters",
+  "/vote-grades",
+  "/vote-interpretations",
+  "/reports/nh-education-aid-per-pupil",
 ];
 
 function isActive(link) {
@@ -32,7 +37,8 @@ function isActive(link) {
 }
 
 const isExploreActive = exploreLinks.some(isActive);
-const isGuidesActive = guideLinks.some(isActive);
+const isGuidePageActive = guidePaths.some((path) => currentPath === path || currentPath.startsWith(`${path}/`));
+const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
 ---
 
 <GlobalTheme />
@@ -88,28 +94,12 @@ const isGuidesActive = guideLinks.some(isActive);
           {link.label}
         </a>
       ))}
-      <details class:list={["nav-dropdown", isExploreActive && "active"]}>
-        <summary class="nav-link" aria-current={isExploreActive ? "page" : undefined}>
+      <details class:list={["nav-dropdown", isExploreOrGuideActive && "active"]}>
+        <summary class="nav-link" aria-current={isExploreOrGuideActive ? "page" : undefined}>
           Explore
         </summary>
         <div class="dropdown-menu">
           {exploreLinks.map((link) => (
-            <a
-              class:list={["dropdown-link", isActive(link) && "active"]}
-              href={link.href}
-              aria-current={isActive(link) ? "page" : undefined}
-            >
-              {link.label}
-            </a>
-          ))}
-        </div>
-      </details>
-      <details class:list={["nav-dropdown", isGuidesActive && "active"]}>
-        <summary class="nav-link" aria-current={isGuidesActive ? "page" : undefined}>
-          Civic Guides
-        </summary>
-        <div class="dropdown-menu">
-          {guideLinks.map((link) => (
             <a
               class:list={["dropdown-link", isActive(link) && "active"]}
               href={link.href}
