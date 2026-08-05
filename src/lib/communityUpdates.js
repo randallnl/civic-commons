@@ -399,10 +399,144 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
     mentionsByUpdate.set(mention.update_id, list);
   }
 
-  return updates.map((update) => ({
-    ...update,
-    mentions: mentionsByUpdate.get(update.id) || [],
-  }));
+  return appendEntitySubjectMentions(
+    updates.map((update) => ({
+      ...update,
+      mentions: mentionsByUpdate.get(update.id) || [],
+    })),
+    db,
+  );
+}
+
+async function appendEntitySubjectMentions(updates = [], db = communityUpdatesDb()) {
+  if (!updates.length || !db) return updates;
+
+  const cache = new Map();
+  const enriched = [];
+
+  for (const update of updates) {
+    const entityType = String(update.entityType || update.entity_type || "").toLowerCase();
+    const entityKey = String(update.entityKey || update.entity_key || "").trim();
+    if (!["representative", "candidate"].includes(entityType) || !entityKey) {
+      enriched.push(update);
+      continue;
+    }
+
+    const cacheKey = `${entityType}:${entityKey}`;
+    let subject = cache.get(cacheKey);
+    if (subject === undefined) {
+      subject = await findUpdateEntitySubject(entityType, entityKey, db);
+      cache.set(cacheKey, subject || null);
+    }
+
+    if (!subject) {
+      enriched.push(update);
+      continue;
+    }
+
+    const mentions = update.mentions || [];
+    const subjectKey = subject.personId || subject.personid || subject.filerEntityNumber || subject.path || subject.name;
+    const alreadyMentioned = mentions.some((mention) => {
+      const mentionKey = mention.personId || mention.personid || mention.filerEntityNumber || mention.path || mention.name;
+      return subjectKey && mentionKey && String(subjectKey) === String(mentionKey);
+    });
+
+    enriched.push({
+      ...update,
+      mentions: alreadyMentioned ? mentions : [subject, ...mentions],
+    });
+  }
+
+  return enriched;
+}
+
+async function findUpdateEntitySubject(entityType = "", entityKey = "", db) {
+  const where =
+    entityType === "candidate"
+      ? `(p.filer_entity_number = ? OR p.slug = ? OR CAST(p.id AS TEXT) = ?)`
+      : `(CAST(p.gc_personid AS TEXT) = ? OR CAST(p.employeeno AS TEXT) = ? OR p.slug = ? OR CAST(p.id AS TEXT) = ?)`;
+  const bindings =
+    entityType === "candidate"
+      ? [entityKey, entityKey, entityKey]
+      : [entityKey, entityKey, entityKey, entityKey];
+
+  const row = await db
+    .prepare(
+      `SELECT
+          p.id,
+          p.gc_personid,
+          p.employeeno,
+          p.filer_entity_number,
+          p.slug,
+          p.firstname,
+          p.lastname,
+          p.display_name,
+          p.party,
+          p.photo_url,
+          p.is_current_legislator,
+          p.is_2026_candidate,
+          COALESCE(NULLIF(cr.office, ''), CASE
+            WHEN lr.legislativebody = 'S' THEN 'State Senator'
+            WHEN lr.legislativebody = 'H' THEN 'State Representative'
+            ELSE ''
+          END) AS office,
+          COALESCE(NULLIF(cr.county, ''), cc.name, '') AS county,
+          COALESCE(NULLIF(cr.district, ''), NULLIF(lr.district, ''), '') AS profile_district
+       FROM d1_people p
+       LEFT JOIN d1_person_candidate_roles cr
+         ON cr.person_id = p.id
+         AND cr.election_year = 2026
+       LEFT JOIN d1_person_legislator_roles lr
+         ON lr.person_id = p.id
+         AND lr.active = 1
+       LEFT JOIN county_codes cc
+         ON cc.source_county_id = CAST(lr.countycode AS INTEGER)
+       WHERE ${where}
+       ORDER BY
+         CASE
+           WHEN ? = 'candidate' AND p.is_2026_candidate = 1 THEN 0
+           WHEN ? = 'representative' AND p.is_current_legislator = 1 THEN 0
+           ELSE 1
+         END,
+         p.lastname COLLATE NOCASE,
+         p.firstname COLLATE NOCASE
+       LIMIT 1`,
+    )
+    .bind(...bindings, entityType, entityType)
+    .first();
+
+  if (!row) return null;
+
+  const name = cleanText(
+    row.display_name ||
+      [row.firstname, row.lastname].filter(Boolean).join(" "),
+  );
+  const isCurrentLegislator = Number(row.is_current_legislator) === 1;
+  const is2026Candidate = Number(row.is_2026_candidate) === 1;
+
+  return {
+    personid: row.gc_personid || row.id,
+    personId: row.id,
+    employeeno: row.employeeno,
+    filerEntityNumber: row.filer_entity_number || "",
+    name,
+    chamber: isCurrentLegislator ? "Legislator" : "",
+    party: cleanText(row.party),
+    district: cleanText(row.profile_district),
+    path: isCurrentLegislator
+      ? `/people/${encodeURIComponent(String(row.slug || row.gc_personid || row.employeeno || row.id))}`
+      : `/candidates/${encodeURIComponent(String(row.filer_entity_number || row.slug || row.id))}`,
+    roleLabel: personRoleLabel({
+      is_current_legislator: isCurrentLegislator ? 1 : 0,
+      is_2026_candidate: is2026Candidate ? 1 : 0,
+    }),
+    photoUrl: row.photo_url || "",
+    office: cleanText(row.office),
+    county: cleanText(row.county),
+    profileDistrict: cleanText(row.profile_district),
+    isCurrentLegislator,
+    is2026Candidate,
+  };
 }
 
 async function hydrateUpdatePhotos(updates = [], db = communityUpdatesDb()) {
