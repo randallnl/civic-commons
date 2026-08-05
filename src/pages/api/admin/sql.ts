@@ -1,10 +1,11 @@
 export const prerender = false;
 
-import { adminDb, requireAdmin } from "../../../lib/adminAuth";
+import { adminDb, canUseSourceDataTools, forbiddenAdminResponse, requireAdmin } from "../../../lib/adminAuth";
 
 export async function POST({ request }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
+  if (!canUseSourceDataTools(auth.session)) return forbiddenAdminResponse();
 
   try {
     const db = adminDb();

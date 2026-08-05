@@ -4,14 +4,21 @@ export const prerender = false;
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import { getBills, normalizeBillCodeForUrl } from "../lib/billsApi";
-import { currentAdminSession } from "../lib/adminAuth";
+import { canModerateContent, canReviewProfiles, canUseSourceDataTools, currentAdminSession } from "../lib/adminAuth";
 import { getProfileGaps } from "../lib/adminProfileGaps";
+import { workflowLabel, workflowSummary } from "../lib/adminWorkflow";
 import {
   articleSubmissionDate,
+  countPendingArticleSubmissions,
   getPendingArticleSubmissions,
 } from "../lib/articleSubmissions";
-import { communityUpdateDate, getPendingCommunityUpdates } from "../lib/communityUpdates";
 import {
+  communityUpdateDate,
+  countPendingCommunityUpdates,
+  getPendingCommunityUpdates,
+} from "../lib/communityUpdates";
+import {
+  countPendingOrganizationEndorsements,
   getOrganizations,
   getPendingOrganizationEndorsements,
 } from "../lib/organizationsApi";
@@ -44,26 +51,45 @@ const gapReviewOptions = [
   { value: "recent", label: "Recently reviewed only" },
 ];
 let pendingCommunityUpdates = [];
+let pendingCommunityUpdateCount = 0;
 let pendingArticleSubmissions = [];
+let pendingArticleSubmissionCount = 0;
 let profileGaps = { results: [], counts: {} };
 let gapProfileLabel = "";
 let peopleOptions = [];
 let organizations = [];
 let organizationAdminData = [];
 let pendingOrganizationEndorsements = [];
+let pendingOrganizationEndorsementCount = 0;
 let candidateEndorsementOptions = [];
 let billCommentOptions = [];
 let billAdminData = [];
+let workflowStats = { total: 0, byStatus: {}, byQueue: {} };
+const userCanReviewProfiles = session ? canReviewProfiles(session) : false;
+const userCanModerateContent = session ? canModerateContent(session) : false;
+const userCanUseSourceDataTools = session ? canUseSourceDataTools(session) : false;
 
 if (session) {
   try {
-    pendingCommunityUpdates = await getPendingCommunityUpdates({ limit: 50 });
+    workflowStats = await workflowSummary();
+  } catch (error) {
+    console.error(error?.message || "Unable to load workflow summary.");
+  }
+
+  try {
+    [pendingCommunityUpdates, pendingCommunityUpdateCount] = await Promise.all([
+      getPendingCommunityUpdates({ limit: 50 }),
+      countPendingCommunityUpdates(),
+    ]);
   } catch (error) {
     console.error(error?.message || "Unable to load pending community updates.");
   }
 
   try {
-    pendingArticleSubmissions = await getPendingArticleSubmissions({ limit: 50 });
+    [pendingArticleSubmissions, pendingArticleSubmissionCount] = await Promise.all([
+      getPendingArticleSubmissions({ limit: 50 }),
+      countPendingArticleSubmissions(),
+    ]);
   } catch (error) {
     console.error(error?.message || "Unable to load pending article submissions.");
   }
@@ -105,7 +131,10 @@ if (session) {
   }
 
   try {
-    pendingOrganizationEndorsements = await getPendingOrganizationEndorsements({ limit: 50 });
+    [pendingOrganizationEndorsements, pendingOrganizationEndorsementCount] = await Promise.all([
+      getPendingOrganizationEndorsements({ limit: 50 }),
+      countPendingOrganizationEndorsements(),
+    ]);
   } catch (error) {
     console.error(error?.message || "Unable to load pending organization endorsements.");
   }
@@ -212,6 +241,10 @@ function reviewDate(value = "") {
     year: "numeric",
   }).format(date);
 }
+
+function workflowClass(value = "") {
+  return `workflow-${String(value || "unassigned").replace(/[^a-z_ -]/gi, "").replace(/\s+/g, "-")}`;
+}
 ---
 
 <html lang="en">
@@ -266,6 +299,7 @@ function reviewDate(value = "") {
               <h2>Signed in</h2>
             </div>
             <p class="session-email">{session.email}</p>
+            <p class="role-chip">Role: {workflowLabel(session.role || "volunteer")}</p>
             <form action="/api/admin/logout" method="post">
               <button type="submit" class="secondary">Log out</button>
             </form>
@@ -281,19 +315,23 @@ function reviewDate(value = "") {
             <div class="admin-metrics">
               <a href="#community-updates">
                 <span>Community updates</span>
-                <strong>{pendingCommunityUpdates.length}</strong>
+                <strong>{pendingCommunityUpdateCount}</strong>
               </a>
               <a href="#article-submissions">
                 <span>Submitted articles</span>
-                <strong>{pendingArticleSubmissions.length}</strong>
+                <strong>{pendingArticleSubmissionCount}</strong>
               </a>
               <a href="#endorsement-submissions">
                 <span>Endorsements</span>
-                <strong>{pendingOrganizationEndorsements.length}</strong>
+                <strong>{pendingOrganizationEndorsementCount}</strong>
               </a>
               <a href="#profile-cleanup">
                 <span>Profile cleanup</span>
                 <strong>{profileGaps.counts.total || 0}</strong>
+              </a>
+              <a href="#volunteer-workflow">
+                <span>Claimed queue</span>
+                <strong>{workflowStats.byStatus?.claimed || 0}</strong>
               </a>
               <a href="#organizations-admin">
                 <span>Organizations</span>
@@ -302,18 +340,74 @@ function reviewDate(value = "") {
             </div>
 
             <nav class="admin-links" aria-label="Admin sections">
-              <a href="#profile-editing">Edit profiles</a>
-              <a href="#bill-admin">Edit bills</a>
-              <a href="#profile-cleanup">Profile cleanup</a>
-              <a href="#community-updates">Community updates</a>
-              <a href="#article-submissions">Submitted articles</a>
-              <a href="#endorsement-submissions">Endorsements</a>
-              <a href="#organizations-admin">Organizations</a>
-              <a href="#asset-upload">Image uploads</a>
-              <a href="#database-tools">D1 SQL</a>
+              <a href="#volunteer-workflow">Volunteer workflow</a>
+              {userCanReviewProfiles && <a href="#profile-cleanup">Profile cleanup</a>}
+              {userCanModerateContent && <a href="#community-updates">Community updates</a>}
+              {userCanModerateContent && <a href="#article-submissions">Submitted articles</a>}
+              {userCanModerateContent && <a href="#endorsement-submissions">Endorsements</a>}
+              {userCanUseSourceDataTools && <a href="#profile-editing">Edit profiles</a>}
+              {userCanUseSourceDataTools && <a href="#bill-admin">Edit bills</a>}
+              {userCanUseSourceDataTools && <a href="#organizations-admin">Organizations</a>}
+              {userCanUseSourceDataTools && <a href="#asset-upload">Image uploads</a>}
+              {userCanUseSourceDataTools && <a href="#database-tools">D1 SQL</a>}
             </nav>
           </section>
 
+          <section id="volunteer-workflow" class="panel workflow-panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Volunteer Workflow</p>
+              <h2>Review queues</h2>
+              <p>
+                Volunteers can claim items, mark them ready, or flag them for
+                follow-up. Approvals should happen after the source, tags, and
+                public-facing text have been checked.
+              </p>
+            </div>
+
+            <div class="workflow-grid">
+              <div>
+                <span>Total pending</span>
+                <strong>{workflowStats.total || 0}</strong>
+              </div>
+              <div>
+                <span>Unassigned</span>
+                <strong>{workflowStats.byStatus?.unassigned || 0}</strong>
+              </div>
+              <div>
+                <span>Claimed</span>
+                <strong>{workflowStats.byStatus?.claimed || 0}</strong>
+              </div>
+              <div>
+                <span>Needs follow-up</span>
+                <strong>{workflowStats.byStatus?.needs_followup || 0}</strong>
+              </div>
+              <div>
+                <span>Ready</span>
+                <strong>{workflowStats.byStatus?.ready || 0}</strong>
+              </div>
+            </div>
+
+            <div class="workflow-guide">
+              <article>
+                <strong>1. Claim</strong>
+                <p>Claim one item so two people do not review the same submission at once.</p>
+              </article>
+              <article>
+                <strong>2. Verify</strong>
+                <p>Open the source, check names, links, photos, tags, and any local context.</p>
+              </article>
+              <article>
+                <strong>3. Note</strong>
+                <p>Leave a short note when something needs a source, correction, or second look.</p>
+              </article>
+              <article>
+                <strong>4. Finish</strong>
+                <p>Mark ready, approve, reject, or confirm reviewed depending on the queue.</p>
+              </article>
+            </div>
+          </section>
+
+          {userCanUseSourceDataTools && (
           <section id="profile-editing" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Profiles</p>
@@ -329,7 +423,9 @@ function reviewDate(value = "") {
               <a href="/candidates">Find a candidate</a>
             </div>
           </section>
+          )}
 
+          {userCanUseSourceDataTools && (
           <section id="bill-admin" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Bills</p>
@@ -414,7 +510,9 @@ function reviewDate(value = "") {
               <button type="submit">Save Bill Text</button>
             </form>
           </section>
+          )}
 
+          {userCanReviewProfiles && (
           <section id="profile-cleanup" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Profile Cleanup</p>
@@ -491,6 +589,7 @@ function reviewDate(value = "") {
 
             <div class="gap-summary">
               <span><strong>{profileGaps.counts.total || 0}</strong> Results</span>
+              <span><strong>{profileGaps.counts.shown || profileGaps.results.length || 0}</strong> Shown</span>
               <span><strong>{profileGaps.counts.representatives || 0}</strong> Legislators</span>
               <span><strong>{profileGaps.counts.candidates || 0}</strong> Candidates</span>
               <span><strong>{profileGaps.counts.missingPhoto || 0}</strong> Missing Photos</span>
@@ -540,13 +639,16 @@ function reviewDate(value = "") {
               <p class="empty">No profiles match these missing-info filters.</p>
             )}
           </section>
+          )}
 
+          {userCanModerateContent && (
           <section id="community-updates" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Moderation</p>
               <h2>Community updates</h2>
               <p>
                 Review comments and photos before they appear on public pages.
+                Showing {pendingCommunityUpdates.length} of {pendingCommunityUpdateCount} pending.
               </p>
             </div>
 
@@ -562,6 +664,36 @@ function reviewDate(value = "") {
                     <p class="moderation-meta">
                       Submitted {communityUpdateDate(update.createdAt) && `on ${communityUpdateDate(update.createdAt)}`}
                     </p>
+
+                    <div class="workflow-controls">
+                      <span class:list={["workflow-status", workflowClass(update.workflowStatus)]}>
+                        {workflowLabel(update.workflowStatus)}
+                      </span>
+                      {update.assignedTo && <span>Claimed by {cleanText(update.assignedTo)}</span>}
+                      {update.moderatorNote && <p>{cleanText(update.moderatorNote)}</p>}
+                      <form
+                        action="/api/admin/workflow"
+                        method="post"
+                        hx-post="/api/admin/workflow"
+                        hx-target="find .workflow-inline-status"
+                        hx-swap="innerHTML"
+                      >
+                        <input type="hidden" name="entityType" value="community-update" />
+                        <input type="hidden" name="id" value={update.id} />
+                        <input type="hidden" name="redirectTo" value="/admin#community-updates" />
+                        <label>
+                          Reviewer note
+                          <input name="moderatorNote" value={cleanText(update.moderatorNote)} placeholder="Optional source/checklist note" />
+                        </label>
+                        <div class="workflow-actions">
+                          <button class="compact-button" type="submit" name="workflowAction" value="claim">Claim</button>
+                          <button class="compact-button secondary" type="submit" name="workflowAction" value="ready">Ready</button>
+                          <button class="compact-button secondary" type="submit" name="workflowAction" value="needs-followup">Needs follow-up</button>
+                          <button class="compact-button secondary" type="submit" name="workflowAction" value="release">Release</button>
+                          <span class="workflow-inline-status" aria-live="polite"></span>
+                        </div>
+                      </form>
+                    </div>
 
                     {update.pageUrl && <a href={update.pageUrl}>Open profile page</a>}
                     <form
@@ -627,7 +759,9 @@ function reviewDate(value = "") {
               <p class="empty">No community updates are waiting for review.</p>
             )}
           </section>
+          )}
 
+          {userCanModerateContent && (
           <section id="article-submissions" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Moderation</p>
@@ -635,6 +769,7 @@ function reviewDate(value = "") {
               <p>
                 Review suggested coverage and approve it into the article
                 database with automatically detected bills, people, and towns.
+                Showing {pendingArticleSubmissions.length} of {pendingArticleSubmissionCount} pending.
               </p>
             </div>
             <datalist id="articlePeopleModerationOptions">
@@ -661,6 +796,36 @@ function reviewDate(value = "") {
 
                     <a href={submission.url}>Open original article</a>
                     {submission.summary && <p>{cleanText(submission.summary)}</p>}
+
+                    <div class="workflow-controls">
+                      <span class:list={["workflow-status", workflowClass(submission.workflowStatus)]}>
+                        {workflowLabel(submission.workflowStatus)}
+                      </span>
+                      {submission.assignedTo && <span>Claimed by {cleanText(submission.assignedTo)}</span>}
+                      {submission.moderatorNote && <p>{cleanText(submission.moderatorNote)}</p>}
+                      <form
+                        action="/api/admin/workflow"
+                        method="post"
+                        hx-post="/api/admin/workflow"
+                        hx-target="find .workflow-inline-status"
+                        hx-swap="innerHTML"
+                      >
+                        <input type="hidden" name="entityType" value="article-submission" />
+                        <input type="hidden" name="id" value={submission.id} />
+                        <input type="hidden" name="redirectTo" value="/admin#article-submissions" />
+                        <label>
+                          Reviewer note
+                          <input name="moderatorNote" value={cleanText(submission.moderatorNote)} placeholder="Optional source/checklist note" />
+                        </label>
+                        <div class="workflow-actions">
+                          <button class="compact-button" type="submit" name="workflowAction" value="claim">Claim</button>
+                          <button class="compact-button secondary" type="submit" name="workflowAction" value="ready">Ready</button>
+                          <button class="compact-button secondary" type="submit" name="workflowAction" value="needs-followup">Needs follow-up</button>
+                          <button class="compact-button secondary" type="submit" name="workflowAction" value="release">Release</button>
+                          <span class="workflow-inline-status" aria-live="polite"></span>
+                        </div>
+                      </form>
+                    </div>
 
                     <div class="detected-relations">
                       <strong>Detected links</strong>
@@ -716,7 +881,9 @@ function reviewDate(value = "") {
               <p class="empty">No submitted articles are waiting for review.</p>
             )}
           </section>
+          )}
 
+          {userCanModerateContent && (
           <section id="endorsement-submissions" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Moderation</p>
@@ -725,6 +892,7 @@ function reviewDate(value = "") {
                 Review community-submitted endorsements before they appear on
                 candidate profiles. Approving also creates a minimal
                 organization profile when needed.
+                Showing {pendingOrganizationEndorsements.length} of {pendingOrganizationEndorsementCount} pending.
               </p>
             </div>
 
@@ -754,6 +922,36 @@ function reviewDate(value = "") {
                       </p>
                     )}
 
+                    <div class="workflow-controls">
+                      <span class:list={["workflow-status", workflowClass(endorsement.workflowStatus)]}>
+                        {workflowLabel(endorsement.workflowStatus)}
+                      </span>
+                      {endorsement.assignedTo && <span>Claimed by {cleanText(endorsement.assignedTo)}</span>}
+                      {endorsement.moderatorNote && <p>{cleanText(endorsement.moderatorNote)}</p>}
+                      <form
+                        action="/api/admin/workflow"
+                        method="post"
+                        hx-post="/api/admin/workflow"
+                        hx-target="find .workflow-inline-status"
+                        hx-swap="innerHTML"
+                      >
+                        <input type="hidden" name="entityType" value="endorsement" />
+                        <input type="hidden" name="id" value={endorsement.id} />
+                        <input type="hidden" name="redirectTo" value="/admin#endorsement-submissions" />
+                        <label>
+                          Reviewer note
+                          <input name="moderatorNote" value={cleanText(endorsement.moderatorNote)} placeholder="Optional source/checklist note" />
+                        </label>
+                        <div class="workflow-actions">
+                          <button class="compact-button" type="submit" name="workflowAction" value="claim">Claim</button>
+                          <button class="compact-button secondary" type="submit" name="workflowAction" value="ready">Ready</button>
+                          <button class="compact-button secondary" type="submit" name="workflowAction" value="needs-followup">Needs follow-up</button>
+                          <button class="compact-button secondary" type="submit" name="workflowAction" value="release">Release</button>
+                          <span class="workflow-inline-status" aria-live="polite"></span>
+                        </div>
+                      </form>
+                    </div>
+
                     <form
                       class="moderation-edit-form"
                       action="/api/admin/endorsements"
@@ -780,7 +978,9 @@ function reviewDate(value = "") {
               <p class="empty">No organization endorsements are waiting for review.</p>
             )}
           </section>
+          )}
 
+          {userCanUseSourceDataTools && (
           <section id="organizations-admin" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Organizations</p>
@@ -1216,7 +1416,9 @@ function reviewDate(value = "") {
               <button type="submit">Save Endorsement</button>
             </form>
           </section>
+          )}
 
+          {userCanUseSourceDataTools && (
           <section id="database-tools" class="panel caution-panel">
             <div class="panel-heading">
               <p class="eyebrow">D1 Database</p>
@@ -1253,7 +1455,9 @@ function reviewDate(value = "") {
             </form>
             </details>
           </section>
+          )}
 
+          {userCanUseSourceDataTools && (
           <section id="asset-upload" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">R2 Storage</p>
@@ -1297,6 +1501,7 @@ function reviewDate(value = "") {
               </p>
             )}
           </section>
+          )}
         </div>
       )}
     </main>
@@ -1940,6 +2145,62 @@ function reviewDate(value = "") {
     gap: 10px;
   }
 
+  .role-chip {
+    background: #eff6ff;
+    border: 1px solid #93c5fd;
+    border-radius: 999px;
+    color: #1d4ed8;
+    display: inline-flex;
+    font-size: 0.82rem;
+    font-weight: 950;
+    margin: 8px 0 14px;
+    padding: 7px 10px;
+  }
+
+  .workflow-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .workflow-grid div,
+  .workflow-guide article {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .workflow-grid span,
+  .workflow-guide p {
+    color: #64748b;
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 850;
+  }
+
+  .workflow-grid strong {
+    color: #1e3a8a;
+    display: block;
+    font-size: 1.65rem;
+    line-height: 1;
+    margin-top: 6px;
+  }
+
+  .workflow-guide {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 14px;
+  }
+
+  .workflow-guide strong {
+    color: #1f2933;
+    display: block;
+    font-size: 0.96rem;
+    margin-bottom: 5px;
+  }
+
   .gap-filters {
     align-items: end;
     display: grid;
@@ -2087,6 +2348,73 @@ function reviewDate(value = "") {
     display: grid;
     gap: 10px;
     margin-top: 12px;
+  }
+
+  .workflow-controls {
+    background: #eef6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    display: grid;
+    gap: 9px;
+    margin: 12px 0;
+    padding: 12px;
+  }
+
+  .workflow-controls > span,
+  .workflow-controls > p {
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 850;
+    margin: 0;
+  }
+
+  .workflow-status {
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.76rem;
+    font-weight: 950;
+    justify-self: start;
+    padding: 6px 9px;
+  }
+
+  .workflow-unassigned {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+  }
+
+  .workflow-claimed {
+    background: #dbeafe;
+    border: 1px solid #60a5fa;
+    color: #1d4ed8;
+  }
+
+  .workflow-needs_followup {
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    color: #92400e;
+  }
+
+  .workflow-ready {
+    background: #dcfce7;
+    border: 1px solid #22c55e;
+    color: #166534;
+  }
+
+  .workflow-controls form {
+    display: grid;
+    gap: 8px;
+  }
+
+  .workflow-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .workflow-inline-status :global(.inline-status.success),
+  .workflow-inline-status :global(.inline-status.error) {
+    display: inline-flex;
   }
 
   .moderation-edit-form textarea {

@@ -1,8 +1,12 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
-import { adminR2Bucket } from "../../../lib/adminAuth";
-import { requireAdmin } from "../../../lib/adminAuth";
+import {
+  adminR2Bucket,
+  canModerateContent,
+  forbiddenAdminResponse,
+  requireAdmin,
+} from "../../../lib/adminAuth";
 import {
   ensureCommunityUpdatesTable,
   communityUpdatesDb,
@@ -14,6 +18,7 @@ import { cleanText } from "../../../lib/text";
 export async function POST({ request }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
+  if (!canModerateContent(auth.session)) return forbiddenAdminResponse();
 
   const wantsHtml = request.headers.get("HX-Request") === "true";
   let redirectTo = "/admin";

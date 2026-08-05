@@ -1,6 +1,12 @@
 export const prerender = false;
 
-import { adminDb, requireAdmin } from "../../../lib/adminAuth";
+import {
+  adminDb,
+  canReviewProfiles,
+  canUseSourceDataTools,
+  forbiddenAdminResponse,
+  requireAdmin,
+} from "../../../lib/adminAuth";
 import { markProfileReviewed } from "../../../lib/adminProfileReviews";
 import {
   linkCandidateToLegislator,
@@ -74,6 +80,7 @@ export async function POST({ request }) {
     if (!entityKey) throw new Error("Profile identifier is required.");
 
     if (profileAction === "confirm-reviewed") {
+      if (!canReviewProfiles(auth.session)) return forbiddenAdminResponse();
       await markProfileReviewed({
         entityType,
         entityKey,
@@ -93,6 +100,8 @@ export async function POST({ request }) {
         "Profile marked reviewed. It will be hidden from the default cleanup queue for 30 days.",
       );
     }
+
+    if (!canUseSourceDataTools(auth.session)) return forbiddenAdminResponse();
 
     const data = {};
     for (const field of fields) {

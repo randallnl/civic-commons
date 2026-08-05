@@ -15,6 +15,7 @@ const {
 const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
 const hasInstagramEmbeds = updates.some((update) => instagramPreview(update.linkUrl));
 const hasTikTokEmbeds = updates.some((update) => tiktokPreview(update.linkUrl)?.videoId);
+const hasFacebookEmbeds = updates.some((update) => facebookPreview(update.linkUrl)?.embedUrl);
 const isReport = entityType === "report";
 
 function linkHost(value = "") {
@@ -95,6 +96,37 @@ function tiktokPreview(value = "") {
 function tiktokPermalink(url) {
   const cleanUrl = new URL(url.toString());
   cleanUrl.search = "";
+  cleanUrl.hash = "";
+  return cleanUrl.toString();
+}
+
+function facebookPreview(value = "") {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, "").toLowerCase();
+    if (!["facebook.com", "m.facebook.com", "fb.watch"].includes(host)) return null;
+
+    const permalink = facebookPermalink(url);
+    const path = url.pathname.toLowerCase();
+    const label = host === "fb.watch" || path.includes("/videos/") || path.includes("/watch/")
+      ? "Facebook video"
+      : path.includes("/posts/") || path.includes("/permalink/")
+        ? "Facebook post"
+        : "Facebook link";
+
+    return {
+      label,
+      host,
+      permalink,
+      embedUrl: `https://www.facebook.com/plugins/post.php?href=${encodeURIComponent(permalink)}&show_text=true&width=500`,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function facebookPermalink(url) {
+  const cleanUrl = new URL(url.toString());
   cleanUrl.hash = "";
   return cleanUrl.toString();
 }
@@ -292,6 +324,32 @@ function escapeRegExp(value = "") {
                     </blockquote>
                   )}
                 </div>
+              ) : facebookPreview(update.linkUrl) ? (
+                <div class="social-embed-wrap facebook-embed-wrap">
+                  <div class="social-preview-card facebook-preview-card">
+                    <span class="social-icon facebook-icon" aria-hidden="true">FB</span>
+                    <span>
+                      <strong>{facebookPreview(update.linkUrl)?.label}</strong>
+                      <small>{facebookPreview(update.linkUrl)?.host}</small>
+                    </span>
+                    <a href={facebookPreview(update.linkUrl)?.permalink || update.linkUrl}>Open</a>
+                  </div>
+                  {facebookPreview(update.linkUrl)?.embedUrl && (
+                    <iframe
+                      class="facebook-embed"
+                      src={facebookPreview(update.linkUrl)?.embedUrl}
+                      width="500"
+                      height="520"
+                      style="border:none;overflow:hidden"
+                      scrolling="no"
+                      frameborder="0"
+                      allowfullscreen="true"
+                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                      loading="lazy"
+                      title="Facebook post preview"
+                    ></iframe>
+                  )}
+                </div>
               ) : instagramPreview(update.linkUrl) ? (
                 <div class="instagram-embed-wrap">
                   <div class="instagram-preview-card">
@@ -342,6 +400,9 @@ function escapeRegExp(value = "") {
 
 {hasInstagramEmbeds && <script async src="https://www.instagram.com/embed.js"></script>}
 {hasTikTokEmbeds && <script async src="https://www.tiktok.com/embed.js"></script>}
+{hasFacebookEmbeds && (
+  <div id="fb-root"></div>
+)}
 
 <script>
   document.querySelectorAll(".community-updates-panel").forEach((panel) => {
@@ -773,6 +834,12 @@ function escapeRegExp(value = "") {
       linear-gradient(135deg, #111827, #06b6d4, #ef4444) border-box;
   }
 
+  .facebook-preview-card {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #1877f2, #60a5fa, #1d4ed8) border-box;
+  }
+
   .instagram-icon,
   .social-icon {
     align-items: center;
@@ -789,6 +856,10 @@ function escapeRegExp(value = "") {
 
   .tiktok-icon {
     background: linear-gradient(135deg, #111827, #06b6d4, #ef4444);
+  }
+
+  .facebook-icon {
+    background: linear-gradient(135deg, #1877f2, #60a5fa);
   }
 
   .instagram-preview-card strong,
@@ -824,6 +895,10 @@ function escapeRegExp(value = "") {
     color: #0f172a;
   }
 
+  .facebook-preview-card a {
+    color: #1d4ed8;
+  }
+
   .instagram-media {
     background: #ffffff;
     border: 0;
@@ -853,6 +928,18 @@ function escapeRegExp(value = "") {
     margin: 0;
     max-width: 540px;
     min-width: 0;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .facebook-embed {
+    background: #ffffff;
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 0 1px rgba(0, 0, 0, 0.35), 0 4px 18px rgba(17, 24, 39, 0.12);
+    box-sizing: border-box;
+    max-width: 100%;
+    min-height: 260px;
     overflow: hidden;
     width: 100%;
   }

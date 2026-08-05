@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { ensureWorkflowColumns, normalizeWorkflowFields } from "./adminWorkflow";
 import { ensureArticlePreviewColumns, getArticlePreview } from "./articlePreviews";
 import { cleanText } from "./text";
 import {
@@ -52,6 +53,7 @@ export function articleSubmissionsDb() {
 export async function ensureArticleSubmissionsTable(db = articleSubmissionsDb()) {
   if (!db) throw new Error("D1 database binding is not configured.");
   await db.prepare(TABLE_SQL).run();
+  await ensureWorkflowColumns(db, "article_submissions");
   await db
     .prepare(
       `CREATE INDEX IF NOT EXISTS idx_article_submissions_status_created
@@ -138,6 +140,21 @@ export async function getPendingArticleSubmissions({ limit = 25 } = {}) {
   }
 
   return submissions.map(normalizeArticleSubmission);
+}
+
+export async function countPendingArticleSubmissions(db = articleSubmissionsDb()) {
+  if (!db) return 0;
+  await ensureArticleSubmissionsTable(db);
+
+  const row = await db
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM article_submissions
+       WHERE status = 'pending'`,
+    )
+    .first();
+
+  return Number(row?.count || 0);
 }
 
 async function hydratePendingSubmissionScan(db, row = {}) {
@@ -323,6 +340,7 @@ export function normalizeArticleSubmission(submission = {}) {
     note: cleanText(submission.note || ""),
     status: submission.status || "pending",
     articleId: submission.article_id || submission.articleId || "",
+    ...normalizeWorkflowFields(submission),
     preview,
     scan: {
       bills: scan.bills || [],

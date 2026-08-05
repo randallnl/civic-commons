@@ -1,7 +1,12 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
-import { requireAdmin } from "../../../lib/adminAuth";
+import {
+  canModerateContent,
+  canUseSourceDataTools,
+  forbiddenAdminResponse,
+  requireAdmin,
+} from "../../../lib/adminAuth";
 import {
   moderateOrganizationEndorsement,
   saveOrganizationEndorsement,
@@ -20,6 +25,7 @@ export async function POST({ request }) {
     redirectTo = safeRedirectPath(form.get("redirectTo")) || "/admin";
 
     if (["approve", "reject"].includes(action)) {
+      if (!canModerateContent(auth.session)) return forbiddenAdminResponse();
       const result = await moderateOrganizationEndorsement(form.get("id"), action, {
         reviewedBy: auth.session.email,
       });
@@ -30,6 +36,7 @@ export async function POST({ request }) {
     if (action !== "save") {
       throw new Error("Choose a valid endorsement admin action.");
     }
+    if (!canUseSourceDataTools(auth.session)) return forbiddenAdminResponse();
 
     const photoUrl = await uploadEndorsementPhoto({
       file: form.get("photo"),

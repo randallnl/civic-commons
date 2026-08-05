@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { ensureWorkflowColumns, normalizeWorkflowFields } from "./adminWorkflow";
 import { cleanText } from "./text";
 
 const TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_updates (
@@ -56,6 +57,7 @@ export async function ensureCommunityUpdatesTable(db = communityUpdatesDb()) {
   await addColumnIfMissing(db, "community_update_mentions", "filer_entity_number", "TEXT");
   await addColumnIfMissing(db, "community_update_mentions", "path", "TEXT");
   await addColumnIfMissing(db, "community_update_mentions", "role_label", "TEXT");
+  await ensureWorkflowColumns(db, "community_updates");
   await db
     .prepare(
       `CREATE INDEX IF NOT EXISTS idx_community_updates_entity_status
@@ -129,7 +131,8 @@ export async function getPendingCommunityUpdates({ limit = 25 } = {}) {
   const result = await db
     .prepare(
       `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
-              email, comment, link_url, photo_url, status, created_at
+              email, comment, link_url, photo_url, status, workflow_status,
+              assigned_to, moderator_note, workflow_updated_at, created_at
        FROM community_updates
        WHERE status = 'pending'
        ORDER BY created_at ASC
@@ -139,6 +142,21 @@ export async function getPendingCommunityUpdates({ limit = 25 } = {}) {
     .all();
 
   return hydrateUpdatePhotosAndMentions((result.results || []).map(normalizeUpdate), db);
+}
+
+export async function countPendingCommunityUpdates(db = communityUpdatesDb()) {
+  if (!db) return 0;
+  await ensureCommunityUpdatesTable(db);
+
+  const row = await db
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM community_updates
+       WHERE status = 'pending'`,
+    )
+    .first();
+
+  return Number(row?.count || 0);
 }
 
 export function communityUpdateEntityKey(value = "") {
@@ -164,6 +182,7 @@ export function normalizeUpdate(update = {}) {
     photoUrls: photoUrls.length ? photoUrls : primaryPhoto ? [primaryPhoto] : [],
     mentions: Array.isArray(update.mentions) ? update.mentions : [],
     createdAt: update.created_at || update.createdAt || "",
+    ...normalizeWorkflowFields(update),
   };
 }
 

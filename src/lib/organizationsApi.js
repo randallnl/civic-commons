@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { ensureWorkflowColumns, normalizeWorkflowFields } from "./adminWorkflow";
 import { cleanText } from "./text";
 
 const DEFAULT_SHEET_BASE =
@@ -115,6 +116,7 @@ export async function ensureOrganizationTables(db = organizationsDb()) {
   await ensureColumn(db, "organization_endorsements", "submitter_email", "TEXT");
   await ensureColumn(db, "organization_endorsements", "reviewed_by", "TEXT");
   await ensureColumn(db, "organization_endorsements", "reviewed_at", "TEXT");
+  await ensureWorkflowColumns(db, "organization_endorsements");
 }
 
 export async function getOrganizations({ includeUnapproved = false } = {}) {
@@ -364,6 +366,21 @@ export async function getPendingOrganizationEndorsements({
     .all();
 
   return (result.results || []).map(normalizeEndorsementRow);
+}
+
+export async function countPendingOrganizationEndorsements(db = organizationsDb()) {
+  if (!db) return 0;
+  await ensureOrganizationTables(db);
+
+  const row = await db
+    .prepare(
+      `SELECT COUNT(*) AS count
+       FROM organization_endorsements
+       WHERE status = 'pending'`,
+    )
+    .first();
+
+  return Number(row?.count || 0);
 }
 
 export async function saveOrganizationEndorsement(data = {}, {
@@ -766,6 +783,7 @@ function normalizeEndorsementRow(row = {}) {
     photoUrl: organizationAssetUrl(row.photo_url || ""),
     date: cleanText(row.date),
     status: cleanText(row.status),
+    ...normalizeWorkflowFields(row),
     submitterName: cleanText(row.submitter_name),
     submitterEmail: row.submitter_email || "",
     createdAt: row.created_at || "",

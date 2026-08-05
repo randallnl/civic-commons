@@ -1,7 +1,13 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
-import { adminDb, adminR2Bucket, requireAdmin } from "../../../lib/adminAuth";
+import {
+  adminDb,
+  adminR2Bucket,
+  canUseSourceDataTools,
+  forbiddenAdminResponse,
+  requireAdmin,
+} from "../../../lib/adminAuth";
 import {
   ensureOrganizationTables,
   slugify as organizationSlugify,
@@ -15,6 +21,7 @@ import {
 export async function POST({ request }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
+  if (!canUseSourceDataTools(auth.session)) return forbiddenAdminResponse();
 
   let redirectTo = "/admin";
   try {

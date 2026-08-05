@@ -1,7 +1,7 @@
 export const prerender = false;
 
 import { env } from "cloudflare:workers";
-import { requireAdmin } from "../../../lib/adminAuth";
+import { canUseSourceDataTools, forbiddenAdminResponse, requireAdmin } from "../../../lib/adminAuth";
 import {
   importOrganizationsFromSheets,
   saveOrganizationComment,
@@ -11,6 +11,7 @@ import {
 export async function POST({ request }) {
   const auth = await requireAdmin(request);
   if (!auth.ok) return auth.response;
+  if (!canUseSourceDataTools(auth.session)) return forbiddenAdminResponse();
 
   let redirectTo = "/admin";
 

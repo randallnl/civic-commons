@@ -62,6 +62,10 @@ export async function getProfileGaps({
   const results = allResults
     .filter((item) => !normalizedProfile || profileOptionValue(item) === normalizedProfile)
     .slice(0, limit);
+  const matchingResults = allResults
+    .filter((item) => !normalizedProfile || profileOptionValue(item) === normalizedProfile);
+  const reviewedMatchingResults = reviewedResults
+    .filter((item) => !normalizedProfile || profileOptionValue(item) === normalizedProfile);
 
   return {
     results,
@@ -70,13 +74,14 @@ export async function getProfileGaps({
       label: [item.name, item.subtitle].filter(Boolean).join(" - "),
     })),
     counts: {
-      total: results.length,
-      representatives: results.filter((item) => item.type === "representative").length,
-      candidates: results.filter((item) => item.type === "candidate").length,
-      missingPhoto: results.filter((item) => item.missing.photo).length,
-      missingEmail: results.filter((item) => item.missing.email).length,
-      missingWebsite: results.filter((item) => item.missing.website).length,
-      recentlyReviewed: reviewedResults.filter((item) => item.review?.isRecent).length,
+      total: matchingResults.length,
+      shown: results.length,
+      representatives: matchingResults.filter((item) => item.type === "representative").length,
+      candidates: matchingResults.filter((item) => item.type === "candidate").length,
+      missingPhoto: matchingResults.filter((item) => item.missing.photo).length,
+      missingEmail: matchingResults.filter((item) => item.missing.email).length,
+      missingWebsite: matchingResults.filter((item) => item.missing.website).length,
+      recentlyReviewed: reviewedMatchingResults.filter((item) => item.review?.isRecent).length,
       recentReviewDays: RECENT_REVIEW_DAYS,
     },
   };
@@ -287,6 +292,7 @@ function emptyCounts() {
     missingPhoto: 0,
     missingEmail: 0,
     missingWebsite: 0,
+    shown: 0,
     recentlyReviewed: 0,
     recentReviewDays: RECENT_REVIEW_DAYS,
   };

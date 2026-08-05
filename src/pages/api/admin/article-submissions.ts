@@ -1,4 +1,4 @@
-import { requireAdmin } from "../../../lib/adminAuth";
+import { canModerateContent, forbiddenAdminResponse, requireAdmin } from "../../../lib/adminAuth";
 import { moderateArticleSubmission } from "../../../lib/articleSubmissions";
 
 export const prerender = false;
@@ -9,6 +9,7 @@ export async function POST({ request }) {
   try {
     const auth = await requireAdmin(request);
     if (!auth.ok) return auth.response;
+    if (!canModerateContent(auth.session)) return forbiddenAdminResponse();
 
     const form = await request.formData();
     const id = Number(form.get("id"));

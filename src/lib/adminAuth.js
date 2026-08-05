@@ -42,7 +42,7 @@ export async function currentAdminSession(request) {
     .bind(tokenHash)
     .first();
 
-  return session || null;
+  return session ? withAdminRole(session) : null;
 }
 
 export async function createMagicLink(email, request) {
@@ -183,7 +183,84 @@ export async function allowedAdminEmails() {
     import.meta.env.ADMIN_EMAIL ||
     "";
 
-  return String(configured)
+  const roleEmails = await roleConfiguredEmails();
+
+  return [
+    ...String(configured)
+    .split(/,|;/)
+    .map(normalizeEmail)
+      .filter(Boolean),
+    ...roleEmails,
+  ].filter((email, index, emails) => email && emails.indexOf(email) === index);
+}
+
+export async function adminRoleForEmail(email = "") {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return "";
+
+  const roleMap = [
+    ["super_admin", env.SUPER_ADMIN_EMAILS],
+    ["profile_reviewer", env.PROFILE_REVIEWER_EMAILS],
+    ["content_moderator", env.CONTENT_MODERATOR_EMAILS],
+    ["org_editor", env.ORG_EDITOR_EMAILS],
+    ["volunteer", env.VOLUNTEER_EMAILS],
+  ];
+
+  for (const [role, binding] of roleMap) {
+    const emails = await emailsFromBinding(binding);
+    if (emails.includes(normalized)) return role;
+  }
+
+  const admins = await emailsFromBinding(env.ADMIN_EMAILS || env.ADMIN_EMAIL);
+  return admins.includes(normalized) ? "super_admin" : "";
+}
+
+export function canUseSourceDataTools(session = {}) {
+  return ["super_admin", "org_editor"].includes(session.role);
+}
+
+export function canModerateContent(session = {}) {
+  return ["super_admin", "content_moderator", "volunteer"].includes(session.role);
+}
+
+export function canReviewProfiles(session = {}) {
+  return ["super_admin", "profile_reviewer", "volunteer"].includes(session.role);
+}
+
+export function forbiddenAdminResponse(message = "Your admin role cannot use this tool.") {
+  return new Response(message, {
+    status: 403,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+async function withAdminRole(session = {}) {
+  const role = (await adminRoleForEmail(session.email)) || "volunteer";
+  return {
+    ...session,
+    role,
+    canUseSourceDataTools: canUseSourceDataTools({ role }),
+    canModerateContent: canModerateContent({ role }),
+    canReviewProfiles: canReviewProfiles({ role }),
+  };
+}
+
+async function roleConfiguredEmails() {
+  const groups = await Promise.all([
+    emailsFromBinding(env.SUPER_ADMIN_EMAILS),
+    emailsFromBinding(env.PROFILE_REVIEWER_EMAILS),
+    emailsFromBinding(env.CONTENT_MODERATOR_EMAILS),
+    emailsFromBinding(env.ORG_EDITOR_EMAILS),
+    emailsFromBinding(env.VOLUNTEER_EMAILS),
+  ]);
+  return groups.flat();
+}
+
+async function emailsFromBinding(binding) {
+  return String(await bindingValue(binding))
     .split(/,|;/)
     .map(normalizeEmail)
     .filter(Boolean);
