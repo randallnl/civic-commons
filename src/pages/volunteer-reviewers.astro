@@ -1,0 +1,263 @@
+---
+export const prerender = false;
+
+import TopNav from "../components/TopNav.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import { cleanText } from "../lib/text";
+
+const sent = Astro.url.searchParams.get("sent") === "1";
+const error = Astro.url.searchParams.get("error") || "";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Volunteer Reviewers | NH Deserves Better</title>
+    <meta
+      name="description"
+      content="Apply to help review candidate data, submitted articles, community updates, and endorsements for NH Deserves Better."
+    />
+  </head>
+  <body>
+    <TopNav activePath="/volunteer-reviewers" />
+    <main class="page-shell">
+      <section class="page-hero compact">
+        <p class="eyebrow">Volunteer Reviewers</p>
+        <h1>Help keep New Hampshire civic data accurate.</h1>
+        <p>
+          NH Deserves Better depends on people willing to check sources,
+          review submitted updates, and help neighbors understand what state
+          government is doing.
+        </p>
+      </section>
+
+      <section class="volunteer-layout">
+        <div class="panel">
+          <div class="section-heading">
+            <p class="eyebrow">Apply</p>
+            <h2>Become a reviewer</h2>
+            <p>
+              Applications are reviewed before access is granted. Approved
+              volunteers receive role-limited access to the admin review queues.
+            </p>
+          </div>
+
+          {sent && (
+            <p class="notice success">
+              Thanks. Your reviewer application was submitted for approval.
+            </p>
+          )}
+          {error && <p class="notice error">{cleanText(error)}</p>}
+
+          <form class="volunteer-form" action="/api/volunteer-reviewers" method="post">
+            <label>
+              Name
+              <input name="name" autocomplete="name" required />
+            </label>
+
+            <label>
+              Email
+              <input name="email" type="email" autocomplete="email" required />
+            </label>
+
+            <label>
+              What would you like to help review?
+              <select name="interests" required>
+                <option value="">Choose a focus area</option>
+                <option value="Candidate profile data">Candidate profile data</option>
+                <option value="Legislator profile data">Legislator profile data</option>
+                <option value="Submitted articles">Submitted articles</option>
+                <option value="Community updates">Community updates</option>
+                <option value="Endorsements and organizations">Endorsements and organizations</option>
+                <option value="Several areas">Several areas</option>
+              </select>
+            </label>
+
+            <label>
+              Relevant experience
+              <textarea
+                name="experience"
+                rows="4"
+                placeholder="Local organizing, research, journalism, data entry, moderation, campaign work, or anything else useful."
+              ></textarea>
+            </label>
+
+            <label>
+              Availability
+              <input name="availability" placeholder="Example: 1-2 hours/week, weekends, election season only" />
+            </label>
+
+            <label>
+              Anything else we should know?
+              <textarea name="notes" rows="3"></textarea>
+            </label>
+
+            <button type="submit">Submit Application</button>
+          </form>
+        </div>
+
+        <aside class="panel guide-panel">
+          <div class="section-heading">
+            <p class="eyebrow">What Reviewers Do</p>
+            <h2>Practical civic maintenance</h2>
+          </div>
+          <div class="guide-list">
+            <article>
+              <strong>Check profile data</strong>
+              <p>Confirm photos, websites, districts, towns represented, and public contact links.</p>
+            </article>
+            <article>
+              <strong>Review submissions</strong>
+              <p>Open sources, check tags, and make sure article or community updates are relevant and readable.</p>
+            </article>
+            <article>
+              <strong>Flag follow-up</strong>
+              <p>Mark items that need a second look, better sourcing, or local context before publishing.</p>
+            </article>
+          </div>
+        </aside>
+      </section>
+    </main>
+    <SiteFooter />
+  </body>
+</html>
+
+<style>
+  .page-shell {
+    display: grid;
+    gap: 22px;
+    margin: 0 auto;
+    padding: 24px 0 42px;
+    width: var(--nhdb-page-rail, min(1280px, calc(100% - clamp(28px, 4vw, 64px))));
+  }
+
+  .page-hero {
+    background: #0f172a;
+    border-radius: 18px;
+    color: #fff7ed;
+    padding: clamp(28px, 5vw, 58px);
+  }
+
+  .page-hero h1 {
+    font-size: clamp(2rem, 5vw, 4rem);
+    line-height: 1;
+    margin: 0;
+    max-width: 760px;
+  }
+
+  .page-hero p:not(.eyebrow) {
+    color: #dbeafe;
+    font-size: 1.08rem;
+    line-height: 1.6;
+    max-width: 720px;
+  }
+
+  .volunteer-layout {
+    align-items: start;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.7fr);
+  }
+
+  .panel {
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    padding: clamp(18px, 3vw, 28px);
+  }
+
+  .section-heading {
+    margin-bottom: 18px;
+  }
+
+  .eyebrow {
+    color: #b6390a;
+    font-size: 0.78rem;
+    font-weight: 950;
+    letter-spacing: 0.04em;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+  }
+
+  .section-heading h2 {
+    margin: 0;
+  }
+
+  .section-heading p,
+  .guide-list p {
+    color: #64748b;
+    line-height: 1.6;
+  }
+
+  .volunteer-form {
+    display: grid;
+    gap: 14px;
+  }
+
+  label {
+    color: #1f2933;
+    display: grid;
+    gap: 7px;
+    font-weight: 900;
+  }
+
+  input,
+  select,
+  textarea {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font: inherit;
+    padding: 11px 12px;
+  }
+
+  button {
+    background: #1f2933;
+    border: 0;
+    border-radius: 999px;
+    color: #fff7ed;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 950;
+    justify-self: start;
+    padding: 12px 18px;
+  }
+
+  .guide-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .guide-list article {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  .guide-list strong {
+    color: #1f2933;
+  }
+
+  .notice {
+    border-radius: 12px;
+    font-weight: 900;
+    padding: 12px;
+  }
+
+  .notice.success {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .notice.error {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  @media (max-width: 820px) {
+    .volunteer-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

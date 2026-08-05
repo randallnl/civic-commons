@@ -29,6 +29,13 @@ import {
 } from "../lib/candidatesApi";
 import { cleanText } from "../lib/text";
 import { getPeopleLinkOptions } from "../lib/unifiedPeople";
+import {
+  getVolunteerReviewers,
+  reviewerCounts,
+  reviewerRoleLabel,
+  REVIEWER_ROLES,
+  REVIEWER_STATUSES,
+} from "../lib/volunteerReviewers";
 
 const session = await currentAdminSession(Astro.request);
 const sent = Astro.url.searchParams.get("sent") === "1";
@@ -40,6 +47,12 @@ const gapMissing = Astro.url.searchParams.get("gapMissing") || "photoWebsite";
 const gapOffice = Astro.url.searchParams.get("gapOffice") || "";
 const gapProfile = Astro.url.searchParams.get("gapProfile") || "";
 const gapReview = Astro.url.searchParams.get("gapReview") || "needs-review";
+const requestedArea =
+  Astro.url.searchParams.get("area") ||
+  Astro.url.pathname.split("/").filter(Boolean)[1] ||
+  "overview";
+const adminAreaOptions = ["overview", "profiles", "moderation", "reviewers", "data"];
+const adminArea = adminAreaOptions.includes(requestedArea) ? requestedArea : "overview";
 const gapOfficeOptions = [
   { value: "", label: "All offices" },
   { value: "State Representative", label: "State Representative" },
@@ -65,15 +78,33 @@ let candidateEndorsementOptions = [];
 let billCommentOptions = [];
 let billAdminData = [];
 let workflowStats = { total: 0, byStatus: {}, byQueue: {} };
+let volunteerReviewers = [];
+let volunteerReviewerCounts = { total: 0, pending: 0, approved: 0, disabled: 0, rejected: 0 };
 const userCanReviewProfiles = session ? canReviewProfiles(session) : false;
 const userCanModerateContent = session ? canModerateContent(session) : false;
 const userCanUseSourceDataTools = session ? canUseSourceDataTools(session) : false;
+const showWorkflowPanel = ["overview", "moderation", "reviewers"].includes(adminArea);
+const showProfilePanels = adminArea === "profiles";
+const showModerationPanels = adminArea === "moderation";
+const showReviewerPanels = adminArea === "reviewers";
+const showDataPanels = adminArea === "data";
 
 if (session) {
   try {
     workflowStats = await workflowSummary();
   } catch (error) {
     console.error(error?.message || "Unable to load workflow summary.");
+  }
+
+  if (userCanUseSourceDataTools) {
+    try {
+      [volunteerReviewers, volunteerReviewerCounts] = await Promise.all([
+        getVolunteerReviewers({ limit: 200 }),
+        reviewerCounts(),
+      ]);
+    } catch (error) {
+      console.error(error?.message || "Unable to load volunteer reviewers.");
+    }
   }
 
   try {
@@ -313,46 +344,48 @@ function workflowClass(value = "") {
             </div>
 
             <div class="admin-metrics">
-              <a href="#community-updates">
+              <a href="/admin/moderation#community-updates">
                 <span>Community updates</span>
                 <strong>{pendingCommunityUpdateCount}</strong>
               </a>
-              <a href="#article-submissions">
+              <a href="/admin/moderation#article-submissions">
                 <span>Submitted articles</span>
                 <strong>{pendingArticleSubmissionCount}</strong>
               </a>
-              <a href="#endorsement-submissions">
+              <a href="/admin/moderation#endorsement-submissions">
                 <span>Endorsements</span>
                 <strong>{pendingOrganizationEndorsementCount}</strong>
               </a>
-              <a href="#profile-cleanup">
+              <a href="/admin/profiles#profile-cleanup">
                 <span>Profile cleanup</span>
                 <strong>{profileGaps.counts.total || 0}</strong>
               </a>
-              <a href="#volunteer-workflow">
+              <a href="/admin/moderation#volunteer-workflow">
                 <span>Claimed queue</span>
                 <strong>{workflowStats.byStatus?.claimed || 0}</strong>
               </a>
-              <a href="#organizations-admin">
+              {userCanUseSourceDataTools && (
+                <a href="/admin/reviewers#reviewer-access">
+                  <span>Reviewer applicants</span>
+                  <strong>{volunteerReviewerCounts.pending || 0}</strong>
+                </a>
+              )}
+              <a href="/admin/data#organizations-admin">
                 <span>Organizations</span>
                 <strong>{organizations.length}</strong>
               </a>
             </div>
 
             <nav class="admin-links" aria-label="Admin sections">
-              <a href="#volunteer-workflow">Volunteer workflow</a>
-              {userCanReviewProfiles && <a href="#profile-cleanup">Profile cleanup</a>}
-              {userCanModerateContent && <a href="#community-updates">Community updates</a>}
-              {userCanModerateContent && <a href="#article-submissions">Submitted articles</a>}
-              {userCanModerateContent && <a href="#endorsement-submissions">Endorsements</a>}
-              {userCanUseSourceDataTools && <a href="#profile-editing">Edit profiles</a>}
-              {userCanUseSourceDataTools && <a href="#bill-admin">Edit bills</a>}
-              {userCanUseSourceDataTools && <a href="#organizations-admin">Organizations</a>}
-              {userCanUseSourceDataTools && <a href="#asset-upload">Image uploads</a>}
-              {userCanUseSourceDataTools && <a href="#database-tools">D1 SQL</a>}
+              <a class:list={[adminArea === "overview" && "active"]} href="/admin">Overview</a>
+              {userCanReviewProfiles && <a class:list={[adminArea === "profiles" && "active"]} href="/admin/profiles">Profiles</a>}
+              {userCanModerateContent && <a class:list={[adminArea === "moderation" && "active"]} href="/admin/moderation">Moderation</a>}
+              {userCanUseSourceDataTools && <a class:list={[adminArea === "reviewers" && "active"]} href="/admin/reviewers">Reviewers</a>}
+              {userCanUseSourceDataTools && <a class:list={[adminArea === "data" && "active"]} href="/admin/data">Data tools</a>}
             </nav>
           </section>
 
+          {showWorkflowPanel && (
           <section id="volunteer-workflow" class="panel workflow-panel">
             <div class="panel-heading">
               <p class="eyebrow">Volunteer Workflow</p>
@@ -406,8 +439,126 @@ function workflowClass(value = "") {
               </article>
             </div>
           </section>
+          )}
 
-          {userCanUseSourceDataTools && (
+          {userCanUseSourceDataTools && showReviewerPanels && (
+          <section id="reviewer-access" class="panel reviewer-access-panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Reviewer Access</p>
+              <h2>Volunteer applications and roles</h2>
+              <p>
+                Approve applicants, assign role-limited access, or disable
+                reviewer accounts without editing secrets. Secret-based admin
+                emails still work as a backup for core administrators.
+              </p>
+            </div>
+
+            <div class="gap-summary">
+              <span><strong>{volunteerReviewerCounts.pending || 0}</strong> Pending</span>
+              <span><strong>{volunteerReviewerCounts.approved || 0}</strong> Approved</span>
+              <span><strong>{volunteerReviewerCounts.disabled || 0}</strong> Disabled</span>
+              <span><strong>{volunteerReviewerCounts.rejected || 0}</strong> Rejected</span>
+            </div>
+
+            <form class="stack-form reviewer-create-form" action="/api/admin/reviewers" method="post">
+              <input type="hidden" name="redirectTo" value="/admin#reviewer-access" />
+              <div class="panel-heading compact-subheading">
+                <p class="eyebrow">Manual Access</p>
+                <h3>Add or update a reviewer by email</h3>
+              </div>
+              <div class="form-grid three">
+                <label>
+                  Email
+                  <input name="email" type="email" required />
+                </label>
+                <label>
+                  Role
+                  <select name="role">
+                    {REVIEWER_ROLES.map((role) => (
+                      <option value={role} selected={role === "volunteer"}>{reviewerRoleLabel(role)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Status
+                  <select name="status">
+                    {REVIEWER_STATUSES.map((status) => (
+                      <option value={status} selected={status === "approved"}>{workflowLabel(status)}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <label>
+                Internal notes
+                <input name="notes" placeholder="Optional access note" />
+              </label>
+              <button type="submit">Save Reviewer Access</button>
+            </form>
+
+            {volunteerReviewers.length ? (
+              <div class="reviewer-list">
+                {volunteerReviewers.map((reviewer) => (
+                  <article>
+                    <div class="reviewer-summary">
+                      <div>
+                        <strong>{cleanText(reviewer.name || reviewer.email)}</strong>
+                        <p>{reviewer.email}</p>
+                      </div>
+                      <div class="reviewer-pills">
+                        <span>{reviewerRoleLabel(reviewer.role)}</span>
+                        <span class:list={["workflow-status", workflowClass(reviewer.status)]}>
+                          {workflowLabel(reviewer.status)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="reviewer-details">
+                      {reviewer.interests && <p><strong>Interests:</strong> {reviewer.interests}</p>}
+                      {reviewer.availability && <p><strong>Availability:</strong> {reviewer.availability}</p>}
+                      {reviewer.experience && <p><strong>Experience:</strong> {reviewer.experience}</p>}
+                      {reviewer.notes && <p><strong>Notes:</strong> {reviewer.notes}</p>}
+                    </div>
+
+                    <form class="reviewer-access-form" action="/api/admin/reviewers" method="post">
+                      <input type="hidden" name="id" value={reviewer.id} />
+                      <input type="hidden" name="redirectTo" value="/admin#reviewer-access" />
+                      <div class="form-grid three">
+                        <label>
+                          Role
+                          <select name="role">
+                            {REVIEWER_ROLES.map((role) => (
+                              <option value={role} selected={role === reviewer.role}>{reviewerRoleLabel(role)}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Status
+                          <select name="status">
+                            {REVIEWER_STATUSES.map((status) => (
+                              <option value={status} selected={status === reviewer.status}>{workflowLabel(status)}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label>
+                          Internal notes
+                          <input name="notes" value={reviewer.notes} />
+                        </label>
+                      </div>
+                      <div class="moderation-actions">
+                        <button type="submit">Save access</button>
+                        <a class="secondary-link" href={`mailto:${reviewer.email}`}>Email reviewer</a>
+                      </div>
+                    </form>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No reviewer applications yet.</p>
+            )}
+          </section>
+          )}
+
+          {userCanUseSourceDataTools && showProfilePanels && (
           <section id="profile-editing" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Profiles</p>
@@ -425,7 +576,7 @@ function workflowClass(value = "") {
           </section>
           )}
 
-          {userCanUseSourceDataTools && (
+          {userCanUseSourceDataTools && showDataPanels && (
           <section id="bill-admin" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Bills</p>
@@ -512,7 +663,7 @@ function workflowClass(value = "") {
           </section>
           )}
 
-          {userCanReviewProfiles && (
+          {userCanReviewProfiles && showProfilePanels && (
           <section id="profile-cleanup" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Profile Cleanup</p>
@@ -641,7 +792,7 @@ function workflowClass(value = "") {
           </section>
           )}
 
-          {userCanModerateContent && (
+          {userCanModerateContent && showModerationPanels && (
           <section id="community-updates" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Moderation</p>
@@ -761,7 +912,7 @@ function workflowClass(value = "") {
           </section>
           )}
 
-          {userCanModerateContent && (
+          {userCanModerateContent && showModerationPanels && (
           <section id="article-submissions" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Moderation</p>
@@ -883,7 +1034,7 @@ function workflowClass(value = "") {
           </section>
           )}
 
-          {userCanModerateContent && (
+          {userCanModerateContent && showModerationPanels && (
           <section id="endorsement-submissions" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Moderation</p>
@@ -980,7 +1131,7 @@ function workflowClass(value = "") {
           </section>
           )}
 
-          {userCanUseSourceDataTools && (
+          {userCanUseSourceDataTools && showDataPanels && (
           <section id="organizations-admin" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">Organizations</p>
@@ -1418,7 +1569,7 @@ function workflowClass(value = "") {
           </section>
           )}
 
-          {userCanUseSourceDataTools && (
+          {userCanUseSourceDataTools && showDataPanels && (
           <section id="database-tools" class="panel caution-panel">
             <div class="panel-heading">
               <p class="eyebrow">D1 Database</p>
@@ -1457,7 +1608,7 @@ function workflowClass(value = "") {
           </section>
           )}
 
-          {userCanUseSourceDataTools && (
+          {userCanUseSourceDataTools && showDataPanels && (
           <section id="asset-upload" class="panel">
             <div class="panel-heading">
               <p class="eyebrow">R2 Storage</p>
@@ -1973,6 +2124,12 @@ function workflowClass(value = "") {
     text-decoration: none;
   }
 
+  .admin-links a.active {
+    background: #1f2933;
+    border-color: #1f2933;
+    color: #ffffff;
+  }
+
   .panel,
   .status-message {
     background: white;
@@ -2199,6 +2356,69 @@ function workflowClass(value = "") {
     display: block;
     font-size: 0.96rem;
     margin-bottom: 5px;
+  }
+
+  .reviewer-list {
+    display: grid;
+    gap: 14px;
+    margin-top: 18px;
+  }
+
+  .reviewer-list article {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .reviewer-summary {
+    align-items: start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+  }
+
+  .reviewer-summary strong {
+    color: #1f2933;
+    display: block;
+    font-size: 1.02rem;
+  }
+
+  .reviewer-summary p,
+  .reviewer-details p {
+    color: #64748b;
+    font-weight: 800;
+    line-height: 1.45;
+    margin: 3px 0 0;
+  }
+
+  .reviewer-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+
+  .reviewer-pills span:first-child {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #334155;
+    font-size: 0.76rem;
+    font-weight: 950;
+    padding: 6px 9px;
+  }
+
+  .reviewer-details {
+    display: grid;
+    gap: 4px;
+  }
+
+  .reviewer-access-form {
+    display: grid;
+    gap: 10px;
   }
 
   .gap-filters {

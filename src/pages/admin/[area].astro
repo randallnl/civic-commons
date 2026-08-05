@@ -1,0 +1,15 @@
+---
+export const prerender = false;
+
+const area = Astro.params.area || "";
+const allowedAreas = ["profiles", "moderation", "reviewers", "data"];
+
+if (!allowedAreas.includes(area)) {
+  return Astro.redirect("/admin", 302);
+}
+
+const target = new URL("/admin", Astro.url);
+target.searchParams.set("area", area);
+
+return Astro.rewrite(target);
+---

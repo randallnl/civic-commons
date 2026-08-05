@@ -1,4 +1,8 @@
 import { env } from "cloudflare:workers";
+import {
+  getVolunteerReviewerByEmail,
+  normalizeEmail as normalizeReviewerEmail,
+} from "./volunteerReviewers";
 
 export const ADMIN_COOKIE = "nhdb_admin_session";
 const TOKEN_TTL_SECONDS = 15 * 60;
@@ -53,7 +57,10 @@ export async function createMagicLink(email, request) {
   if (!normalizedEmail) throw new Error("Email is required.");
 
   const allowedEmails = await allowedAdminEmails();
-  if (!allowedEmails.includes(normalizedEmail)) {
+  const reviewer = await getVolunteerReviewerByEmail(normalizedEmail, db);
+  const allowedByReviewer = reviewer?.status === "approved";
+  const blockedByReviewer = ["disabled", "rejected"].includes(reviewer?.status);
+  if (blockedByReviewer || (!allowedEmails.includes(normalizedEmail) && !allowedByReviewer)) {
     throw new Error("That email is not authorized for admin access.");
   }
 
@@ -197,6 +204,8 @@ export async function allowedAdminEmails() {
 export async function adminRoleForEmail(email = "") {
   const normalized = normalizeEmail(email);
   if (!normalized) return "";
+  const reviewer = await getVolunteerReviewerByEmail(normalized);
+  if (reviewer?.status === "approved" && reviewer.role) return reviewer.role;
 
   const roleMap = [
     ["super_admin", env.SUPER_ADMIN_EMAILS],
@@ -274,7 +283,7 @@ export async function bindingValue(binding) {
 }
 
 export function normalizeEmail(value = "") {
-  return String(value).trim().toLowerCase();
+  return normalizeReviewerEmail(value);
 }
 
 export function cookieValue(request, name) {

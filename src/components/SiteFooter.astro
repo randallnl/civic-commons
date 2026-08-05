@@ -53,13 +53,17 @@ const year = new Date().getFullYear();
         <h2>Help keep the public record useful.</h2>
         <p>Suggest profile edits, submit articles, and share context for review.</p>
       </div>
-      <a href="/suggest-update">Suggest an update</a>
+      <div class="footer-callout-actions">
+        <a href="/suggest-update">Suggest an update</a>
+        <a href="/volunteer-reviewers">Volunteer to review</a>
+      </div>
     </div>
 
     <div class="footer-bottom">
       <p>© {year} NH Deserves Better. Community accountability takes participation.</p>
       <div>
         <a href="/admin">Admin</a>
+        <a href="/volunteer-reviewers">Volunteer</a>
         <a href="/suggest-update">Corrections</a>
       </div>
     </div>
@@ -191,7 +195,14 @@ const year = new Date().getFullYear();
     margin: 0 0 6px;
   }
 
-  .footer-callout > a {
+  .footer-callout-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .footer-callout-actions a {
     background: #1f2933;
     border-radius: 999px;
     color: #ffffff;
@@ -201,7 +212,7 @@ const year = new Date().getFullYear();
     text-decoration: none;
   }
 
-  .footer-callout > a:hover {
+  .footer-callout-actions a:hover {
     background: #dc4d09;
   }
 
@@ -241,7 +252,9 @@ const year = new Date().getFullYear();
       flex-direction: column;
     }
 
-    .footer-callout > a {
+    .footer-callout-actions,
+    .footer-callout-actions a {
+      justify-content: center;
       text-align: center;
     }
   }
