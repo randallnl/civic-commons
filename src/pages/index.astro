@@ -12,13 +12,20 @@ import {
   getRecentApprovedCommunityUpdates,
 } from "../lib/communityUpdates";
 import {
+  getCommunityUpdateCards,
+  previewDescription,
+  previewTitle,
+} from "../lib/communityUpdateCards";
+import {
   getTrackedBills,
   normalizeBillCode,
 } from "../lib/trackedBills";
+import profileIcon from "../assets/profile icon.png";
 
 let recentArticles = [];
 let organizationComments = [];
 let recentCommunityUpdates = [];
+let communityUpdateCards = [];
 let trackedBills = new Map();
 const howToStepImages = [
   organizationAssetUrl("capital dome.png"),
@@ -57,6 +64,7 @@ try {
 }
 
 recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
+communityUpdateCards = await getCommunityUpdateCards(recentCommunityUpdates);
 
 function trackedBillForCode(code = "") {
   const normalized = normalizeBillCode(code);
@@ -274,6 +282,86 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
       </section>
 
       <section class="homepage-stack">
+        <div class="homepage-panel">
+          <div class="section-intro">
+            <p class="eyebrow">Community Updates</p>
+            <h2>Recent context from around New Hampshire.</h2>
+            <p>
+              Community updates help connect profiles, votes, and bills to what
+              neighbors are seeing locally.
+            </p>
+          </div>
+
+          <div class="homepage-update-list">
+            {communityUpdateCards.length ? (
+              communityUpdateCards.map((update) => {
+                const photos = update.photoUrls?.length
+                  ? update.photoUrls
+                  : update.photoUrl
+                    ? [update.photoUrl]
+                    : [];
+
+                return (
+                  <article class:list={["community-update-card", photos.length && "has-photo"]}>
+                    {photos[0] && (
+                      <a class="community-update-thumb" href={update.pageUrl || "/updates"} tabindex="-1" aria-hidden="true">
+                        <img src={photos[0]} alt="" loading="lazy" />
+                        <span>{photos.length === 1 ? "Photo update" : `${photos.length} photos`}</span>
+                      </a>
+                    )}
+                    <div class="community-update-copy">
+                      <div class="community-update-meta">
+                        <strong>{cleanText(update.displayName || "Community member")}</strong>
+                        {communityUpdateDate(update.createdAt) && <span>{communityUpdateDate(update.createdAt)}</span>}
+                      </div>
+                      <h3>
+                        <a href={update.pageUrl || "/updates"}>{cleanText(update.entityName || "Community update")}</a>
+                      </h3>
+                      {update.comment && <p>{previewText(update.comment, 220)}</p>}
+                      {update.linkUrl && (
+                        <a class="community-link-preview rich-link-preview" href={update.linkUrl}>
+                          {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+                          <span>
+                            <strong>{previewTitle(update.linkPreview)}</strong>
+                            {previewDescription(update.linkPreview, update.linkUrl) && (
+                              <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
+                            )}
+                          </span>
+                        </a>
+                      )}
+                      {update.people?.length > 0 && (
+                        <div class="community-people-preview" aria-label="People connected to this update">
+                          {update.people.slice(0, 3).map((person) => (
+                            <a class="mini-person-card" href={person.path}>
+                              <img
+                                class:list={[!person.photoUrl && "profile-icon"]}
+                                src={person.photoUrl || profileIcon.src}
+                                alt={person.photoUrl ? `Photo of ${person.name}` : ""}
+                                loading="lazy"
+                              />
+                              <span>
+                                <strong>{cleanText(person.name)}</strong>
+                                {person.role && <small>{cleanText(person.role)}</small>}
+                                {person.districtLabel && <small>{cleanText(person.districtLabel)}</small>}
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              })
+            ) : (
+              <article class="comment-card placeholder">
+                <span>Community updates</span>
+                <strong>No approved updates yet</strong>
+                <p>Approved community-submitted updates will appear here.</p>
+              </article>
+            )}
+          </div>
+        </div>
+
         <div class="homepage-panel">
           <div class="section-intro">
           <p class="eyebrow">Community Comments</p>
@@ -1316,6 +1404,22 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
     padding: 16px;
   }
 
+  .homepage-update-list {
+    display: grid;
+    gap: 14px;
+    margin-top: 18px;
+  }
+
+  .community-update-card {
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    padding: 16px;
+  }
+
   .community-update-card.has-photo {
     align-items: stretch;
     grid-template-columns: 148px minmax(0, 1fr);
@@ -1364,6 +1468,152 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
 
   .community-update-copy > * {
     min-width: 0;
+  }
+
+  .community-update-meta {
+    color: #64748b;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+    font-weight: 850;
+    gap: 8px;
+  }
+
+  .community-update-meta strong {
+    color: #1f2933;
+  }
+
+  .community-update-card h3 {
+    font-size: 1.18rem;
+    line-height: 1.16;
+    margin: 0;
+  }
+
+  .community-update-card h3 a {
+    color: #1f2933;
+    text-decoration: none;
+  }
+
+  .community-update-card h3 a:hover {
+    color: #b6390a;
+    text-decoration: underline;
+  }
+
+  .community-update-card p {
+    color: #4b5563;
+    font-weight: 750;
+    line-height: 1.5;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .rich-link-preview {
+    overflow: hidden;
+  }
+
+  .rich-link-preview > img {
+    aspect-ratio: 16 / 9;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    grid-column: 1 / -1;
+    max-height: 220px;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  .community-link-preview {
+    background: #ffffff;
+    border: 1px solid #93c5fd;
+    border-radius: 14px;
+    color: #1f2933;
+    display: grid;
+    gap: 10px;
+    margin-top: 4px;
+    padding: 12px;
+    text-decoration: none;
+  }
+
+  .community-link-preview strong,
+  .community-link-preview small {
+    display: block;
+  }
+
+  .community-link-preview strong {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .community-link-preview small {
+    color: #64748b;
+    font-size: 0.84rem;
+    font-weight: 850;
+    line-height: 1.35;
+    margin-top: 4px;
+  }
+
+  .community-people-preview {
+    border-top: 1px solid #dbeafe;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    margin-top: 4px;
+    padding-top: 12px;
+  }
+
+  .mini-person-card {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    color: #1f2933;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 48px minmax(0, 1fr);
+    min-width: 0;
+    padding: 8px;
+    text-decoration: none;
+  }
+
+  .mini-person-card img {
+    aspect-ratio: 4 / 5;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    display: block;
+    height: 60px;
+    object-fit: cover;
+    object-position: center top;
+    width: 48px;
+  }
+
+  .mini-person-card img.profile-icon {
+    object-fit: cover;
+  }
+
+  .mini-person-card span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .mini-person-card strong,
+  .mini-person-card small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mini-person-card strong {
+    color: #1f2933;
+    font-size: 0.92rem;
+    line-height: 1.15;
+  }
+
+  .mini-person-card small {
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 850;
   }
 
   .comment-card.placeholder {
