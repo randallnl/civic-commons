@@ -47,8 +47,17 @@ const gapMissing = Astro.url.searchParams.get("gapMissing") || "photoWebsite";
 const gapOffice = Astro.url.searchParams.get("gapOffice") || "";
 const gapProfile = Astro.url.searchParams.get("gapProfile") || "";
 const gapReview = Astro.url.searchParams.get("gapReview") || "needs-review";
+const hasProfileGapFilters = [
+  "gapType",
+  "gapMissing",
+  "gapOffice",
+  "gapProfile",
+  "gapProfileSearch",
+  "gapReview",
+].some((param) => Astro.url.searchParams.has(param));
 const requestedArea =
   Astro.url.searchParams.get("area") ||
+  (hasProfileGapFilters ? "profiles" : "") ||
   Astro.url.pathname.split("/").filter(Boolean)[1] ||
   "overview";
 const adminAreaOptions = ["overview", "profiles", "moderation", "reviewers", "data"];
@@ -674,7 +683,7 @@ function workflowClass(value = "") {
               </p>
             </div>
 
-            <form class="gap-filters" action="/admin" method="get">
+            <form class="gap-filters" action="/admin/profiles" method="get">
               <label>
                 Profile type
                 <select name="gapType">

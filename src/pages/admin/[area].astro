@@ -8,7 +8,7 @@ if (!allowedAreas.includes(area)) {
   return Astro.redirect("/admin", 302);
 }
 
-const target = new URL("/admin", Astro.url);
+const target = new URL(`/admin${Astro.url.search}`, Astro.url);
 target.searchParams.set("area", area);
 
 return Astro.rewrite(target);
