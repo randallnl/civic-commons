@@ -9,8 +9,14 @@ import {
   communityUpdateDate,
   getRecentApprovedCommunityUpdates,
 } from "../lib/communityUpdates";
+import {
+  getCommunityUpdateCards,
+  previewDescription,
+  previewTitle,
+} from "../lib/communityUpdateCards";
 import { getRecentOrganizationComments } from "../lib/organizationsApi";
 import { cleanText } from "../lib/text";
+import profileIcon from "../assets/profile icon.png";
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const typeParam = Astro.url.searchParams.get("type");
@@ -26,9 +32,10 @@ try {
     getArticles({ include: "relations", limit: 80 }),
     getRecentOrganizationComments({ limit: 80 }),
   ]);
+  const communityUpdateCards = await getCommunityUpdateCards(communityUpdates || []);
 
   feedItems = [
-    ...(communityUpdates || []).map((update) => communityFeedItem(update)),
+    ...communityUpdateCards.map((update) => communityFeedItem(update)),
     ...((articleData.articles || []).map((article) => articleFeedItem(article))),
     ...(organizationComments || []).map((comment) => organizationCommentFeedItem(comment)),
   ].sort((a, b) => b.sortDate - a.sortDate);
@@ -60,6 +67,10 @@ function communityFeedItem(update = {}) {
       communityUpdateDate(dateValue),
     ].filter(Boolean).join(" - "),
     image: photos[0] || "",
+    photos,
+    linkUrl: update.linkUrl || "",
+    linkPreview: update.linkPreview || null,
+    people: update.people || [],
     text: [
       update.entityName,
       update.entityKey,
@@ -258,6 +269,36 @@ function cleanDate(value = "") {
                   <h3><a href={item.href}>{item.title}</a></h3>
                   {item.meta && <p class="feed-meta">{item.meta}</p>}
                   <p>{item.body}</p>
+                  {item.type === "community" && item.linkUrl && (
+                    <a class="community-link-preview rich-link-preview" href={item.linkUrl}>
+                      {item.linkPreview?.imageUrl && <img src={item.linkPreview.imageUrl} alt="" loading="lazy" />}
+                      <span>
+                        <strong>{previewTitle(item.linkPreview)}</strong>
+                        {previewDescription(item.linkPreview, item.linkUrl) && (
+                          <small>{previewDescription(item.linkPreview, item.linkUrl)}</small>
+                        )}
+                      </span>
+                    </a>
+                  )}
+                  {item.type === "community" && item.people?.length > 0 && (
+                    <div class="community-people-preview" aria-label="People connected to this update">
+                      {item.people.slice(0, 4).map((person) => (
+                        <a class="mini-person-card" href={person.path}>
+                          <img
+                            class:list={[!person.photoUrl && "profile-icon"]}
+                            src={person.photoUrl || profileIcon.src}
+                            alt={person.photoUrl ? `Photo of ${person.name}` : ""}
+                            loading="lazy"
+                          />
+                          <span>
+                            <strong>{cleanText(person.name)}</strong>
+                            {person.role && <small>{cleanText(person.role)}</small>}
+                            {person.districtLabel && <small>{cleanText(person.districtLabel)}</small>}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   <div class="feed-actions">
                     <a href={item.href}>Open details</a>
                     {item.sourceHref && <a href={item.sourceHref}>{item.sourceLabel}</a>}
@@ -414,6 +455,114 @@ function cleanDate(value = "") {
     font-size: 0.82rem;
     padding: 8px 10px;
     text-decoration: none;
+  }
+
+  .rich-link-preview {
+    overflow: hidden;
+  }
+
+  .rich-link-preview > img {
+    aspect-ratio: 16 / 9;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    grid-column: 1 / -1;
+    max-height: 220px;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  .community-link-preview {
+    background: #ffffff;
+    border: 1px solid #93c5fd;
+    border-radius: 14px;
+    color: #1f2933;
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    text-decoration: none;
+  }
+
+  .community-link-preview strong,
+  .community-link-preview small {
+    display: block;
+  }
+
+  .community-link-preview strong {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .community-link-preview small {
+    color: #64748b;
+    font-size: 0.84rem;
+    font-weight: 850;
+    line-height: 1.35;
+    margin-top: 4px;
+  }
+
+  .community-people-preview {
+    border-top: 1px solid #dbeafe;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    margin-top: 4px;
+    padding-top: 12px;
+  }
+
+  .mini-person-card {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    color: #1f2933;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 48px minmax(0, 1fr);
+    min-width: 0;
+    padding: 8px;
+    text-decoration: none;
+  }
+
+  .mini-person-card img {
+    aspect-ratio: 4 / 5;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    display: block;
+    height: 60px;
+    object-fit: cover;
+    object-position: center top;
+    width: 48px;
+  }
+
+  .mini-person-card img.profile-icon {
+    object-fit: cover;
+  }
+
+  .mini-person-card span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .mini-person-card strong,
+  .mini-person-card small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mini-person-card strong {
+    color: #1f2933;
+    font-size: 0.92rem;
+    line-height: 1.15;
+  }
+
+  .mini-person-card small {
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 850;
   }
 
   .filter-chips {
