@@ -411,11 +411,13 @@ function cleanDate(value = "") {
   }
 
   .feed-card.has-image {
-    grid-template-columns: minmax(180px, 0.34fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.34fr);
   }
 
   .feed-image {
     background: #f8fafc;
+    grid-column: 2;
+    grid-row: 1;
     min-height: 190px;
   }
 
@@ -428,6 +430,8 @@ function cleanDate(value = "") {
   .feed-copy {
     display: grid;
     gap: 10px;
+    grid-column: 1;
+    grid-row: 1;
     padding: 20px;
   }
 
@@ -695,6 +699,12 @@ function cleanDate(value = "") {
   @media (max-width: 760px) {
     .feed-card.has-image {
       grid-template-columns: 1fr;
+    }
+
+    .feed-image,
+    .feed-copy {
+      grid-column: auto;
+      grid-row: auto;
     }
 
     .feed-image {
