@@ -53,19 +53,22 @@ const typeOptions = [
 function communityFeedItem(update = {}) {
   const photos = update.photoUrls?.length ? update.photoUrls : update.photoUrl ? [update.photoUrl] : [];
   const dateValue = update.createdAt || "";
+  const submittedBy = `Submitted by ${cleanText(update.displayName || "Community member")}`;
+  const dateText = communityUpdateDate(dateValue);
   return {
     type: "community",
     typeLabel: "Community update",
+    typeIcon: "CU",
     title: cleanText(update.entityName || "Community update"),
     eyebrow: cleanText(update.entityType || "Community"),
     body: cleanText(update.comment || update.linkUrl || "Community-submitted context."),
     href: update.pageUrl || update.linkUrl || "/communities",
     sourceHref: update.linkUrl || "",
     sourceLabel: update.linkUrl ? "Open submitted link" : "",
-    meta: [
-      `Submitted by ${cleanText(update.displayName || "Community member")}`,
-      communityUpdateDate(dateValue),
-    ].filter(Boolean).join(" - "),
+    meta: [submittedBy, dateText].filter(Boolean).join(" - "),
+    submittedBy,
+    dateValue,
+    dateText,
     image: photos[0] || "",
     photos,
     linkUrl: update.linkUrl || "",
@@ -91,6 +94,7 @@ function articleFeedItem(article = {}) {
   return {
     type: "article",
     typeLabel: "Article",
+    typeIcon: "A",
     title,
     eyebrow: source || "Article",
     body: cleanText(article.preview?.description || article.summary || "Civic coverage tracked by NH Deserves Better."),
@@ -121,6 +125,7 @@ function organizationCommentFeedItem(comment = {}) {
   return {
     type: "organization-comment",
     typeLabel: "Organization comment",
+    typeIcon: "OC",
     title,
     eyebrow: [comment.position, billLabel].filter(Boolean).join(" - "),
     body: cleanText(comment.comment || "Organization position on a tracked bill."),
@@ -262,12 +267,26 @@ function cleanDate(value = "") {
                   </a>
                 )}
                 <div class="feed-copy">
-                  <div class="feed-topline">
-                    <span>{item.typeLabel}</span>
-                    {item.eyebrow && <span>{item.eyebrow}</span>}
+                  <div class="feed-card-head">
+                    <span class:list={["feed-type-icon", `feed-type-${item.type}`]} aria-hidden="true">
+                      {item.typeIcon}
+                    </span>
+                    <div class="feed-head-copy">
+                      {item.type === "community" ? (
+                        <>
+                          <strong>{item.submittedBy}</strong>
+                          {item.dateText && <time datetime={item.dateValue}>{item.dateText}</time>}
+                        </>
+                      ) : (
+                        <div class="feed-topline">
+                          <span>{item.typeLabel}</span>
+                          {item.eyebrow && <span>{item.eyebrow}</span>}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <h3><a href={item.href}>{item.title}</a></h3>
-                  {item.meta && <p class="feed-meta">{item.meta}</p>}
+                  {item.type !== "community" && <h3><a href={item.href}>{item.title}</a></h3>}
+                  {item.type !== "community" && item.meta && <p class="feed-meta">{item.meta}</p>}
                   <p>{item.body}</p>
                   {item.type === "community" && item.linkUrl && (
                     <a class="community-link-preview rich-link-preview" href={item.linkUrl}>
@@ -281,22 +300,25 @@ function cleanDate(value = "") {
                     </a>
                   )}
                   {item.type === "community" && item.people?.length > 0 && (
-                    <div class="community-people-preview" aria-label="People connected to this update">
-                      {item.people.slice(0, 4).map((person) => (
-                        <a class="mini-person-card" href={person.path}>
-                          <img
-                            class:list={[!person.photoUrl && "profile-icon"]}
-                            src={person.photoUrl || profileIcon.src}
-                            alt={person.photoUrl ? `Photo of ${person.name}` : ""}
-                            loading="lazy"
-                          />
-                          <span>
-                            <strong>{cleanText(person.name)}</strong>
-                            {person.role && <small>{cleanText(person.role)}</small>}
-                            {person.districtLabel && <small>{cleanText(person.districtLabel)}</small>}
-                          </span>
-                        </a>
-                      ))}
+                    <div class="community-people-block">
+                      <h4>People</h4>
+                      <div class="community-people-preview" aria-label="People connected to this update">
+                        {item.people.slice(0, 4).map((person) => (
+                          <a class="mini-person-card" href={person.path}>
+                            <img
+                              class:list={[!person.photoUrl && "profile-icon"]}
+                              src={person.photoUrl || profileIcon.src}
+                              alt={person.photoUrl ? `Photo of ${person.name}` : ""}
+                              loading="lazy"
+                            />
+                            <span>
+                              <strong>{cleanText(person.name)}</strong>
+                              {person.role && <small>{cleanText(person.role)}</small>}
+                              {person.districtLabel && <small>{cleanText(person.districtLabel)}</small>}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
                     </div>
                   )}
                   <div class="feed-actions">
@@ -350,7 +372,10 @@ function cleanDate(value = "") {
   .feed-panel {
     display: grid;
     gap: 16px;
+    justify-self: center;
     margin-top: 18px;
+    max-width: 880px;
+    width: 100%;
   }
 
   .results-heading {
@@ -404,6 +429,53 @@ function cleanDate(value = "") {
     display: grid;
     gap: 10px;
     padding: 20px;
+  }
+
+  .feed-card-head {
+    align-items: start;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .feed-type-icon {
+    align-items: center;
+    background: #1d4ed8;
+    border-radius: 10px;
+    color: #ffffff;
+    display: inline-flex;
+    font-size: 0.7rem;
+    font-weight: 950;
+    height: 34px;
+    justify-content: center;
+    line-height: 1;
+    width: 34px;
+  }
+
+  .feed-type-article {
+    background: #7c2d12;
+  }
+
+  .feed-type-organization-comment {
+    background: #166534;
+  }
+
+  .feed-head-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .feed-head-copy > strong {
+    color: #1f2933;
+    font-size: 0.9rem;
+    line-height: 1.2;
+  }
+
+  .feed-head-copy time {
+    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 850;
   }
 
   .feed-topline,
@@ -505,14 +577,30 @@ function cleanDate(value = "") {
   }
 
   .community-people-preview {
-    border-top: 1px solid #dbeafe;
     display: grid;
     gap: 8px;
     grid-template-columns: repeat(auto-fit, minmax(150px, 220px));
     justify-content: start;
+    max-width: 700px;
+  }
+
+  .community-people-block {
+    border-top: 1px solid #dbeafe;
+    display: grid;
+    gap: 8px;
     margin-top: 4px;
     max-width: 700px;
     padding-top: 12px;
+  }
+
+  .community-people-block h4 {
+    color: #6b4f2a;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    line-height: 1;
+    margin: 0;
+    text-transform: uppercase;
   }
 
   .mini-person-card {
