@@ -738,25 +738,26 @@ function uniqueTowns(towns = []) {
               </div>
             )}
 
-            {profileResourceLinks.length > 0 && (
-              <nav class="resource-link-bar" aria-label="Profile links">
-                {profileResourceLinks.map((link) => {
-                  const Icon = link.icon;
-
-                  return (
-                    <a href={link.href}>
-                      <span class="link-icon" aria-hidden="true">
-                        <Icon size={17} stroke-width={2.3} />
-                      </span>
-                      <span>{link.label}</span>
-                    </a>
-                  );
-                })}
-              </nav>
-            )}
           </aside>
         </div>
       </section>
+
+      {profileResourceLinks.length > 0 && (
+        <nav class="resource-link-bar" aria-label="Profile links">
+          {profileResourceLinks.map((link) => {
+            const Icon = link.icon;
+
+            return (
+              <a href={link.href}>
+                <span class="link-icon" aria-hidden="true">
+                  <Icon size={17} stroke-width={2.3} />
+                </span>
+                <span>{link.label}</span>
+              </a>
+            );
+          })}
+        </nav>
+      )}
 
       {linkedCandidateForEndorsements && (
         <section class="panel candidate-role-panel" id="candidate-role">
@@ -1576,15 +1577,15 @@ function uniqueTowns(towns = []) {
   }
 
   .resource-link-bar {
-    align-items: stretch;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin: 14px 0 0;
-    padding: 0;
+    gap: 10px;
+    margin: 18px 0 24px;
+    padding: 14px;
   }
 
   .hero-details {
@@ -1680,12 +1681,6 @@ function uniqueTowns(towns = []) {
     gap: 8px;
     padding: 8px 11px;
     text-decoration: none;
-  }
-
-  .hero-details .resource-link-bar a {
-    background: #ffffff;
-    flex: 1 1 calc(50% - 8px);
-    justify-content: center;
   }
 
   .resource-link-bar a:hover {
