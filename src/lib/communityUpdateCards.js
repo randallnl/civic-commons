@@ -84,10 +84,28 @@ function personPreview(mention = {}) {
 
   return {
     ...mention,
+    path: peopleProfilePath(mention),
     photoUrl,
     role,
     districtLabel,
   };
+}
+
+function peopleProfilePath(mention = {}) {
+  const existingPath = String(mention.path || "").trim();
+  if (existingPath.startsWith("/people/")) return existingPath;
+
+  const key =
+    mention.personSlug ||
+    mention.person_slug ||
+    mention.slug ||
+    mention.personid ||
+    mention.personId ||
+    mention.employeeno ||
+    mention.filerEntityNumber ||
+    mention.filer_entity_number;
+
+  return key ? `/people/${encodeURIComponent(String(key))}` : existingPath;
 }
 
 function linkHost(value = "") {

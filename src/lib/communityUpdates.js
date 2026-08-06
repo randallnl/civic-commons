@@ -295,15 +295,8 @@ function aliasList(value = "") {
 }
 
 function personMentionPath(person = {}) {
-  if (Number(person.is_current_legislator) === 1) {
-    return `/people/${encodeURIComponent(String(person.slug || person.gc_personid || person.employeeno || person.id))}`;
-  }
-
-  if (Number(person.is_2026_candidate) === 1) {
-    return `/candidates/${encodeURIComponent(String(person.filer_entity_number || person.slug || person.id))}`;
-  }
-
-  return "";
+  const key = person.slug || person.gc_personid || person.employeeno || person.id || person.filer_entity_number;
+  return key ? `/people/${encodeURIComponent(String(key))}` : "";
 }
 
 function personRoleLabel(person = {}) {
@@ -387,7 +380,13 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
       chamber: cleanText(mention.chamber),
       party: cleanText(mention.party),
       district: cleanText(mention.district),
-      path: mention.path || `/people/${encodeURIComponent(String(mention.personid))}`,
+      path: personMentionPath({
+        slug: mention.person_slug,
+        gc_personid: mention.personid,
+        employeeno: mention.employeeno,
+        id: mention.person_id,
+        filer_entity_number: mention.filer_entity_number,
+      }),
       roleLabel: cleanText(mention.role_label),
       photoUrl: mention.photo_url || "",
       office: cleanText(mention.office),
@@ -523,9 +522,7 @@ async function findUpdateEntitySubject(entityType = "", entityKey = "", db) {
     chamber: isCurrentLegislator ? "Legislator" : "",
     party: cleanText(row.party),
     district: cleanText(row.profile_district),
-    path: isCurrentLegislator
-      ? `/people/${encodeURIComponent(String(row.slug || row.gc_personid || row.employeeno || row.id))}`
-      : `/candidates/${encodeURIComponent(String(row.filer_entity_number || row.slug || row.id))}`,
+    path: personMentionPath(row),
     roleLabel: personRoleLabel({
       is_current_legislator: isCurrentLegislator ? 1 : 0,
       is_2026_candidate: is2026Candidate ? 1 : 0,
