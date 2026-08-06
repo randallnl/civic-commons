@@ -6,6 +6,7 @@ import SiteFooter from "../../components/SiteFooter.astro";
 import ArticleList from "../../components/ArticleList.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import FilterBar from "../../components/FilterBar.astro";
+import SocialLinkPreviews from "../../components/SocialLinkPreviews.astro";
 import profileIcon from "../../assets/profile icon.png";
 import {
   ExternalLink,
@@ -218,6 +219,24 @@ const sourceLinks = [
 ].filter(Boolean);
 const linkedLegislatorProfile = sourceLinks.find((link) => link.primary);
 const candidateResourceLinks = sourceLinks.filter((link) => !link.primary);
+const candidateSocialLinks = [
+  socialField(candidate, "substack") && {
+    href: socialProfileUrl(socialField(candidate, "substack"), "substack"),
+    label: "Substack",
+  },
+  socialField(candidate, "instagram") && {
+    href: socialProfileUrl(socialField(candidate, "instagram"), "instagram"),
+    label: "Instagram",
+  },
+  socialField(candidate, "facebook") && {
+    href: socialProfileUrl(socialField(candidate, "facebook"), "facebook"),
+    label: "Facebook",
+  },
+  socialField(candidate, "tiktok") && {
+    href: socialProfileUrl(socialField(candidate, "tiktok"), "tiktok"),
+    label: "TikTok",
+  },
+].filter(Boolean);
 
 if (adminSession) {
   try {
@@ -555,6 +574,12 @@ function uniqueArticles(articles = []) {
           })}
         </nav>
       )}
+
+      <SocialLinkPreviews
+        links={candidateSocialLinks}
+        title={`${name}'s social links`}
+        eyebrow="Profile Socials"
+      />
 
       <section class="panel">
         <p class="eyebrow">Ballot Roles</p>

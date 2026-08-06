@@ -240,7 +240,7 @@ function cleanPermalink(url, { keepSearch = false } = {}) {
   return cleanUrl.toString();
 }
 
-function socialPreview(value = "") {
+export function socialPreview(value = "") {
   const tikTok = tiktokPreview(value);
   if (tikTok) return { ...tikTok, type: "tiktok" };
   const facebook = facebookPreview(value);

@@ -876,7 +876,7 @@ const isReport = entityType === "report";
 
   .instagram-preview-card,
   .social-preview-card {
-    align-items: center;
+    align-items: stretch;
     background:
       linear-gradient(#ffffff, #ffffff) padding-box,
       linear-gradient(135deg, #f97316, #db2777, #7c3aed) border-box;
@@ -885,8 +885,10 @@ const isReport = entityType === "report";
     color: #1f2933;
     display: grid;
     gap: 10px;
-    grid-template-columns: auto minmax(0, 1fr);
-    padding: 10px 12px;
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 430px;
+    padding: 0;
+    position: relative;
     text-decoration: none;
   }
 
@@ -897,10 +899,10 @@ const isReport = entityType === "report";
   .rich-link-preview > img {
     aspect-ratio: 16 / 9;
     background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
+    border: 0;
+    border-radius: 0;
     grid-column: 1 / -1;
-    max-height: 220px;
+    max-height: 250px;
     object-fit: cover;
     width: 100%;
   }
@@ -964,7 +966,11 @@ const isReport = entityType === "report";
     font-weight: 950;
     height: 38px;
     justify-content: center;
+    left: 10px;
+    position: absolute;
+    top: 10px;
     width: 38px;
+    z-index: 2;
   }
 
   .tiktok-icon {
@@ -986,9 +992,16 @@ const isReport = entityType === "report";
     display: block;
   }
 
+  .instagram-preview-card > span:not(.instagram-icon),
+  .social-preview-card > span:not(.social-icon) {
+    display: block;
+    padding: 12px 14px 14px;
+  }
+
   .instagram-preview-card strong,
   .social-preview-card strong {
-    font-size: 0.96rem;
+    color: #1f2933;
+    font-size: 1.02rem;
     line-height: 1.2;
   }
 

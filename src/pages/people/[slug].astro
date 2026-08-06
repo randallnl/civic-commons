@@ -5,6 +5,7 @@ import ArticleList from "../../components/ArticleList.astro";
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import FilterBar from "../../components/FilterBar.astro";
+import SocialLinkPreviews from "../../components/SocialLinkPreviews.astro";
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import profileIcon from "../../assets/profile icon.png";
@@ -484,6 +485,25 @@ const profileResourceLinks = [
   },
 ].filter(Boolean);
 
+const profileSocialLinks = [
+  person.substack_url && {
+    href: socialProfileUrl(person.substack_url, "substack"),
+    label: "Substack",
+  },
+  person.instagram_url && {
+    href: socialProfileUrl(person.instagram_url, "instagram"),
+    label: "Instagram",
+  },
+  person.facebook_url && {
+    href: socialProfileUrl(person.facebook_url, "facebook"),
+    label: "Facebook",
+  },
+  person.tiktok_url && {
+    href: socialProfileUrl(person.tiktok_url, "tiktok"),
+    label: "TikTok",
+  },
+].filter(Boolean);
+
 function formatDate(value) {
   if (!value) return "";
 
@@ -807,6 +827,12 @@ function uniqueTowns(towns = []) {
           })}
         </nav>
       )}
+
+      <SocialLinkPreviews
+        links={profileSocialLinks}
+        title={`${person.full_name}'s social links`}
+        eyebrow="Profile Socials"
+      />
 
       {linkedCandidateForEndorsements && (
         <section class="panel candidate-role-panel" id="candidate-role">
