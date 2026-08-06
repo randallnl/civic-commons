@@ -27,7 +27,7 @@ const {
 const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
 const updateCards = await getCommunityUpdateCards(updates);
 const adminSession = await currentAdminSession(Astro.request);
-const canDeleteUpdates = canModerateContent(adminSession);
+const canModerateUpdates = canModerateContent(adminSession);
 const hasInstagramEmbeds = updateCards.some((card) => card.social?.type === "instagram");
 const hasTikTokEmbeds = updateCards.some((card) => card.social?.type === "tiktok" && card.social.videoId);
 const hasFacebookEmbeds = updateCards.some((card) => card.social?.type === "facebook" && card.social.embedUrl);
@@ -292,18 +292,52 @@ const isReport = entityType === "report";
                 ))}
               </div>
             )}
-            {canDeleteUpdates && (
-              <form
-                class="community-update-admin-actions"
-                action="/api/admin/community-updates"
-                method="post"
-                onsubmit="return confirm('Delete this community update from public pages?');"
-              >
-                <input type="hidden" name="id" value={update.id} />
-                <input type="hidden" name="action" value="delete" />
-                <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
-                <button type="submit">Delete update</button>
-              </form>
+            {canModerateUpdates && (
+              <details class="community-update-admin-editor">
+                <summary>Edit update</summary>
+                <form
+                  action="/api/admin/community-updates"
+                  method="post"
+                  enctype="multipart/form-data"
+                  hx-post="/api/admin/community-updates"
+                  hx-encoding="multipart/form-data"
+                  hx-target="find .community-update-admin-status"
+                  hx-swap="innerHTML"
+                >
+                  <input type="hidden" name="id" value={update.id} />
+                  <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+                  <label>
+                    Submitted by
+                    <input name="displayName" value={cleanText(update.displayName || "Community member")} />
+                  </label>
+                  <label>
+                    Update text
+                    <textarea name="comment" rows="4">{cleanText(update.comment || "")}</textarea>
+                  </label>
+                  <label>
+                    Link
+                    <input name="linkUrl" type="url" value={update.linkUrl || ""} placeholder="https://example.com/context" />
+                  </label>
+                  <label class="community-update-admin-file">
+                    Add photos
+                    <input name="photos" type="file" accept="image/*" multiple />
+                    <small>New photos are added to this update when you save.</small>
+                  </label>
+                  <div class="community-update-admin-actions">
+                    <button type="submit" name="action" value="save">Save edits</button>
+                    <button
+                      class="danger"
+                      type="submit"
+                      name="action"
+                      value="delete"
+                      onclick="return confirm('Delete this community update from public pages?');"
+                    >
+                      Delete update
+                    </button>
+                    <span class="community-update-admin-status" aria-live="polite"></span>
+                  </div>
+                </form>
+              </details>
             )}
           </div>
         </article>
@@ -614,12 +648,67 @@ const isReport = entityType === "report";
     min-width: 0;
   }
 
-  .community-update-admin-actions {
+  .community-update-admin-editor {
     border-top: 1px solid #e5e7eb;
-    display: flex;
-    justify-content: flex-end;
     margin-top: 12px;
     padding-top: 12px;
+  }
+
+  .community-update-admin-editor summary {
+    color: #1d4ed8;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 950;
+  }
+
+  .community-update-admin-editor form {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    display: grid;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 12px;
+  }
+
+  .community-update-admin-editor label {
+    color: #334155;
+    display: grid;
+    font-size: 0.76rem;
+    font-weight: 950;
+    gap: 5px;
+    text-transform: uppercase;
+  }
+
+  .community-update-admin-editor input,
+  .community-update-admin-editor textarea {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-sizing: border-box;
+    color: #1f2933;
+    font: inherit;
+    padding: 9px 10px;
+    text-transform: none;
+    width: 100%;
+  }
+
+  .community-update-admin-editor textarea {
+    resize: vertical;
+  }
+
+  .community-update-admin-file small {
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: none;
+  }
+
+  .community-update-admin-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
   }
 
   .community-update-admin-actions button {
@@ -630,10 +719,32 @@ const isReport = entityType === "report";
     padding: 7px 10px;
   }
 
+  .community-update-admin-actions button:first-child {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #ffffff;
+  }
+
   .community-update-admin-actions button:hover {
     background: #fee2e2;
     border-color: #fca5a5;
     color: #991b1b;
+  }
+
+  .community-update-admin-actions button:first-child:hover {
+    background: #1e40af;
+    border-color: #1e40af;
+    color: #ffffff;
+  }
+
+  .community-update-admin-status {
+    color: #166534;
+    font-size: 0.78rem;
+    font-weight: 900;
+  }
+
+  .community-update-admin-status :global(.inline-status.error) {
+    color: #b91c1c;
   }
 
   .community-photo-dialog {

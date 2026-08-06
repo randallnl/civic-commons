@@ -4,6 +4,10 @@ export const prerender = false;
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import FilterBar from "../components/FilterBar.astro";
+import {
+  canModerateContent,
+  currentAdminSession,
+} from "../lib/adminAuth";
 import { articleDetailPath, articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
 import {
   communityUpdateDate,
@@ -22,6 +26,8 @@ const q = Astro.url.searchParams.get("q")?.trim() || "";
 const typeParam = Astro.url.searchParams.get("type");
 const type = typeParam === null ? "community" : typeParam.trim();
 const sort = Astro.url.searchParams.get("sort")?.trim() || "updated:desc";
+const adminSession = await currentAdminSession(Astro.request);
+const canModerateUpdates = canModerateContent(adminSession);
 
 let feedItems = [];
 let error = "";
@@ -56,6 +62,7 @@ function communityFeedItem(update = {}) {
   const submittedBy = `Submitted by ${cleanText(update.displayName || "Community member")}`;
   const dateText = communityUpdateDate(dateValue);
   return {
+    id: update.id,
     type: "community",
     typeLabel: "Community update",
     typeIcon: "CU",
@@ -67,6 +74,8 @@ function communityFeedItem(update = {}) {
     sourceLabel: update.linkUrl ? "Open submitted link" : "",
     meta: [submittedBy, dateText].filter(Boolean).join(" - "),
     submittedBy,
+    displayName: cleanText(update.displayName || "Community member"),
+    comment: cleanText(update.comment || ""),
     dateValue,
     dateText,
     image: photos[0] || "",
@@ -364,6 +373,53 @@ function cleanDate(value = "") {
                     <a href={item.href}>Open details</a>
                     {item.sourceHref && <a href={item.sourceHref}>{item.sourceLabel}</a>}
                   </div>
+                  {canModerateUpdates && item.type === "community" && (
+                    <details class="feed-admin-editor">
+                      <summary>Edit community update</summary>
+                      <form
+                        action="/api/admin/community-updates"
+                        method="post"
+                        enctype="multipart/form-data"
+                        hx-post="/api/admin/community-updates"
+                        hx-encoding="multipart/form-data"
+                        hx-target="find .feed-admin-status"
+                        hx-swap="innerHTML"
+                      >
+                        <input type="hidden" name="id" value={item.id} />
+                        <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+                        <label>
+                          Submitted by
+                          <input name="displayName" value={item.displayName || "Community member"} />
+                        </label>
+                        <label>
+                          Update text
+                          <textarea name="comment" rows="4">{item.comment}</textarea>
+                        </label>
+                        <label>
+                          Link
+                          <input name="linkUrl" type="url" value={item.linkUrl || ""} placeholder="https://example.com/context" />
+                        </label>
+                        <label class="feed-admin-file">
+                          Add photos
+                          <input name="photos" type="file" accept="image/*" multiple />
+                          <small>New photos are added to this update when you save.</small>
+                        </label>
+                        <div class="feed-admin-actions">
+                          <button type="submit" name="action" value="save">Save edits</button>
+                          <button
+                            class="danger"
+                            type="submit"
+                            name="action"
+                            value="delete"
+                            onclick="return confirm('Delete this community update from public pages?');"
+                          >
+                            Delete update
+                          </button>
+                          <span class="feed-admin-status" aria-live="polite"></span>
+                        </div>
+                      </form>
+                    </details>
+                  )}
                 </div>
               </article>
             ))}
@@ -570,6 +626,96 @@ function cleanDate(value = "") {
     font-size: 0.82rem;
     padding: 8px 10px;
     text-decoration: none;
+  }
+
+  .feed-admin-editor {
+    border-top: 1px solid #e5e7eb;
+    margin-top: 6px;
+    padding-top: 12px;
+  }
+
+  .feed-admin-editor summary {
+    color: #1d4ed8;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 950;
+  }
+
+  .feed-admin-editor form {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    display: grid;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 12px;
+  }
+
+  .feed-admin-editor label {
+    color: #334155;
+    display: grid;
+    font-size: 0.76rem;
+    font-weight: 950;
+    gap: 5px;
+    text-transform: uppercase;
+  }
+
+  .feed-admin-editor input,
+  .feed-admin-editor textarea {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-sizing: border-box;
+    color: #1f2933;
+    font: inherit;
+    padding: 9px 10px;
+    text-transform: none;
+    width: 100%;
+  }
+
+  .feed-admin-editor textarea {
+    resize: vertical;
+  }
+
+  .feed-admin-file small {
+    color: #64748b;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: none;
+  }
+
+  .feed-admin-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .feed-admin-actions button {
+    background: #1d4ed8;
+    border: 1px solid #1d4ed8;
+    border-radius: 999px;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 950;
+    padding: 7px 10px;
+  }
+
+  .feed-admin-actions button.danger {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #b91c1c;
+  }
+
+  .feed-admin-status {
+    color: #166534;
+    font-size: 0.78rem;
+    font-weight: 900;
+  }
+
+  .feed-admin-status :global(.inline-status.error) {
+    color: #b91c1c;
   }
 
   .rich-link-preview {

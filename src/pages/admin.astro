@@ -896,6 +896,10 @@ function workflowClass(value = "") {
                         Edit update text
                         <textarea name="comment" rows="4">{cleanText(update.comment)}</textarea>
                       </label>
+                      <label>
+                        Link
+                        <input name="linkUrl" type="url" value={update.linkUrl || ""} placeholder="https://example.com/context" />
+                      </label>
                       <label class="moderation-file-field">
                         Add photos
                         <input name="photos" type="file" accept="image/*" multiple />

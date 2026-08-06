@@ -28,6 +28,7 @@ export async function POST({ request }) {
     const action = String(form.get("action") || "").trim();
     const comment = cleanText(form.get("comment") || "");
     const displayName = cleanText(form.get("displayName") || "") || "Community member";
+    const linkUrl = cleanText(form.get("linkUrl") || "");
     const files = form
       .getAll("photos")
       .concat(form.getAll("photo"))
@@ -87,10 +88,11 @@ export async function POST({ request }) {
           `UPDATE community_updates
            SET display_name = ?,
                comment = ?,
+               link_url = ?,
                photo_url = COALESCE(NULLIF(photo_url, ''), ?)
            WHERE id = ?`,
         )
-        .bind(displayName, comment, photoUrls[0] || "", id)
+        .bind(displayName, comment, linkUrl, photoUrls[0] || "", id)
         .run();
 
       await db
