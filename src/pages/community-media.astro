@@ -19,8 +19,8 @@ import profileIcon from "../assets/profile icon.png";
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const platform = Astro.url.searchParams.get("platform")?.trim() || "";
 const sort = Astro.url.searchParams.get("sort")?.trim() || "updated:desc";
-const DESCRIPTION_PREVIEW_LENGTH = 170;
-const NOTE_PREVIEW_LENGTH = 180;
+const DESCRIPTION_PREVIEW_LENGTH = 114;
+const NOTE_PREVIEW_LENGTH = 114;
 
 let mediaItems = [];
 let error = "";

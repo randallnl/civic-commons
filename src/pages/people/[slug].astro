@@ -90,6 +90,10 @@ const person = {
   email: representative?.email || profileCandidate?.candidateEmail || "",
   phone: representative?.phone || "",
   website_url: representative?.sourceUrls?.generalCourt || profileCandidate?.candidateWebsite || "",
+  substack_url: socialField(representative, profileCandidate, "substack"),
+  instagram_url: socialField(representative, profileCandidate, "instagram"),
+  facebook_url: socialField(representative, profileCandidate, "facebook"),
+  tiktok_url: socialField(representative, profileCandidate, "tiktok"),
 };
 const representativeEntityKey = representative?.personid || representative?.id || slug;
 const trackedVotesHref = `/people/${slug}/votes`;
@@ -458,6 +462,26 @@ const profileResourceLinks = [
     label: "Citizens Count",
     icon: ExternalLink,
   },
+  person.substack_url && {
+    href: socialProfileUrl(person.substack_url, "substack"),
+    label: "Substack",
+    icon: ExternalLink,
+  },
+  person.instagram_url && {
+    href: socialProfileUrl(person.instagram_url, "instagram"),
+    label: "Instagram",
+    icon: ExternalLink,
+  },
+  person.facebook_url && {
+    href: socialProfileUrl(person.facebook_url, "facebook"),
+    label: "Facebook",
+    icon: ExternalLink,
+  },
+  person.tiktok_url && {
+    href: socialProfileUrl(person.tiktok_url, "tiktok"),
+    label: "TikTok",
+    icon: ExternalLink,
+  },
 ].filter(Boolean);
 
 function formatDate(value) {
@@ -499,6 +523,31 @@ function contactHref(type, value) {
   if (type === "email") return `mailto:${value}`;
   if (type === "phone") return `tel:${value}`;
   return value;
+}
+
+function socialField(primary = {}, fallback = {}, platform = "") {
+  const camel = `${platform}Url`;
+  const snake = `${platform}_url`;
+  return primary?.[camel] || primary?.[snake] || fallback?.[camel] || fallback?.[snake] || "";
+}
+
+function socialProfileUrl(value = "", platform = "") {
+  const cleaned = String(value || "").trim();
+  if (!cleaned) return "";
+  if (/^https?:\/\//i.test(cleaned)) return cleaned;
+
+  const handle = cleaned.replace(/^@+/, "").replace(/^\/+/, "");
+  if (platform === "substack") {
+    if (handle.includes(".")) return `https://${handle}`;
+    return `https://${handle}.substack.com`;
+  }
+
+  const bases = {
+    instagram: "https://www.instagram.com/",
+    facebook: "https://www.facebook.com/",
+    tiktok: "https://www.tiktok.com/@",
+  };
+  return bases[platform] ? `${bases[platform]}${handle}` : cleaned;
 }
 
 function candidateOptionLabel(candidate = {}) {
@@ -826,6 +875,10 @@ function uniqueTowns(towns = []) {
             />
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
             <input type="hidden" name="clearFields" value="linkedCandidateFilerEntityNumber" />
+            <input type="hidden" name="clearFields" value="substackUrl" />
+            <input type="hidden" name="clearFields" value="instagramUrl" />
+            <input type="hidden" name="clearFields" value="facebookUrl" />
+            <input type="hidden" name="clearFields" value="tiktokUrl" />
 
             <label>
               Name
@@ -940,6 +993,28 @@ function uniqueTowns(towns = []) {
               Photo URL
               <input name="photo" type="url" value={representative.photo || ""} />
             </label>
+
+            <div class="form-grid">
+              <label>
+                Substack
+                <input name="substackUrl" value={person.substack_url || ""} placeholder="https://example.substack.com or handle" />
+              </label>
+              <label>
+                Instagram
+                <input name="instagramUrl" value={person.instagram_url || ""} placeholder="https://instagram.com/name or @handle" />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Facebook
+                <input name="facebookUrl" value={person.facebook_url || ""} placeholder="https://facebook.com/name" />
+              </label>
+              <label>
+                TikTok
+                <input name="tiktokUrl" value={person.tiktok_url || ""} placeholder="https://tiktok.com/@handle or @handle" />
+              </label>
+            </div>
             <input
               type="hidden"
               name="reviewNote"

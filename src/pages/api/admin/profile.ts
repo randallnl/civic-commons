@@ -37,6 +37,10 @@ const CANDIDATE_FIELDS = [
   "totalSpent",
   "is_free_stater",
   "linkedRepresentativePersonId",
+  "substackUrl",
+  "instagramUrl",
+  "facebookUrl",
+  "tiktokUrl",
 ];
 
 const REPRESENTATIVE_FIELDS = [
@@ -57,6 +61,10 @@ const REPRESENTATIVE_FIELDS = [
   "notes",
   "is_free_stater",
   "linkedCandidateFilerEntityNumber",
+  "substackUrl",
+  "instagramUrl",
+  "facebookUrl",
+  "tiktokUrl",
 ];
 
 export async function POST({ request }) {
@@ -246,6 +254,7 @@ async function updateRepresentativeSource(db, entityKey, data) {
 
   await upsertPersonFromLegislator(personid, db);
   changed += await updatePersonAliases(db, { gcPersonid: personid }, data);
+  changed += await updatePersonSocialLinks(db, { gcPersonid: personid }, data);
 
   if (!changed) throw new Error("No matching legislator source row was updated.");
   return { changed };
@@ -311,6 +320,11 @@ async function updateCandidateSource(db, entityKey, data) {
   await upsertPersonFromCandidate(String(entityKey), db);
   changed += await updateUnifiedCandidatePerson(db, entityKey, data);
   changed += await updatePersonAliases(
+    db,
+    { filerEntityNumber: String(entityKey), slug: String(entityKey) },
+    data,
+  );
+  changed += await updatePersonSocialLinks(
     db,
     { filerEntityNumber: String(entityKey), slug: String(entityKey) },
     data,
@@ -409,6 +423,58 @@ async function updatePersonAliases(db, identifiers = {}, data = {}) {
     .prepare(
       `UPDATE d1_people
        SET name_aliases = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE ${clauses.join(" OR ")}`,
+    )
+    .bind(...params)
+    .run();
+  return result.meta?.changes ?? result.changes ?? 0;
+}
+
+async function updatePersonSocialLinks(db, identifiers = {}, data = {}) {
+  const socialFields = [
+    ["substackUrl", "substack_url"],
+    ["instagramUrl", "instagram_url"],
+    ["facebookUrl", "facebook_url"],
+    ["tiktokUrl", "tiktok_url"],
+  ];
+  const suppliedFields = socialFields.filter(([field]) =>
+    Object.prototype.hasOwnProperty.call(data, field),
+  );
+  if (!suppliedFields.length) return 0;
+
+  await ensureUnifiedPeopleTables(db);
+
+  const assignments = suppliedFields.map(([, column]) => `${column} = ?`);
+  const params = suppliedFields.map(([field]) => data[field] || "");
+  assignments.push("updated_at = CURRENT_TIMESTAMP");
+
+  const clauses = [];
+  if (identifiers.gcPersonid) {
+    clauses.push("gc_personid = ?");
+    params.push(identifiers.gcPersonid);
+  }
+  if (identifiers.filerEntityNumber) {
+    clauses.push("filer_entity_number = ?");
+    params.push(identifiers.filerEntityNumber);
+  }
+  if (identifiers.slug) {
+    clauses.push("slug = ?");
+    params.push(identifiers.slug);
+    clauses.push(
+      `id IN (
+        SELECT person_id
+        FROM d1_person_candidate_roles
+        WHERE filer_entity_number = ?
+      )`,
+    );
+    params.push(identifiers.slug);
+  }
+  if (!clauses.length) return 0;
+
+  const result = await db
+    .prepare(
+      `UPDATE d1_people
+       SET ${assignments.join(", ")}
        WHERE ${clauses.join(" OR ")}`,
     )
     .bind(...params)

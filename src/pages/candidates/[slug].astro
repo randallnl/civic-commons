@@ -136,6 +136,31 @@ function ballotpediaUrlForName(value = "") {
   return slug ? `https://ballotpedia.org/${slug}` : "";
 }
 
+function socialField(entity = {}, platform = "") {
+  const camel = `${platform}Url`;
+  const snake = `${platform}_url`;
+  return entity?.[camel] || entity?.[snake] || "";
+}
+
+function socialProfileUrl(value = "", platform = "") {
+  const cleaned = String(value || "").trim();
+  if (!cleaned) return "";
+  if (/^https?:\/\//i.test(cleaned)) return cleaned;
+
+  const handle = cleaned.replace(/^@+/, "").replace(/^\/+/, "");
+  if (platform === "substack") {
+    if (handle.includes(".")) return `https://${handle}`;
+    return `https://${handle}.substack.com`;
+  }
+
+  const bases = {
+    instagram: "https://www.instagram.com/",
+    facebook: "https://www.facebook.com/",
+    tiktok: "https://www.tiktok.com/@",
+  };
+  return bases[platform] ? `${bases[platform]}${handle}` : cleaned;
+}
+
 const sourceLinks = [
   candidate.candidateWebsite && {
     href: candidate.candidateWebsite,
@@ -168,6 +193,26 @@ const sourceLinks = [
   externalProfileUrl(candidate, ["citizensCountUrl", "citizens_count_url", "citizenscount_url"]) && {
     href: externalProfileUrl(candidate, ["citizensCountUrl", "citizens_count_url", "citizenscount_url"]),
     label: "Citizens Count",
+    icon: ExternalLink,
+  },
+  socialField(candidate, "substack") && {
+    href: socialProfileUrl(socialField(candidate, "substack"), "substack"),
+    label: "Substack",
+    icon: ExternalLink,
+  },
+  socialField(candidate, "instagram") && {
+    href: socialProfileUrl(socialField(candidate, "instagram"), "instagram"),
+    label: "Instagram",
+    icon: ExternalLink,
+  },
+  socialField(candidate, "facebook") && {
+    href: socialProfileUrl(socialField(candidate, "facebook"), "facebook"),
+    label: "Facebook",
+    icon: ExternalLink,
+  },
+  socialField(candidate, "tiktok") && {
+    href: socialProfileUrl(socialField(candidate, "tiktok"), "tiktok"),
+    label: "TikTok",
     icon: ExternalLink,
   },
 ].filter(Boolean);
@@ -702,6 +747,10 @@ function uniqueArticles(articles = []) {
             <input type="hidden" name="entityKey" value={candidate.filerEntityNumber || slug} />
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
             <input type="hidden" name="clearFields" value="linkedRepresentativePersonId" />
+            <input type="hidden" name="clearFields" value="substackUrl" />
+            <input type="hidden" name="clearFields" value="instagramUrl" />
+            <input type="hidden" name="clearFields" value="facebookUrl" />
+            <input type="hidden" name="clearFields" value="tiktokUrl" />
 
             <label>
               Name
@@ -802,6 +851,28 @@ function uniqueArticles(articles = []) {
               Photo URL
               <input name="photoUrl" type="url" value={candidate.photoUrl || ""} />
             </label>
+
+            <div class="form-grid">
+              <label>
+                Substack
+                <input name="substackUrl" value={socialField(candidate, "substack")} placeholder="https://example.substack.com or handle" />
+              </label>
+              <label>
+                Instagram
+                <input name="instagramUrl" value={socialField(candidate, "instagram")} placeholder="https://instagram.com/name or @handle" />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Facebook
+                <input name="facebookUrl" value={socialField(candidate, "facebook")} placeholder="https://facebook.com/name" />
+              </label>
+              <label>
+                TikTok
+                <input name="tiktokUrl" value={socialField(candidate, "tiktok")} placeholder="https://tiktok.com/@handle or @handle" />
+              </label>
+            </div>
             <input
               type="hidden"
               name="reviewNote"
