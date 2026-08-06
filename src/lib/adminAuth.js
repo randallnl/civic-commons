@@ -225,31 +225,31 @@ export async function adminRoleForEmail(email = "") {
 }
 
 export function canUseSourceDataTools(session = {}) {
-  return ["super_admin"].includes(session.role);
+  return ["super_admin"].includes(session?.role);
 }
 
 export function canManageReviewers(session = {}) {
-  return ["super_admin"].includes(session.role);
+  return ["super_admin"].includes(session?.role);
 }
 
 export function canEditOrganizations(session = {}) {
-  return ["super_admin", "org_editor", "volunteer"].includes(session.role);
+  return ["super_admin", "org_editor", "volunteer"].includes(session?.role);
 }
 
 export function canEditProfiles(session = {}) {
-  return ["super_admin", "profile_reviewer", "volunteer"].includes(session.role);
+  return ["super_admin", "profile_reviewer", "volunteer"].includes(session?.role);
 }
 
 export function canUploadAssets(session = {}) {
-  return ["super_admin", "profile_reviewer", "org_editor", "volunteer"].includes(session.role);
+  return ["super_admin", "profile_reviewer", "org_editor", "volunteer"].includes(session?.role);
 }
 
 export function canModerateContent(session = {}) {
-  return ["super_admin", "content_moderator", "volunteer"].includes(session.role);
+  return ["super_admin", "content_moderator", "volunteer"].includes(session?.role);
 }
 
 export function canReviewProfiles(session = {}) {
-  return ["super_admin", "profile_reviewer", "volunteer"].includes(session.role);
+  return ["super_admin", "profile_reviewer", "volunteer"].includes(session?.role);
 }
 
 export function forbiddenAdminResponse(message = "Your admin role cannot use this tool.") {
