@@ -60,6 +60,7 @@ function mediaFeedItem(update = {}) {
   const titlePreview = textPreview(title, TITLE_PREVIEW_LENGTH);
   const description = previewDescription(preview, update.linkUrl);
   const isPortrait = social.type === "tiktok" || isInstagramVideo(social) || isFacebookVideo(social);
+  const fallbackImageUrl = update.photoUrls?.[0] || update.photoUrl || "";
 
   return {
     id: update.id,
@@ -72,11 +73,12 @@ function mediaFeedItem(update = {}) {
     displayName: cleanText(update.displayName || "Community member"),
     entityName: cleanText(update.entityName || ""),
     href: update.pageUrl || update.linkUrl || "/updates",
-    imageUrl: preview?.imageUrl || "",
+    imageUrl: preview?.imageUrl || fallbackImageUrl,
     linkUrl: update.linkUrl || "",
     people,
     platform: social.type || "link",
     platformLabel: platformLabel(social),
+    fallbackLabel: fallbackLabel(social, title),
     social,
     isPortrait,
     sortDate: Date.parse(dateValue || "") || 0,
@@ -92,6 +94,27 @@ function mediaFeedItem(update = {}) {
       social.publication,
       people.map((person) => person.name || person.role || person.districtLabel).join(" "),
     ].filter(Boolean).join(" "),
+  };
+}
+
+function fallbackLabel(social = {}, title = "") {
+  if (social.type === "substack") {
+    const isHomePost = String(social.permalink || "").includes("substack.com/home/post/");
+    return {
+      mark: "S",
+      kicker: isHomePost ? "Substack share link" : "Substack",
+      title: social.publication
+        ? `${social.publication}.substack.com`
+        : social.handle
+          ? `@${social.handle}`
+          : cleanText(title || "Substack link"),
+    };
+  }
+
+  return {
+    mark: "",
+    kicker: social.label || "Social media",
+    title: social.host || social.handle || "",
   };
 }
 
@@ -258,6 +281,12 @@ function textPreview(value = "", maxLength = 170) {
                   <span class="platform-badge">{item.platformLabel}</span>
                   {item.imageUrl ? (
                     <img src={item.imageUrl} alt="" loading="lazy" />
+                  ) : item.platform === "substack" ? (
+                    <span class="media-fallback substack-media-fallback">
+                      <span>{item.fallbackLabel.mark}</span>
+                      <small>{item.fallbackLabel.kicker}</small>
+                      <strong>{item.fallbackLabel.title}</strong>
+                    </span>
                   ) : (
                     <span class="media-fallback">{item.platformLabel}</span>
                   )}
@@ -421,8 +450,8 @@ function textPreview(value = "", maxLength = 170) {
   }
 
   .media-grid {
-    column-count: 3;
-    column-gap: 18px;
+    column-count: 4;
+    column-gap: 16px;
   }
 
   .media-card {
@@ -503,6 +532,46 @@ function textPreview(value = "", maxLength = 170) {
     justify-self: center;
     padding: 28px;
     text-align: center;
+  }
+
+  .substack-media-fallback {
+    align-content: center;
+    background:
+      radial-gradient(circle at 80% 18%, rgba(255, 255, 255, 0.36), transparent 24%),
+      linear-gradient(135deg, #ff6719 0%, #f97316 54%, #7c2d12 100%);
+    color: #fffaf1;
+    display: grid;
+    gap: 9px;
+    height: 100%;
+    justify-items: center;
+    padding: 34px 24px;
+    width: 100%;
+  }
+
+  .substack-media-fallback > span {
+    align-items: center;
+    background: #fffaf1;
+    border-radius: 16px;
+    color: #ff6719;
+    display: inline-flex;
+    font-size: clamp(2.5rem, 9vw, 4.5rem);
+    height: 88px;
+    justify-content: center;
+    line-height: 1;
+    width: 88px;
+  }
+
+  .substack-media-fallback small {
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .substack-media-fallback strong {
+    font-size: clamp(1rem, 2.5vw, 1.28rem);
+    line-height: 1.15;
+    max-width: 22ch;
+    overflow-wrap: anywhere;
   }
 
   .platform-badge {
@@ -707,7 +776,7 @@ function textPreview(value = "", maxLength = 170) {
 
   @media (min-width: 721px) and (max-width: 1040px) {
     .media-grid {
-      column-count: 2;
+      column-count: 3;
     }
   }
 </style>
