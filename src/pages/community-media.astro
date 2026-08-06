@@ -58,7 +58,7 @@ function mediaFeedItem(update = {}) {
   const preview = update.linkPreview || null;
   const title = previewTitle(preview, update.linkUrl);
   const titlePreview = textPreview(title, TITLE_PREVIEW_LENGTH);
-  const description = previewDescription(preview, update.linkUrl);
+  const description = mediaDescription(preview, update.linkUrl, social);
   const isPortrait = social.type === "tiktok" || isInstagramVideo(social) || isFacebookVideo(social);
   const fallbackImageUrl = update.photoUrls?.[0] || update.photoUrl || "";
 
@@ -150,8 +150,29 @@ function handleText(item = {}) {
       ? `@${item.social.handle} on Substack`
       : `${item.social.isProfile ? "Profile: " : ""}@${item.social.handle}`;
   }
-  if (item.social?.publication) return `${item.social.publication} on Substack`;
+  if (item.social?.publication) return item.social.publication;
+  if (item.platform === "facebook" || item.platform === "substack") return "";
   return item.social?.host || "";
+}
+
+function mediaDescription(preview = null, linkUrl = "", social = {}) {
+  const description = previewDescription(preview, linkUrl);
+  if (!description) return "";
+
+  const normalized = description.toLowerCase().trim();
+  const host = String(social.host || "").toLowerCase().trim();
+
+  if (host && normalized === host) return "";
+  if (social.type === "facebook" && normalized.includes("facebook.com")) return "";
+  if (social.type === "substack") {
+    const publication = String(social.publication || "").toLowerCase().trim();
+    const handle = String(social.handle || "").toLowerCase().trim();
+    if (normalized === "substack") return "";
+    if (publication && normalized === `${publication} on substack`) return "";
+    if (handle && normalized === `@${handle} on substack`) return "";
+  }
+
+  return description;
 }
 
 function textPreview(value = "", maxLength = 170) {
