@@ -44,6 +44,10 @@ function normalizePreview(preview) {
 }
 
 export async function getArticlePreview(articleUrl, apiBase = previewApiBase()) {
+  const normalizedUrl = normalizePreviewUrl(articleUrl);
+  const cached = await cachedLinkPreview(normalizedUrl);
+  if (cached) return cached;
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5_000);
 
@@ -51,19 +55,106 @@ export async function getArticlePreview(articleUrl, apiBase = previewApiBase()) 
     const response = await fetch(`${apiBase}/preview`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url: articleUrl }),
+      body: JSON.stringify({ url: normalizedUrl || articleUrl }),
       signal: controller.signal,
     });
 
     if (!response.ok) return null;
 
-    return normalizePreview(await response.json());
+    const preview = normalizePreview(await response.json());
+    await saveLinkPreview(normalizedUrl, preview);
+    return preview;
   } catch (error) {
     console.warn(`Unable to preview article: ${articleUrl}`, error?.message || error);
     return null;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function normalizePreviewUrl(value = "") {
+  try {
+    const url = new URL(String(value || "").trim());
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return String(value || "").trim();
+  }
+}
+
+async function cachedLinkPreview(articleUrl = "") {
+  const db = env.d1_db;
+  if (!db || !articleUrl) return null;
+
+  try {
+    await ensureLinkPreviewTable(db);
+    const row = await db
+      .prepare(
+        `SELECT preview_title, preview_description, preview_image_url
+         FROM link_previews
+         WHERE url = ?`,
+      )
+      .bind(articleUrl)
+      .first();
+
+    return row
+      ? normalizePreview({
+          title: row.preview_title,
+          description: row.preview_description,
+          imageUrl: row.preview_image_url,
+        })
+      : null;
+  } catch (error) {
+    console.warn(`Unable to read cached preview: ${articleUrl}`, error?.message || error);
+    return null;
+  }
+}
+
+async function saveLinkPreview(articleUrl = "", preview = null) {
+  const db = env.d1_db;
+  const normalized = normalizePreview(preview);
+  if (!db || !articleUrl || !normalized) return;
+
+  try {
+    await ensureLinkPreviewTable(db);
+    await db
+      .prepare(
+        `INSERT INTO link_previews (
+           url, preview_title, preview_description, preview_image_url, preview_fetched_at
+         )
+         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+         ON CONFLICT(url) DO UPDATE SET
+           preview_title = excluded.preview_title,
+           preview_description = excluded.preview_description,
+           preview_image_url = excluded.preview_image_url,
+           preview_fetched_at = excluded.preview_fetched_at`,
+      )
+      .bind(
+        articleUrl,
+        normalized.title,
+        normalized.description,
+        normalized.imageUrl,
+      )
+      .run();
+  } catch (error) {
+    console.warn(`Unable to cache link preview: ${articleUrl}`, error?.message || error);
+  }
+}
+
+async function ensureLinkPreviewTable(db = env.d1_db) {
+  if (!db) return;
+
+  await db
+    .prepare(
+      `CREATE TABLE IF NOT EXISTS link_previews (
+        url TEXT PRIMARY KEY,
+        preview_title TEXT,
+        preview_description TEXT,
+        preview_image_url TEXT,
+        preview_fetched_at TEXT
+      )`,
+    )
+    .run();
 }
 
 export async function enrichArticlesWithPreviews(articles = [], { limit = 20 } = {}) {
