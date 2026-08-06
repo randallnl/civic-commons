@@ -10,6 +10,7 @@ import {
 } from "../lib/communityUpdates";
 import {
   getCommunityUpdateCards,
+  peopleProfilePath,
   previewDescription,
   previewTitle,
 } from "../lib/communityUpdateCards";
@@ -384,7 +385,7 @@ function textPreview(value = "", maxLength = 170) {
                       <span>Legislator context</span>
                       <div>
                         {item.people.slice(0, 3).map((person) => (
-                          <a class="mini-person-card" href={person.path}>
+                          <a class="mini-person-card" href={peopleProfilePath(person)}>
                             <img
                               class:list={[!person.photoUrl && "profile-icon"]}
                               src={person.photoUrl || profileIcon.src}
@@ -468,19 +469,19 @@ function textPreview(value = "", maxLength = 170) {
 
   .hero {
     background:
-      radial-gradient(circle at 85% 18%, rgba(255, 103, 25, 0.28), transparent 24%),
-      radial-gradient(circle at 15% 80%, rgba(37, 99, 235, 0.2), transparent 28%),
-      linear-gradient(135deg, #10233f 0%, #1d4ed8 48%, #ff6719 100%);
-    border: 0;
+      radial-gradient(circle at 85% 18%, rgba(255, 103, 25, 0.14), transparent 24%),
+      radial-gradient(circle at 15% 80%, rgba(37, 99, 235, 0.12), transparent 28%),
+      linear-gradient(135deg, #eff6ff 0%, #ffffff 54%, #fff7ed 100%);
+    border: 1px solid var(--nhdb-line);
     border-radius: 16px;
-    color: #fffaf1;
+    color: #1f2933;
     overflow: hidden;
     padding: clamp(28px, 5vw, 54px);
     position: relative;
   }
 
   .hero::after {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent);
+    background: linear-gradient(90deg, #1d4ed8, #ff6719);
     content: "";
     inset: auto 0 0;
     height: 8px;
@@ -498,8 +499,8 @@ function textPreview(value = "", maxLength = 170) {
 
   .hero-kicker-row a,
   .hero-actions a {
-    background: rgba(255, 250, 241, 0.14);
-    border: 1px solid rgba(255, 250, 241, 0.42);
+    background: #1f2933;
+    border: 1px solid #111827;
     border-radius: 999px;
     color: #fffaf1;
     font-size: 0.86rem;
@@ -522,7 +523,7 @@ function textPreview(value = "", maxLength = 170) {
   }
 
   .lede {
-    color: rgba(255, 250, 241, 0.88);
+    color: #475569;
     font-size: clamp(1rem, 1.4vw, 1.16rem);
     line-height: 1.6;
     margin: 0;
@@ -530,7 +531,7 @@ function textPreview(value = "", maxLength = 170) {
   }
 
   .hero .eyebrow {
-    color: rgba(255, 250, 241, 0.74);
+    color: #6b4f2a;
   }
 
   .media-panel {

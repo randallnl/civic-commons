@@ -50,7 +50,7 @@ export function mentionParts(comment = "", mentions = []) {
     const mention = activeMentions.find((item) => item.name.toLowerCase() === name.toLowerCase());
     parts.push({
       text: `@${name}`,
-      href: mention?.path,
+      href: peopleProfilePath(mention),
     });
     lastIndex = match.index + match[0].length;
   }
@@ -91,9 +91,12 @@ function personPreview(mention = {}) {
   };
 }
 
-function peopleProfilePath(mention = {}) {
+export function peopleProfilePath(mention = {}) {
   const existingPath = String(mention.path || "").trim();
   if (existingPath.startsWith("/people/")) return existingPath;
+  if (existingPath.startsWith("/candidates/")) {
+    return `/people/${existingPath.replace(/^\/candidates\/+/, "")}`;
+  }
 
   const key =
     mention.personSlug ||

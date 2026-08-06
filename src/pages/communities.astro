@@ -7,6 +7,7 @@ import FilterBar from "../components/FilterBar.astro";
 import { getRecentApprovedCommunityUpdates } from "../lib/communityUpdates";
 import {
   getCommunityUpdateCards,
+  peopleProfilePath,
   previewDescription,
   previewTitle,
 } from "../lib/communityUpdateCards";
@@ -486,14 +487,14 @@ const updateTypeOptions = [
                         {mentions.length > 0 && (
                           <div class="mention-list" aria-label="Mentioned people">
                             {mentions.slice(0, 4).map((mention) => (
-                              <a href={mention.path}>{cleanText(mention.name)}</a>
+                              <a href={peopleProfilePath(mention)}>{cleanText(mention.name)}</a>
                             ))}
                           </div>
                         )}
                         {update.people?.length > 0 && (
                           <div class="community-people-preview" aria-label="People connected to this update">
                             {update.people.slice(0, 4).map((person) => (
-                              <a class="mini-person-card" href={person.path}>
+                              <a class="mini-person-card" href={peopleProfilePath(person)}>
                                 <img
                                   class:list={[!person.photoUrl && "profile-icon"]}
                                   src={person.photoUrl || profileIcon.src}

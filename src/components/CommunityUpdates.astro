@@ -10,6 +10,7 @@ import {
 import {
   getCommunityUpdateCards,
   mentionParts,
+  peopleProfilePath,
   previewDescription,
   previewTitle,
 } from "../lib/communityUpdateCards";
@@ -155,7 +156,7 @@ const isReport = entityType === "report";
               <div class="mention-list" aria-label="Tagged people">
                 <span>Tagged people</span>
                 {update.mentions.map((mention) => (
-                  <a href={mention.path}>
+                  <a href={peopleProfilePath(mention)}>
                     {mention.name}
                     {(mention.roleLabel || mention.chamber) && (
                       <small>{mention.roleLabel || mention.chamber}</small>
@@ -276,7 +277,7 @@ const isReport = entityType === "report";
             {update.people?.length > 0 && (
               <div class="community-people-preview" aria-label="People connected to this update">
                 {update.people.map((person) => (
-                  <a class="mini-person-card" href={person.path}>
+                  <a class="mini-person-card" href={peopleProfilePath(person)}>
                     <img
                       class:list={[!person.photoUrl && "profile-icon"]}
                       src={person.photoUrl || profileIcon.src}
