@@ -118,8 +118,10 @@ function cacheTtlForCivicApiRequest(url, { method = "GET", override, cacheMode }
 
   if (path === "/articles" || path.startsWith("/articles/")) return 10 * 60;
   if (path === "/communities" || path.startsWith("/communities/")) return 15 * 60;
-  if (path === "/candidates" || path.startsWith("/candidates/")) return 10 * 60;
-  if (path === "/reps" || path.startsWith("/reps/")) return 10 * 60;
+  if (path === "/candidates") return 10 * 60;
+  if (path.startsWith("/candidates/")) return 0;
+  if (path === "/reps") return 10 * 60;
+  if (path.startsWith("/reps/")) return 0;
   if (path === "/bills" || path.startsWith("/bills/")) return 15 * 60;
 
   return 0;
