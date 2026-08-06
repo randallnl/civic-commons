@@ -21,6 +21,7 @@ const {
   entityKey,
   entityName,
   pageUrl = Astro.url.pathname,
+  variant = "",
 } = Astro.props;
 
 const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
@@ -33,7 +34,7 @@ const hasFacebookEmbeds = updateCards.some((card) => card.social?.type === "face
 const isReport = entityType === "report";
 ---
 
-<section class="panel community-updates-panel">
+<section class:list={["panel community-updates-panel", variant === "narrow" && "community-updates-panel-narrow"]}>
   <div class="section-heading">
     <p class="eyebrow">{isReport ? "Community updates" : "Share Your Thoughts"}</p>
     <h2>{isReport ? "Help improve this public analysis" : "Community context"}</h2>
@@ -431,6 +432,12 @@ const isReport = entityType === "report";
     background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
     border-color: #bfdbfe;
     margin-top: 0;
+  }
+
+  .community-updates-panel-narrow {
+    justify-self: center;
+    max-width: 760px;
+    width: 100%;
   }
 
   .section-heading p:not(.eyebrow) {
