@@ -115,14 +115,6 @@ const fundingData = [
 
     <div class="explorer-layout">
       <form class="explorer-controls" data-controls>
-        <div class="control-intro">
-          <label for="explorer-year">Fiscal year to inspect</label>
-          <select id="explorer-year" data-year>
-            {fundingData.map((row) => <option value={row.year} selected={row.year === 2025}>FY{row.year}</option>)}
-          </select>
-          <small>FY2025 is the latest year with complete district, charter, and EFA data.</small>
-        </div>
-
         <fieldset>
           <legend><span>1</span> Choose one district measure</legend>
           <label class="choice-row">
@@ -179,61 +171,54 @@ const fundingData = [
       </form>
 
       <div class="explorer-output">
-        <div class="result-status" data-status aria-live="polite"></div>
-        <div class="result-metrics" aria-live="polite">
-          <article>
-            <span>Selected funding</span>
-            <strong data-total>—</strong>
-          </article>
-          <article>
-            <span>Selected students</span>
-            <strong data-students>—</strong>
-          </article>
-          <article class="primary-result">
-            <span>Aid per selected student</span>
-            <strong data-per-student>—</strong>
-          </article>
-        </div>
-
         <div class="formula-card">
           <div>
-            <span>Your formula for <b data-formula-year>FY2025</b></span>
+            <span>How this calculation works</span>
             <a href="#glossary">Definitions ↓</a>
           </div>
           <p data-formula>—</p>
         </div>
 
-        <div class="breakdown-card">
-          <h3>What is inside the selected total</h3>
-          <div class="breakdown-bar" data-breakdown-bar aria-hidden="true"></div>
-          <ul data-breakdown></ul>
-        </div>
+        <figure class="trend-card spend-chart-card">
+          <figcaption>
+            <div>
+              <span>Selected programs, every year</span>
+              <strong>Total spending by program</strong>
+            </div>
+            <small>Each bar stacks the selected programs. Incomplete years are marked instead of treating missing data as zero.</small>
+          </figcaption>
+          <div class="chart-legend" data-spend-legend aria-label="Selected funding programs"></div>
+          <svg data-spend-chart viewBox="0 0 760 286" role="img" aria-labelledby="spend-title spend-description">
+            <title id="spend-title">Total selected education spending by program and fiscal year</title>
+            <desc id="spend-description">A stacked bar chart that updates when funding selections change.</desc>
+          </svg>
+        </figure>
 
         <figure class="trend-card">
           <figcaption>
             <div>
               <span>Same definition, every year</span>
-              <strong data-chart-title>Per-student trend</strong>
+              <strong>Per-student trend</strong>
             </div>
-            <small>Hover or focus a point to see its value. Gaps mean data is unavailable or the selected program was not operating.</small>
+            <small>Hover or focus a point to see the year and aid per student. Gaps mean data is unavailable.</small>
           </figcaption>
           <svg data-trend-chart viewBox="0 0 760 270" role="img" aria-labelledby="trend-title trend-description">
             <title id="trend-title">Education aid per selected student by fiscal year</title>
             <desc id="trend-description">A line chart that updates when funding and student selections change.</desc>
           </svg>
         </figure>
+
+        <details class="trend-table-details" open>
+          <summary>See the calculation for every year</summary>
+          <div class="table-wrap">
+            <table class="explorer-table">
+              <thead><tr><th>Year</th><th class="numeric">Selected funding</th><th class="numeric">Selected students</th><th class="numeric">Per student</th><th>Coverage</th></tr></thead>
+              <tbody data-trend-table></tbody>
+            </table>
+          </div>
+        </details>
       </div>
     </div>
-
-    <details class="trend-table-details" open>
-      <summary>See the calculation for every year</summary>
-      <div class="table-wrap">
-        <table class="explorer-table">
-          <thead><tr><th>Year</th><th class="numeric">Selected funding</th><th class="numeric">Selected students</th><th class="numeric">Per student</th><th>Coverage</th></tr></thead>
-          <tbody data-trend-table></tbody>
-        </table>
-      </div>
-    </details>
   </div>
 </section>
 
@@ -814,7 +799,6 @@ const fundingData = [
 
   if (explorer instanceof HTMLElement && dataNode) {
     const rows = JSON.parse(dataNode.textContent || "[]");
-    const yearSelect = explorer.querySelector("[data-year]");
     const autoMatch = explorer.querySelector("[data-auto-match]");
     const studentInputs = Array.from(explorer.querySelectorAll("[data-student]"));
     const fundingInputs = Array.from(explorer.querySelectorAll("[data-funding]"));
@@ -943,105 +927,122 @@ const fundingData = [
       return `$${value.toFixed(1)} million`;
     }
 
-    function formulaPart(result, key, labels) {
-      const value = result.row[key];
-      if (value === null || value === undefined) return `${labels[key]} (unavailable)`;
-      if (labels === fundingLabels) return `${labels[key]} $${value.toFixed(1)}m`;
-      return `${labels[key]} ${numberFormat.format(value)}`;
-    }
-
-    function updateStatus(result) {
-      const status = explorer.querySelector("[data-status]");
-      if (!(status instanceof HTMLElement)) return;
-      status.replaceChildren();
-      const strong = document.createElement("strong");
-      const detail = document.createElement("span");
-      if (result.available) {
-        status.className = "result-status complete";
-        strong.textContent = `Complete calculation for FY${result.row.year}`;
-        detail.textContent = "Every selected funding and student field is available.";
-      } else {
-        status.className = "result-status unavailable";
-        strong.textContent = `Cannot calculate FY${result.row.year} with these selections`;
-        if (result.missing.length > 0) {
-          detail.textContent = `Unavailable: ${result.missing.join(", ")}. Missing data is not treated as zero.`;
-        } else if (result.fundingKeys.length === 0) {
-          detail.textContent = "Select at least one funding measure.";
-        } else if (result.studentKeys.length > 0 && result.students === 0) {
-          detail.textContent = `The selected program had zero funding membership in FY${result.row.year}, so a per-student rate is not defined.`;
-        } else {
-          detail.textContent = "Select at least one available student population.";
-        }
-      }
-      status.append(strong, detail);
-    }
-
-    function updateMetrics(result) {
-      const total = explorer.querySelector("[data-total]");
-      const students = explorer.querySelector("[data-students]");
-      const perStudent = explorer.querySelector("[data-per-student]");
-      const hasAllFunding = result.fundingKeys.length > 0 && result.fundingKeys.every((key) => typeof result.row[key] === "number");
-      const hasAllStudents = result.studentKeys.length > 0 && result.studentKeys.every((key) => typeof result.row[key] === "number");
-      if (total) total.textContent = hasAllFunding ? formatMillions(result.totalMillions) : "Unavailable";
-      if (students) students.textContent = hasAllStudents ? numberFormat.format(result.students) : "Unavailable";
-      if (perStudent) perStudent.textContent = result.available ? moneyFormat.format(result.perStudent) : "Not calculable";
-    }
-
-    function updateFormula(result) {
-      const formulaYear = explorer.querySelector("[data-formula-year]");
+    function updateFormula() {
       const formula = explorer.querySelector("[data-formula]");
-      if (formulaYear) formulaYear.textContent = `FY${result.row.year}`;
       if (!formula) return;
-      const numerator = result.fundingKeys.length
-        ? result.fundingKeys.map((key) => formulaPart(result, key, fundingLabels)).join(" + ")
+      const fundingKeys = selectedFundingKeys();
+      const studentKeys = selectedStudentKeys();
+      const numerator = fundingKeys.length
+        ? fundingKeys.map((key) => fundingLabels[key]).join(" + ")
         : "No funding selected";
-      const denominator = result.studentKeys.length
-        ? result.studentKeys.map((key) => formulaPart(result, key, studentLabels)).join(" + ")
+      const denominator = studentKeys.length
+        ? studentKeys.map((key) => studentLabels[key]).join(" + ")
         : "No students selected";
-      const answer = result.available ? moneyFormat.format(result.perStudent) : "not calculable";
-      formula.textContent = `(${numerator}) ÷ (${denominator}) = ${answer} per student`;
+      formula.textContent = `(${numerator}) ÷ (${denominator}). The charts and table apply this definition separately to each fiscal year.`;
     }
 
-    function updateBreakdown(result) {
-      const list = explorer.querySelector("[data-breakdown]");
-      const bar = explorer.querySelector("[data-breakdown-bar]");
-      if (!(list instanceof HTMLElement) || !(bar instanceof HTMLElement)) return;
-      list.replaceChildren();
-      bar.replaceChildren();
-      result.fundingKeys.forEach((key) => {
-        const value = result.row[key];
-        const item = document.createElement("li");
-        const label = document.createElement("span");
-        const swatch = document.createElement("i");
-        const amount = document.createElement("strong");
-        swatch.style.background = componentColors[key];
-        label.append(swatch, document.createTextNode(fundingLabels[key]));
-        amount.textContent = typeof value === "number" ? formatMillions(value) : "Unavailable";
-        if (typeof value !== "number") item.className = "missing-component";
-        item.append(label, amount);
-        list.append(item);
-
-        if (typeof value === "number" && result.totalMillions > 0) {
-          const segment = document.createElement("span");
-          segment.style.width = `${value / result.totalMillions * 100}%`;
-          segment.style.background = componentColors[key];
-          segment.title = `${fundingLabels[key]}: ${formatMillions(value)}`;
-          bar.append(segment);
-        }
-      });
-      if (result.fundingKeys.length === 0) {
-        const empty = document.createElement("li");
-        empty.textContent = "Select a funding measure to see its components.";
-        list.append(empty);
+    function updateChartLegend(selector, fundingKeys) {
+      const legend = explorer.querySelector(selector);
+      if (!(legend instanceof HTMLElement)) return;
+      legend.replaceChildren();
+      if (fundingKeys.length === 0) {
+        legend.textContent = "Select at least one funding program.";
+        legend.classList.add("empty");
+        return;
       }
+      legend.classList.remove("empty");
+      fundingKeys.forEach((key) => {
+        const item = document.createElement("span");
+        const swatch = document.createElement("i");
+        swatch.style.background = componentColors[key];
+        item.append(swatch, document.createTextNode(fundingLabels[key]));
+        legend.append(item);
+      });
     }
 
-    function updateChart(results, selectedYear) {
+    function updateSpendChart(results) {
+      const svg = explorer.querySelector("[data-spend-chart]");
+      if (!(svg instanceof SVGElement)) return;
+      const fundingKeys = selectedFundingKeys();
+      updateChartLegend("[data-spend-legend]", fundingKeys);
+      const title = "<title>Total selected education spending by program and fiscal year</title>";
+      const description = "<desc>Each complete bar stacks the selected funding programs. Missing selected data leaves a marked gap.</desc>";
+      if (fundingKeys.length === 0) {
+        svg.innerHTML = `${title}${description}<text x="380" y="143" text-anchor="middle" class="chart-empty">Select funding to build the chart</text>`;
+        return;
+      }
+
+      const completeResults = results.filter((result) => fundingKeys.every((key) => typeof result.row[key] === "number"));
+      if (completeResults.length === 0) {
+        svg.innerHTML = `${title}${description}<text x="380" y="143" text-anchor="middle" class="chart-empty">No complete years for these selections</text>`;
+        return;
+      }
+
+      const rawMax = Math.max(...completeResults.map((result) => fundingKeys.reduce((sum, key) => sum + result.row[key], 0)));
+      const max = Math.max(100, Math.ceil(rawMax / 100) * 100);
+      const left = 62;
+      const right = 742;
+      const top = 24;
+      const bottom = 230;
+      const barWidth = Math.min(42, (right - left) / results.length * .68);
+      const x = (index) => left + index * (right - left) / (results.length - 1);
+      const y = (value) => bottom - value / max * (bottom - top);
+      const parts = [title, description];
+
+      for (let index = 0; index <= 4; index += 1) {
+        const value = max * index / 4;
+        const lineY = y(value);
+        parts.push(`<line x1="${left}" y1="${lineY}" x2="${right}" y2="${lineY}" class="chart-grid" />`);
+        parts.push(`<text x="${left - 10}" y="${lineY + 4}" text-anchor="end" class="chart-label">$${numberFormat.format(value)}m</text>`);
+      }
+
+      results.forEach((result, index) => {
+        const centerX = x(index);
+        const missingKeys = fundingKeys.filter((key) => typeof result.row[key] !== "number");
+        parts.push(`<text x="${centerX}" y="258" text-anchor="middle" class="chart-year">${String(result.row.year).slice(2)}</text>`);
+        if (missingKeys.length > 0) {
+          const missingLabel = `FY${result.row.year}: unavailable ${missingKeys.map((key) => fundingLabels[key]).join(", ")}`;
+          parts.push(`<g class="chart-missing-year" tabindex="0" role="img" aria-label="${missingLabel}"><text x="${centerX}" y="${bottom - 7}" text-anchor="middle">×</text></g>`);
+          return;
+        }
+
+        let stackedValue = 0;
+        fundingKeys.forEach((key) => {
+          const value = result.row[key];
+          if (value <= 0) return;
+          const segmentBottom = y(stackedValue);
+          stackedValue += value;
+          const segmentTop = y(stackedValue);
+          const segmentHeight = Math.max(0, segmentBottom - segmentTop);
+          const tooltipWidth = 286;
+          const tooltipHeight = 62;
+          const tooltipX = Math.max(0, Math.min(centerX - tooltipWidth / 2, 760 - tooltipWidth));
+          const tooltipY = segmentTop >= 76 ? segmentTop - 72 : Math.min(bottom - tooltipHeight - 5, segmentTop + segmentHeight + 7);
+          const accessibleLabel = `${fundingLabels[key]}, FY${result.row.year}: ${formatMillions(value)}`;
+          parts.push(`
+            <g class="chart-bar-group" tabindex="0" role="img" aria-label="${accessibleLabel}">
+              <rect x="${centerX - barWidth / 2}" y="${segmentTop}" width="${barWidth}" height="${segmentHeight}" fill="${componentColors[key]}" class="chart-bar-segment" />
+              <g class="chart-tooltip" transform="translate(${tooltipX} ${tooltipY})" aria-hidden="true">
+                <rect width="${tooltipWidth}" height="${tooltipHeight}" rx="7" />
+                <text x="14" y="24" class="chart-tooltip-year">${fundingLabels[key]} · FY${result.row.year}</text>
+                <text x="14" y="48" class="chart-tooltip-value">${formatMillions(value)}</text>
+              </g>
+            </g>
+          `);
+        });
+      });
+      parts.push(`<text x="${left}" y="278" class="chart-axis-title">Fiscal year 20— · millions of dollars</text>`);
+      svg.innerHTML = parts.join("");
+    }
+
+    function updateChart(results) {
       const svg = explorer.querySelector("[data-trend-chart]");
       if (!(svg instanceof SVGElement)) return;
+      const title = "<title>Education aid per selected student by fiscal year</title>";
+      const description = "<desc>The combined selected funding is divided by the selected student population for each year. Missing data creates gaps.</desc>";
       const valid = results.filter((result) => result.available);
       if (valid.length === 0) {
-        svg.innerHTML = '<text x="380" y="135" text-anchor="middle" class="chart-empty">No complete years for these selections</text>';
+        svg.innerHTML = `${title}${description}<text x="380" y="135" text-anchor="middle" class="chart-empty">No complete years for these selections</text>`;
         return;
       }
 
@@ -1049,15 +1050,15 @@ const fundingData = [
       const rawMin = Math.min(...values);
       const rawMax = Math.max(...values);
       const spread = Math.max(rawMax - rawMin, rawMax * 0.08, 250);
-      const min = Math.max(0, Math.floor((rawMin - spread * 0.16) / 250) * 250);
-      const max = Math.ceil((rawMax + spread * 0.16) / 250) * 250;
+      const min = Math.max(0, Math.floor((rawMin - spread * .16) / 250) * 250);
+      const max = Math.ceil((rawMax + spread * .16) / 250) * 250;
       const left = 62;
       const right = 742;
       const top = 24;
       const bottom = 218;
       const x = (index) => left + index * (right - left) / (results.length - 1);
       const y = (value) => bottom - (value - min) / (max - min || 1) * (bottom - top);
-      const parts = [];
+      const parts = [title, description];
 
       for (let index = 0; index < 4; index += 1) {
         const value = min + (max - min) * index / 3;
@@ -1069,7 +1070,6 @@ const fundingData = [
       results.forEach((result, index) => {
         parts.push(`<text x="${x(index)}" y="246" text-anchor="middle" class="chart-year">${String(result.row.year).slice(2)}</text>`);
       });
-
       let run = [];
       const finishRun = () => {
         if (run.length > 0) parts.push(`<polyline points="${run.join(" ")}" class="chart-line" />`);
@@ -1083,22 +1083,21 @@ const fundingData = [
 
       results.forEach((result, index) => {
         if (!result.available) return;
-        const isSelected = result.row.year === selectedYear;
         const pointX = x(index);
         const pointY = y(result.perStudent);
-        const tooltipWidth = 166;
+        const tooltipWidth = 244;
+        const tooltipHeight = 62;
         const tooltipX = Math.max(0, Math.min(pointX - tooltipWidth / 2, 760 - tooltipWidth));
-        const tooltipY = pointY >= 72 ? pointY - 58 : pointY + 14;
-        const accessibleLabel = `FY${result.row.year}: ${moneyFormat.format(result.perStudent)} per student`;
-        if (isSelected) parts.push(`<line x1="${pointX}" y1="${top}" x2="${pointX}" y2="${bottom}" class="chart-selected-line" />`);
+        const tooltipY = pointY >= 82 ? pointY - 74 : pointY + 14;
+        const accessibleLabel = `FY${result.row.year}: ${moneyFormat.format(result.perStudent)} aid per student`;
         parts.push(`
           <g class="chart-point-group" tabindex="0" role="img" aria-label="${accessibleLabel}">
             <circle cx="${pointX}" cy="${pointY}" r="15" class="chart-hit-area" />
-            <circle cx="${pointX}" cy="${pointY}" r="${isSelected ? 6 : 4}" class="chart-point${isSelected ? " selected" : ""}" />
+            <circle cx="${pointX}" cy="${pointY}" r="4" class="chart-point" />
             <g class="chart-tooltip" transform="translate(${tooltipX} ${tooltipY})" aria-hidden="true">
-              <rect width="${tooltipWidth}" height="44" rx="5" />
-              <text x="10" y="17" class="chart-tooltip-year">FY${result.row.year}</text>
-              <text x="10" y="34" class="chart-tooltip-value">${moneyFormat.format(result.perStudent)} per student</text>
+              <rect width="${tooltipWidth}" height="${tooltipHeight}" rx="7" />
+              <text x="14" y="24" class="chart-tooltip-year">FY${result.row.year}</text>
+              <text x="14" y="48" class="chart-tooltip-value">${moneyFormat.format(result.perStudent)} aid per student</text>
             </g>
           </g>
         `);
@@ -1107,20 +1106,14 @@ const fundingData = [
       svg.innerHTML = parts.join("");
     }
 
-    function updateTrendTable(results, selectedYear) {
+    function updateTrendTable(results) {
       const tableBody = explorer.querySelector("[data-trend-table]");
       if (!(tableBody instanceof HTMLElement)) return;
       tableBody.replaceChildren();
       results.forEach((result) => {
         const row = document.createElement("tr");
-        if (result.row.year === selectedYear) row.className = "selected-year-row";
         const yearCell = document.createElement("td");
-        const yearButton = document.createElement("button");
-        yearButton.type = "button";
-        yearButton.dataset.tableYear = String(result.row.year);
-        yearButton.textContent = `FY${result.row.year}`;
-        if (result.row.year === selectedYear) yearButton.setAttribute("aria-current", "true");
-        yearCell.append(yearButton);
+        yearCell.textContent = `FY${result.row.year}`;
 
         const totalCell = document.createElement("td");
         totalCell.className = "numeric";
@@ -1165,20 +1158,14 @@ const fundingData = [
     }
 
     function render() {
-      if (!(yearSelect instanceof HTMLSelectElement)) return;
       updateDistrictAddonControl();
       syncStudentPopulation();
       updateStudentControls();
-      const selectedYear = Number(yearSelect.value);
-      const selectedRow = rows.find((row) => row.year === selectedYear) || rows[0];
-      const result = calculate(selectedRow);
       const results = rows.map(calculate);
-      updateStatus(result);
-      updateMetrics(result);
-      updateFormula(result);
-      updateBreakdown(result);
-      updateChart(results, selectedYear);
-      updateTrendTable(results, selectedYear);
+      updateFormula();
+      updateSpendChart(results);
+      updateChart(results);
+      updateTrendTable(results);
       updatePresetState();
     }
 
@@ -1195,17 +1182,9 @@ const fundingData = [
 
     [...fundingInputs, ...districtInputs].forEach((input) => input.addEventListener("change", render));
     if (districtAddons) districtAddons.addEventListener("change", render);
-    if (yearSelect) yearSelect.addEventListener("change", render);
     if (autoMatch) autoMatch.addEventListener("change", render);
     studentInputs.forEach((input) => input.addEventListener("change", render));
     presetButtons.forEach((button) => button.addEventListener("click", () => applyPreset(button.dataset.preset)));
-    explorer.addEventListener("click", (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLButtonElement) || !target.dataset.tableYear || !(yearSelect instanceof HTMLSelectElement)) return;
-      yearSelect.value = target.dataset.tableYear;
-      yearSelect.focus();
-      render();
-    });
 
     render();
   }
@@ -1285,10 +1264,7 @@ h3 { margin-bottom: 8px; font-size: 1.18rem; line-height: 1.25; }
 .preset-row button[aria-pressed="true"] { border-color: var(--red); background: var(--red); color: var(--white); font-weight: 800; }
 .explorer-layout { display: grid; grid-template-columns: minmax(320px,390px) minmax(0,1fr); gap: 18px; align-items: start; }
 .explorer-controls { color: var(--ink); background: var(--white); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.control-intro { display: grid; gap: 7px; padding: 20px; background: var(--gold-soft); border-bottom: 1px solid var(--line); }
-.control-intro label { font-weight: 700; }
-.control-intro select { width: 100%; padding: 11px 38px 11px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: var(--white); color: var(--ink); font: inherit; font-weight: 700; }
-.control-intro small, .choice-row small, .auto-match small { color: var(--ink-2); font-size: .72rem; }
+.choice-row small, .auto-match small { color: var(--ink-2); font-size: .72rem; }
 .explorer-controls fieldset { margin: 0; padding: 28px 20px 24px; border: 0; border-bottom: 1px solid var(--line); }
 .explorer-controls fieldset:last-child { border-bottom: 0; }
 .explorer-controls legend { width: 100%; padding: 11px 0 11px; font-weight: 800; }
@@ -1303,61 +1279,49 @@ h3 { margin-bottom: 8px; font-size: 1.18rem; line-height: 1.25; }
 .student-choices input:disabled { opacity: .72; }
 .manual-note { margin: 11px 0 0 28px; color: var(--ink-2); font-size: .69rem; }
 .explorer-output { display: grid; gap: 14px; }
-.result-status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; padding: 11px 15px; border: 1px solid var(--line); border-left: 5px solid; border-radius: 8px; background: var(--white); font-size: .78rem; }
-.result-status.complete { border-color: #65c0a7; background: rgba(73,167,142,.16); }
-.result-status.unavailable { border-color: #e2b75b; background: rgba(198,149,46,.16); }
-.result-status :global(strong) { font-size: .82rem; }
-.result-status :global(span) { color: var(--ink-2); }
-.result-metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1px; border: 1px solid var(--line); border-radius: 10px; background: var(--line); overflow: hidden; }
-.result-metrics article { min-height: 124px; padding: 20px; background: var(--white); }
-.result-metrics span, .formula-card > div > span, .trend-card figcaption span { display: block; color: var(--ink-2); font-size: .66rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
-.result-metrics strong { display: block; margin-top: 14px; color: var(--ink); font-size: clamp(1.35rem,2.3vw,2rem); line-height: 1; letter-spacing: -.04em; }
-.result-metrics .primary-result { background: var(--green-soft); }
-.result-metrics .primary-result span { color: var(--green); }
-.result-metrics .primary-result strong { color: var(--green); }
+.formula-card > div > span, .trend-card figcaption span { display: block; color: var(--ink-2); font-size: .66rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .formula-card { padding: 18px 20px; background: var(--gold-soft); border: 1px solid var(--line); border-left: 4px solid var(--gold); border-radius: 8px; }
 .formula-card > div { display: flex; justify-content: space-between; gap: 14px; align-items: center; }
 .formula-card a { color: var(--red); font-size: .72rem; font-weight: 700; }
 .formula-card p { margin: 11px 0 0; color: var(--ink); font-size: .8rem; line-height: 1.65; overflow-wrap: anywhere; }
-.breakdown-card { padding: 20px; background: var(--white); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; }
-.breakdown-card h3 { font-size: .98rem; }
-.breakdown-bar { display: flex; min-height: 16px; margin: 13px 0 12px; background: var(--paper-2); overflow: hidden; }
-.breakdown-bar :global(span) { min-width: 2px; }
-.breakdown-card ul { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 20px; margin: 0; padding: 0; list-style: none; }
-.breakdown-card :global(li) { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-2); font-size: .72rem; }
-.breakdown-card :global(li > span) { display: flex; gap: 7px; align-items: center; }
-.breakdown-card :global(li i) { flex: 0 0 auto; width: 9px; height: 9px; }
-.breakdown-card :global(li strong) { color: var(--ink); white-space: nowrap; }
-.breakdown-card :global(.missing-component strong) { color: var(--red); }
 .trend-card { margin: 0; padding: 20px 20px 12px; background: var(--white); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; }
 .trend-card figcaption { display: flex; justify-content: space-between; gap: 20px; align-items: end; }
 .trend-card figcaption span { color: var(--red); }
 .trend-card figcaption strong { display: block; margin-top: 4px; font-size: 1.05rem; }
 .trend-card figcaption small { max-width: 260px; color: var(--ink-2); font-size: .7rem; text-align: right; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 7px 15px; min-height: 22px; margin-top: 14px; color: var(--ink-2); font-size: .68rem; }
+.chart-legend :global(span) { display: inline-flex; gap: 6px; align-items: center; }
+.chart-legend :global(i) { width: 9px; height: 9px; flex: 0 0 auto; }
+.chart-legend.empty { font-style: italic; }
 .trend-card svg { display: block; width: 100%; height: auto; min-height: 220px; margin-top: 6px; overflow: visible; }
 .trend-card :global(.chart-grid) { stroke: #ddd5c7; stroke-width: 1; }
 .trend-card :global(.chart-line) { fill: none; stroke: var(--green); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
 .trend-card :global(.chart-point-group) { cursor: crosshair; outline: none; }
 .trend-card :global(.chart-hit-area) { fill: transparent; pointer-events: all; }
 .trend-card :global(.chart-point) { fill: var(--white); stroke: var(--green); stroke-width: 3; }
-.trend-card :global(.chart-point.selected) { fill: var(--gold); stroke: var(--ink); }
 .trend-card :global(.chart-point-group:focus-visible .chart-point) { stroke: var(--red); stroke-width: 4; }
+.trend-card :global(.chart-bar-group) { cursor: crosshair; outline: none; }
+.trend-card :global(.chart-bar-segment) { stroke: var(--white); stroke-width: 1; }
+.trend-card :global(.chart-bar-group:focus-visible .chart-bar-segment) { stroke: var(--ink); stroke-width: 3; }
+.trend-card :global(.chart-missing-year) { outline: none; }
+.trend-card :global(.chart-missing-year text) { fill: var(--red); font-family: "Courier New", monospace; font-size: 22px; font-weight: 700; }
+.trend-card :global(.chart-missing-year:focus-visible text) { text-decoration: underline; }
 .trend-card :global(.chart-tooltip) { opacity: 0; pointer-events: none; transition: opacity .12s ease; }
-.trend-card :global(.chart-point-group:hover .chart-tooltip), .trend-card :global(.chart-point-group:focus .chart-tooltip) { opacity: 1; }
+.trend-card :global(.chart-point-group:hover .chart-tooltip), .trend-card :global(.chart-point-group:focus .chart-tooltip), .trend-card :global(.chart-bar-group:hover .chart-tooltip), .trend-card :global(.chart-bar-group:focus .chart-tooltip) { opacity: 1; }
 .trend-card :global(.chart-tooltip rect) { fill: var(--ink); stroke: var(--white); stroke-width: 1; }
 .trend-card :global(.chart-tooltip text) { fill: var(--white); font-family: "Courier New", monospace; }
-.trend-card :global(.chart-tooltip-year) { font-size: 10px; font-weight: 700; letter-spacing: .06em; }
-.trend-card :global(.chart-tooltip-value) { font-size: 12px; font-weight: 700; }
-.trend-card :global(.chart-selected-line) { stroke: var(--gold); stroke-width: 1; stroke-dasharray: 4 4; }
+.trend-card :global(.chart-tooltip-year) { font-size: 13px; font-weight: 700; letter-spacing: .05em; }
+.trend-card :global(.chart-tooltip-value) { font-size: 17px; font-weight: 700; }
 .trend-card :global(.chart-label), .trend-card :global(.chart-year), .trend-card :global(.chart-axis-title), .trend-card :global(.chart-empty) { fill: #536d78; font-family: "Courier New", monospace; font-size: 11px; }
 .trend-card :global(.chart-axis-title) { font-size: 9px; }
 .trend-card :global(.chart-empty) { font-size: 14px; }
-.trend-table-details { margin-top: 18px; color: var(--ink); background: var(--white); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.trend-table-details { margin: 0; color: var(--ink); background: var(--white); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .trend-table-details summary { padding: 15px 18px; cursor: pointer; color: var(--green); font-weight: 700; }
+.trend-table-details .table-wrap { border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+.explorer-table { min-width: 700px; }
 .explorer-table :global(td) { padding: 11px 14px; border-bottom: 1px solid var(--line); color: var(--ink); font-size: .78rem; }
 .explorer-table :global(tr:last-child td) { border-bottom: 0; }
-.explorer-table :global(.selected-year-row) { background: var(--gold-soft); }
-.explorer-table :global(button) { padding: 0; border: 0; background: transparent; color: var(--green); cursor: pointer; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.explorer-table :global(td:first-child) { color: var(--green); font-weight: 700; }
 .explorer-table :global(.numeric) { text-align: right; font-variant-numeric: tabular-nums; }
 .explorer-table :global(.result-cell) { color: var(--green); font-weight: 700; }
 
@@ -1441,7 +1405,6 @@ footer p { margin: 7px 0 0; color: rgba(255,253,248,.66); font-size: .77rem; }
   .hero-verdict { max-width: 520px; }
   .explorer-layout { grid-template-columns: 1fr; }
   .explorer-controls { display: grid; grid-template-columns: 1fr 1fr; }
-  .control-intro { grid-column: 1 / -1; }
   .explorer-controls fieldset:last-child { grid-column: 1 / -1; }
   .glossary-grid { grid-template-columns: 1fr 1fr; }
   .impact-grid { grid-template-columns: 1fr 1fr; }
@@ -1458,12 +1421,14 @@ footer p { margin: 7px 0 0; color: rgba(255,253,248,.66); font-size: .77rem; }
   .preset-row > span { width: 100%; }
   .preset-row button { flex: 1 1 calc(50% - 8px); }
   .explorer-controls { display: block; }
-  .result-metrics, .glossary-grid { grid-template-columns: 1fr; }
-  .result-metrics article { min-height: 94px; }
-  .breakdown-card ul { grid-template-columns: 1fr; }
+  .glossary-grid { grid-template-columns: 1fr; }
   .trend-card { padding: 16px 10px 8px; }
   .trend-card figcaption { align-items: start; flex-direction: column; gap: 6px; padding: 0 6px; }
   .trend-card figcaption small { text-align: left; }
+  .trend-card :global(.chart-label), .trend-card :global(.chart-year) { font-size: 16px; }
+  .trend-card :global(.chart-axis-title) { font-size: 13px; }
+  .trend-card :global(.chart-tooltip-year) { font-size: 17px; }
+  .trend-card :global(.chart-tooltip-value) { font-size: 21px; }
   .formula-card > div { align-items: start; }
   .section-heading { grid-template-columns: 34px minmax(0,1fr); gap: 10px; }
   .impact-grid, .audit-steps, .footer-grid { grid-template-columns: 1fr; }
