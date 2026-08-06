@@ -1,0 +1,571 @@
+---
+export const prerender = false;
+
+import TopNav from "../components/TopNav.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import FilterBar from "../components/FilterBar.astro";
+import {
+  communityUpdateDate,
+  getRecentApprovedCommunityUpdates,
+} from "../lib/communityUpdates";
+import {
+  getCommunityUpdateCards,
+  previewDescription,
+  previewTitle,
+} from "../lib/communityUpdateCards";
+import { cleanText } from "../lib/text";
+import profileIcon from "../assets/profile icon.png";
+
+const q = Astro.url.searchParams.get("q")?.trim() || "";
+const platform = Astro.url.searchParams.get("platform")?.trim() || "";
+const sort = Astro.url.searchParams.get("sort")?.trim() || "updated:desc";
+
+let mediaItems = [];
+let error = "";
+
+try {
+  const updates = await getRecentApprovedCommunityUpdates({ limit: 120 });
+  const cards = await getCommunityUpdateCards(updates || []);
+
+  mediaItems = cards
+    .filter((update) => isSocialUpdate(update))
+    .map((update) => mediaFeedItem(update))
+    .sort((a, b) => b.sortDate - a.sortDate);
+} catch (loadError) {
+  error = loadError?.message || "Unable to load community media.";
+}
+
+const platformOptions = [
+  ["", "All platforms"],
+  ["tiktok", "TikTok"],
+  ["instagram", "Instagram"],
+  ["facebook", "Facebook"],
+  ["substack", "Substack"],
+];
+
+function isSocialUpdate(update = {}) {
+  const type = update.social?.type || "";
+  return ["tiktok", "instagram", "facebook", "substack"].includes(type);
+}
+
+function mediaFeedItem(update = {}) {
+  const social = update.social || {};
+  const people = update.people || [];
+  const dateValue = update.createdAt || "";
+  const preview = update.linkPreview || null;
+  const title = previewTitle(preview, update.linkUrl);
+  const description = previewDescription(preview, update.linkUrl);
+  const isPortrait = social.type === "tiktok" || isInstagramVideo(social);
+
+  return {
+    id: update.id,
+    title,
+    description,
+    body: cleanText(update.comment || ""),
+    dateText: communityUpdateDate(dateValue),
+    dateValue,
+    displayName: cleanText(update.displayName || "Community member"),
+    entityName: cleanText(update.entityName || ""),
+    href: update.pageUrl || update.linkUrl || "/updates",
+    imageUrl: preview?.imageUrl || "",
+    linkUrl: update.linkUrl || "",
+    people,
+    platform: social.type || "link",
+    platformLabel: platformLabel(social),
+    social,
+    isPortrait,
+    sortDate: Date.parse(dateValue || "") || 0,
+    sortName: title,
+    text: [
+      title,
+      description,
+      update.comment,
+      update.entityName,
+      update.displayName,
+      update.linkUrl,
+      social.handle,
+      social.publication,
+      people.map((person) => person.name || person.role || person.districtLabel).join(" "),
+    ].filter(Boolean).join(" "),
+  };
+}
+
+function isInstagramVideo(social = {}) {
+  const label = String(social.label || "").toLowerCase();
+  return label.includes("reel") || label.includes("video");
+}
+
+function platformLabel(social = {}) {
+  if (social.type === "tiktok") return social.isProfile ? "TikTok profile" : "TikTok video";
+  if (social.type === "instagram") return social.isProfile ? "Instagram profile" : social.label || "Instagram post";
+  if (social.type === "facebook") return social.label || "Facebook post";
+  if (social.type === "substack") return social.label || "Substack";
+  return "Social media";
+}
+
+function handleText(item = {}) {
+  if (item.social?.handle) {
+    return item.platform === "substack"
+      ? `@${item.social.handle} on Substack`
+      : `${item.social.isProfile ? "Profile: " : ""}@${item.social.handle}`;
+  }
+  if (item.social?.publication) return `${item.social.publication} on Substack`;
+  return item.social?.host || "";
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/NH%20DB%20Logo.svg" />
+    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.svg" />
+    <title>Community Media | NH Deserves Better</title>
+    <meta
+      name="description"
+      content="An experimental social media feed for community-submitted videos and posts about New Hampshire legislators."
+    />
+  </head>
+
+  <body>
+    <TopNav />
+    <main
+      class="page"
+      x-data="nhdbFuzzyFilter({ itemSelector: '.media-card[data-fuzzy-item]', pageSize: 18, threshold: 0.32 })"
+    >
+      <section class="hero">
+        <p class="eyebrow">Experimental Feed</p>
+        <h1>Community media about legislators.</h1>
+        <p class="lede">
+          Browse reels, TikToks, social posts, and newsletter links submitted
+          by community members. These previews are designed for fast scanning
+          and richer context around public officials.
+        </p>
+      </section>
+
+      <FilterBar action="/community-media" submitLabel="Filter media" clearHref="/community-media" columns="wide" live={true}>
+        <label for="q">
+          <span>Search</span>
+          <input
+            id="q"
+            name="q"
+            type="search"
+            value={q}
+            placeholder="Legislator, town, district, platform, or keyword"
+            data-fuzzy-search
+          />
+        </label>
+        <label for="platform">
+          <span>Platform</span>
+          <select id="platform" name="platform" data-fuzzy-filter-field data-fuzzy-field="platform" data-fuzzy-match="exact">
+            {platformOptions.map(([value, label]) => (
+              <option value={value} selected={platform === value}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <label for="sort">
+          <span>Sort</span>
+          <select id="sort" name="sort" data-fuzzy-sort>
+            <option value="updated:desc" selected={sort === "updated:desc"}>Newest first</option>
+            <option value="updated:asc" selected={sort === "updated:asc"}>Oldest first</option>
+            <option value="name:asc" selected={sort === "name:asc"}>Title A-Z</option>
+            <option value="platform:asc" selected={sort === "platform:asc"}>Platform A-Z</option>
+          </select>
+        </label>
+      </FilterBar>
+      <div class="filter-chips" data-fuzzy-chips hidden></div>
+
+      {error ? (
+        <p class="status-message">{error}</p>
+      ) : (
+        <section class="media-panel">
+          <div class="results-heading">
+            <div>
+              <p class="eyebrow">Social Context</p>
+              <h2><span data-fuzzy-count>{mediaItems.length}</span> media posts shown</h2>
+            </div>
+            <a href="/suggest-update">Suggest media</a>
+          </div>
+
+          <div class="media-grid">
+            {mediaItems.map((item) => (
+              <article
+                class:list={[
+                  "media-card",
+                  item.isPortrait ? "portrait-media" : "landscape-media",
+                  `platform-${item.platform}`,
+                ]}
+                data-fuzzy-item
+                data-fuzzy-text={item.text}
+                data-fuzzy-platform={item.platform}
+                data-fuzzy-sort-name={item.sortName}
+                data-fuzzy-sort-updated={item.sortDate}
+                data-fuzzy-sort-platform={item.platformLabel}
+              >
+                <a class="media-frame" href={item.linkUrl || item.href}>
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt="" loading="lazy" />
+                  ) : (
+                    <span class="media-fallback">{item.platformLabel}</span>
+                  )}
+                  <span class="platform-badge">{item.platformLabel}</span>
+                </a>
+
+                <div class="media-copy">
+                  <div class="media-meta">
+                    <span>{handleText(item)}</span>
+                    {item.dateText && <time datetime={item.dateValue}>{item.dateText}</time>}
+                  </div>
+                  <h3><a href={item.linkUrl || item.href}>{item.title}</a></h3>
+                  {item.description && <p>{item.description}</p>}
+                  {item.body && <p class="community-note">{item.body}</p>}
+
+                  {item.people.length > 0 && (
+                    <div class="people-strip" aria-label="People connected to this post">
+                      <span>Legislator context</span>
+                      <div>
+                        {item.people.slice(0, 3).map((person) => (
+                          <a class="mini-person-card" href={person.path}>
+                            <img
+                              class:list={[!person.photoUrl && "profile-icon"]}
+                              src={person.photoUrl || profileIcon.src}
+                              alt={person.photoUrl ? `Photo of ${person.name}` : ""}
+                              loading="lazy"
+                            />
+                            <strong>{cleanText(person.name)}</strong>
+                            {(person.role || person.districtLabel) && (
+                              <small>{cleanText([person.role, person.districtLabel].filter(Boolean).join(" - "))}</small>
+                            )}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div class="media-actions">
+                    <a href={item.href}>Open update</a>
+                    {item.linkUrl && <a href={item.linkUrl}>Open post</a>}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div class="status-message empty-state" data-fuzzy-empty hidden>
+            <strong>No media posts matched those filters.</strong>
+            <p>Try a broader name, remove the platform filter, or search by town or district.</p>
+          </div>
+          <div class="see-more-row">
+            <button type="button" class="see-more-button subtle" data-fuzzy-more hidden>Show more media</button>
+          </div>
+        </section>
+      )}
+    </main>
+    <SiteFooter />
+  </body>
+</html>
+
+<style>
+  .page {
+    display: grid;
+    gap: 18px;
+  }
+
+  .hero {
+    background:
+      radial-gradient(circle at 82% 18%, rgba(255, 103, 25, 0.16), transparent 26%),
+      linear-gradient(135deg, #eff6ff 0%, #ffffff 48%, #fff7ed 100%);
+    border: 1px solid var(--nhdb-line);
+    border-radius: 14px;
+    padding: clamp(28px, 5vw, 54px);
+  }
+
+  .hero h1 {
+    font-size: clamp(2.25rem, 6vw, 4.8rem);
+    letter-spacing: 0;
+    line-height: 0.94;
+    margin: 0 0 16px;
+    max-width: 980px;
+  }
+
+  .lede {
+    color: #475569;
+    font-size: clamp(1rem, 1.4vw, 1.16rem);
+    line-height: 1.6;
+    margin: 0;
+    max-width: 760px;
+  }
+
+  .media-panel {
+    display: grid;
+    gap: 18px;
+  }
+
+  .results-heading {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid var(--nhdb-line);
+    border-radius: 10px;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    padding: 20px;
+  }
+
+  .results-heading h2 {
+    font-size: 1.55rem;
+    line-height: 1.05;
+    margin: 0;
+  }
+
+  .results-heading a,
+  .media-actions a {
+    background: #1f2933;
+    border: 1px solid #111827;
+    border-radius: 999px;
+    color: #fffaf1;
+    font-size: 0.86rem;
+    font-weight: 950;
+    padding: 9px 12px;
+    text-decoration: none;
+  }
+
+  .media-grid {
+    align-items: start;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  .media-card {
+    background: #ffffff;
+    border: 1px solid var(--nhdb-line);
+    border-radius: 14px;
+    display: grid;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .media-frame {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #2563eb, #ff6719) border-box;
+    border-bottom: 1px solid var(--nhdb-line);
+    color: inherit;
+    display: grid;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+    text-decoration: none;
+  }
+
+  .portrait-media .media-frame {
+    aspect-ratio: 9 / 16;
+    justify-self: center;
+    max-height: min(72vh, 640px);
+    width: min(100%, 390px);
+  }
+
+  .landscape-media .media-frame {
+    aspect-ratio: 16 / 9;
+    width: 100%;
+  }
+
+  .media-frame img {
+    background: #ffffff;
+    display: block;
+    height: 100%;
+    object-fit: contain;
+    width: 100%;
+  }
+
+  .platform-instagram .media-frame {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #f97316, #db2777, #7c3aed) border-box;
+  }
+
+  .platform-tiktok .media-frame {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #111827, #06b6d4, #ef4444) border-box;
+  }
+
+  .platform-facebook .media-frame {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #1877f2, #60a5fa, #1d4ed8) border-box;
+  }
+
+  .platform-substack .media-frame {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #ff6719, #f59e0b, #7c2d12) border-box;
+  }
+
+  .media-fallback {
+    align-self: center;
+    color: #1f2933;
+    font-size: clamp(1.5rem, 5vw, 3rem);
+    font-weight: 950;
+    justify-self: center;
+    padding: 28px;
+    text-align: center;
+  }
+
+  .platform-badge {
+    backdrop-filter: blur(10px);
+    background: rgba(31, 41, 51, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    bottom: 12px;
+    color: #fffaf1;
+    font-size: 0.76rem;
+    font-weight: 950;
+    left: 12px;
+    padding: 7px 10px;
+    position: absolute;
+  }
+
+  .media-copy {
+    display: grid;
+    gap: 11px;
+    padding: 18px;
+  }
+
+  .media-meta {
+    color: #64748b;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+    font-weight: 900;
+    gap: 8px;
+  }
+
+  .media-card h3 {
+    font-size: 1.24rem;
+    line-height: 1.12;
+    margin: 0;
+  }
+
+  .media-card h3 a {
+    color: #1f2933;
+    text-decoration: none;
+  }
+
+  .media-card h3 a:hover {
+    color: #b6390a;
+    text-decoration: underline;
+  }
+
+  .media-card p {
+    color: #475569;
+    line-height: 1.5;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .community-note {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    font-weight: 750;
+    padding: 10px;
+  }
+
+  .people-strip {
+    border-top: 1px solid #dbeafe;
+    display: grid;
+    gap: 9px;
+    padding-top: 12px;
+  }
+
+  .people-strip > span {
+    color: #6b4f2a;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .people-strip > div {
+    display: grid;
+    gap: 8px;
+  }
+
+  .mini-person-card {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    color: #1f2933;
+    display: grid;
+    gap: 2px 10px;
+    grid-template-columns: 44px minmax(0, 1fr);
+    padding: 9px;
+    text-decoration: none;
+  }
+
+  .mini-person-card img {
+    aspect-ratio: 4 / 5;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    display: block;
+    grid-row: span 2;
+    height: 54px;
+    object-fit: cover;
+    object-position: center top;
+    width: 44px;
+  }
+
+  .mini-person-card img.profile-icon {
+    object-fit: cover;
+  }
+
+  .mini-person-card strong,
+  .mini-person-card small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mini-person-card strong {
+    font-size: 0.94rem;
+    line-height: 1.15;
+  }
+
+  .mini-person-card small {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 850;
+  }
+
+  .media-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .media-actions a {
+    background: #f8fafc;
+    border-color: #d1d5db;
+    color: #1f2933;
+  }
+
+  .see-more-row {
+    display: flex;
+    justify-content: center;
+  }
+
+  @media (max-width: 720px) {
+    .results-heading {
+      align-items: start;
+      flex-direction: column;
+    }
+
+    .media-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
