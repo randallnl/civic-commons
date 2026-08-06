@@ -393,7 +393,7 @@ export async function upsertPersonFromCandidate(filer, db = adminDb()) {
          party = excluded.party,
          email = excluded.email,
          website_url = excluded.website_url,
-         photo_url = excluded.photo_url,
+         photo_url = COALESCE(NULLIF(excluded.photo_url, ''), d1_people.photo_url),
          is_2026_candidate = excluded.is_2026_candidate,
          is_free_stater = CASE WHEN excluded.is_free_stater = 1 THEN 1 ELSE d1_people.is_free_stater END,
          updated_at = CURRENT_TIMESTAMP`,

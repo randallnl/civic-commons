@@ -153,9 +153,23 @@ async function updateCandidatePhoto(entityKey, publicUrl) {
     legacyChanges += legacyResult.meta?.changes ?? legacyResult.changes ?? 0;
   }
 
+  if (resolved.filerEntityNumber) await upsertPersonFromCandidate(resolved.filerEntityNumber, db);
+  if (resolved.personId || resolved.filerEntityNumber) {
+    const finalUnifiedResult = await db
+      .prepare(
+        `UPDATE d1_people
+         SET photo_url = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?
+            OR filer_entity_number = ?`,
+      )
+      .bind(publicUrl, resolved.personId || 0, resolved.filerEntityNumber || "")
+      .run();
+    unifiedChanges += finalUnifiedResult.meta?.changes ?? finalUnifiedResult.changes ?? 0;
+  }
+
   const changes = unifiedChanges + legacyChanges;
   if (!changes) throw new Error("No matching candidate row was updated.");
-  if (resolved.filerEntityNumber) await upsertPersonFromCandidate(resolved.filerEntityNumber, db);
   return "candidate photo_url";
 }
 
