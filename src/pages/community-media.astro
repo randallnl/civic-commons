@@ -19,6 +19,7 @@ import profileIcon from "../assets/profile icon.png";
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const platform = Astro.url.searchParams.get("platform")?.trim() || "";
 const sort = Astro.url.searchParams.get("sort")?.trim() || "updated:desc";
+const TITLE_PREVIEW_LENGTH = 114;
 const DESCRIPTION_PREVIEW_LENGTH = 114;
 const NOTE_PREVIEW_LENGTH = 114;
 
@@ -56,12 +57,14 @@ function mediaFeedItem(update = {}) {
   const dateValue = update.createdAt || "";
   const preview = update.linkPreview || null;
   const title = previewTitle(preview, update.linkUrl);
+  const titlePreview = textPreview(title, TITLE_PREVIEW_LENGTH);
   const description = previewDescription(preview, update.linkUrl);
   const isPortrait = social.type === "tiktok" || isInstagramVideo(social) || isFacebookVideo(social);
 
   return {
     id: update.id,
     title,
+    titlePreview: titlePreview.preview,
     description,
     body: cleanText(update.comment || ""),
     dateText: communityUpdateDate(dateValue),
@@ -270,8 +273,10 @@ function textPreview(value = "", maxLength = 170) {
                       href={item.linkUrl || item.href}
                       target={item.linkUrl ? "_blank" : undefined}
                       rel={item.linkUrl ? "noopener noreferrer" : undefined}
+                      title={item.title}
+                      aria-label={item.title}
                     >
-                      {item.title}
+                      {item.titlePreview}
                     </a>
                   </h3>
                   {item.description && (
