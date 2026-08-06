@@ -80,6 +80,7 @@ function mediaFeedItem(update = {}) {
     platformLabel: platformLabel(social),
     fallbackLabel: fallbackLabel(social, title),
     social,
+    embedUrl: social.type === "facebook" ? social.embedUrl || "" : "",
     isPortrait,
     sortDate: Date.parse(dateValue || "") || 0,
     sortName: title,
@@ -281,6 +282,20 @@ function textPreview(value = "", maxLength = 170) {
                   <span class="platform-badge">{item.platformLabel}</span>
                   {item.imageUrl ? (
                     <img src={item.imageUrl} alt="" loading="lazy" />
+                  ) : item.platform === "facebook" && item.embedUrl ? (
+                    <iframe
+                      class="media-embed facebook-media-embed"
+                      src={item.embedUrl}
+                      width="500"
+                      height="520"
+                      style="border:none;overflow:hidden"
+                      scrolling="no"
+                      frameborder="0"
+                      allowfullscreen="true"
+                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                      loading="lazy"
+                      title="Facebook post preview"
+                    ></iframe>
                   ) : item.platform === "substack" ? (
                     <span class="media-fallback substack-media-fallback">
                       <span>{item.fallbackLabel.mark}</span>
@@ -498,6 +513,19 @@ function textPreview(value = "", maxLength = 170) {
     height: 100%;
     object-fit: contain;
     width: 100%;
+  }
+
+  .media-embed {
+    background: #ffffff;
+    display: block;
+    grid-area: 1 / 1;
+    height: 100%;
+    min-height: 100%;
+    width: 100%;
+  }
+
+  .facebook-media-embed {
+    transform-origin: top center;
   }
 
   .platform-instagram .media-frame {

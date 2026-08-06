@@ -186,7 +186,7 @@ function facebookPreview(value = "") {
 
     const permalink = cleanPermalink(url, { keepSearch: true });
     const path = url.pathname.toLowerCase();
-    const label = host === "fb.watch" || path.includes("/videos/") || path.includes("/watch/")
+    const label = host === "fb.watch" || path.includes("/reel/") || path.includes("/videos/") || path.includes("/watch/")
       ? "Facebook video"
       : path.includes("/posts/") || path.includes("/permalink/")
         ? "Facebook post"
