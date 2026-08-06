@@ -168,6 +168,25 @@ async function updateCandidatePhoto(entityKey, publicUrl) {
     unifiedChanges += finalUnifiedResult.meta?.changes ?? finalUnifiedResult.changes ?? 0;
   }
 
+  if (resolved.personId) {
+    await db
+      .prepare(
+        `UPDATE d1_legislator_photos
+         SET photo_url = ?,
+             filename = ?,
+             source = 'd1_people',
+             updated_at = CURRENT_TIMESTAMP
+         WHERE employeeno = (
+           SELECT employeeno
+           FROM d1_people
+           WHERE id = ?
+           LIMIT 1
+         )`,
+      )
+      .bind(publicUrl, filenameFromUrl(publicUrl), resolved.personId)
+      .run();
+  }
+
   const changes = unifiedChanges + legacyChanges;
   if (!changes) throw new Error("No matching candidate row was updated.");
   return "candidate photo_url";
@@ -263,8 +282,19 @@ async function updateRepresentativePhoto(entityKey, key, publicUrl) {
     )
     .run();
 
+  await db
+    .prepare(
+      `UPDATE d1_people
+       SET photo_url = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE gc_personid = ?
+          OR employeeno = ?`,
+    )
+    .bind(publicUrl, legislator.personid, legislator.employeeno)
+    .run();
+
   await upsertPersonFromLegislator(legislator.personid, db);
-  return "d1_legislator_photos";
+  return "d1_people photo_url";
 }
 
 async function updateOrganizationLogo(entityKey, key) {
@@ -340,6 +370,11 @@ function sanitizeFilename(value = "") {
     .replace(/[^a-zA-Z0-9._ -]+/g, "")
     .replace(/\s+/g, " ")
     .slice(0, 120);
+}
+
+function filenameFromUrl(value = "") {
+  const path = String(value || "").split("?")[0] || "";
+  return decodeURIComponent(path.split("/").pop() || "").trim();
 }
 
 function numericId(value = "") {

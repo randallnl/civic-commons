@@ -241,6 +241,21 @@ async function updateRepresentativeSource(db, entityKey, data) {
          updated_at = CURRENT_TIMESTAMP`,
       [filenameFromUrl(data.photo), data.photo, personid],
     );
+
+    changed += await runSourceUpdate(
+      db,
+      `UPDATE d1_people
+       SET photo_url = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE gc_personid = ?
+          OR employeeno = (
+            SELECT employeeno
+            FROM d1_legislators
+            WHERE personid = ?
+            LIMIT 1
+          )`,
+      [data.photo, personid, personid],
+    );
   }
 
   if (Object.prototype.hasOwnProperty.call(data, "linkedCandidateFilerEntityNumber")) {

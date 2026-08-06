@@ -321,8 +321,11 @@ export async function upsertPersonFromLegislator(identifier, db = adminDb()) {
   const numeric = Number(identifier);
   const rep = await db
     .prepare(
-      `SELECT l.*, COALESCE(p.photo_url, '') AS photo_url
+      `SELECT l.*, COALESCE(NULLIF(people.photo_url, ''), p.photo_url, '') AS photo_url
        FROM d1_legislators l
+       LEFT JOIN d1_people people
+         ON people.gc_personid = l.personid
+         OR people.employeeno = l.employeeno
        LEFT JOIN d1_legislator_photos p
          ON p.employeeno = l.employeeno
        WHERE l.personid = ? OR l.employeeno = ?

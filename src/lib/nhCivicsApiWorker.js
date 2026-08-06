@@ -1494,7 +1494,7 @@ async function handleRepProfile(request, env) {
       people.instagram_url,
       people.facebook_url,
       people.tiktok_url,
-      COALESCE(p.photo_url, '') AS photo,
+      COALESCE(NULLIF(people.photo_url, ''), p.photo_url, '') AS photo,
       l.database_name
     FROM d1_legislators l
     LEFT JOIN d1_district_mapping dm
@@ -2462,7 +2462,7 @@ async function getRepresentativesForDistrict(env, district) {
       l.party,
       ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "l.is_free_stater"))},
       ${isTpActionAlignedSelectExpression("people.is_tpaction_aligned_2026")},
-      COALESCE(p.photo_url, '') AS photo,
+      COALESCE(NULLIF(people.photo_url, ''), p.photo_url, '') AS photo,
       l.emailaddress AS email,
       l.district AS raw_district,
       l.countycode
@@ -3337,10 +3337,13 @@ async function handleTownSearch(request, env) {
       COALESCE(dm.communities_represented, r.city, '') AS location_text,
       r.emailaddress AS email,
       '' AS phone,
-      COALESCE(p.photo_url, '') AS photo
+      COALESCE(NULLIF(people.photo_url, ''), p.photo_url, '') AS photo
     FROM d1_legislators r
     LEFT JOIN d1_legislator_photos p
       ON r.employeeno = p.employeeno
+    LEFT JOIN d1_people people
+      ON people.gc_personid = r.personid
+      OR people.employeeno = r.employeeno
     LEFT JOIN d1_district_mapping dm
       ON (
         (
@@ -3496,7 +3499,7 @@ async function handleReps(request, env) {
       r.zipcode,
       r.emailaddress AS email,
       '' AS phone,
-      COALESCE(p.photo_url, '') AS photo,
+      COALESCE(NULLIF(people.photo_url, ''), p.photo_url, '') AS photo,
       r.database_name
     ${baseFrom}
     ORDER BY
@@ -3994,7 +3997,7 @@ async function handleBillRollCall(request, env) {
       ${isTpActionAlignedSelectExpression("p.is_tpaction_aligned_2026")},
       l.personid,
       COALESCE(p.slug, l.slug, '') AS slug,
-      COALESCE(p.photo_url, lp.photo_url, '') AS photo
+      COALESCE(NULLIF(p.photo_url, ''), lp.photo_url, '') AS photo
     FROM d1_rollcallhistory h
     LEFT JOIN d1_legislators l
       ON l.employeeno = h.employeenumber
@@ -4366,11 +4369,14 @@ async function hydrateArticles(env, articles) {
             l.district,
             l.countycode,
             l.emailaddress AS email,
-            COALESCE(lp.photo_url, '') AS photo
+            COALESCE(NULLIF(people.photo_url, ''), lp.photo_url, '') AS photo
           FROM d1_article_legislators al
           LEFT JOIN d1_legislators l
             ON l.personid = al.personid
             OR l.employeeno = al.employeeno
+          LEFT JOIN d1_people people
+            ON people.gc_personid = l.personid
+            OR people.employeeno = l.employeeno
           LEFT JOIN d1_legislator_photos lp
             ON lp.employeeno = l.employeeno
           WHERE al.article_id = ?
@@ -4685,7 +4691,7 @@ async function findHouseRepsFromDistrictMappings(env, districts) {
         COALESCE(dm.communities_represented, l.city, '') AS location_text,
         l.emailaddress AS email,
         '' AS phone,
-        COALESCE(p.photo_url, '') AS photo
+        COALESCE(NULLIF(people.photo_url, ''), p.photo_url, '') AS photo
       FROM d1_legislators l
       LEFT JOIN d1_district_mapping dm
         ON dm.body = 'H'
@@ -4734,7 +4740,7 @@ async function findSenators(env, senate) {
       COALESCE(dm.communities_represented, l.city, '') AS location_text,
       l.emailaddress AS email,
       '' AS phone,
-      COALESCE(p.photo_url, '') AS photo
+      COALESCE(NULLIF(people.photo_url, ''), p.photo_url, '') AS photo
     FROM d1_legislators l
     LEFT JOIN d1_district_mapping dm
       ON dm.body = 'S'
