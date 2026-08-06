@@ -73,6 +73,7 @@ function communityFeedItem(update = {}) {
     photos,
     linkUrl: update.linkUrl || "",
     linkPreview: update.linkPreview || null,
+    social: update.social || null,
     people: update.people || [],
     text: [
       update.entityName,
@@ -289,15 +290,30 @@ function cleanDate(value = "") {
                   {item.type !== "community" && item.meta && <p class="feed-meta">{item.meta}</p>}
                   <p>{item.body}</p>
                   {item.type === "community" && item.linkUrl && (
-                    <a class="community-link-preview rich-link-preview" href={item.linkUrl}>
-                      {item.linkPreview?.imageUrl && <img src={item.linkPreview.imageUrl} alt="" loading="lazy" />}
-                      <span>
-                        <strong>{previewTitle(item.linkPreview)}</strong>
-                        {previewDescription(item.linkPreview, item.linkUrl) && (
-                          <small>{previewDescription(item.linkPreview, item.linkUrl)}</small>
-                        )}
-                      </span>
-                    </a>
+                    item.social?.type === "instagram" ? (
+                      <a class="community-link-preview rich-link-preview instagram-preview-card" href={item.social.permalink || item.linkUrl}>
+                        <span class="instagram-icon" aria-hidden="true">IG</span>
+                        {item.linkPreview?.imageUrl && <img src={item.linkPreview.imageUrl} alt="" loading="lazy" />}
+                        <span>
+                          <strong>{previewTitle(item.linkPreview, item.linkUrl)}</strong>
+                          <small>
+                            {item.social.handle
+                              ? `${item.social.isProfile ? "Profile: " : ""}@${item.social.handle}`
+                              : previewDescription(item.linkPreview, item.linkUrl)}
+                          </small>
+                        </span>
+                      </a>
+                    ) : (
+                      <a class="community-link-preview rich-link-preview" href={item.linkUrl}>
+                        {item.linkPreview?.imageUrl && <img src={item.linkPreview.imageUrl} alt="" loading="lazy" />}
+                        <span>
+                          <strong>{previewTitle(item.linkPreview)}</strong>
+                          {previewDescription(item.linkPreview, item.linkUrl) && (
+                            <small>{previewDescription(item.linkPreview, item.linkUrl)}</small>
+                          )}
+                        </span>
+                      </a>
+                    )
                   )}
                   {item.type === "community" && item.people?.length > 0 && (
                     <div class="community-people-block">
@@ -560,6 +576,28 @@ function cleanDate(value = "") {
     padding: 12px;
     text-decoration: none;
     width: 100%;
+  }
+
+  .instagram-preview-card {
+    align-items: center;
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #f97316, #db2777, #7c3aed) border-box;
+    border: 2px solid transparent;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .instagram-icon {
+    align-items: center;
+    background: linear-gradient(135deg, #f97316, #db2777, #7c3aed);
+    border-radius: 10px;
+    color: #ffffff;
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 950;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
   }
 
   .community-link-preview strong,

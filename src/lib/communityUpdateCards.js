@@ -107,6 +107,18 @@ function instagramPreview(value = "") {
 
     const parts = url.pathname.split("/").filter(Boolean);
     const first = parts[0]?.toLowerCase() || "";
+    const reservedPaths = new Set([
+      "about",
+      "accounts",
+      "api",
+      "developer",
+      "directory",
+      "explore",
+      "legal",
+      "oauth",
+      "privacy",
+      "terms",
+    ]);
     const labels = {
       p: "Instagram post",
       reel: "Instagram reel",
@@ -114,7 +126,9 @@ function instagramPreview(value = "") {
       tv: "Instagram video",
       stories: "Instagram story",
     };
-    const label = labels[first] || "Instagram profile";
+    const isProfile = Boolean(first && !labels[first] && !reservedPaths.has(first));
+    const isEmbeddable = Boolean(labels[first] && first !== "stories");
+    const label = labels[first] || (isProfile ? "Instagram profile" : "Instagram link");
     const handle =
       first === "stories"
         ? parts[1]
@@ -126,6 +140,8 @@ function instagramPreview(value = "") {
       label,
       handle,
       host,
+      isEmbeddable,
+      isProfile,
       permalink: cleanPermalink(url),
     };
   } catch {

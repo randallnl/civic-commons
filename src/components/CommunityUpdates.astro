@@ -221,21 +221,23 @@ const isReport = entityType === "report";
                       <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
                       <small>
                         {update.social.handle
-                          ? `@${update.social.handle}`
+                          ? `${update.social.isProfile ? "Profile: " : ""}@${update.social.handle}`
                           : previewDescription(update.linkPreview, update.linkUrl)}
                       </small>
                     </span>
                   </a>
-                  <blockquote
-                    class="instagram-media"
-                    data-instgrm-captioned
-                    data-instgrm-permalink={update.social.permalink}
-                    data-instgrm-version="14"
-                  >
-                    <a href={update.social.permalink || update.linkUrl}>
-                      View this post on Instagram
-                    </a>
-                  </blockquote>
+                  {update.social.isEmbeddable && (
+                    <blockquote
+                      class="instagram-media"
+                      data-instgrm-captioned
+                      data-instgrm-permalink={update.social.permalink}
+                      data-instgrm-version="14"
+                    >
+                      <a href={update.social.permalink || update.linkUrl}>
+                        View this post on Instagram
+                      </a>
+                    </blockquote>
+                  )}
                 </div>
               ) : (
                 <a class="community-link-preview rich-link-preview" href={update.linkUrl}>
