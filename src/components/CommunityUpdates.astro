@@ -167,12 +167,12 @@ const isReport = entityType === "report";
                       <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
                       <small>
                       {update.social.handle
-                          ? `@${update.social.handle}`
+                          ? `${update.social.isProfile ? "Profile: " : ""}@${update.social.handle}`
                           : previewDescription(update.linkPreview, update.linkUrl)}
                       </small>
                     </span>
                   </a>
-                  {update.social.videoId && (
+                  {update.social.isEmbeddable && update.social.videoId && (
                     <blockquote
                       class="tiktok-embed"
                       cite={update.social.permalink}
@@ -239,6 +239,21 @@ const isReport = entityType === "report";
                     </blockquote>
                   )}
                 </div>
+              ) : update.social?.type === "substack" ? (
+                <a class="rich-link-preview social-preview-card substack-preview-card" href={update.social.permalink || update.linkUrl}>
+                  <span class="social-icon substack-icon" aria-hidden="true">S</span>
+                  {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+                  <span>
+                    <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+                    <small>
+                      {update.social.handle
+                        ? `@${update.social.handle} on Substack`
+                        : update.social.publication
+                          ? `${update.social.publication} on Substack`
+                          : previewDescription(update.linkPreview, update.linkUrl)}
+                    </small>
+                  </span>
+                </a>
               ) : (
                 <a class="community-link-preview rich-link-preview" href={update.linkUrl}>
                   {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
@@ -773,6 +788,12 @@ const isReport = entityType === "report";
       linear-gradient(135deg, #1877f2, #60a5fa, #1d4ed8) border-box;
   }
 
+  .substack-preview-card {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #ff6719, #f59e0b, #7c2d12) border-box;
+  }
+
   .instagram-icon,
   .social-icon {
     align-items: center;
@@ -793,6 +814,10 @@ const isReport = entityType === "report";
 
   .facebook-icon {
     background: linear-gradient(135deg, #1877f2, #60a5fa);
+  }
+
+  .substack-icon {
+    background: linear-gradient(135deg, #ff6719, #f97316);
   }
 
   .instagram-preview-card strong,

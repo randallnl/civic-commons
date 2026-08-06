@@ -290,16 +290,39 @@ function cleanDate(value = "") {
                   {item.type !== "community" && item.meta && <p class="feed-meta">{item.meta}</p>}
                   <p>{item.body}</p>
                   {item.type === "community" && item.linkUrl && (
-                    item.social?.type === "instagram" ? (
-                      <a class="community-link-preview rich-link-preview instagram-preview-card" href={item.social.permalink || item.linkUrl}>
-                        <span class="instagram-icon" aria-hidden="true">IG</span>
+                    ["instagram", "tiktok", "substack"].includes(item.social?.type || "") ? (
+                      <a
+                        class:list={[
+                          "community-link-preview",
+                          "rich-link-preview",
+                          item.social.type === "tiktok"
+                            ? "tiktok-preview-card"
+                            : item.social.type === "substack"
+                              ? "substack-preview-card"
+                              : "instagram-preview-card",
+                        ]}
+                        href={item.social.permalink || item.linkUrl}
+                      >
+                        <span class:list={[
+                          item.social.type === "tiktok"
+                            ? "tiktok-icon"
+                            : item.social.type === "substack"
+                              ? "substack-icon"
+                              : "instagram-icon",
+                        ]} aria-hidden="true">
+                          {item.social.type === "tiktok" ? "TT" : item.social.type === "substack" ? "S" : "IG"}
+                        </span>
                         {item.linkPreview?.imageUrl && <img src={item.linkPreview.imageUrl} alt="" loading="lazy" />}
                         <span>
                           <strong>{previewTitle(item.linkPreview, item.linkUrl)}</strong>
                           <small>
                             {item.social.handle
-                              ? `${item.social.isProfile ? "Profile: " : ""}@${item.social.handle}`
-                              : previewDescription(item.linkPreview, item.linkUrl)}
+                              ? item.social.type === "substack"
+                                ? `@${item.social.handle} on Substack`
+                                : `${item.social.isProfile ? "Profile: " : ""}@${item.social.handle}`
+                              : item.social.publication
+                                ? `${item.social.publication} on Substack`
+                                : previewDescription(item.linkPreview, item.linkUrl)}
                           </small>
                         </span>
                       </a>
@@ -587,7 +610,27 @@ function cleanDate(value = "") {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .instagram-icon {
+  .tiktok-preview-card {
+    align-items: center;
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #111827, #06b6d4, #ef4444) border-box;
+    border: 2px solid transparent;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .substack-preview-card {
+    align-items: center;
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #ff6719, #f59e0b, #7c2d12) border-box;
+    border: 2px solid transparent;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .instagram-icon,
+  .tiktok-icon,
+  .substack-icon {
     align-items: center;
     background: linear-gradient(135deg, #f97316, #db2777, #7c3aed);
     border-radius: 10px;
@@ -598,6 +641,14 @@ function cleanDate(value = "") {
     height: 38px;
     justify-content: center;
     width: 38px;
+  }
+
+  .tiktok-icon {
+    background: linear-gradient(135deg, #111827, #06b6d4, #ef4444);
+  }
+
+  .substack-icon {
+    background: linear-gradient(135deg, #ff6719, #f97316);
   }
 
   .community-link-preview strong,

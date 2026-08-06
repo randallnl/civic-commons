@@ -161,11 +161,15 @@ function tiktokPreview(value = "") {
     const handle = parts.find((part) => part.startsWith("@"))?.replace(/^@/, "") || "";
     const videoIndex = parts.findIndex((part) => part.toLowerCase() === "video");
     const videoId = videoIndex >= 0 ? parts[videoIndex + 1] || "" : "";
+    const isProfile = Boolean(handle && !videoId);
+    const isEmbeddable = Boolean(videoId);
 
     return {
-      label: videoId ? "TikTok video" : "TikTok link",
+      label: videoId ? "TikTok video" : isProfile ? "TikTok profile" : "TikTok link",
       handle,
       host,
+      isEmbeddable,
+      isProfile,
       videoId,
       permalink: cleanPermalink(url),
     };
@@ -199,6 +203,36 @@ function facebookPreview(value = "") {
   }
 }
 
+function substackPreview(value = "") {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, "").toLowerCase();
+    const isSubstackHost = host === "substack.com" || host.endsWith(".substack.com");
+    if (!isSubstackHost) return null;
+
+    const parts = url.pathname.split("/").filter(Boolean);
+    const first = parts[0]?.toLowerCase() || "";
+    const publication = host.endsWith(".substack.com")
+      ? host.replace(/\.substack\.com$/, "")
+      : "";
+    const handle = parts.find((part) => part.startsWith("@"))?.replace(/^@/, "") || "";
+    const isPost = parts.includes("p") || first === "p";
+    const isProfile = Boolean(handle || (!isPost && (publication || first === "profile")));
+
+    return {
+      label: isPost ? "Substack post" : isProfile ? "Substack profile" : "Substack link",
+      handle,
+      host,
+      isPost,
+      isProfile,
+      publication,
+      permalink: cleanPermalink(url, { keepSearch: true }),
+    };
+  } catch {
+    return null;
+  }
+}
+
 function cleanPermalink(url, { keepSearch = false } = {}) {
   const cleanUrl = new URL(url.toString());
   if (!keepSearch) cleanUrl.search = "";
@@ -213,14 +247,24 @@ function socialPreview(value = "") {
   if (facebook) return { ...facebook, type: "facebook" };
   const instagram = instagramPreview(value);
   if (instagram) return { ...instagram, type: "instagram" };
+  const substack = substackPreview(value);
+  if (substack) return { ...substack, type: "substack" };
   return null;
 }
 
 function genericLinkPreview(value = "", social = null) {
   if (!value) return null;
+  const substackDescription = social?.type === "substack"
+    ? social.handle
+      ? `@${social.handle} on Substack`
+      : social.publication
+        ? `${social.publication} on Substack`
+        : "Substack"
+    : "";
+
   return {
     title: social?.label || "Linked context",
-    description: social?.handle ? `@${social.handle}` : linkHost(value),
+    description: substackDescription || (social?.handle ? `@${social.handle}` : linkHost(value)),
     imageUrl: "",
   };
 }
