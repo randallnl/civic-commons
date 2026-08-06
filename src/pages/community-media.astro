@@ -19,6 +19,8 @@ import profileIcon from "../assets/profile icon.png";
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const platform = Astro.url.searchParams.get("platform")?.trim() || "";
 const sort = Astro.url.searchParams.get("sort")?.trim() || "updated:desc";
+const DESCRIPTION_PREVIEW_LENGTH = 170;
+const NOTE_PREVIEW_LENGTH = 180;
 
 let mediaItems = [];
 let error = "";
@@ -124,6 +126,36 @@ function handleText(item = {}) {
   if (item.social?.publication) return `${item.social.publication} on Substack`;
   return item.social?.host || "";
 }
+
+function textPreview(value = "", maxLength = 170) {
+  const text = cleanText(value).replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) {
+    return { text, preview: text, isLong: false };
+  }
+
+  const clipped = text.slice(0, maxLength + 1);
+  const sentenceBreak = Math.max(
+    clipped.lastIndexOf(". "),
+    clipped.lastIndexOf("! "),
+    clipped.lastIndexOf("? "),
+  );
+  const commaBreak = clipped.lastIndexOf(", ");
+  const spaceBreak = clipped.lastIndexOf(" ");
+  const breakAt =
+    sentenceBreak > 80
+      ? sentenceBreak + 1
+      : commaBreak > 80
+        ? commaBreak
+        : spaceBreak > 80
+          ? spaceBreak
+          : maxLength;
+
+  return {
+    text,
+    preview: `${text.slice(0, breakAt).trim()}...`,
+    isLong: true,
+  };
+}
 ---
 
 <html lang="en">
@@ -214,7 +246,12 @@ function handleText(item = {}) {
                 data-fuzzy-sort-updated={item.sortDate}
                 data-fuzzy-sort-platform={item.platformLabel}
               >
-                <a class="media-frame" href={item.linkUrl || item.href}>
+                <a
+                  class="media-frame"
+                  href={item.linkUrl || item.href}
+                  target={item.linkUrl ? "_blank" : undefined}
+                  rel={item.linkUrl ? "noopener noreferrer" : undefined}
+                >
                   <span class="platform-badge">{item.platformLabel}</span>
                   {item.imageUrl ? (
                     <img src={item.imageUrl} alt="" loading="lazy" />
@@ -228,9 +265,41 @@ function handleText(item = {}) {
                     <span>{handleText(item)}</span>
                     {item.dateText && <time datetime={item.dateValue}>{item.dateText}</time>}
                   </div>
-                  <h3><a href={item.linkUrl || item.href}>{item.title}</a></h3>
-                  {item.description && <p>{item.description}</p>}
-                  {item.body && <p class="community-note">{item.body}</p>}
+                  <h3>
+                    <a
+                      href={item.linkUrl || item.href}
+                      target={item.linkUrl ? "_blank" : undefined}
+                      rel={item.linkUrl ? "noopener noreferrer" : undefined}
+                    >
+                      {item.title}
+                    </a>
+                  </h3>
+                  {item.description && (
+                    textPreview(item.description, DESCRIPTION_PREVIEW_LENGTH).isLong ? (
+                      <details class="text-disclosure">
+                        <summary>
+                          <span>{textPreview(item.description, DESCRIPTION_PREVIEW_LENGTH).preview}</span>
+                          <strong>Show more</strong>
+                        </summary>
+                        <p>{textPreview(item.description, DESCRIPTION_PREVIEW_LENGTH).text}</p>
+                      </details>
+                    ) : (
+                      <p>{item.description}</p>
+                    )
+                  )}
+                  {item.body && (
+                    textPreview(item.body, NOTE_PREVIEW_LENGTH).isLong ? (
+                      <details class="text-disclosure community-note">
+                        <summary>
+                          <span>{textPreview(item.body, NOTE_PREVIEW_LENGTH).preview}</span>
+                          <strong>Show more</strong>
+                        </summary>
+                        <p>{textPreview(item.body, NOTE_PREVIEW_LENGTH).text}</p>
+                      </details>
+                    ) : (
+                      <p class="community-note">{item.body}</p>
+                    )
+                  )}
 
                   {item.people.length > 0 && (
                     <div class="people-strip" aria-label="People connected to this post">
@@ -256,7 +325,11 @@ function handleText(item = {}) {
 
                   <div class="media-actions">
                     <a href={item.href}>Open update</a>
-                    {item.linkUrl && <a href={item.linkUrl}>Open post</a>}
+                    {item.linkUrl && (
+                      <a href={item.linkUrl} target="_blank" rel="noopener noreferrer">
+                        Open post
+                      </a>
+                    )}
                   </div>
                 </div>
               </article>
@@ -481,6 +554,45 @@ function handleText(item = {}) {
     line-height: 1.5;
     margin: 0;
     overflow-wrap: anywhere;
+  }
+
+  .text-disclosure {
+    color: #475569;
+    display: grid;
+    gap: 8px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .text-disclosure summary {
+    cursor: pointer;
+    display: grid;
+    gap: 8px;
+    list-style: none;
+  }
+
+  .text-disclosure summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .text-disclosure summary span {
+    color: #475569;
+  }
+
+  .text-disclosure summary strong {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 950;
+    justify-self: start;
+    line-height: 1;
+    padding: 7px 10px;
+  }
+
+  .text-disclosure[open] summary strong {
+    display: none;
   }
 
   .community-note {
