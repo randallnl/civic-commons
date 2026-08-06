@@ -3,30 +3,11 @@ export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-import { articleDetailPath, articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
+import { articleDetailPath, articlePublishDate, getArticles } from "../lib/articlesApi";
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
-import { getOrganizations, organizationPath } from "../lib/organizationsApi";
-import {
-  communityUpdateDate,
-  getRecentApprovedCommunityUpdates,
-} from "../lib/communityUpdates";
-import {
-  getCommunityUpdateCards,
-  previewDescription,
-  previewTitle,
-} from "../lib/communityUpdateCards";
-import {
-  getTrackedBills,
-  normalizeBillCode,
-} from "../lib/trackedBills";
-import profileIcon from "../assets/profile icon.png";
 
 let recentArticles = [];
-let organizationComments = [];
-let recentCommunityUpdates = [];
-let communityUpdateCards = [];
-let trackedBills = new Map();
 const howToStepImages = [
   organizationAssetUrl("capital dome.png"),
   organizationAssetUrl("portsmouth.png"),
@@ -35,110 +16,24 @@ const howToStepImages = [
 ];
 
 try {
-  const [
-    articleResult,
-    trackedBillResult,
-    organizationResult,
-    communityUpdatesResult,
-  ] = await Promise.allSettled([
+  const [articleResult] = await Promise.allSettled([
     getArticles({ include: "relations", limit: 5 }),
-    getTrackedBills(),
-    getOrganizations(),
-    getRecentApprovedCommunityUpdates({ limit: 6 }),
   ]);
 
   const articleData = articleResult.status === "fulfilled" ? articleResult.value : {};
-  trackedBills = trackedBillResult.status === "fulfilled" ? trackedBillResult.value : new Map();
-  const organizations = organizationResult.status === "fulfilled" ? organizationResult.value : [];
-  recentCommunityUpdates = communityUpdatesResult.status === "fulfilled" ? communityUpdatesResult.value : [];
 
   recentArticles = articleData.articles || [];
-  organizationComments = organizations
-    .flatMap((organization) =>
-      (organization.comments || []).map((comment) => ({ ...comment, organization })),
-    )
-    .filter((comment) => trackedBillForCode(comment.bill || comment.billLabel))
-    .slice(0, 4);
 } catch (error) {
   console.error(error?.message || "Unable to load homepage API data.");
 }
 
 recentArticles = await enrichArticlesWithPreviews(recentArticles, { limit: 5 });
-communityUpdateCards = await getCommunityUpdateCards(recentCommunityUpdates);
-
-function trackedBillForCode(code = "") {
-  const normalized = normalizeBillCode(code);
-  if (!normalized) return null;
-  if (trackedBills.has(normalized)) return trackedBills.get(normalized);
-
-  for (const [key, bill] of trackedBills.entries()) {
-    if (String(key).startsWith(`${normalized}::`)) return bill;
-  }
-
-  return null;
-}
 
 function organizationAssetUrl(filename = "") {
   return `/api/organization-assets/${String(filename)
     .split("/")
     .map((part) => encodeURIComponent(part))
     .join("/")}`;
-}
-
-function previewText(text = "", maxLength = 150) {
-  const normalized = cleanText(text).replace(/\s+/g, " ").trim();
-  if (normalized.length <= maxLength) return normalized;
-  return `${normalized.slice(0, maxLength).trim()}...`;
-}
-
-function instagramPreview(value = "") {
-  try {
-    const url = new URL(value);
-    const host = url.hostname.replace(/^www\./, "").toLowerCase();
-    if (!["instagram.com", "instagr.am"].includes(host)) return null;
-
-    const parts = url.pathname.split("/").filter(Boolean);
-    const first = parts[0]?.toLowerCase() || "";
-    const labels = {
-      p: "Instagram post",
-      reel: "Instagram reel",
-      reels: "Instagram reel",
-      tv: "Instagram video",
-      stories: "Instagram story",
-    };
-    const label = labels[first] || "Instagram profile";
-    const handle =
-      first === "stories"
-        ? parts[1]
-        : labels[first]
-          ? ""
-          : parts[0] || "";
-
-    return { label, handle, host };
-  } catch {
-    return null;
-  }
-}
-
-function positionClass(position = "") {
-  const value = String(position).toLowerCase();
-  if (value.includes("support") || value.includes("favor")) return "support";
-  if (value.includes("oppose") || value.includes("against")) return "oppose";
-  return "neutral";
-}
-
-function billCommentTitle(trackedBill = {}, fallbackCode = "") {
-  const code = normalizeBillCode(trackedBill.code || fallbackCode);
-  const name = cleanText(trackedBill.name || trackedBill.title || "");
-  if (!name) return code;
-
-  const title = cleanText(
-    name
-      .replace(new RegExp(`^${code}\\s*[:\\-–—]?\\s*`, "i"), "")
-      .trim(),
-  ) || name;
-
-  return [code, title].filter(Boolean).join(": ");
 }
 ---
 
@@ -279,144 +174,6 @@ function billCommentTitle(trackedBill = {}, fallbackCode = "") {
             <a href="#">Telegram</a>
           </div>
         </aside>
-      </section>
-
-      <section class="homepage-stack">
-        <div class="homepage-panel">
-          <div class="section-intro">
-            <p class="eyebrow">Community Updates</p>
-            <h2>Recent context from around New Hampshire.</h2>
-            <p>
-              Community updates help connect profiles, votes, and bills to what
-              neighbors are seeing locally.
-            </p>
-          </div>
-
-          <div class="homepage-update-list">
-            {communityUpdateCards.length ? (
-              communityUpdateCards.map((update) => {
-                const photos = update.photoUrls?.length
-                  ? update.photoUrls
-                  : update.photoUrl
-                    ? [update.photoUrl]
-                    : [];
-
-                return (
-                  <article class:list={["community-update-card", photos.length && "has-photo"]}>
-                    {photos[0] && (
-                      <a class="community-update-thumb" href={update.pageUrl || "/updates"} tabindex="-1" aria-hidden="true">
-                        <img src={photos[0]} alt="" loading="lazy" />
-                        <span>{photos.length === 1 ? "Photo update" : `${photos.length} photos`}</span>
-                      </a>
-                    )}
-                    <div class="community-update-copy">
-                      <div class="community-update-meta">
-                        <strong>{cleanText(update.displayName || "Community member")}</strong>
-                        {communityUpdateDate(update.createdAt) && <span>{communityUpdateDate(update.createdAt)}</span>}
-                      </div>
-                      <h3>
-                        <a href={update.pageUrl || "/updates"}>{cleanText(update.entityName || "Community update")}</a>
-                      </h3>
-                      {update.comment && <p>{previewText(update.comment, 220)}</p>}
-                      {update.linkUrl && (
-                        <a class="community-link-preview rich-link-preview" href={update.linkUrl}>
-                          {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
-                          <span>
-                            <strong>{previewTitle(update.linkPreview)}</strong>
-                            {previewDescription(update.linkPreview, update.linkUrl) && (
-                              <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
-                            )}
-                          </span>
-                        </a>
-                      )}
-                      {update.people?.length > 0 && (
-                        <div class="community-people-preview" aria-label="People connected to this update">
-                          {update.people.slice(0, 3).map((person) => (
-                            <a class="mini-person-card" href={person.path}>
-                              <img
-                                class:list={[!person.photoUrl && "profile-icon"]}
-                                src={person.photoUrl || profileIcon.src}
-                                alt={person.photoUrl ? `Photo of ${person.name}` : ""}
-                                loading="lazy"
-                              />
-                              <span>
-                                <strong>{cleanText(person.name)}</strong>
-                                {person.role && <small>{cleanText(person.role)}</small>}
-                                {person.districtLabel && <small>{cleanText(person.districtLabel)}</small>}
-                              </span>
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </article>
-                );
-              })
-            ) : (
-              <article class="comment-card placeholder">
-                <span>Community updates</span>
-                <strong>No approved updates yet</strong>
-                <p>Approved community-submitted updates will appear here.</p>
-              </article>
-            )}
-          </div>
-        </div>
-
-        <div class="homepage-panel">
-          <div class="section-intro">
-          <p class="eyebrow">Community Comments</p>
-          <h2>Pair public experience with organized civic analysis.</h2>
-          <p>
-            This space will bring together resident comments and published
-            organizational comments on tracked bills so visitors can see both
-            personal impact and policy analysis in one place. The goal is to
-            help neighbors understand the local context behind votes,
-            legislation, and public accountability.
-          </p>
-          </div>
-
-          <div class="comment-list stacked-comment-list">
-              {organizationComments.length ? (
-                organizationComments.map((item) => {
-                  const trackedBill = trackedBillForCode(item.bill || item.billLabel);
-                  const billCode = trackedBill?.code || normalizeBillCode(item.bill || item.billLabel);
-                  const billTitle = billCommentTitle(trackedBill, billCode);
-
-                  return (
-                    <article class="comment-card">
-                      <div class="comment-topline">
-                        <div class="organization-comment-source">
-                          {item.organization.logoUrl && (
-                            <a class="organization-comment-logo" href={organizationPath(item.organization)} tabindex="-1" aria-hidden="true">
-                              <img src={item.organization.logoUrl} alt="" loading="lazy" />
-                            </a>
-                          )}
-                          <a href={organizationPath(item.organization)}>
-                            {item.organization.name}
-                          </a>
-                        </div>
-                        {item.position && (
-                          <span class:list={["position-pill", positionClass(item.position)]}>
-                            {item.position}
-                          </span>
-                        )}
-                      </div>
-                      <a class="bill-comment-link" href={`/bills/${billCode}`}>
-                        {billTitle}
-                      </a>
-                      <p>{previewText(item.comment, 190)}</p>
-                    </article>
-                  );
-                })
-              ) : (
-                <article class="comment-card placeholder">
-                  <span>Organizational comments</span>
-                  <strong>No tracked bill comments yet</strong>
-                  <p>Published organization comments for bills in the tracker will appear here automatically.</p>
-                </article>
-              )}
-          </div>
-        </div>
       </section>
 
       <section class="cta">
