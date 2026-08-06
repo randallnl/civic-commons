@@ -421,19 +421,20 @@ function textPreview(value = "", maxLength = 170) {
   }
 
   .media-grid {
-    align-items: start;
-    display: grid;
-    gap: 18px;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    column-count: 3;
+    column-gap: 18px;
   }
 
   .media-card {
     background: #ffffff;
     border: 1px solid var(--nhdb-line);
     border-radius: 14px;
+    break-inside: avoid;
     display: grid;
     gap: 0;
+    margin: 0 0 18px;
     overflow: hidden;
+    page-break-inside: avoid;
   }
 
   .media-frame {
@@ -700,7 +701,13 @@ function textPreview(value = "", maxLength = 170) {
     }
 
     .media-grid {
-      grid-template-columns: 1fr;
+      column-count: 1;
+    }
+  }
+
+  @media (min-width: 721px) and (max-width: 1040px) {
+    .media-grid {
+      column-count: 2;
     }
   }
 </style>

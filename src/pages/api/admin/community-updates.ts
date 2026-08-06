@@ -35,13 +35,32 @@ export async function POST({ request }) {
     redirectTo = safeRedirectPath(form.get("redirectTo")) || "/admin";
 
     if (!id) throw new Error("Community update id is required.");
-    if (!["approve", "reject", "save"].includes(action)) {
-      throw new Error("Choose save, approve, or reject.");
+    if (!["approve", "reject", "save", "delete"].includes(action)) {
+      throw new Error("Choose save, approve, reject, or delete.");
     }
 
     const db = communityUpdatesDb();
     if (!db) throw new Error("D1 database binding is not configured.");
     await ensureCommunityUpdatesTable(db);
+
+    if (action === "delete") {
+      const result = await db
+        .prepare(
+          `UPDATE community_updates
+           SET status = 'deleted',
+               reviewed_by = ?,
+               reviewed_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+        )
+        .bind(auth.session.email, id)
+        .run();
+
+      const changed = result.meta?.changes ?? result.changes ?? 0;
+      if (!changed) throw new Error("No matching community update was found.");
+
+      if (wantsHtml) return htmlMessage("Community update deleted.", "success");
+      return redirectWithMessage(request, redirectTo, "Community update deleted.");
+    }
 
     if (action === "save" || action === "approve") {
       const existing = await db

@@ -884,7 +884,7 @@ function workflowClass(value = "") {
                       hx-swap="innerHTML"
                       x-data="{ busy: false, lastAction: '' }"
                       @htmx:before-request="busy = true"
-                      @htmx:after-request="busy = false; if ($event.detail.successful && ['approve', 'reject'].includes(lastAction)) $el.closest('article')?.remove()"
+                      @htmx:after-request="busy = false; if ($event.detail.successful && ['approve', 'reject', 'delete'].includes(lastAction)) $el.closest('article')?.remove()"
                     >
                       <input type="hidden" name="id" value={update.id} />
                       <input type="hidden" name="redirectTo" value="/admin" />
@@ -905,6 +905,7 @@ function workflowClass(value = "") {
                         <button type="submit" name="action" value="save" @click="lastAction = 'save'" :disabled="busy">Save edits</button>
                         <button type="submit" name="action" value="approve" @click="lastAction = 'approve'" :disabled="busy">Approve</button>
                         <button class="secondary danger" type="submit" name="action" value="reject" @click="lastAction = 'reject'" :disabled="busy">Reject</button>
+                        <button class="secondary danger" type="submit" name="action" value="delete" @click="lastAction = 'delete'" :disabled="busy">Delete</button>
                         <span class="moderation-inline-status" aria-live="polite"></span>
                       </div>
                     </form>

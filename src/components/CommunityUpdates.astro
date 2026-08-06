@@ -4,6 +4,10 @@ import {
   getApprovedCommunityUpdates,
 } from "../lib/communityUpdates";
 import {
+  canModerateContent,
+  currentAdminSession,
+} from "../lib/adminAuth";
+import {
   getCommunityUpdateCards,
   mentionParts,
   previewDescription,
@@ -21,6 +25,8 @@ const {
 
 const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
 const updateCards = await getCommunityUpdateCards(updates);
+const adminSession = await currentAdminSession(Astro.request);
+const canDeleteUpdates = canModerateContent(adminSession);
 const hasInstagramEmbeds = updateCards.some((card) => card.social?.type === "instagram");
 const hasTikTokEmbeds = updateCards.some((card) => card.social?.type === "tiktok" && card.social.videoId);
 const hasFacebookEmbeds = updateCards.some((card) => card.social?.type === "facebook" && card.social.embedUrl);
@@ -284,6 +290,19 @@ const isReport = entityType === "report";
                   </a>
                 ))}
               </div>
+            )}
+            {canDeleteUpdates && (
+              <form
+                class="community-update-admin-actions"
+                action="/api/admin/community-updates"
+                method="post"
+                onsubmit="return confirm('Delete this community update from public pages?');"
+              >
+                <input type="hidden" name="id" value={update.id} />
+                <input type="hidden" name="action" value="delete" />
+                <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+                <button type="submit">Delete update</button>
+              </form>
             )}
           </div>
         </article>
@@ -586,6 +605,28 @@ const isReport = entityType === "report";
     align-content: start;
     display: grid;
     min-width: 0;
+  }
+
+  .community-update-admin-actions {
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+
+  .community-update-admin-actions button {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #b91c1c;
+    font-size: 0.78rem;
+    padding: 7px 10px;
+  }
+
+  .community-update-admin-actions button:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
   }
 
   .community-photo-dialog {
