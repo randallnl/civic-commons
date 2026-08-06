@@ -6,12 +6,15 @@ import SiteFooter from "../../components/SiteFooter.astro";
 import ArticleList from "../../components/ArticleList.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import FilterBar from "../../components/FilterBar.astro";
-import SocialLinkPreviews from "../../components/SocialLinkPreviews.astro";
 import profileIcon from "../../assets/profile icon.png";
 import {
+  Camera,
   ExternalLink,
   Globe,
   Mail,
+  MessageCircle,
+  Music2,
+  Newspaper,
   UserRoundCheck,
 } from "@lucide/astro";
 import { getArticles } from "../../lib/articlesApi";
@@ -199,44 +202,30 @@ const sourceLinks = [
   socialField(candidate, "substack") && {
     href: socialProfileUrl(socialField(candidate, "substack"), "substack"),
     label: "Substack",
-    icon: ExternalLink,
+    icon: Newspaper,
+    platform: "substack",
   },
   socialField(candidate, "instagram") && {
     href: socialProfileUrl(socialField(candidate, "instagram"), "instagram"),
     label: "Instagram",
-    icon: ExternalLink,
+    icon: Camera,
+    platform: "instagram",
   },
   socialField(candidate, "facebook") && {
     href: socialProfileUrl(socialField(candidate, "facebook"), "facebook"),
     label: "Facebook",
-    icon: ExternalLink,
+    icon: MessageCircle,
+    platform: "facebook",
   },
   socialField(candidate, "tiktok") && {
     href: socialProfileUrl(socialField(candidate, "tiktok"), "tiktok"),
     label: "TikTok",
-    icon: ExternalLink,
+    icon: Music2,
+    platform: "tiktok",
   },
 ].filter(Boolean);
 const linkedLegislatorProfile = sourceLinks.find((link) => link.primary);
 const candidateResourceLinks = sourceLinks.filter((link) => !link.primary);
-const candidateSocialLinks = [
-  socialField(candidate, "substack") && {
-    href: socialProfileUrl(socialField(candidate, "substack"), "substack"),
-    label: "Substack",
-  },
-  socialField(candidate, "instagram") && {
-    href: socialProfileUrl(socialField(candidate, "instagram"), "instagram"),
-    label: "Instagram",
-  },
-  socialField(candidate, "facebook") && {
-    href: socialProfileUrl(socialField(candidate, "facebook"), "facebook"),
-    label: "Facebook",
-  },
-  socialField(candidate, "tiktok") && {
-    href: socialProfileUrl(socialField(candidate, "tiktok"), "tiktok"),
-    label: "TikTok",
-  },
-].filter(Boolean);
 
 if (adminSession) {
   try {
@@ -564,7 +553,7 @@ function uniqueArticles(articles = []) {
             const Icon = link.icon || ExternalLink;
 
             return (
-              <a href={link.href}>
+              <a class:list={[link.platform && `social-link-${link.platform}`]} href={link.href}>
                 <span class="link-icon" aria-hidden="true">
                   <Icon size={17} stroke-width={2.3} />
                 </span>
@@ -574,12 +563,6 @@ function uniqueArticles(articles = []) {
           })}
         </nav>
       )}
-
-      <SocialLinkPreviews
-        links={candidateSocialLinks}
-        title={`${name}'s social links`}
-        eyebrow="Profile Socials"
-      />
 
       <section class="panel">
         <p class="eyebrow">Ballot Roles</p>
@@ -1286,6 +1269,33 @@ function uniqueArticles(articles = []) {
   .resource-link-bar a:hover {
     border-color: #dc4d09;
     color: #b6390a;
+  }
+
+  .resource-link-bar a[class*="social-link-"] {
+    border-color: transparent;
+    color: #ffffff;
+  }
+
+  .resource-link-bar .social-link-substack {
+    background: #ff6719;
+  }
+
+  .resource-link-bar .social-link-instagram {
+    background: linear-gradient(135deg, #f97316, #db2777, #7c3aed);
+  }
+
+  .resource-link-bar .social-link-facebook {
+    background: #1877f2;
+  }
+
+  .resource-link-bar .social-link-tiktok {
+    background: linear-gradient(135deg, #111827, #06b6d4, #ef4444);
+  }
+
+  .resource-link-bar a[class*="social-link-"]:hover {
+    border-color: rgba(255, 255, 255, 0.8);
+    color: #ffffff;
+    filter: brightness(0.95);
   }
 
   .link-icon {

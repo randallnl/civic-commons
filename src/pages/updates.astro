@@ -5,11 +5,6 @@ import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import FilterBar from "../components/FilterBar.astro";
 import {
-  canModerateContent,
-  currentAdminSession,
-} from "../lib/adminAuth";
-import { articleDetailPath, articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
-import {
   communityUpdateDate,
   getRecentApprovedCommunityUpdates,
 } from "../lib/communityUpdates";
@@ -18,172 +13,196 @@ import {
   previewDescription,
   previewTitle,
 } from "../lib/communityUpdateCards";
-import { getRecentOrganizationComments } from "../lib/organizationsApi";
 import { cleanText } from "../lib/text";
 import profileIcon from "../assets/profile icon.png";
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
-const typeParam = Astro.url.searchParams.get("type");
-const type = typeParam === null ? "community" : typeParam.trim();
+const platform = Astro.url.searchParams.get("platform")?.trim() || "";
 const sort = Astro.url.searchParams.get("sort")?.trim() || "updated:desc";
-const adminSession = await currentAdminSession(Astro.request);
-const canModerateUpdates = canModerateContent(adminSession);
+const TITLE_PREVIEW_LENGTH = 114;
+const DESCRIPTION_PREVIEW_LENGTH = 114;
+const NOTE_PREVIEW_LENGTH = 114;
 
-let feedItems = [];
+let mediaItems = [];
 let error = "";
 
 try {
-  const [communityUpdates, articleData, organizationComments] = await Promise.all([
-    getRecentApprovedCommunityUpdates({ limit: 80 }),
-    getArticles({ include: "relations", limit: 80 }),
-    getRecentOrganizationComments({ limit: 80 }),
-  ]);
-  const communityUpdateCards = await getCommunityUpdateCards(communityUpdates || []);
+  const updates = await getRecentApprovedCommunityUpdates({ limit: 120 });
+  const cards = await getCommunityUpdateCards(updates || []);
 
-  feedItems = [
-    ...communityUpdateCards.map((update) => communityFeedItem(update)),
-    ...((articleData.articles || []).map((article) => articleFeedItem(article))),
-    ...(organizationComments || []).map((comment) => organizationCommentFeedItem(comment)),
-  ].sort((a, b) => b.sortDate - a.sortDate);
+  mediaItems = cards
+    .map((update) => mediaFeedItem(update))
+    .sort((a, b) => b.sortDate - a.sortDate);
 } catch (loadError) {
-  error = loadError?.message || "Unable to load updates.";
+  error = loadError?.message || "Unable to load community updates.";
 }
 
-const typeOptions = [
-  ["community", "Community updates"],
-  ["article", "Articles"],
-  ["organization-comment", "Organization comments"],
-  ["", "Everything"],
+const platformOptions = [
+  ["", "All platforms"],
+  ["tiktok", "TikTok"],
+  ["instagram", "Instagram"],
+  ["facebook", "Facebook"],
+  ["substack", "Substack"],
+  ["photo", "Photos"],
+  ["link", "Links"],
+  ["update", "Notes"],
 ];
 
-function communityFeedItem(update = {}) {
-  const photos = update.photoUrls?.length ? update.photoUrls : update.photoUrl ? [update.photoUrl] : [];
+function mediaFeedItem(update = {}) {
+  const social = update.social || {};
+  const people = update.people || [];
   const dateValue = update.createdAt || "";
-  const submittedBy = `Submitted by ${cleanText(update.displayName || "Community member")}`;
-  const dateText = communityUpdateDate(dateValue);
+  const preview = update.linkPreview || null;
+  const title = previewTitle(preview, update.linkUrl);
+  const titlePreview = textPreview(title, TITLE_PREVIEW_LENGTH);
+  const description = mediaDescription(preview, update.linkUrl, social);
+  const isPortrait = social.type === "tiktok" || isInstagramVideo(social) || isFacebookVideo(social);
+  const fallbackImageUrl = update.photoUrls?.[0] || update.photoUrl || "";
+  const platform = social.type || (fallbackImageUrl ? "photo" : update.linkUrl ? "link" : "update");
+
   return {
     id: update.id,
-    type: "community",
-    typeLabel: "Community update",
-    typeIcon: "CU",
-    title: cleanText(update.entityName || "Community update"),
-    eyebrow: cleanText(update.entityType || "Community"),
-    body: cleanText(update.comment || update.linkUrl || "Community-submitted context."),
-    href: update.pageUrl || update.linkUrl || "/communities",
-    sourceHref: update.linkUrl || "",
-    sourceLabel: update.linkUrl ? "Open submitted link" : "",
-    meta: [submittedBy, dateText].filter(Boolean).join(" - "),
-    submittedBy,
-    displayName: cleanText(update.displayName || "Community member"),
-    comment: cleanText(update.comment || ""),
-    dateValue,
-    dateText,
-    image: photos[0] || "",
-    photos,
-    linkUrl: update.linkUrl || "",
-    linkPreview: update.linkPreview || null,
-    social: update.social || null,
-    people: update.people || [],
-    text: [
-      update.entityName,
-      update.entityKey,
-      update.displayName,
-      update.comment,
-      update.linkUrl,
-      (update.mentions || []).map((mention) => mention.name).join(" "),
-    ].filter(Boolean).join(" "),
-    sortName: cleanText(update.entityName || update.displayName || ""),
-    sortDate: Date.parse(dateValue || "") || 0,
-  };
-}
-
-function articleFeedItem(article = {}) {
-  const dateText = articlePublishDate(article);
-  const source = articleSourceName(article);
-  const title = cleanText(article.preview?.title || article.title || "Article");
-  return {
-    type: "article",
-    typeLabel: "Article",
-    typeIcon: "A",
     title,
-    eyebrow: source || "Article",
-    body: cleanText(article.preview?.description || article.summary || "Civic coverage tracked by NH Deserves Better."),
-    href: articleDetailPath(article),
-    sourceHref: article.url || "",
-    sourceLabel: source ? `Original source: ${source}` : "Open original article",
-    meta: [source, dateText].filter(Boolean).join(" - "),
-    image: article.preview?.imageUrl || "",
+    titlePreview: titlePreview.preview,
+    description,
+    body: cleanText(update.comment || ""),
+    dateText: communityUpdateDate(dateValue),
+    dateValue,
+    displayName: cleanText(update.displayName || "Community member"),
+    entityName: cleanText(update.entityName || ""),
+    href: update.pageUrl || update.linkUrl || "/updates",
+    imageUrl: preview?.imageUrl || fallbackImageUrl,
+    linkUrl: update.linkUrl || "",
+    people,
+    platform,
+    platformLabel: platformLabel(social, platform),
+    fallbackLabel: fallbackLabel(social, title),
+    social,
+    embedUrl: social.type === "facebook" ? social.embedUrl || "" : "",
+    isPortrait,
+    sortDate: Date.parse(dateValue || "") || 0,
+    sortName: title,
     text: [
       title,
-      source,
-      article.summary,
-      article.preview?.description,
-      (article.bills || []).map((bill) => bill.name || bill.title || bill.condensedbillno || bill).join(" "),
-      (article.legislators || []).map((person) => person.name || person.matched_name || person).join(" "),
-      (article.candidates || []).map((person) => person.name || person.candidate_name_raw || person).join(" "),
-      (article.towns || []).map((town) => town.town || town.name || town).join(" "),
+      description,
+      update.comment,
+      update.entityName,
+      update.displayName,
+      update.linkUrl,
+      social.handle,
+      social.publication,
+      people.map((person) => person.name || person.role || person.districtLabel).join(" "),
     ].filter(Boolean).join(" "),
-    sortName: title,
-    sortDate: articleDateSortValue(article),
   };
 }
 
-function organizationCommentFeedItem(comment = {}) {
-  const billLabel = cleanText(comment.billLabel || comment.bill || "Tracked bill");
-  const organization = cleanText(comment.organization || "Organization");
-  const title = `${organization} on ${billLabel}`;
+function fallbackLabel(social = {}, title = "") {
+  if (social.type === "substack") {
+    const isHomePost = String(social.permalink || "").includes("substack.com/home/post/");
+    return {
+      mark: "S",
+      kicker: isHomePost ? "Substack share link" : "Substack",
+      title: social.publication
+        ? `${social.publication}.substack.com`
+        : social.handle
+          ? `@${social.handle}`
+          : cleanText(title || "Substack link"),
+    };
+  }
+
   return {
-    type: "organization-comment",
-    typeLabel: "Organization comment",
-    typeIcon: "OC",
-    title,
-    eyebrow: [comment.position, billLabel].filter(Boolean).join(" - "),
-    body: cleanText(comment.comment || "Organization position on a tracked bill."),
-    href: comment.bill ? `/bills/${encodeURIComponent(comment.bill)}` : `/organizations/${comment.organizationSlug}`,
-    sourceHref: comment.linkUrl || "",
-    sourceLabel: cleanText(comment.linkLabel || "Read source"),
-    meta: [organization, cleanDate(comment.date)].filter(Boolean).join(" - "),
-    image: comment.photoUrl || "",
-    text: [
-      organization,
-      billLabel,
-      comment.bill,
-      comment.position,
-      comment.comment,
-      comment.author,
-      (comment.issueAreas || []).join(" "),
-      (comment.towns || []).join(" "),
-    ].filter(Boolean).join(" "),
-    sortName: title,
-    sortDate: Date.parse(comment.date || "") || 0,
+    mark: "",
+    kicker: social.label || "Community update",
+    title: social.host || social.handle || cleanText(title || "Shared context"),
   };
 }
 
-function articleDateSortValue(article = {}) {
-  const value =
-    article.published_at ||
-    article.publishedAt ||
-    article.published_date ||
-    article.publishedDate ||
-    article.publish_date ||
-    article.publishDate ||
-    article.date ||
-    article.created_at ||
-    article.createdAt ||
-    article.updated_at ||
-    article.updatedAt;
-  return Date.parse(value || "") || 0;
+function isInstagramVideo(social = {}) {
+  const label = String(social.label || "").toLowerCase();
+  return label.includes("reel") || label.includes("video");
 }
 
-function cleanDate(value = "") {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return cleanText(value);
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+function isFacebookVideo(social = {}) {
+  const label = String(social.label || "").toLowerCase();
+  const permalink = String(social.permalink || "").toLowerCase();
+  return social.type === "facebook" && (
+    label.includes("reel") ||
+    label.includes("video") ||
+    permalink.includes("/reel/") ||
+    permalink.includes("/videos/") ||
+    permalink.includes("/watch/")
+  );
+}
+
+function platformLabel(social = {}, platform = "") {
+  if (social.type === "tiktok") return social.isProfile ? "TikTok profile" : "TikTok video";
+  if (social.type === "instagram") return social.isProfile ? "Instagram profile" : social.label || "Instagram post";
+  if (social.type === "facebook") return social.label || "Facebook post";
+  if (social.type === "substack") return social.label || "Substack";
+  if (platform === "photo") return "Photo update";
+  if (platform === "link") return "Community link";
+  return "Community note";
+}
+
+function handleText(item = {}) {
+  if (item.social?.handle) {
+    return item.platform === "substack"
+      ? `@${item.social.handle} on Substack`
+      : `${item.social.isProfile ? "Profile: " : ""}@${item.social.handle}`;
+  }
+  if (item.social?.publication) return item.social.publication;
+  if (item.platform === "facebook" || item.platform === "substack" || item.platform === "photo") return "";
+  return item.social?.host || "";
+}
+
+function mediaDescription(preview = null, linkUrl = "", social = {}) {
+  const description = previewDescription(preview, linkUrl);
+  if (!description) return "";
+
+  const normalized = description.toLowerCase().trim();
+  const host = String(social.host || "").toLowerCase().trim();
+
+  if (host && normalized === host) return "";
+  if (social.type === "facebook" && normalized.includes("facebook.com")) return "";
+  if (social.type === "substack") {
+    const publication = String(social.publication || "").toLowerCase().trim();
+    const handle = String(social.handle || "").toLowerCase().trim();
+    if (normalized === "substack") return "";
+    if (publication && normalized === `${publication} on substack`) return "";
+    if (handle && normalized === `@${handle} on substack`) return "";
+  }
+
+  return description;
+}
+
+function textPreview(value = "", maxLength = 170) {
+  const text = cleanText(value).replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) {
+    return { text, preview: text, isLong: false };
+  }
+
+  const clipped = text.slice(0, maxLength + 1);
+  const sentenceBreak = Math.max(
+    clipped.lastIndexOf(". "),
+    clipped.lastIndexOf("! "),
+    clipped.lastIndexOf("? "),
+  );
+  const commaBreak = clipped.lastIndexOf(", ");
+  const spaceBreak = clipped.lastIndexOf(" ");
+  const breakAt =
+    sentenceBreak > 80
+      ? sentenceBreak + 1
+      : commaBreak > 80
+        ? commaBreak
+        : spaceBreak > 80
+          ? spaceBreak
+          : maxLength;
+
+  return {
+    text,
+    preview: `${text.slice(0, breakAt).trim()}...`,
+    isLong: true,
+  };
 }
 ---
 
@@ -193,10 +212,10 @@ function cleanDate(value = "") {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/NH%20DB%20Logo.svg" />
     <link rel="apple-touch-icon" href="/NH%20DB%20Logo.svg" />
-    <title>Updates Feed | NH Deserves Better</title>
+    <title>Community Updates | NH Deserves Better</title>
     <meta
       name="description"
-      content="A combined feed of community updates, civic articles, and organization comments on tracked bills."
+      content="Community-submitted updates, social posts, reels, videos, and newsletter links about New Hampshire legislators."
     />
   </head>
 
@@ -204,19 +223,27 @@ function cleanDate(value = "") {
     <TopNav />
     <main
       class="page"
-      x-data="nhdbFuzzyFilter({ itemSelector: '.feed-card[data-fuzzy-item]', pageSize: 20, threshold: 0.32 })"
+      x-data="nhdbFuzzyFilter({ itemSelector: '.media-card[data-fuzzy-item]', pageSize: 18, threshold: 0.32 })"
     >
       <section class="hero">
-        <p class="eyebrow">Updates Feed</p>
-        <h1>Follow community context, coverage, and organization comments.</h1>
+        <div class="hero-kicker-row">
+          <p class="eyebrow">Community Updates</p>
+          <a href="/suggest-update">Submit context</a>
+        </div>
+        <h1>Local context that helps neighbors understand public power.</h1>
         <p class="lede">
-          Start with community updates, then filter into articles and
-          organizational comments connected to candidates, legislators,
-          communities, and tracked bills.
+          Browse community-submitted posts, photos, links, reels, TikToks, and
+          newsletter updates connected to New Hampshire legislators and
+          candidates. The public record gets stronger when people add what they
+          are seeing in their own communities.
         </p>
+        <div class="hero-actions">
+          <a href="/volunteer-reviewers">Help review updates</a>
+          <a href="/people">Find legislators</a>
+        </div>
       </section>
 
-      <FilterBar action="/updates" submitLabel="Filter feed" clearHref="/updates" columns="wide" live={true}>
+      <FilterBar action="/updates" submitLabel="Filter updates" clearHref="/updates" columns="wide" live={true}>
         <label for="q">
           <span>Search</span>
           <input
@@ -224,15 +251,15 @@ function cleanDate(value = "") {
             name="q"
             type="search"
             value={q}
-            placeholder="Town, bill, person, organization, or keyword"
+            placeholder="Legislator, town, district, platform, or keyword"
             data-fuzzy-search
           />
         </label>
-        <label for="type">
-          <span>Feed type</span>
-          <select id="type" name="type" data-fuzzy-filter-field data-fuzzy-field="type" data-fuzzy-match="exact">
-            {typeOptions.map(([value, label]) => (
-              <option value={value} selected={type === value}>{label}</option>
+        <label for="platform">
+          <span>Platform</span>
+          <select id="platform" name="platform" data-fuzzy-filter-field data-fuzzy-field="platform" data-fuzzy-match="exact">
+            {platformOptions.map(([value, label]) => (
+              <option value={value} selected={platform === value}>{label}</option>
             ))}
           </select>
         </label>
@@ -242,7 +269,7 @@ function cleanDate(value = "") {
             <option value="updated:desc" selected={sort === "updated:desc"}>Newest first</option>
             <option value="updated:asc" selected={sort === "updated:asc"}>Oldest first</option>
             <option value="name:asc" selected={sort === "name:asc"}>Title A-Z</option>
-            <option value="type:asc" selected={sort === "type:asc"}>Type A-Z</option>
+            <option value="platform:asc" selected={sort === "platform:asc"}>Platform A-Z</option>
           </select>
         </label>
       </FilterBar>
@@ -251,107 +278,112 @@ function cleanDate(value = "") {
       {error ? (
         <p class="status-message">{error}</p>
       ) : (
-        <section class="feed-panel">
+        <section class="media-panel">
           <div class="results-heading">
             <div>
-              <p class="eyebrow">Recent Context</p>
-              <h2><span data-fuzzy-count>{feedItems.length}</span> items shown</h2>
+              <p class="eyebrow">Social Context</p>
+              <h2><span data-fuzzy-count>{mediaItems.length}</span> community updates shown</h2>
             </div>
             <a href="/suggest-update">Suggest an update</a>
           </div>
 
-          <div class="feed-list">
-            {feedItems.map((item) => (
+          <div class="media-grid">
+            {mediaItems.map((item) => (
               <article
-                class:list={["feed-card", item.image && "has-image"]}
+                class:list={[
+                  "media-card",
+                  item.isPortrait ? "portrait-media" : "landscape-media",
+                  `platform-${item.platform}`,
+                ]}
                 data-fuzzy-item
                 data-fuzzy-text={item.text}
-                data-fuzzy-type={item.type}
+                data-fuzzy-platform={item.platform}
                 data-fuzzy-sort-name={item.sortName}
                 data-fuzzy-sort-updated={item.sortDate}
-                data-fuzzy-sort-type={item.typeLabel}
+                data-fuzzy-sort-platform={item.platformLabel}
               >
-                {item.image && (
-                  <a class="feed-image" href={item.href} tabindex="-1" aria-hidden="true">
-                    <img src={item.image} alt="" loading="lazy" />
-                  </a>
-                )}
-                <div class="feed-copy">
-                  <div class="feed-card-head">
-                    <span class:list={["feed-type-icon", `feed-type-${item.type}`]} aria-hidden="true">
-                      {item.typeIcon}
+                <a
+                  class="media-frame"
+                  href={item.linkUrl || item.href}
+                  target={item.linkUrl ? "_blank" : undefined}
+                  rel={item.linkUrl ? "noopener noreferrer" : undefined}
+                >
+                  <span class="platform-badge">{item.platformLabel}</span>
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt="" loading="lazy" />
+                  ) : item.platform === "facebook" && item.embedUrl ? (
+                    <iframe
+                      class="media-embed facebook-media-embed"
+                      src={item.embedUrl}
+                      width="500"
+                      height="520"
+                      style="border:none;overflow:hidden"
+                      scrolling="no"
+                      frameborder="0"
+                      allowfullscreen="true"
+                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                      loading="lazy"
+                      title="Facebook post preview"
+                    ></iframe>
+                  ) : item.platform === "substack" ? (
+                    <span class="media-fallback substack-media-fallback">
+                      <span>{item.fallbackLabel.mark}</span>
+                      <small>{item.fallbackLabel.kicker}</small>
+                      <strong>{item.fallbackLabel.title}</strong>
                     </span>
-                    <div class="feed-head-copy">
-                      {item.type === "community" ? (
-                        <>
-                          <strong>{item.submittedBy}</strong>
-                          {item.dateText && <time datetime={item.dateValue}>{item.dateText}</time>}
-                        </>
-                      ) : (
-                        <div class="feed-topline">
-                          <span>{item.typeLabel}</span>
-                          {item.eyebrow && <span>{item.eyebrow}</span>}
-                        </div>
-                      )}
-                    </div>
+                  ) : (
+                    <span class="media-fallback">{item.platformLabel}</span>
+                  )}
+                </a>
+
+                <div class="media-copy">
+                  <div class="media-meta">
+                    <span>{handleText(item)}</span>
+                    {item.dateText && <time datetime={item.dateValue}>{item.dateText}</time>}
                   </div>
-                  {item.type !== "community" && <h3><a href={item.href}>{item.title}</a></h3>}
-                  {item.type !== "community" && item.meta && <p class="feed-meta">{item.meta}</p>}
-                  <p>{item.body}</p>
-                  {item.type === "community" && item.linkUrl && (
-                    ["instagram", "tiktok", "substack"].includes(item.social?.type || "") ? (
-                      <a
-                        class:list={[
-                          "community-link-preview",
-                          "rich-link-preview",
-                          item.social.type === "tiktok"
-                            ? "tiktok-preview-card"
-                            : item.social.type === "substack"
-                              ? "substack-preview-card"
-                              : "instagram-preview-card",
-                        ]}
-                        href={item.social.permalink || item.linkUrl}
-                      >
-                        <span class:list={[
-                          item.social.type === "tiktok"
-                            ? "tiktok-icon"
-                            : item.social.type === "substack"
-                              ? "substack-icon"
-                              : "instagram-icon",
-                        ]} aria-hidden="true">
-                          {item.social.type === "tiktok" ? "TT" : item.social.type === "substack" ? "S" : "IG"}
-                        </span>
-                        {item.linkPreview?.imageUrl && <img src={item.linkPreview.imageUrl} alt="" loading="lazy" />}
-                        <span>
-                          <strong>{previewTitle(item.linkPreview, item.linkUrl)}</strong>
-                          <small>
-                            {item.social.handle
-                              ? item.social.type === "substack"
-                                ? `@${item.social.handle} on Substack`
-                                : `${item.social.isProfile ? "Profile: " : ""}@${item.social.handle}`
-                              : item.social.publication
-                                ? `${item.social.publication} on Substack`
-                                : previewDescription(item.linkPreview, item.linkUrl)}
-                          </small>
-                        </span>
-                      </a>
+                  <h3>
+                    <a
+                      href={item.linkUrl || item.href}
+                      target={item.linkUrl ? "_blank" : undefined}
+                      rel={item.linkUrl ? "noopener noreferrer" : undefined}
+                      title={item.title}
+                      aria-label={item.title}
+                    >
+                      {item.titlePreview}
+                    </a>
+                  </h3>
+                  {item.description && (
+                    textPreview(item.description, DESCRIPTION_PREVIEW_LENGTH).isLong ? (
+                      <details class="text-disclosure">
+                        <summary>
+                          <span>{textPreview(item.description, DESCRIPTION_PREVIEW_LENGTH).preview}</span>
+                          <strong>Show more</strong>
+                        </summary>
+                        <p>{textPreview(item.description, DESCRIPTION_PREVIEW_LENGTH).text}</p>
+                      </details>
                     ) : (
-                      <a class="community-link-preview rich-link-preview" href={item.linkUrl}>
-                        {item.linkPreview?.imageUrl && <img src={item.linkPreview.imageUrl} alt="" loading="lazy" />}
-                        <span>
-                          <strong>{previewTitle(item.linkPreview)}</strong>
-                          {previewDescription(item.linkPreview, item.linkUrl) && (
-                            <small>{previewDescription(item.linkPreview, item.linkUrl)}</small>
-                          )}
-                        </span>
-                      </a>
+                      <p>{item.description}</p>
                     )
                   )}
-                  {item.type === "community" && item.people?.length > 0 && (
-                    <div class="community-people-block">
-                      <h4>People</h4>
-                      <div class="community-people-preview" aria-label="People connected to this update">
-                        {item.people.slice(0, 4).map((person) => (
+                  {item.body && (
+                    textPreview(item.body, NOTE_PREVIEW_LENGTH).isLong ? (
+                      <details class="text-disclosure community-note">
+                        <summary>
+                          <span>{textPreview(item.body, NOTE_PREVIEW_LENGTH).preview}</span>
+                          <strong>Show more</strong>
+                        </summary>
+                        <p>{textPreview(item.body, NOTE_PREVIEW_LENGTH).text}</p>
+                      </details>
+                    ) : (
+                      <p class="community-note">{item.body}</p>
+                    )
+                  )}
+
+                  {item.people.length > 0 && (
+                    <div class="people-strip" aria-label="People connected to this post">
+                      <span>Legislator context</span>
+                      <div>
+                        {item.people.slice(0, 3).map((person) => (
                           <a class="mini-person-card" href={person.path}>
                             <img
                               class:list={[!person.photoUrl && "profile-icon"]}
@@ -359,118 +391,151 @@ function cleanDate(value = "") {
                               alt={person.photoUrl ? `Photo of ${person.name}` : ""}
                               loading="lazy"
                             />
-                            <span>
-                              <strong>{cleanText(person.name)}</strong>
-                              {person.role && <small>{cleanText(person.role)}</small>}
-                              {person.districtLabel && <small>{cleanText(person.districtLabel)}</small>}
-                            </span>
+                            <strong>{cleanText(person.name)}</strong>
+                            {(person.role || person.districtLabel) && (
+                              <small>{cleanText([person.role, person.districtLabel].filter(Boolean).join(" - "))}</small>
+                            )}
                           </a>
                         ))}
                       </div>
                     </div>
                   )}
-                  <div class="feed-actions">
-                    <a href={item.href}>Open details</a>
-                    {item.sourceHref && <a href={item.sourceHref}>{item.sourceLabel}</a>}
+
+                  <div class="media-actions">
+                    <a href={item.href}>Open update</a>
+                    {item.linkUrl && (
+                      <a href={item.linkUrl} target="_blank" rel="noopener noreferrer">
+                        Open post
+                      </a>
+                    )}
                   </div>
-                  {canModerateUpdates && item.type === "community" && (
-                    <details class="feed-admin-editor">
-                      <summary>Edit community update</summary>
-                      <form
-                        action="/api/admin/community-updates"
-                        method="post"
-                        enctype="multipart/form-data"
-                        hx-post="/api/admin/community-updates"
-                        hx-encoding="multipart/form-data"
-                        hx-target="find .feed-admin-status"
-                        hx-swap="innerHTML"
-                      >
-                        <input type="hidden" name="id" value={item.id} />
-                        <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
-                        <label>
-                          Submitted by
-                          <input name="displayName" value={item.displayName || "Community member"} />
-                        </label>
-                        <label>
-                          Update text
-                          <textarea name="comment" rows="4">{item.comment}</textarea>
-                        </label>
-                        <label>
-                          Link
-                          <input name="linkUrl" type="url" value={item.linkUrl || ""} placeholder="https://example.com/context" />
-                        </label>
-                        <label class="feed-admin-file">
-                          Add photos
-                          <input name="photos" type="file" accept="image/*" multiple />
-                          <small>New photos are added to this update when you save.</small>
-                        </label>
-                        <div class="feed-admin-actions">
-                          <button type="submit" name="action" value="save">Save edits</button>
-                          <button
-                            class="danger"
-                            type="submit"
-                            name="action"
-                            value="delete"
-                            onclick="return confirm('Delete this community update from public pages?');"
-                          >
-                            Delete update
-                          </button>
-                          <span class="feed-admin-status" aria-live="polite"></span>
-                        </div>
-                      </form>
-                    </details>
-                  )}
                 </div>
               </article>
             ))}
           </div>
 
           <div class="status-message empty-state" data-fuzzy-empty hidden>
-            <strong>No updates matched those filters.</strong>
-            <p>Try a broader keyword, clear the type chip, or switch the feed type to Everything.</p>
+            <strong>No community updates matched those filters.</strong>
+            <p>Try a broader name, remove the platform filter, or search by town or district.</p>
           </div>
           <div class="see-more-row">
-            <button type="button" class="see-more-button subtle" data-fuzzy-more hidden>Show more loaded updates</button>
+            <button type="button" class="see-more-button subtle" data-fuzzy-more data-auto-load-more hidden>Show more updates</button>
           </div>
+          <div class="scroll-load-sentinel" data-scroll-load-sentinel aria-hidden="true"></div>
         </section>
       )}
     </main>
     <SiteFooter />
+    <script>
+      function setupUpdateAutoLoad() {
+        const button = document.querySelector("[data-auto-load-more]");
+        const sentinel = document.querySelector("[data-scroll-load-sentinel]");
+        if (!(button instanceof HTMLButtonElement) || !(sentinel instanceof HTMLElement)) return;
+
+        let ticking = false;
+        function maybeLoadMore() {
+          if (button.hidden || ticking) return;
+          const rect = sentinel.getBoundingClientRect();
+          if (rect.top > window.innerHeight + 620) return;
+
+          ticking = true;
+          button.click();
+          window.setTimeout(() => {
+            ticking = false;
+            maybeLoadMore();
+          }, 160);
+        }
+
+        window.addEventListener("scroll", maybeLoadMore, { passive: true });
+        window.addEventListener("resize", maybeLoadMore);
+        maybeLoadMore();
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", setupUpdateAutoLoad, { once: true });
+      } else {
+        setupUpdateAutoLoad();
+      }
+    </script>
   </body>
 </html>
 
 <style>
-  a {
-    color: #1f2933;
-    font-weight: 800;
+  .page {
+    display: grid;
+    gap: 18px;
   }
 
   .hero {
-    margin-bottom: 18px;
-    padding: 32px;
+    background:
+      radial-gradient(circle at 85% 18%, rgba(255, 103, 25, 0.28), transparent 24%),
+      radial-gradient(circle at 15% 80%, rgba(37, 99, 235, 0.2), transparent 28%),
+      linear-gradient(135deg, #10233f 0%, #1d4ed8 48%, #ff6719 100%);
+    border: 0;
+    border-radius: 16px;
+    color: #fffaf1;
+    overflow: hidden;
+    padding: clamp(28px, 5vw, 54px);
+    position: relative;
+  }
+
+  .hero::after {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent);
+    content: "";
+    inset: auto 0 0;
+    height: 8px;
+    position: absolute;
+  }
+
+  .hero-kicker-row,
+  .hero-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+  }
+
+  .hero-kicker-row a,
+  .hero-actions a {
+    background: rgba(255, 250, 241, 0.14);
+    border: 1px solid rgba(255, 250, 241, 0.42);
+    border-radius: 999px;
+    color: #fffaf1;
+    font-size: 0.86rem;
+    font-weight: 950;
+    padding: 9px 12px;
+    text-decoration: none;
+  }
+
+  .hero-actions {
+    justify-content: flex-start;
+    margin-top: 20px;
   }
 
   .hero h1 {
-    font-size: clamp(2.15rem, 5.25vw, 4rem);
-    line-height: 0.95;
-    margin: 0 0 18px;
-    max-width: 920px;
+    font-size: clamp(2.25rem, 6vw, 4.8rem);
+    letter-spacing: 0;
+    line-height: 0.94;
+    margin: 0 0 16px;
+    max-width: 980px;
   }
 
   .lede {
-    color: #4b5563;
+    color: rgba(255, 250, 241, 0.88);
+    font-size: clamp(1rem, 1.4vw, 1.16rem);
     line-height: 1.6;
     margin: 0;
     max-width: 760px;
   }
 
-  .feed-panel {
+  .hero .eyebrow {
+    color: rgba(255, 250, 241, 0.74);
+  }
+
+  .media-panel {
     display: grid;
-    gap: 16px;
-    justify-self: center;
-    margin-top: 18px;
-    max-width: 820px;
-    width: 100%;
+    gap: 18px;
   }
 
   .results-heading {
@@ -490,356 +555,291 @@ function cleanDate(value = "") {
     margin: 0;
   }
 
-  .feed-list {
-    display: grid;
-    gap: 14px;
+  .results-heading a,
+  .media-actions a {
+    background: #1f2933;
+    border: 1px solid #111827;
+    border-radius: 999px;
+    color: #fffaf1;
+    font-size: 0.86rem;
+    font-weight: 950;
+    padding: 9px 12px;
+    text-decoration: none;
   }
 
-  .feed-card {
+  .media-grid {
+    column-count: 4;
+    column-gap: 16px;
+  }
+
+  .media-card {
     background: #ffffff;
     border: 1px solid var(--nhdb-line);
-    border-radius: 10px;
+    border-radius: 14px;
+    break-inside: avoid;
     display: grid;
     gap: 0;
-    grid-template-columns: minmax(0, 1fr);
+    margin: 0 0 18px;
     overflow: hidden;
+    page-break-inside: avoid;
   }
 
-  .feed-card.has-image {
-    grid-template-columns: minmax(0, 1fr) minmax(160px, 0.3fr);
+  .media-frame {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #2563eb, #ff6719) border-box;
+    border-bottom: 1px solid var(--nhdb-line);
+    color: inherit;
+    display: grid;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+    text-decoration: none;
   }
 
-  .feed-image {
-    background: #f8fafc;
-    grid-column: 2;
-    grid-row: 1;
-    min-height: 190px;
+  .portrait-media .media-frame {
+    aspect-ratio: 9 / 16;
+    justify-self: center;
+    max-height: min(72vh, 640px);
+    width: min(100%, 390px);
   }
 
-  .feed-image img {
+  .landscape-media .media-frame {
+    aspect-ratio: 16 / 9;
+    width: 100%;
+  }
+
+  .media-frame img {
+    background: #ffffff;
+    display: block;
+    grid-area: 1 / 1;
     height: 100%;
     object-fit: contain;
     width: 100%;
   }
 
-  .feed-copy {
-    display: grid;
-    gap: 10px;
-    grid-column: 1;
-    grid-row: 1;
-    padding: 20px;
+  .media-embed {
+    background: #ffffff;
+    display: block;
+    grid-area: 1 / 1;
+    height: 100%;
+    min-height: 100%;
+    width: 100%;
   }
 
-  .feed-card-head {
-    align-items: start;
-    display: grid;
-    gap: 10px;
-    grid-template-columns: 38px minmax(0, 1fr);
+  .facebook-media-embed {
+    transform-origin: top center;
   }
 
-  .feed-type-icon {
-    align-items: center;
-    background: #1d4ed8;
-    border-radius: 10px;
-    color: #ffffff;
-    display: inline-flex;
-    font-size: 0.7rem;
+  .platform-instagram .media-frame {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #f97316, #db2777, #7c3aed) border-box;
+  }
+
+  .platform-tiktok .media-frame {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #111827, #06b6d4, #ef4444) border-box;
+  }
+
+  .platform-facebook .media-frame {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #1877f2, #60a5fa, #1d4ed8) border-box;
+  }
+
+  .platform-substack .media-frame {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #ff6719, #f59e0b, #7c2d12) border-box;
+  }
+
+  .platform-photo .media-frame {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #2563eb, #38bdf8, #bfdbfe) border-box;
+  }
+
+  .platform-link .media-frame,
+  .platform-update .media-frame {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #1f2933, #60a5fa) border-box;
+  }
+
+  .media-fallback {
+    align-self: center;
+    color: #1f2933;
+    font-size: clamp(1.5rem, 5vw, 3rem);
     font-weight: 950;
-    height: 34px;
+    justify-self: center;
+    padding: 28px;
+    text-align: center;
+  }
+
+  .substack-media-fallback {
+    align-content: center;
+    background:
+      radial-gradient(circle at 80% 18%, rgba(255, 255, 255, 0.36), transparent 24%),
+      linear-gradient(135deg, #ff6719 0%, #f97316 54%, #7c2d12 100%);
+    color: #fffaf1;
+    display: grid;
+    gap: 9px;
+    height: 100%;
+    justify-items: center;
+    padding: 34px 24px;
+    width: 100%;
+  }
+
+  .substack-media-fallback > span {
+    align-items: center;
+    background: #fffaf1;
+    border-radius: 16px;
+    color: #ff6719;
+    display: inline-flex;
+    font-size: clamp(2.5rem, 9vw, 4.5rem);
+    height: 88px;
     justify-content: center;
     line-height: 1;
-    width: 34px;
+    width: 88px;
   }
 
-  .feed-type-article {
-    background: #7c2d12;
+  .substack-media-fallback small {
+    font-size: 0.76rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
   }
 
-  .feed-type-organization-comment {
-    background: #166534;
+  .substack-media-fallback strong {
+    font-size: clamp(1rem, 2.5vw, 1.28rem);
+    line-height: 1.15;
+    max-width: 22ch;
+    overflow-wrap: anywhere;
   }
 
-  .feed-head-copy {
+  .platform-badge {
+    backdrop-filter: blur(10px);
+    background: rgba(31, 41, 51, 0.84);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    color: #fffaf1;
+    font-size: 0.76rem;
+    font-weight: 950;
+    grid-area: 1 / 1;
+    left: 12px;
+    padding: 7px 10px;
+    position: absolute;
+    top: 12px;
+    z-index: 2;
+  }
+
+  .media-copy {
+    border-top: 1px solid var(--nhdb-line);
     display: grid;
-    gap: 3px;
-    min-width: 0;
+    gap: 11px;
+    padding: 18px;
+    position: relative;
+    z-index: 1;
   }
 
-  .feed-head-copy > strong {
-    color: #1f2933;
-    font-size: 0.9rem;
-    line-height: 1.2;
-  }
-
-  .feed-head-copy time {
+  .media-meta {
     color: #64748b;
-    font-size: 0.82rem;
-    font-weight: 850;
-  }
-
-  .feed-topline,
-  .feed-actions {
     display: flex;
     flex-wrap: wrap;
+    font-size: 0.82rem;
+    font-weight: 900;
     gap: 8px;
   }
 
-  .feed-topline span {
-    background: #f8fafc;
-    border: 1px solid #d1d5db;
-    border-radius: 999px;
-    color: #475569;
-    font-size: 0.76rem;
-    font-weight: 950;
-    padding: 6px 9px;
-  }
-
-  .feed-topline span:first-child {
-    background: #fff7ed;
-    border-color: #f4b35f;
-    color: #8a3a05;
-  }
-
-  .feed-copy h3 {
-    font-size: clamp(1.18rem, 2vw, 1.6rem);
-    line-height: 1.08;
+  .media-card h3 {
+    font-size: 1.24rem;
+    line-height: 1.12;
     margin: 0;
   }
 
-  .feed-copy p {
-    color: #4b5563;
-    line-height: 1.55;
+  .media-card h3 a {
+    color: #1f2933;
+    text-decoration: none;
+  }
+
+  .media-card h3 a:hover {
+    color: #b6390a;
+    text-decoration: underline;
+  }
+
+  .media-card p {
+    color: #475569;
+    line-height: 1.5;
     margin: 0;
     overflow-wrap: anywhere;
   }
 
-  .feed-meta {
-    color: #64748b !important;
-    font-size: 0.84rem;
-    font-weight: 850;
-  }
-
-  .feed-actions a {
-    background: #f8fafc;
-    border: 1px solid #d1d5db;
-    border-radius: 999px;
-    font-size: 0.82rem;
-    padding: 8px 10px;
-    text-decoration: none;
-  }
-
-  .feed-admin-editor {
-    border-top: 1px solid #e5e7eb;
-    margin-top: 6px;
-    padding-top: 12px;
-  }
-
-  .feed-admin-editor summary {
-    color: #1d4ed8;
-    cursor: pointer;
-    font-size: 0.82rem;
-    font-weight: 950;
-  }
-
-  .feed-admin-editor form {
-    background: #f8fafc;
-    border: 1px solid #dbeafe;
-    border-radius: 12px;
+  .text-disclosure {
+    color: #475569;
     display: grid;
-    gap: 10px;
-    margin-top: 10px;
-    padding: 12px;
-  }
-
-  .feed-admin-editor label {
-    color: #334155;
-    display: grid;
-    font-size: 0.76rem;
-    font-weight: 950;
-    gap: 5px;
-    text-transform: uppercase;
-  }
-
-  .feed-admin-editor input,
-  .feed-admin-editor textarea {
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    box-sizing: border-box;
-    color: #1f2933;
-    font: inherit;
-    padding: 9px 10px;
-    text-transform: none;
-    width: 100%;
-  }
-
-  .feed-admin-editor textarea {
-    resize: vertical;
-  }
-
-  .feed-admin-file small {
-    color: #64748b;
-    font-size: 0.74rem;
-    font-weight: 800;
-    text-transform: none;
-  }
-
-  .feed-admin-actions {
-    align-items: center;
-    display: flex;
-    flex-wrap: wrap;
     gap: 8px;
-    justify-content: flex-end;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
   }
 
-  .feed-admin-actions button {
-    background: #1d4ed8;
-    border: 1px solid #1d4ed8;
-    border-radius: 999px;
-    color: #ffffff;
+  .text-disclosure summary {
     cursor: pointer;
+    display: grid;
+    gap: 8px;
+    list-style: none;
+  }
+
+  .text-disclosure summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .text-disclosure summary span {
+    color: #475569;
+  }
+
+  .text-disclosure summary strong {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1d4ed8;
     font-size: 0.78rem;
     font-weight: 950;
+    justify-self: start;
+    line-height: 1;
     padding: 7px 10px;
   }
 
-  .feed-admin-actions button.danger {
-    background: #fff7ed;
-    border-color: #fed7aa;
-    color: #b91c1c;
+  .text-disclosure[open] summary strong {
+    display: none;
   }
 
-  .feed-admin-status {
-    color: #166534;
-    font-size: 0.78rem;
-    font-weight: 900;
-  }
-
-  .feed-admin-status :global(.inline-status.error) {
-    color: #b91c1c;
-  }
-
-  .rich-link-preview {
-    overflow: hidden;
-  }
-
-  .rich-link-preview > img {
-    aspect-ratio: 16 / 9;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
+  .community-note {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
     border-radius: 10px;
-    grid-column: 1 / -1;
-    max-height: 220px;
-    object-fit: contain;
-    width: 100%;
+    font-weight: 750;
+    padding: 10px;
   }
 
-  .community-link-preview {
-    background: #ffffff;
-    border: 1px solid #93c5fd;
-    border-radius: 14px;
-    color: #1f2933;
-    display: grid;
-    gap: 10px;
-    justify-self: start;
-    max-width: min(470px, 100%);
-    padding: 12px;
-    text-decoration: none;
-    width: 100%;
-  }
-
-  .instagram-preview-card {
-    align-items: center;
-    background:
-      linear-gradient(#ffffff, #ffffff) padding-box,
-      linear-gradient(135deg, #f97316, #db2777, #7c3aed) border-box;
-    border: 2px solid transparent;
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .tiktok-preview-card {
-    align-items: center;
-    background:
-      linear-gradient(#ffffff, #ffffff) padding-box,
-      linear-gradient(135deg, #111827, #06b6d4, #ef4444) border-box;
-    border: 2px solid transparent;
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .substack-preview-card {
-    align-items: center;
-    background:
-      linear-gradient(#ffffff, #ffffff) padding-box,
-      linear-gradient(135deg, #ff6719, #f59e0b, #7c2d12) border-box;
-    border: 2px solid transparent;
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .instagram-icon,
-  .tiktok-icon,
-  .substack-icon {
-    align-items: center;
-    background: linear-gradient(135deg, #f97316, #db2777, #7c3aed);
-    border-radius: 10px;
-    color: #ffffff;
-    display: inline-flex;
-    font-size: 0.78rem;
-    font-weight: 950;
-    height: 38px;
-    justify-content: center;
-    width: 38px;
-  }
-
-  .tiktok-icon {
-    background: linear-gradient(135deg, #111827, #06b6d4, #ef4444);
-  }
-
-  .substack-icon {
-    background: linear-gradient(135deg, #ff6719, #f97316);
-  }
-
-  .community-link-preview strong,
-  .community-link-preview small {
-    display: block;
-  }
-
-  .community-link-preview strong {
-    font-size: 1rem;
-    line-height: 1.2;
-  }
-
-  .community-link-preview small {
-    color: #64748b;
-    font-size: 0.84rem;
-    font-weight: 850;
-    line-height: 1.35;
-    margin-top: 4px;
-  }
-
-  .community-people-preview {
-    display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 220px));
-    justify-content: start;
-    max-width: 640px;
-  }
-
-  .community-people-block {
+  .people-strip {
     border-top: 1px solid #dbeafe;
     display: grid;
-    gap: 8px;
-    margin-top: 4px;
-    max-width: 640px;
+    gap: 9px;
     padding-top: 12px;
   }
 
-  .community-people-block h4 {
+  .people-strip > span {
     color: #6b4f2a;
     font-size: 0.72rem;
     font-weight: 950;
     letter-spacing: 0.1em;
-    line-height: 1;
-    margin: 0;
     text-transform: uppercase;
+  }
+
+  .people-strip > div {
+    display: grid;
+    gap: 8px;
   }
 
   .mini-person-card {
@@ -849,11 +849,9 @@ function cleanDate(value = "") {
     border-radius: 12px;
     color: #1f2933;
     display: grid;
-    gap: 10px;
-    grid-template-columns: 42px minmax(0, 1fr);
-    max-width: 220px;
-    min-width: 0;
-    padding: 8px;
+    gap: 2px 10px;
+    grid-template-columns: 44px minmax(0, 1fr);
+    padding: 9px;
     text-decoration: none;
   }
 
@@ -863,20 +861,15 @@ function cleanDate(value = "") {
     border: 1px solid #d1d5db;
     border-radius: 9px;
     display: block;
-    height: 52px;
+    grid-row: span 2;
+    height: 54px;
     object-fit: cover;
     object-position: center top;
-    width: 42px;
+    width: 44px;
   }
 
   .mini-person-card img.profile-icon {
     object-fit: cover;
-  }
-
-  .mini-person-card span {
-    display: grid;
-    gap: 2px;
-    min-width: 0;
   }
 
   .mini-person-card strong,
@@ -887,32 +880,26 @@ function cleanDate(value = "") {
   }
 
   .mini-person-card strong {
-    color: #1f2933;
-    font-size: 0.92rem;
+    font-size: 0.94rem;
     line-height: 1.15;
   }
 
   .mini-person-card small {
     color: #64748b;
-    font-size: 0.74rem;
+    font-size: 0.75rem;
     font-weight: 850;
   }
 
-  .filter-chips {
+  .media-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin: 12px 0 0;
   }
 
-  .status-message,
-  .empty-state {
-    background: #ffffff;
-    border: 1px solid var(--nhdb-line);
-    border-radius: 10px;
-    color: #4b5563;
-    line-height: 1.5;
-    padding: 16px;
+  .media-actions a {
+    background: #f8fafc;
+    border-color: #d1d5db;
+    color: #1f2933;
   }
 
   .see-more-row {
@@ -920,35 +907,24 @@ function cleanDate(value = "") {
     justify-content: center;
   }
 
-  .see-more-button {
-    background: #1f2933;
-    border: 1px solid #1f2933;
-    border-radius: 999px;
-    color: white;
-    cursor: pointer;
-    font: inherit;
-    font-weight: 900;
-    padding: 10px 14px;
+  .scroll-load-sentinel {
+    height: 1px;
   }
 
-  @media (max-width: 760px) {
-    .feed-card.has-image {
-      grid-template-columns: 1fr;
-    }
-
-    .feed-image,
-    .feed-copy {
-      grid-column: auto;
-      grid-row: auto;
-    }
-
-    .feed-image {
-      min-height: 220px;
-    }
-
+  @media (max-width: 720px) {
     .results-heading {
       align-items: start;
-      display: grid;
+      flex-direction: column;
+    }
+
+    .media-grid {
+      column-count: 1;
+    }
+  }
+
+  @media (min-width: 721px) and (max-width: 1040px) {
+    .media-grid {
+      column-count: 3;
     }
   }
 </style>

@@ -5,15 +5,18 @@ import ArticleList from "../../components/ArticleList.astro";
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import FilterBar from "../../components/FilterBar.astro";
-import SocialLinkPreviews from "../../components/SocialLinkPreviews.astro";
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import profileIcon from "../../assets/profile icon.png";
 import {
+  Camera,
   ExternalLink,
   Globe,
   Mail,
+  MessageCircle,
+  Newspaper,
   Phone,
+  Music2,
   UserRoundCheck,
 } from "@lucide/astro";
 import { getArticles } from "../../lib/articlesApi";
@@ -466,41 +469,26 @@ const profileResourceLinks = [
   person.substack_url && {
     href: socialProfileUrl(person.substack_url, "substack"),
     label: "Substack",
-    icon: ExternalLink,
+    icon: Newspaper,
+    platform: "substack",
   },
   person.instagram_url && {
     href: socialProfileUrl(person.instagram_url, "instagram"),
     label: "Instagram",
-    icon: ExternalLink,
+    icon: Camera,
+    platform: "instagram",
   },
   person.facebook_url && {
     href: socialProfileUrl(person.facebook_url, "facebook"),
     label: "Facebook",
-    icon: ExternalLink,
+    icon: MessageCircle,
+    platform: "facebook",
   },
   person.tiktok_url && {
     href: socialProfileUrl(person.tiktok_url, "tiktok"),
     label: "TikTok",
-    icon: ExternalLink,
-  },
-].filter(Boolean);
-
-const profileSocialLinks = [
-  person.substack_url && {
-    href: socialProfileUrl(person.substack_url, "substack"),
-    label: "Substack",
-  },
-  person.instagram_url && {
-    href: socialProfileUrl(person.instagram_url, "instagram"),
-    label: "Instagram",
-  },
-  person.facebook_url && {
-    href: socialProfileUrl(person.facebook_url, "facebook"),
-    label: "Facebook",
-  },
-  person.tiktok_url && {
-    href: socialProfileUrl(person.tiktok_url, "tiktok"),
-    label: "TikTok",
+    icon: Music2,
+    platform: "tiktok",
   },
 ].filter(Boolean);
 
@@ -817,7 +805,7 @@ function uniqueTowns(towns = []) {
             const Icon = link.icon;
 
             return (
-              <a href={link.href}>
+              <a class:list={[link.platform && `social-link-${link.platform}`]} href={link.href}>
                 <span class="link-icon" aria-hidden="true">
                   <Icon size={17} stroke-width={2.3} />
                 </span>
@@ -827,12 +815,6 @@ function uniqueTowns(towns = []) {
           })}
         </nav>
       )}
-
-      <SocialLinkPreviews
-        links={profileSocialLinks}
-        title={`${person.full_name}'s social links`}
-        eyebrow="Profile Socials"
-      />
 
       {linkedCandidateForEndorsements && (
         <section class="panel candidate-role-panel" id="candidate-role">
@@ -1796,6 +1778,33 @@ function uniqueTowns(towns = []) {
   .resource-link-bar a:hover {
     border-color: #dc4d09;
     color: #b6390a;
+  }
+
+  .resource-link-bar a[class*="social-link-"] {
+    border-color: transparent;
+    color: #ffffff;
+  }
+
+  .resource-link-bar .social-link-substack {
+    background: #ff6719;
+  }
+
+  .resource-link-bar .social-link-instagram {
+    background: linear-gradient(135deg, #f97316, #db2777, #7c3aed);
+  }
+
+  .resource-link-bar .social-link-facebook {
+    background: #1877f2;
+  }
+
+  .resource-link-bar .social-link-tiktok {
+    background: linear-gradient(135deg, #111827, #06b6d4, #ef4444);
+  }
+
+  .resource-link-bar a[class*="social-link-"]:hover {
+    border-color: rgba(255, 255, 255, 0.8);
+    color: #ffffff;
+    filter: brightness(0.95);
   }
 
   .link-icon {
