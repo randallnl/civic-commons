@@ -22,7 +22,10 @@ import {
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
-import { candidateFilerForRepresentative } from "../../lib/candidateLegislatorLinks";
+import {
+  candidateFilerForRepresentative,
+  representativePersonIdForCandidate,
+} from "../../lib/candidateLegislatorLinks";
 import { candidateProfileForLegislator } from "../../lib/candidateLegislators";
 import {
   candidateName,
@@ -39,7 +42,7 @@ import {
   getOrganizations,
   organizationPath,
 } from "../../lib/organizationsApi";
-import { getRepresentative } from "../../lib/repsApi";
+import { getRepresentative, getRepresentatives, repName } from "../../lib/repsApi";
 import {
   getTrackedBills,
   isVotingAction,
@@ -55,7 +58,9 @@ const { slug } = Astro.params;
 
 let apiData = null;
 let candidateOptions = [];
+let legislatorOptions = [];
 let linkedCandidateFilerEntityNumber = "";
+let linkedRepresentativePersonId = "";
 const adminSession = await currentAdminSession(Astro.request);
 const message = Astro.url.searchParams.get("message") || "";
 const error = Astro.url.searchParams.get("error") || "";
@@ -214,6 +219,24 @@ if (adminSession && hasLegislatorProfile) {
       "";
   } catch (error) {
     console.error(error?.message || "Unable to load candidate link options.");
+  }
+}
+
+if (adminSession && linkedCandidateForEndorsements) {
+  try {
+    const [repData, explicitPersonId] = await Promise.all([
+      getRepresentatives({ limit: 700 }),
+      representativePersonIdForCandidate(linkedCandidateForEndorsements.filerEntityNumber || ""),
+    ]);
+    legislatorOptions = repData.representatives || [];
+    linkedRepresentativePersonId =
+      explicitPersonId ||
+      linkedCandidateForEndorsements.legislatorPersonId ||
+      representative?.personid ||
+      representative?.id ||
+      "";
+  } catch (error) {
+    console.error(error?.message || "Unable to load legislator link options.");
   }
 }
 
@@ -565,6 +588,15 @@ function candidateOptionLabel(candidate = {}) {
     candidate.county,
     candidate.district ? `District ${candidate.district}` : "",
     candidate.politicalParty,
+  ].filter(Boolean).join(" - ");
+}
+
+function legislatorOptionLabel(rep = {}) {
+  return [
+    repName(rep),
+    rep.chamber || rep.legislativebody,
+    rep.district || rep.raw_district,
+    rep.party,
   ].filter(Boolean).join(" - ");
 }
 
@@ -1104,6 +1136,262 @@ function uniqueTowns(towns = []) {
             </label>
 
             <button class="danger-button" type="submit">Remove Legislator</button>
+          </form>
+        </section>
+      )}
+
+      {adminSession && linkedCandidateForEndorsements && (
+        <section class="panel admin-edit-panel">
+          <div class="section-heading">
+            <p class="eyebrow">Admin</p>
+            <h2>Edit Candidate Role</h2>
+            <p>
+              These edits update the source candidate row in D1 and the unified
+              people profile.
+            </p>
+          </div>
+
+          <form
+            class="admin-edit-form"
+            action="/api/admin/profile"
+            method="post"
+            hx-post="/api/admin/profile"
+            hx-target="find .admin-inline-status"
+            hx-swap="innerHTML"
+          >
+            <input type="hidden" name="entityType" value="candidate" />
+            <input
+              type="hidden"
+              name="entityKey"
+              value={linkedCandidateForEndorsements.filerEntityNumber || candidateSlug(linkedCandidateForEndorsements)}
+            />
+            <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+            <input type="hidden" name="clearFields" value="linkedRepresentativePersonId" />
+            <input type="hidden" name="clearFields" value="substackUrl" />
+            <input type="hidden" name="clearFields" value="instagramUrl" />
+            <input type="hidden" name="clearFields" value="facebookUrl" />
+            <input type="hidden" name="clearFields" value="tiktokUrl" />
+
+            <label>
+              Name
+              <input name="name" value={linkedCandidateForEndorsements.name || candidateName(linkedCandidateForEndorsements)} />
+            </label>
+
+            <label>
+              Name Aliases
+              <textarea name="nameAliases" rows="3" placeholder="Sly, Sly Karasinski">{linkedCandidateForEndorsements.nameAliases || linkedCandidateForEndorsements.name_aliases || ""}</textarea>
+              <small class="field-help">
+                Add alternate names separated by commas or new lines. These are
+                used for search, tagging, and mention matching.
+              </small>
+            </label>
+
+            <div class="form-grid">
+              <label>
+                First Name
+                <input name="candidateFirstName" value={linkedCandidateForEndorsements.candidateFirstName || ""} />
+              </label>
+              <label>
+                Last Name
+                <input name="candidateLastName" value={linkedCandidateForEndorsements.candidateLastName || ""} />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Party
+                <input name="politicalParty" value={linkedCandidateForEndorsements.politicalParty || ""} />
+              </label>
+              <label>
+                Free State Aligned
+                <select name="is_free_stater">
+                  <option value="">No override</option>
+                  <option value="true" selected={linkedCandidateForEndorsements.is_free_stater === true}>Yes</option>
+                  <option value="false" selected={linkedCandidateForEndorsements.is_free_stater === false}>No</option>
+                </select>
+              </label>
+            </div>
+
+            <label>
+              Linked Legislator
+              <input
+                name="linkedRepresentativePersonId"
+                list="people-legislator-link-options"
+                value={linkedRepresentativePersonId}
+                placeholder="Start typing a legislator name, then select their personid"
+              />
+              <small class="field-help">
+                Saves an explicit candidate-to-legislator link. Use the numeric
+                personid shown by the autocomplete option.
+              </small>
+            </label>
+            <datalist id="people-legislator-link-options">
+              {legislatorOptions.map((rep) => (
+                <option
+                  value={rep.personid || rep.id}
+                  label={legislatorOptionLabel(rep)}
+                />
+              ))}
+            </datalist>
+
+            <div class="form-grid">
+              <label>
+                Office Type
+                <input name="officeType" value={linkedCandidateForEndorsements.officeType || ""} />
+              </label>
+              <label>
+                Office
+                <input name="office" value={linkedCandidateForEndorsements.office || ""} />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                County
+                <input name="county" value={linkedCandidateForEndorsements.county || ""} />
+              </label>
+              <label>
+                District
+                <input name="district" value={linkedCandidateForEndorsements.district || ""} />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Email
+                <input name="candidateEmail" type="email" value={linkedCandidateForEndorsements.candidateEmail || ""} />
+              </label>
+              <label>
+                Website
+                <input name="candidateWebsite" type="url" value={linkedCandidateForEndorsements.candidateWebsite || ""} />
+              </label>
+            </div>
+
+            <label>
+              Photo URL
+              <input name="photoUrl" type="url" value={linkedCandidateForEndorsements.photoUrl || linkedCandidateForEndorsements.legislatorPhotoUrl || ""} />
+            </label>
+
+            <div class="form-grid">
+              <label>
+                Substack
+                <input name="substackUrl" value={socialField(linkedCandidateForEndorsements, person, "substack")} placeholder="https://example.substack.com or handle" />
+              </label>
+              <label>
+                Instagram
+                <input name="instagramUrl" value={socialField(linkedCandidateForEndorsements, person, "instagram")} placeholder="https://instagram.com/name or @handle" />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Facebook
+                <input name="facebookUrl" value={socialField(linkedCandidateForEndorsements, person, "facebook")} placeholder="https://facebook.com/name" />
+              </label>
+              <label>
+                TikTok
+                <input name="tiktokUrl" value={socialField(linkedCandidateForEndorsements, person, "tiktok")} placeholder="https://tiktok.com/@handle or @handle" />
+              </label>
+            </div>
+
+            <input
+              type="hidden"
+              name="reviewNote"
+              value="Reviewed candidate profile for missing photo, website, or email; no update found."
+            />
+
+            <div class="form-grid">
+              <label>
+                Election Year
+                <input name="electionYear" inputmode="numeric" value={linkedCandidateForEndorsements.electionYear || ""} />
+              </label>
+              <label>
+                Election Cycle
+                <input name="electionCycle" value={linkedCandidateForEndorsements.electionCycle || ""} />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Total Raised
+                <input name="totalRaised" inputmode="decimal" value={linkedCandidateForEndorsements.totalRaised ?? ""} />
+              </label>
+              <label>
+                Total Spent
+                <input name="totalSpent" inputmode="decimal" value={linkedCandidateForEndorsements.totalSpent ?? ""} />
+              </label>
+            </div>
+
+            <div class="admin-form-actions">
+              <button type="submit">Save Candidate Edits</button>
+              <button
+                class="secondary-button"
+                type="submit"
+                name="profileAction"
+                value="confirm-reviewed"
+              >
+                Confirm reviewed, no update found
+              </button>
+              <span class="admin-inline-status" aria-live="polite"></span>
+            </div>
+          </form>
+
+          <form
+            class="admin-edit-form admin-upload-form"
+            action="/api/admin/upload"
+            method="post"
+            enctype="multipart/form-data"
+          >
+            <input type="hidden" name="entityType" value="candidate" />
+            <input
+              type="hidden"
+              name="entityKey"
+              value={linkedCandidateForEndorsements.filerEntityNumber || candidateSlug(linkedCandidateForEndorsements)}
+            />
+            <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+
+            <div class="section-heading compact-heading">
+              <p class="eyebrow">Photo Upload</p>
+              <h2>Upload and update candidate photo</h2>
+            </div>
+
+            <label>
+              R2 key
+              <input
+                name="key"
+                value={`candidates/${linkedCandidateForEndorsements.filerEntityNumber || candidateSlug(linkedCandidateForEndorsements)}-${slug}.jpg`}
+              />
+            </label>
+
+            <label>
+              Image file
+              <input name="file" type="file" accept="image/*" required />
+            </label>
+
+            <button type="submit">Upload Candidate Photo</button>
+          </form>
+
+          <form class="admin-edit-form admin-remove-form" action="/api/admin/remove" method="post">
+            <input type="hidden" name="entityType" value="candidate" />
+            <input
+              type="hidden"
+              name="entityKey"
+              value={linkedCandidateForEndorsements.filerEntityNumber || candidateSlug(linkedCandidateForEndorsements)}
+            />
+            <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+
+            <div class="section-heading compact-heading">
+              <p class="eyebrow">Remove</p>
+              <h2>Remove candidate from public results</h2>
+              <p>This deletes the candidate row from the source D1 table.</p>
+            </div>
+
+            <label class="confirm-remove">
+              <input name="confirmRemove" type="checkbox" value="yes" required />
+              I understand this will remove this candidate from the site.
+            </label>
+
+            <button class="danger-button" type="submit">Remove Candidate</button>
           </form>
         </section>
       )}
