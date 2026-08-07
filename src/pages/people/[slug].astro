@@ -1314,25 +1314,27 @@ function uniqueTowns(towns = []) {
               <div class="timeline-list">
                 {officeTerms.map((term) => (
                   <article class="timeline-item">
-                    <div>
-                      <h3>{term.title}</h3>
-                      <p>
-                        {formatDistrictLabel(term)}
-                      </p>
-                      {term.status === "current" && townServiceAreas.length ? (
-                        <div class="office-town-list">
-                          <span>Towns served</span>
-                          <div>
-                            {townServiceAreas.flatMap((area) =>
-                              area.towns.map((town) => <em>{town}</em>)
-                            )}
-                          </div>
-                        </div>
-                      ) : null}
+                    <div class="timeline-item-heading">
+                      <div>
+                        <h3>{term.title}</h3>
+                        <p>
+                          {formatDistrictLabel(term)}
+                        </p>
+                      </div>
+                      <span class:list={["status-pill", term.status]}>
+                        {term.status}
+                      </span>
                     </div>
-                    <span class:list={["status-pill", term.status]}>
-                      {term.status}
-                    </span>
+                    {term.status === "current" && townServiceAreas.length ? (
+                      <div class="office-town-list">
+                        <span>Towns served</span>
+                        <div>
+                          {townServiceAreas.flatMap((area) =>
+                            area.towns.map((town) => <em>{town}</em>)
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
                   </article>
                 ))}
               </div>
@@ -2387,13 +2389,18 @@ function uniqueTowns(towns = []) {
   }
 
   .timeline-item {
+    display: grid;
+    gap: 14px;
+  }
+
+  .timeline-item-heading {
     align-items: start;
     display: flex;
     gap: 16px;
     justify-content: space-between;
   }
 
-  .timeline-item > div {
+  .timeline-item-heading > div {
     flex: 1;
     min-width: 0;
   }
@@ -2415,7 +2422,7 @@ function uniqueTowns(towns = []) {
   .office-town-list div {
     display: grid;
     gap: 7px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 
   .office-town-list em {
