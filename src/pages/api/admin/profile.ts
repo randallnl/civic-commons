@@ -43,6 +43,27 @@ const CANDIDATE_FIELDS = [
   "tiktokUrl",
 ];
 
+const PERSON_FIELDS = [
+  "gcPersonid",
+  "filerEntityNumber",
+  "name",
+  "nameAliases",
+  "firstname",
+  "lastname",
+  "middlename",
+  "party",
+  "email",
+  "phone",
+  "websiteUrl",
+  "photoUrl",
+  "notes",
+  "is_free_stater",
+  "substackUrl",
+  "instagramUrl",
+  "facebookUrl",
+  "tiktokUrl",
+];
+
 const REPRESENTATIVE_FIELDS = [
   "name",
   "nameAliases",
@@ -80,9 +101,14 @@ export async function POST({ request }) {
     const profileAction = String(form.get("profileAction") || "save").trim();
     redirectTo = safeRedirectPath(form.get("redirectTo")) || "/admin";
     const clearFields = new Set(form.getAll("clearFields").map(String));
-    const fields = entityType === "candidate" ? CANDIDATE_FIELDS : REPRESENTATIVE_FIELDS;
+    const fields =
+      entityType === "candidate"
+        ? CANDIDATE_FIELDS
+        : entityType === "person"
+          ? PERSON_FIELDS
+          : REPRESENTATIVE_FIELDS;
 
-    if (!["candidate", "representative"].includes(entityType)) {
+    if (!["candidate", "person", "representative"].includes(entityType)) {
       throw new Error("Choose a candidate or legislator profile.");
     }
     if (!entityKey) throw new Error("Profile identifier is required.");
@@ -158,6 +184,10 @@ async function updateSourceProfile(entityType, entityKey, data) {
 
   if (entityType === "representative") {
     return updateRepresentativeSource(db, entityKey, data);
+  }
+
+  if (entityType === "person") {
+    return updatePersonSource(db, entityKey, data);
   }
 
   if (entityType === "candidate") {
@@ -272,6 +302,183 @@ async function updateRepresentativeSource(db, entityKey, data) {
   changed += await updatePersonSocialLinks(db, { gcPersonid: personid }, data);
 
   if (!changed) throw new Error("No matching legislator source row was updated.");
+  return { changed };
+}
+
+async function updatePersonSource(db, entityKey, data) {
+  await ensureUnifiedPeopleTables(db);
+  const key = String(entityKey || "").trim();
+  const gcPersonid = numericId(data.gcPersonid);
+  const filerEntityNumber = String(data.filerEntityNumber || "").trim();
+  if (!key && !gcPersonid && !filerEntityNumber) {
+    throw new Error("A person identifier is required.");
+  }
+
+  if (gcPersonid) await upsertPersonFromLegislator(gcPersonid, db);
+  if (filerEntityNumber) await upsertPersonFromCandidate(filerEntityNumber, db);
+
+  const firstName = data.firstname || firstNameFromFullName(data.name);
+  const lastName = data.lastname || lastNameFromFullName(data.name);
+  const displayName = data.name || [firstName, lastName].filter(Boolean).join(" ");
+  let changed = 0;
+
+  changed += await updateUnifiedPerson(db, {
+    key,
+    gcPersonid,
+    filerEntityNumber,
+    firstName,
+    lastName,
+    middleName: data.middlename || "",
+    displayName,
+    party: data.party || "",
+    email: data.email || "",
+    phone: data.phone || "",
+    websiteUrl: data.websiteUrl || "",
+    photoUrl: data.photoUrl || "",
+    freeStater: freeStaterValue(data),
+  });
+
+  changed += await updatePersonAliases(
+    db,
+    {
+      key,
+      gcPersonid,
+      filerEntityNumber,
+      slug: key,
+    },
+    data,
+  );
+  changed += await updatePersonSocialLinks(
+    db,
+    {
+      key,
+      gcPersonid,
+      filerEntityNumber,
+      slug: key,
+    },
+    data,
+  );
+
+  if (gcPersonid) {
+    changed += await runSourceUpdate(
+      db,
+      `UPDATE d1_legislators
+       SET firstname = COALESCE(NULLIF(?, ''), firstname),
+           lastname = COALESCE(NULLIF(?, ''), lastname),
+           middlename = COALESCE(NULLIF(?, ''), middlename),
+           party = COALESCE(NULLIF(?, ''), party),
+           emailaddress = COALESCE(NULLIF(?, ''), emailaddress),
+           is_free_stater = CASE
+             WHEN ? IS NULL THEN is_free_stater
+             ELSE ?
+           END
+       WHERE personid = ?`,
+      [
+        firstName,
+        lastName,
+        data.middlename || "",
+        data.party || "",
+        data.email || "",
+        freeStaterValue(data),
+        freeStaterValue(data),
+        gcPersonid,
+      ],
+    );
+
+    if (Object.prototype.hasOwnProperty.call(data, "photoUrl")) {
+      changed += await runSourceUpdate(
+        db,
+        `INSERT INTO d1_legislator_photos (
+           employeeno,
+           personid,
+           firstname,
+           lastname,
+           filename,
+           photo_url,
+           source,
+           updated_at
+         )
+         SELECT
+           employeeno,
+           personid,
+           firstname,
+           lastname,
+           ?,
+           ?,
+           'admin',
+           CURRENT_TIMESTAMP
+         FROM d1_legislators
+         WHERE personid = ?
+         ON CONFLICT(employeeno) DO UPDATE SET
+           personid = excluded.personid,
+           firstname = excluded.firstname,
+           lastname = excluded.lastname,
+           filename = excluded.filename,
+           photo_url = excluded.photo_url,
+           source = excluded.source,
+           updated_at = CURRENT_TIMESTAMP`,
+        [filenameFromUrl(data.photoUrl), data.photoUrl || "", gcPersonid],
+      );
+    }
+
+    if (Object.prototype.hasOwnProperty.call(data, "notes")) {
+      changed += await runSourceUpdate(
+        db,
+        `UPDATE d1_legislators
+         SET notes = COALESCE(NULLIF(?, ''), notes)
+         WHERE personid = ?`,
+        [data.notes || "", gcPersonid],
+      );
+    }
+  }
+
+  if (filerEntityNumber) {
+    changed += await runSourceUpdate(
+      db,
+      `UPDATE candidates
+       SET candidate_first_name = COALESCE(NULLIF(?, ''), candidate_first_name),
+           candidate_last_name = COALESCE(NULLIF(?, ''), candidate_last_name),
+           political_party = COALESCE(NULLIF(?, ''), political_party),
+           candidate_email = COALESCE(NULLIF(?, ''), candidate_email),
+           candidate_website = COALESCE(NULLIF(?, ''), candidate_website),
+           photo_url = COALESCE(NULLIF(?, ''), photo_url),
+           is_free_stater = CASE
+             WHEN ? IS NULL THEN is_free_stater
+             ELSE ?
+           END
+       WHERE filer_entity_number = ?`,
+      [
+        firstName,
+        lastName,
+        data.party || "",
+        data.email || "",
+        data.websiteUrl || "",
+        data.photoUrl || "",
+        freeStaterValue(data),
+        freeStaterValue(data),
+        filerEntityNumber,
+      ],
+    );
+
+    await upsertPersonFromCandidate(filerEntityNumber, db);
+    changed += await updateUnifiedPerson(db, {
+      key,
+      gcPersonid,
+      filerEntityNumber,
+      firstName,
+      lastName,
+      middleName: data.middlename || "",
+      displayName,
+      party: data.party || "",
+      email: data.email || "",
+      phone: data.phone || "",
+      websiteUrl: data.websiteUrl || "",
+      photoUrl: data.photoUrl || "",
+      freeStater: freeStaterValue(data),
+    });
+  }
+
+  if (!changed) throw new Error("No matching people profile row was updated.");
   return { changed };
 }
 
@@ -406,12 +613,80 @@ async function updateUnifiedCandidatePerson(db, entityKey, data = {}) {
   );
 }
 
+async function updateUnifiedPerson(db, data = {}) {
+  const clauses = [];
+  const params = [
+    data.firstName || "",
+    data.lastName || "",
+    data.middleName || "",
+    data.displayName || "",
+    data.party || "",
+    data.email || "",
+    data.phone || "",
+    data.websiteUrl || "",
+    data.photoUrl || "",
+    data.freeStater,
+    data.freeStater,
+  ];
+
+  if (data.key) {
+    clauses.push("slug = ?");
+    params.push(data.key);
+    clauses.push("CAST(id AS TEXT) = ?");
+    params.push(data.key);
+  }
+  if (data.gcPersonid) {
+    clauses.push("gc_personid = ?");
+    params.push(data.gcPersonid);
+  }
+  if (data.filerEntityNumber) {
+    clauses.push("filer_entity_number = ?");
+    params.push(data.filerEntityNumber);
+    clauses.push(
+      `id IN (
+        SELECT person_id
+        FROM d1_person_candidate_roles
+        WHERE filer_entity_number = ?
+      )`,
+    );
+    params.push(data.filerEntityNumber);
+  }
+  if (!clauses.length) return 0;
+
+  return runSourceUpdate(
+    db,
+    `UPDATE d1_people
+     SET firstname = COALESCE(NULLIF(?, ''), firstname),
+         lastname = COALESCE(NULLIF(?, ''), lastname),
+         middlename = COALESCE(NULLIF(?, ''), middlename),
+         display_name = COALESCE(NULLIF(?, ''), display_name),
+         party = COALESCE(NULLIF(?, ''), party),
+         email = COALESCE(NULLIF(?, ''), email),
+         phone = COALESCE(NULLIF(?, ''), phone),
+         website_url = COALESCE(NULLIF(?, ''), website_url),
+         photo_url = COALESCE(NULLIF(?, ''), photo_url),
+         is_free_stater = CASE
+           WHEN ? IS NULL THEN is_free_stater
+           ELSE ?
+         END,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE ${clauses.join(" OR ")}`,
+    params,
+  );
+}
+
 async function updatePersonAliases(db, identifiers = {}, data = {}) {
   if (!Object.prototype.hasOwnProperty.call(data, "nameAliases")) return 0;
 
   const clauses = [];
   const params = [data.nameAliases || ""];
 
+  if (identifiers.key) {
+    clauses.push("slug = ?");
+    params.push(identifiers.key);
+    clauses.push("CAST(id AS TEXT) = ?");
+    params.push(identifiers.key);
+  }
   if (identifiers.gcPersonid) {
     clauses.push("gc_personid = ?");
     params.push(identifiers.gcPersonid);
@@ -464,6 +739,12 @@ async function updatePersonSocialLinks(db, identifiers = {}, data = {}) {
   assignments.push("updated_at = CURRENT_TIMESTAMP");
 
   const clauses = [];
+  if (identifiers.key) {
+    clauses.push("slug = ?");
+    params.push(identifiers.key);
+    clauses.push("CAST(id AS TEXT) = ?");
+    params.push(identifiers.key);
+  }
   if (identifiers.gcPersonid) {
     clauses.push("gc_personid = ?");
     params.push(identifiers.gcPersonid);

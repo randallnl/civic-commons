@@ -22,18 +22,13 @@ import {
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
-import {
-  candidateFilerForRepresentative,
-  representativePersonIdForCandidate,
-} from "../../lib/candidateLegislatorLinks";
+import { representativePersonIdForCandidate } from "../../lib/candidateLegislatorLinks";
 import { candidateProfileForLegislator } from "../../lib/candidateLegislators";
 import {
   candidateName,
   candidateSlug,
   formatCandidateParty,
   getCandidate,
-  getCandidates,
-  isLegislativeCandidate,
 } from "../../lib/candidatesApi";
 import { isFreeStater, isTpActionAligned } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
@@ -57,9 +52,7 @@ import {
 const { slug } = Astro.params;
 
 let apiData = null;
-let candidateOptions = [];
 let legislatorOptions = [];
-let linkedCandidateFilerEntityNumber = "";
 let linkedRepresentativePersonId = "";
 const adminSession = await currentAdminSession(Astro.request);
 const message = Astro.url.searchParams.get("message") || "";
@@ -206,22 +199,6 @@ const recentlyViewedProfile = {
 };
 let organizations = [];
 let endorsements = [];
-if (adminSession && hasLegislatorProfile) {
-  try {
-    const [candidateData, explicitCandidateId] = await Promise.all([
-      getCandidates({ electionYear: 2026, limit: 700 }),
-      candidateFilerForRepresentative(representative.personid || representative.id),
-    ]);
-    candidateOptions = (candidateData.candidates || []).filter(isLegislativeCandidate);
-    linkedCandidateFilerEntityNumber =
-      explicitCandidateId ||
-      currentCandidateProfile?.candidate?.filerEntityNumber ||
-      "";
-  } catch (error) {
-    console.error(error?.message || "Unable to load candidate link options.");
-  }
-}
-
 if (adminSession && linkedCandidateForEndorsements) {
   try {
     const [repData, explicitPersonId] = await Promise.all([
@@ -581,16 +558,6 @@ function socialProfileUrl(value = "", platform = "") {
   return bases[platform] ? `${bases[platform]}${handle}` : cleaned;
 }
 
-function candidateOptionLabel(candidate = {}) {
-  return [
-    candidateName(candidate),
-    candidate.office,
-    candidate.county,
-    candidate.district ? `District ${candidate.district}` : "",
-    candidate.politicalParty,
-  ].filter(Boolean).join(" - ");
-}
-
 function legislatorOptionLabel(rep = {}) {
   return [
     repName(rep),
@@ -888,14 +855,14 @@ function uniqueTowns(towns = []) {
         </section>
       )}
 
-      {adminSession && hasLegislatorProfile && (
+      {adminSession && (
         <section class="panel admin-edit-panel">
           <div class="section-heading">
             <p class="eyebrow">Admin</p>
-            <h2>Edit Legislator Profile</h2>
+            <h2>Edit People Profile</h2>
             <p>
-              These edits update the source legislator rows in D1. Refresh after
-              saving to see the API-backed profile data.
+              Shared identity, contact, photo, and social fields live on the
+              unified people profile and sync back to connected source rows.
             </p>
           </div>
 
@@ -907,14 +874,11 @@ function uniqueTowns(towns = []) {
             hx-target="find .admin-inline-status"
             hx-swap="innerHTML"
           >
-            <input type="hidden" name="entityType" value="representative" />
-            <input
-              type="hidden"
-              name="entityKey"
-              value={representative.personid || representative.id || slug}
-            />
+            <input type="hidden" name="entityType" value="person" />
+            <input type="hidden" name="entityKey" value={slug} />
+            <input type="hidden" name="gcPersonid" value={representative?.personid || representative?.id || ""} />
+            <input type="hidden" name="filerEntityNumber" value={linkedCandidateForEndorsements?.filerEntityNumber || ""} />
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
-            <input type="hidden" name="clearFields" value="linkedCandidateFilerEntityNumber" />
             <input type="hidden" name="clearFields" value="substackUrl" />
             <input type="hidden" name="clearFields" value="instagramUrl" />
             <input type="hidden" name="clearFields" value="facebookUrl" />
@@ -922,12 +886,12 @@ function uniqueTowns(towns = []) {
 
             <label>
               Name
-              <input name="name" value={representative.name || person.full_name} />
+              <input name="name" value={person.full_name} />
             </label>
 
             <label>
               Name Aliases
-              <textarea name="nameAliases" rows="3" placeholder="Sly, Sly Karasinski">{representative.nameAliases || representative.name_aliases || ""}</textarea>
+              <textarea name="nameAliases" rows="3" placeholder="Sly, Sly Karasinski">{representative?.nameAliases || representative?.name_aliases || linkedCandidateForEndorsements?.nameAliases || linkedCandidateForEndorsements?.name_aliases || ""}</textarea>
               <small class="field-help">
                 Add alternate names separated by commas or new lines. These are
                 used for search, tagging, and mention matching.
@@ -937,102 +901,46 @@ function uniqueTowns(towns = []) {
             <div class="form-grid">
               <label>
                 First Name
-                <input name="firstname" value={representative.firstname || ""} />
+                <input name="firstname" value={representative?.firstname || linkedCandidateForEndorsements?.candidateFirstName || profileCandidate?.candidateFirstName || ""} />
               </label>
               <label>
                 Last Name
-                <input name="lastname" value={representative.lastname || ""} />
+                <input name="lastname" value={representative?.lastname || linkedCandidateForEndorsements?.candidateLastName || profileCandidate?.candidateLastName || ""} />
               </label>
             </div>
 
             <div class="form-grid">
               <label>
                 Middle Name
-                <input name="middlename" value={representative.middlename || ""} />
+                <input name="middlename" value={representative?.middlename || ""} />
               </label>
               <label>
                 Party
-                <input name="party" value={representative.party || ""} />
+                <input name="party" value={person.party || ""} />
               </label>
             </div>
-
-            <div class="form-grid">
-              <label>
-                Chamber
-                <select name="chamber">
-                  <option value="">No override</option>
-                  <option value="House" selected={representative.chamber === "House"}>House</option>
-                  <option value="Senate" selected={representative.chamber === "Senate"}>Senate</option>
-                </select>
-              </label>
-              <label>
-                Free State Aligned
-                <select name="is_free_stater">
-                  <option value="">No override</option>
-                  <option value="true" selected={representative.is_free_stater === true}>Yes</option>
-                  <option value="false" selected={representative.is_free_stater === false}>No</option>
-                </select>
-              </label>
-            </div>
-
-            <label>
-              Linked Candidate
-              <input
-                name="linkedCandidateFilerEntityNumber"
-                list="candidate-link-options"
-                value={linkedCandidateFilerEntityNumber}
-                placeholder="Start typing a candidate name, then select their filer number"
-              />
-              <small class="field-help">
-                Saves an explicit legislator-to-candidate link. Use the filer
-                entity number shown by the autocomplete option.
-              </small>
-            </label>
-            <datalist id="candidate-link-options">
-              {candidateOptions.map((candidate) => (
-                <option
-                  value={candidate.filerEntityNumber}
-                  label={candidateOptionLabel(candidate)}
-                />
-              ))}
-            </datalist>
-
-            <div class="form-grid">
-              <label>
-                District Label
-                <input name="district" value={representative.district || ""} />
-              </label>
-              <label>
-                Raw District
-                <input name="raw_district" value={representative.raw_district || ""} />
-              </label>
-            </div>
-
-            <label>
-              Location Text
-              <input name="location_text" value={representative.location_text || ""} />
-            </label>
-
-            <label>
-              Towns Represented
-              <textarea name="towns_represented" rows="3">{parseTownsServed(representative.towns_represented).join(", ")}</textarea>
-            </label>
 
             <div class="form-grid">
               <label>
                 Email
-                <input name="email" type="email" value={representative.email || ""} />
+                <input name="email" type="email" value={person.email || ""} />
               </label>
               <label>
                 Phone
-                <input name="phone" value={representative.phone || ""} />
+                <input name="phone" value={person.phone || ""} />
               </label>
             </div>
 
-            <label>
-              Photo URL
-              <input name="photo" type="url" value={representative.photo || ""} />
-            </label>
+            <div class="form-grid">
+              <label>
+                Website
+                <input name="websiteUrl" type="url" value={person.website_url || ""} />
+              </label>
+              <label>
+                Photo URL
+                <input name="photoUrl" type="url" value={person.photo_url || ""} />
+              </label>
+            </div>
 
             <div class="form-grid">
               <label>
@@ -1055,19 +963,30 @@ function uniqueTowns(towns = []) {
                 <input name="tiktokUrl" value={person.tiktok_url || ""} placeholder="https://tiktok.com/@handle or @handle" />
               </label>
             </div>
+
+            <label>
+              Free State Aligned
+              <select name="is_free_stater">
+                <option value="">No override</option>
+                <option value="true" selected={isFreeStater(representative) || isFreeStater(linkedCandidateForEndorsements)}>Yes</option>
+                <option value="false" selected={representative?.is_free_stater === false || linkedCandidateForEndorsements?.is_free_stater === false}>No</option>
+              </select>
+            </label>
             <input
               type="hidden"
               name="reviewNote"
-              value="Reviewed legislator profile for missing photo, website, or email; no update found."
+              value="Reviewed people profile for missing photo, website, or email; no update found."
             />
 
-            <label>
-              Notes / Bio
-              <textarea name="notes" rows="5">{representative.notes || ""}</textarea>
-            </label>
+            {hasLegislatorProfile && (
+              <label>
+                Notes / Bio
+                <textarea name="notes" rows="5">{representative.notes || ""}</textarea>
+              </label>
+            )}
 
             <div class="admin-form-actions">
-              <button type="submit">Save Legislator Edits</button>
+              <button type="submit">Save People Profile</button>
               <button
                 class="secondary-button"
                 type="submit"
@@ -1086,24 +1005,24 @@ function uniqueTowns(towns = []) {
             method="post"
             enctype="multipart/form-data"
           >
-            <input type="hidden" name="entityType" value="representative" />
+            <input type="hidden" name="entityType" value={linkedCandidateForEndorsements ? "candidate" : "representative"} />
             <input
               type="hidden"
               name="entityKey"
-              value={representative.personid || representative.id || slug}
+              value={linkedCandidateForEndorsements?.filerEntityNumber || representative?.personid || representative?.id || slug}
             />
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
 
             <div class="section-heading compact-heading">
               <p class="eyebrow">Photo Upload</p>
-              <h2>Upload and update legislator photo</h2>
+              <h2>Upload and update profile photo</h2>
             </div>
 
             <label>
               R2 key
               <input
                 name="key"
-                value={`legislators/${representative.employeeno || representative.personid || slug}-${slug}.jpg`}
+                value={`${linkedCandidateForEndorsements ? "candidates" : "legislators"}/${linkedCandidateForEndorsements?.filerEntityNumber || representative?.employeeno || representative?.personid || slug}-${slug}.jpg`}
               />
             </label>
 
@@ -1112,9 +1031,10 @@ function uniqueTowns(towns = []) {
               <input name="file" type="file" accept="image/*" required />
             </label>
 
-            <button type="submit">Upload Legislator Photo</button>
+            <button type="submit">Upload Profile Photo</button>
           </form>
 
+          {hasLegislatorProfile && (
           <form class="admin-edit-form admin-remove-form" action="/api/admin/remove" method="post">
             <input type="hidden" name="entityType" value="representative" />
             <input
@@ -1137,6 +1057,7 @@ function uniqueTowns(towns = []) {
 
             <button class="danger-button" type="submit">Remove Legislator</button>
           </form>
+          )}
         </section>
       )}
 
@@ -1146,8 +1067,9 @@ function uniqueTowns(towns = []) {
             <p class="eyebrow">Admin</p>
             <h2>Edit Candidate Role</h2>
             <p>
-              These edits update the source candidate row in D1 and the unified
-              people profile.
+              These edits update the candidate role details in the source D1
+              candidate row. Identity, contact, photo, and social fields are
+              edited in the people profile form above.
             </p>
           </div>
 
@@ -1167,50 +1089,6 @@ function uniqueTowns(towns = []) {
             />
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
             <input type="hidden" name="clearFields" value="linkedRepresentativePersonId" />
-            <input type="hidden" name="clearFields" value="substackUrl" />
-            <input type="hidden" name="clearFields" value="instagramUrl" />
-            <input type="hidden" name="clearFields" value="facebookUrl" />
-            <input type="hidden" name="clearFields" value="tiktokUrl" />
-
-            <label>
-              Name
-              <input name="name" value={linkedCandidateForEndorsements.name || candidateName(linkedCandidateForEndorsements)} />
-            </label>
-
-            <label>
-              Name Aliases
-              <textarea name="nameAliases" rows="3" placeholder="Sly, Sly Karasinski">{linkedCandidateForEndorsements.nameAliases || linkedCandidateForEndorsements.name_aliases || ""}</textarea>
-              <small class="field-help">
-                Add alternate names separated by commas or new lines. These are
-                used for search, tagging, and mention matching.
-              </small>
-            </label>
-
-            <div class="form-grid">
-              <label>
-                First Name
-                <input name="candidateFirstName" value={linkedCandidateForEndorsements.candidateFirstName || ""} />
-              </label>
-              <label>
-                Last Name
-                <input name="candidateLastName" value={linkedCandidateForEndorsements.candidateLastName || ""} />
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label>
-                Party
-                <input name="politicalParty" value={linkedCandidateForEndorsements.politicalParty || ""} />
-              </label>
-              <label>
-                Free State Aligned
-                <select name="is_free_stater">
-                  <option value="">No override</option>
-                  <option value="true" selected={linkedCandidateForEndorsements.is_free_stater === true}>Yes</option>
-                  <option value="false" selected={linkedCandidateForEndorsements.is_free_stater === false}>No</option>
-                </select>
-              </label>
-            </div>
 
             <label>
               Linked Legislator
@@ -1256,48 +1134,10 @@ function uniqueTowns(towns = []) {
               </label>
             </div>
 
-            <div class="form-grid">
-              <label>
-                Email
-                <input name="candidateEmail" type="email" value={linkedCandidateForEndorsements.candidateEmail || ""} />
-              </label>
-              <label>
-                Website
-                <input name="candidateWebsite" type="url" value={linkedCandidateForEndorsements.candidateWebsite || ""} />
-              </label>
-            </div>
-
-            <label>
-              Photo URL
-              <input name="photoUrl" type="url" value={linkedCandidateForEndorsements.photoUrl || linkedCandidateForEndorsements.legislatorPhotoUrl || ""} />
-            </label>
-
-            <div class="form-grid">
-              <label>
-                Substack
-                <input name="substackUrl" value={socialField(linkedCandidateForEndorsements, person, "substack")} placeholder="https://example.substack.com or handle" />
-              </label>
-              <label>
-                Instagram
-                <input name="instagramUrl" value={socialField(linkedCandidateForEndorsements, person, "instagram")} placeholder="https://instagram.com/name or @handle" />
-              </label>
-            </div>
-
-            <div class="form-grid">
-              <label>
-                Facebook
-                <input name="facebookUrl" value={socialField(linkedCandidateForEndorsements, person, "facebook")} placeholder="https://facebook.com/name" />
-              </label>
-              <label>
-                TikTok
-                <input name="tiktokUrl" value={socialField(linkedCandidateForEndorsements, person, "tiktok")} placeholder="https://tiktok.com/@handle or @handle" />
-              </label>
-            </div>
-
             <input
               type="hidden"
               name="reviewNote"
-              value="Reviewed candidate profile for missing photo, website, or email; no update found."
+              value="Reviewed candidate role details; no update found."
             />
 
             <div class="form-grid">
@@ -1323,7 +1163,7 @@ function uniqueTowns(towns = []) {
             </div>
 
             <div class="admin-form-actions">
-              <button type="submit">Save Candidate Edits</button>
+              <button type="submit">Save Candidate Role</button>
               <button
                 class="secondary-button"
                 type="submit"
@@ -1334,41 +1174,6 @@ function uniqueTowns(towns = []) {
               </button>
               <span class="admin-inline-status" aria-live="polite"></span>
             </div>
-          </form>
-
-          <form
-            class="admin-edit-form admin-upload-form"
-            action="/api/admin/upload"
-            method="post"
-            enctype="multipart/form-data"
-          >
-            <input type="hidden" name="entityType" value="candidate" />
-            <input
-              type="hidden"
-              name="entityKey"
-              value={linkedCandidateForEndorsements.filerEntityNumber || candidateSlug(linkedCandidateForEndorsements)}
-            />
-            <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
-
-            <div class="section-heading compact-heading">
-              <p class="eyebrow">Photo Upload</p>
-              <h2>Upload and update candidate photo</h2>
-            </div>
-
-            <label>
-              R2 key
-              <input
-                name="key"
-                value={`candidates/${linkedCandidateForEndorsements.filerEntityNumber || candidateSlug(linkedCandidateForEndorsements)}-${slug}.jpg`}
-              />
-            </label>
-
-            <label>
-              Image file
-              <input name="file" type="file" accept="image/*" required />
-            </label>
-
-            <button type="submit">Upload Candidate Photo</button>
           </form>
 
           <form class="admin-edit-form admin-remove-form" action="/api/admin/remove" method="post">
