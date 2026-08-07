@@ -4,7 +4,6 @@ export const prerender = false;
 import ArticleList from "../../components/ArticleList.astro";
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
-import FilterBar from "../../components/FilterBar.astro";
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import profileIcon from "../../assets/profile icon.png";
@@ -106,9 +105,6 @@ const apiTerm = representative
   : candidateToTerm(profileCandidate);
 const officeTerms = [{ ...apiTerm, status: "current" }];
 const currentOfficeTerms = officeTerms;
-const candidacies = {
-  results: uniqueCandidateRoles(profileCandidate?.candidateRoles?.length ? profileCandidate.candidateRoles : profileCandidate ? [profileCandidate] : []),
-};
 
 let trackedBills = new Map();
 let billSummaries = new Map();
@@ -170,7 +166,6 @@ if (representative?.towns_represented || representative?.location_text) {
     });
   }
 }
-const sourceLinks = sourceUrlsToLinks(representative?.sourceUrls);
 const portraitUrl = profilePhotoUrl(person.photo_url);
 const currentCandidateProfile = representative
   ? await candidateProfileForLegislator(representative)
@@ -379,30 +374,6 @@ function normalizeVote(vote = {}, bills = new Map(), summaries = new Map()) {
   };
 }
 
-function sourceUrlsToLinks(sourceUrls = {}) {
-  const links = [];
-
-  if (sourceUrls.generalCourt) {
-    links.push({
-      title: "General Court Profile",
-      link_type: "general_court",
-      url: sourceUrls.generalCourt,
-      publisher: "New Hampshire General Court",
-    });
-  }
-
-  if (sourceUrls.photo) {
-    links.push({
-      title: "Photo Source",
-      link_type: "photo",
-      url: sourceUrls.photo,
-      publisher: "NH Deserves Better",
-    });
-  }
-
-  return links;
-}
-
 function externalProfileUrl(entity = {}, names = []) {
   return names
     .map((name) => entity[name])
@@ -566,25 +537,6 @@ function legislatorOptionLabel(rep = {}) {
     rep.district || rep.raw_district,
     rep.party,
   ].filter(Boolean).join(" - ");
-}
-
-function uniqueCandidateRoles(roles = []) {
-  const seen = new Set();
-
-  return roles.filter((role) => {
-    const key = [
-      role.filerEntityNumber,
-      role.office,
-      role.county,
-      role.district,
-      role.electionYear,
-    ]
-      .filter(Boolean)
-      .join("|");
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
 }
 
 function candidateOfficeLine(candidate = {}) {
@@ -1211,45 +1163,6 @@ function uniqueTowns(towns = []) {
         <div class="stack">
           {hasLegislatorProfile && (
           <section class="panel">
-            <div class="section-heading">
-              <p class="eyebrow">Service</p>
-              <h2>Current and Past Offices</h2>
-            </div>
-
-            {officeTerms.length ? (
-              <div class="timeline-list">
-                {officeTerms.map((term) => (
-                  <article class="timeline-item">
-                    <div>
-                      <h3>{term.title}</h3>
-                      <p>
-                        {formatDistrictLabel(term)}
-                      </p>
-                      {term.status === "current" && townServiceAreas.length ? (
-                        <div class="office-town-list">
-                          <span>Towns served</span>
-                          <div>
-                            {townServiceAreas.flatMap((area) =>
-                              area.towns.map((town) => <em>{town}</em>)
-                            )}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                    <span class:list={["status-pill", term.status]}>
-                      {term.status}
-                    </span>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p class="empty">No office history is listed yet.</p>
-            )}
-          </section>
-          )}
-
-          {hasLegislatorProfile && (
-          <section class="panel">
             <div class="section-heading split-heading">
               <div>
                 <p class="eyebrow">Vote History</p>
@@ -1390,17 +1303,53 @@ function uniqueTowns(towns = []) {
         </div>
 
         <aside class="stack">
-          <section
-            class="panel compact-panel endorsements-panel"
-            x-data="nhdbFuzzyFilter({ itemSelector: '.endorsement-card[data-fuzzy-item]', syncUrl: false })"
-          >
+          {hasLegislatorProfile && (
+          <section class="panel compact-panel">
+            <div class="section-heading">
+              <p class="eyebrow">Service</p>
+              <h2>Current and Past Offices</h2>
+            </div>
+
+            {officeTerms.length ? (
+              <div class="timeline-list">
+                {officeTerms.map((term) => (
+                  <article class="timeline-item">
+                    <div>
+                      <h3>{term.title}</h3>
+                      <p>
+                        {formatDistrictLabel(term)}
+                      </p>
+                      {term.status === "current" && townServiceAreas.length ? (
+                        <div class="office-town-list">
+                          <span>Towns served</span>
+                          <div>
+                            {townServiceAreas.flatMap((area) =>
+                              area.towns.map((town) => <em>{town}</em>)
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                    <span class:list={["status-pill", term.status]}>
+                      {term.status}
+                    </span>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No office history is listed yet.</p>
+            )}
+          </section>
+          )}
+
+          <section class="panel compact-panel endorsements-panel">
             <div class="section-heading">
               <div>
                 <p class="eyebrow">Endorsements</p>
                 <h2>
                   Organizational Endorsements
                   {endorsements.length > 0 && (
-                    <span class="inline-count">(<span data-fuzzy-count>{endorsements.length}</span>)</span>
+                    <span class="inline-count">({endorsements.length})</span>
                   )}
                 </h2>
               </div>
@@ -1416,58 +1365,10 @@ function uniqueTowns(towns = []) {
 
             {endorsements.length ? (
               <>
-                <details class="endorsement-filter-disclosure">
-                  <summary>
-                    <span>Filter options</span>
-                    <small>Search, position, and sort</small>
-                  </summary>
-                  <FilterBar submitLabel="Apply" columns="dense" live={true}>
-                    <label>
-                      Search
-                      <input name="q" type="search" placeholder="Organization or note" data-fuzzy-search />
-                    </label>
-                    <label>
-                      Position
-                      <select name="position" data-fuzzy-filter-field data-fuzzy-field="position">
-                        <option value="">All positions</option>
-                        <option value="Endorsed">Endorsed</option>
-                        <option value="Recommended">Recommended</option>
-                        <option value="Supported">Supported</option>
-                        <option value="Opposed">Opposed</option>
-                      </select>
-                    </label>
-                    <label>
-                      Sort
-                      <select name="sort" data-fuzzy-sort>
-                        <option value="name">Organization A-Z</option>
-                        <option value="updated:desc">Newest first</option>
-                        <option value="position">Position</option>
-                      </select>
-                    </label>
-                  </FilterBar>
-                </details>
-
-                <div class="filter-chips" data-fuzzy-chips hidden></div>
-
                 <div class="endorsement-list">
                 {endorsements.map((endorsement) => (
                   <article
                     class="endorsement-card"
-                    data-fuzzy-item
-                    data-fuzzy-name={endorsement.organization.name}
-                    data-fuzzy-position={endorsement.position || ""}
-                    data-fuzzy-sort-name={endorsement.organization.name}
-                    data-fuzzy-sort-position={endorsement.position || ""}
-                    data-fuzzy-sort-updated={Date.parse(endorsement.date || endorsement.createdAt || "") || 0}
-                    data-fuzzy-text={[
-                      endorsement.organization.name,
-                      endorsement.position,
-                      endorsement.statement,
-                      endorsement.office,
-                      endorsement.district,
-                      endorsement.electionYear,
-                      endorsement.date,
-                    ].filter(Boolean).join(" ")}
                   >
                     <div class="endorsement-card-main">
                       <a class="endorsement-media" href={organizationPath(endorsement.organization)}>
@@ -1504,11 +1405,6 @@ function uniqueTowns(towns = []) {
                   </article>
                 ))}
                 </div>
-
-                <div class="status-message empty-state" data-fuzzy-empty hidden>
-                  <strong>No endorsements match those filters.</strong>
-                  <span>Try searching by organization name, position, or note.</span>
-                </div>
               </>
             ) : (
               <p class="empty">
@@ -1541,51 +1437,6 @@ function uniqueTowns(towns = []) {
             )}
           </section>
 
-          <section class="panel compact-panel">
-            <div class="section-heading">
-              <p class="eyebrow">Elections</p>
-              <h2>Candidacies</h2>
-            </div>
-
-            {candidacies.results.length ? (
-              <div class="side-list">
-                {candidacies.results.map((race) => (
-                  <article>
-                    <h3>{race.position_title}</h3>
-                    <p>{race.election_name}</p>
-                    <span>
-                      {race.election_date && `${formatDate(race.election_date)} - `}
-                      {race.status}
-                    </span>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p class="empty">No candidacy records are listed yet.</p>
-            )}
-          </section>
-
-          <section class="panel compact-panel">
-            <div class="section-heading">
-              <p class="eyebrow">Sources</p>
-              <h2>Links</h2>
-            </div>
-
-            {sourceLinks.length ? (
-              <div class="side-list">
-                {sourceLinks.map((link) => (
-                  <article>
-                    <h3>
-                      <a href={link.url}>{link.title || link.link_type}</a>
-                    </h3>
-                    {link.publisher && <p>{link.publisher}</p>}
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p class="empty">No source links are listed yet.</p>
-            )}
-          </section>
         </aside>
       </section>
     </main>
@@ -2371,62 +2222,6 @@ function uniqueTowns(towns = []) {
     display: flex;
     gap: 12px;
     justify-content: space-between;
-  }
-
-  .endorsement-filter-disclosure {
-    margin-bottom: 12px;
-  }
-
-  .endorsement-filter-disclosure summary {
-    align-items: center;
-    background: #f8fafc;
-    border: 1px solid #d1d5db;
-    border-radius: 999px;
-    color: #1f2933;
-    cursor: pointer;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 10px;
-    justify-content: space-between;
-    list-style: none;
-    padding: 10px 13px;
-  }
-
-  .endorsement-filter-disclosure summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .endorsement-filter-disclosure summary::after {
-    content: "+";
-    font-size: 1.1rem;
-    font-weight: 950;
-    line-height: 1;
-  }
-
-  .endorsement-filter-disclosure[open] summary {
-    border-radius: 12px 12px 0 0;
-  }
-
-  .endorsement-filter-disclosure[open] summary::after {
-    content: "-";
-  }
-
-  .endorsement-filter-disclosure summary span {
-    font-size: 0.84rem;
-    font-weight: 950;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .endorsement-filter-disclosure summary small {
-    color: #6b7280;
-    font-size: 0.78rem;
-    font-weight: 800;
-  }
-
-  .endorsement-filter-disclosure :global(.nhdb-filter-bar) {
-    border-radius: 0 0 12px 12px;
-    border-top: 0;
   }
 
   .endorsement-list {
