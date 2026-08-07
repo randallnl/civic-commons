@@ -2911,7 +2911,42 @@ async function getCandidatesForAddressDistricts(
     .bind(electionYear, ...binds)
     .all();
 
-  return uniqueFormattedCandidates((result.results || []).map(formatCandidate));
+  const candidates = uniqueFormattedCandidates(
+    (result.results || []).map(formatCandidate)
+  );
+
+  return candidates.filter((candidate) =>
+    candidateServesParsedAddress(candidate, parsed)
+  );
+}
+
+function candidateServesParsedAddress(candidate = {}, parsed = {}) {
+  const addressTown = normalizeCommunityText(parsed.place?.name || "");
+  if (!addressTown) return true;
+
+  const representedCommunities = splitDistrictCommunities(
+    candidate.towns_represented ||
+      candidate.townsRepresented ||
+      candidate.communities_represented ||
+      candidate.communitiesRepresented
+  );
+
+  if (!representedCommunities.length) return false;
+
+  return representedCommunities.some((community) =>
+    communityMatchesParsedAddress(community, addressTown, parsed.ward)
+  );
+}
+
+function communityMatchesParsedAddress(community, addressTown, ward) {
+  const communityTown = normalizeCommunityText(getCountyTownName(community));
+  if (!communityTown || communityTown !== addressTown) return false;
+
+  const addressWard = ward?.number ? Number(ward.number) : null;
+  if (!addressWard) return true;
+
+  const communityWards = getCommunityWardNumbers(community);
+  return !communityWards.length || communityWards.includes(addressWard);
 }
 
 function uniqueFormattedCandidates(candidates = []) {
@@ -3589,6 +3624,12 @@ async function handleAddressLookup(request, env) {
 
     const civicData = await getCivicData(address, env.CIVIC_API_KEY);
     const parsed = parseCivicDivisions(civicData.divisions || {});
+    if (!parsed.place?.name && civicData.normalizedInput?.city) {
+      parsed.place = {
+        ocdId: "",
+        name: civicData.normalizedInput.city,
+      };
+    }
 
     const matchedDistricts = await findAddressDistricts(
       env,
