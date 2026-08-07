@@ -79,11 +79,6 @@ const quickChecklist = [
             </p>
           </section>
 
-          <section class="panel screenshot-panel">
-            <img src={screenshots[0].src} alt={screenshots[0].alt} loading="eager" />
-            <p>{screenshots[0].caption}</p>
-          </section>
-
           <section class="panel">
             <div class="section-heading">
               <p class="eyebrow">Standard Workflow</p>
@@ -98,6 +93,10 @@ const quickChecklist = [
                   page, scroll to the admin tools panel and select
                   <strong>Profiles</strong> to open the profile cleanup queue.
                 </p>
+                <figure class="workflow-screenshot">
+                  <img src={screenshots[0].src} alt={screenshots[0].alt} loading="eager" />
+                  <figcaption>{screenshots[0].caption}</figcaption>
+                </figure>
               </li>
               <li>
                 <strong>Choose a cleanup filter.</strong>
@@ -115,6 +114,10 @@ const quickChecklist = [
                   opens the candidate or legislator profile where updates should
                   be made.
                 </p>
+                <figure class="workflow-screenshot">
+                  <img src={screenshots[1].src} alt={screenshots[1].alt} loading="lazy" />
+                  <figcaption>{screenshots[1].caption}</figcaption>
+                </figure>
               </li>
               <li>
                 <strong>Search the person's name plus NH.</strong>
@@ -149,6 +152,10 @@ const quickChecklist = [
                   links, or a confident photo. Save after each individual update
                   so work is not lost.
                 </p>
+                <figure class="workflow-screenshot">
+                  <img src={screenshots[2].src} alt={screenshots[2].alt} loading="lazy" />
+                  <figcaption>{screenshots[2].caption}</figcaption>
+                </figure>
               </li>
               <li>
                 <strong>Return to the queue and confirm review.</strong>
@@ -160,11 +167,6 @@ const quickChecklist = [
                 </p>
               </li>
             </ol>
-          </section>
-
-          <section class="panel screenshot-panel">
-            <img src={screenshots[1].src} alt={screenshots[1].alt} loading="lazy" />
-            <p>{screenshots[1].caption}</p>
           </section>
 
           <section class="panel">
@@ -193,11 +195,6 @@ const quickChecklist = [
                 </ul>
               </article>
             </div>
-          </section>
-
-          <section class="panel screenshot-panel">
-            <img src={screenshots[2].src} alt={screenshots[2].alt} loading="lazy" />
-            <p>{screenshots[2].caption}</p>
           </section>
 
           <section class="panel">
@@ -396,24 +393,27 @@ const quickChecklist = [
     padding: 2px 6px;
   }
 
-  .screenshot-panel {
-    padding: 0;
+  .workflow-screenshot {
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    margin: 8px 0 0;
     overflow: hidden;
   }
 
-  .screenshot-panel img {
+  .workflow-screenshot img {
     background: #eaf4ff;
     display: block;
     width: 100%;
   }
 
-  .screenshot-panel p {
+  .workflow-screenshot figcaption {
     border-top: 1px solid var(--nhdb-line);
     color: #334155;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 850;
     margin: 0;
-    padding: 16px 20px;
+    padding: 12px 14px;
   }
 
   .rule-grid {

@@ -1900,14 +1900,18 @@ function uniqueTowns(towns = []) {
     line-height: 1.3;
   }
 
-  .profile-detail-wide {
+  .hero-details .detail-list .profile-detail-wide {
+    display: grid;
     grid-column: 1 / -1;
+    grid-template-columns: 1fr;
   }
 
-  .hero-town-list {
+  .hero-details .detail-list .profile-detail-wide .hero-town-list {
     display: grid;
     gap: 7px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+    width: 100%;
   }
 
   .hero-town-list span {
