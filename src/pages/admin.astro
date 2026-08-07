@@ -108,7 +108,7 @@ const userCanUploadAssets = session ? canUploadAssets(session) : false;
 const userCanUseSourceDataTools = session ? canUseSourceDataTools(session) : false;
 const userCanManageReviewers = session ? canManageReviewers(session) : false;
 const userCanUseDataArea = userCanEditOrganizations || userCanUploadAssets || userCanUseSourceDataTools;
-const showWorkflowPanel = ["overview", "moderation", "reviewers"].includes(adminArea);
+const showImportantDocsPanel = adminArea === "overview";
 const showProfilePanels = adminArea === "profiles";
 const showModerationPanels = adminArea === "moderation";
 const showReviewerPanels = adminArea === "reviewers";
@@ -318,12 +318,27 @@ function workflowClass(value = "") {
     <main class="page">
       <a class="back" href="/">Back home</a>
 
-      <section class="hero">
-        <p class="eyebrow">Admin</p>
-        <h1>Update site data and assets.</h1>
-        <p class="lede">
-          Sign in with a magic link to run D1 updates and upload images to R2.
-        </p>
+      <section class:list={["hero", session && "admin-hero"]}>
+        <div>
+          <p class="eyebrow">Admin</p>
+          <h1>Update site data and assets.</h1>
+          <p class="lede">
+            Sign in with a magic link to run D1 updates and upload images to R2.
+          </p>
+        </div>
+        {session && (
+          <aside class="session-card" aria-label="Current admin session">
+            <div class="panel-heading">
+              <p class="eyebrow">Session</p>
+              <h2>Signed in</h2>
+            </div>
+            <p class="session-email">{session.email}</p>
+            <p class="role-chip">Role: {reviewerRoleLabel(session.role || "volunteer")}</p>
+            <form action="/api/admin/logout" method="post">
+              <button type="submit" class="secondary">Log out</button>
+            </form>
+          </aside>
+        )}
       </section>
 
       {error && <p class="status-message error">{error}</p>}
@@ -349,18 +364,6 @@ function workflowClass(value = "") {
         </form>
       ) : (
         <div class="admin-grid">
-          <section class="panel">
-            <div class="panel-heading">
-              <p class="eyebrow">Session</p>
-              <h2>Signed in</h2>
-            </div>
-            <p class="session-email">{session.email}</p>
-            <p class="role-chip">Role: {reviewerRoleLabel(session.role || "volunteer")}</p>
-            <form action="/api/admin/logout" method="post">
-              <button type="submit" class="secondary">Log out</button>
-            </form>
-          </section>
-
           <section class="panel admin-toc">
             <div class="panel-heading">
               <p class="eyebrow">Admin Tools</p>
@@ -385,10 +388,6 @@ function workflowClass(value = "") {
                 <span>Profile cleanup</span>
                 <strong>{profileGaps.counts.total || 0}</strong>
               </a>
-              <a href="/admin/moderation#volunteer-workflow">
-                <span>Claimed queue</span>
-                <strong>{workflowStats.byStatus?.claimed || 0}</strong>
-              </a>
               {userCanManageReviewers && (
                 <a href="/admin/reviewers#reviewer-access">
                   <span>Reviewer applicants</span>
@@ -412,58 +411,38 @@ function workflowClass(value = "") {
             </nav>
           </section>
 
-          {showWorkflowPanel && (
-          <section id="volunteer-workflow" class="panel workflow-panel">
+          {showImportantDocsPanel && (
+          <section id="important-docs" class="panel docs-panel">
             <div class="panel-heading">
-              <p class="eyebrow">Volunteer Workflow</p>
-              <h2>Review queues</h2>
+              <p class="eyebrow">Important Docs</p>
+              <h2>Reference guides</h2>
               <p>
-                Volunteers can claim items, mark them ready, or flag them for
-                follow-up. Approvals should happen after the source, tags, and
-                public-facing text have been checked.
+                Keep the most useful admin and volunteer instructions close at
+                hand while reviewing profiles, submissions, and source data.
               </p>
             </div>
 
-            <div class="workflow-grid">
-              <div>
-                <span>Total pending</span>
-                <strong>{workflowStats.total || 0}</strong>
-              </div>
-              <div>
-                <span>Unassigned</span>
-                <strong>{workflowStats.byStatus?.unassigned || 0}</strong>
-              </div>
-              <div>
-                <span>Claimed</span>
-                <strong>{workflowStats.byStatus?.claimed || 0}</strong>
-              </div>
-              <div>
-                <span>Needs follow-up</span>
-                <strong>{workflowStats.byStatus?.needs_followup || 0}</strong>
-              </div>
-              <div>
-                <span>Ready</span>
-                <strong>{workflowStats.byStatus?.ready || 0}</strong>
-              </div>
-            </div>
-
-            <div class="workflow-guide">
-              <article>
-                <strong>1. Claim</strong>
-                <p>Claim one item so two people do not review the same submission at once.</p>
-              </article>
-              <article>
-                <strong>2. Verify</strong>
-                <p>Open the source, check names, links, photos, tags, and any local context.</p>
-              </article>
-              <article>
-                <strong>3. Note</strong>
-                <p>Leave a short note when something needs a source, correction, or second look.</p>
-              </article>
-              <article>
-                <strong>4. Finish</strong>
-                <p>Mark ready, approve, reject, or confirm reviewed depending on the queue.</p>
-              </article>
+            <div class="docs-grid">
+              <a href="/profile-cleanup-guide">
+                <span>Volunteer Resource</span>
+                <strong>Profile cleanup guide</strong>
+                <p>Find reliable photos, websites, and social links without guessing.</p>
+              </a>
+              <a href="/civic-guides">
+                <span>Civic Guides</span>
+                <strong>Guide library</strong>
+                <p>Browse public explainer pages and reference materials.</p>
+              </a>
+              <a href="/volunteer-reviewers">
+                <span>Access</span>
+                <strong>Volunteer reviewer form</strong>
+                <p>Send prospective reviewers here to request site access.</p>
+              </a>
+              <a href="/admin/profiles#profile-cleanup">
+                <span>Admin Queue</span>
+                <strong>Profile cleanup queue</strong>
+                <p>Jump straight to missing photo and website review work.</p>
+              </a>
             </div>
           </section>
           )}
@@ -814,9 +793,9 @@ function workflowClass(value = "") {
                       {profile.missing.photo && <span>Missing photo</span>}
                       {profile.missing.email && <span>Missing email</span>}
                       {profile.missing.website && <span>Missing website</span>}
-                      {profile.review?.reviewedAt && (
-                        <span class="review-chip">Reviewed {reviewDate(profile.review.reviewedAt)}</span>
-                      )}
+                      <span class:list={["review-chip", !profile.review?.reviewedAt && "review-chip-empty"]}>
+                        Last reviewed: {profile.review?.reviewedAt ? reviewDate(profile.review.reviewedAt) : "Never"}
+                      </span>
                     </div>
                     <div class="gap-actions">
                       <a href={profile.profilePath}>Open profile</a>
@@ -2072,6 +2051,20 @@ function workflowClass(value = "") {
     padding: 42px 0 28px;
   }
 
+  .admin-hero {
+    align-items: end;
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  }
+
+  .session-card {
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    padding: 20px;
+  }
+
   .eyebrow {
     color: #6b4f2a;
     font-size: 0.78rem;
@@ -2121,14 +2114,14 @@ function workflowClass(value = "") {
     grid-template-columns: minmax(260px, 0.36fr) minmax(0, 1fr);
   }
 
-  .admin-grid .panel:not(:first-child):not(.admin-toc) {
+  .admin-grid .panel:not(.admin-toc) {
     grid-column: 2;
   }
 
   .admin-toc {
     align-self: start;
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 1;
     position: sticky;
     top: 18px;
   }
@@ -2369,6 +2362,50 @@ function workflowClass(value = "") {
     font-weight: 950;
     margin: 8px 0 14px;
     padding: 7px 10px;
+  }
+
+  .docs-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .docs-grid a {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    color: #1f2933;
+    display: grid;
+    gap: 6px;
+    padding: 14px;
+    text-decoration: none;
+  }
+
+  .docs-grid a:hover {
+    background: #ffffff;
+    border-color: #93c5fd;
+  }
+
+  .docs-grid span {
+    color: #6b4f2a;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .docs-grid strong {
+    color: #1e3a8a;
+    font-size: 1rem;
+    line-height: 1.15;
+  }
+
+  .docs-grid p {
+    color: #64748b;
+    font-size: 0.84rem;
+    font-weight: 800;
+    line-height: 1.35;
+    margin: 0;
   }
 
   .workflow-grid {
@@ -2638,6 +2675,23 @@ function workflowClass(value = "") {
     white-space: nowrap;
   }
 
+  .profile-gap-list .profile-gap-avatar {
+    border: 0;
+    border-radius: 12px;
+    display: block;
+    line-height: 0;
+    padding: 0;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .profile-gap-list .profile-gap-avatar img {
+    height: 72px;
+    object-fit: cover;
+    object-position: center center;
+    width: 58px;
+  }
+
   .compact-button {
     min-height: 0;
     padding: 8px 10px;
@@ -2658,9 +2712,15 @@ function workflowClass(value = "") {
   }
 
   .missing-chips .review-chip {
-    background: #ecfdf5;
-    border-color: #10b981;
-    color: #065f46;
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    color: #075985;
+  }
+
+  .missing-chips .review-chip-empty {
+    background: #f8fafc;
+    border-color: #d1d5db;
+    color: #64748b;
   }
 
   .moderation-list {
@@ -2997,6 +3057,11 @@ function workflowClass(value = "") {
   }
 
   @media (max-width: 840px) {
+    .admin-hero {
+      align-items: start;
+      grid-template-columns: 1fr;
+    }
+
     .admin-grid {
       grid-template-columns: 1fr;
     }
@@ -3010,7 +3075,7 @@ function workflowClass(value = "") {
       grid-template-columns: 1fr;
     }
 
-    .admin-grid .panel:not(:first-child):not(.admin-toc) {
+    .admin-grid .panel:not(.admin-toc) {
       grid-column: auto;
     }
 
@@ -3022,6 +3087,7 @@ function workflowClass(value = "") {
 
     .form-grid.two,
     .form-grid.three,
+    .docs-grid,
     .organization-toolbar,
     .bill-tagging {
       grid-template-columns: 1fr;
