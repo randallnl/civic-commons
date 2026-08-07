@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Profile edit view screenshot</title>
+  <desc id="desc">A screenshot-style illustration of the admin edit view on a profile, with fields for website and social media accounts.</desc>
+  <rect width="1440" height="900" fill="#eaf4ff"/>
+  <rect x="82" y="66" width="1276" height="768" rx="28" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>
+  <rect x="132" y="116" width="270" height="338" rx="18" fill="#d8cfc0" stroke="#cbd5e1" stroke-width="2"/>
+  <circle cx="267" cy="244" r="70" fill="#94a3b8"/>
+  <rect x="190" y="326" width="154" height="58" rx="29" fill="#64748b"/>
+  <text x="442" y="154" fill="#b6390a" font-family="Arial, sans-serif" font-size="18" font-weight="900" letter-spacing="2">CANDIDATE PROFILE</text>
+  <text x="442" y="210" fill="#1f2933" font-family="Arial, sans-serif" font-size="54" font-weight="950">Alex Sample</text>
+  <rect x="442" y="236" width="132" height="36" rx="18" fill="#dbeafe"/>
+  <text x="463" y="260" fill="#1e3a8a" font-family="Arial, sans-serif" font-size="17" font-weight="900">Democratic</text>
+  <rect x="132" y="494" width="1176" height="84" rx="18" fill="#f8fafc" stroke="#d1d5db" stroke-width="2"/>
+  <text x="166" y="526" fill="#b6390a" font-family="Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="2">ADMIN</text>
+  <text x="166" y="558" fill="#1f2933" font-family="Arial, sans-serif" font-size="24" font-weight="900">Edit view is off by default</text>
+  <rect x="1110" y="514" width="164" height="44" rx="22" fill="#1f2933"/>
+  <text x="1136" y="542" fill="#fffaf1" font-family="Arial, sans-serif" font-size="17" font-weight="900">Show edit view</text>
+  <rect x="132" y="612" width="1176" height="172" rx="18" fill="#fff" stroke="#d1d5db" stroke-width="2"/>
+  <text x="166" y="654" fill="#1f2933" font-family="Arial, sans-serif" font-size="28" font-weight="950">Edit People Profile</text>
+  <g font-family="Arial, sans-serif" font-size="16" font-weight="900" fill="#374151">
+    <text x="166" y="700">Website</text>
+    <text x="536" y="700">Instagram</text>
+    <text x="906" y="700">Facebook</text>
+  </g>
+  <g fill="#f8fafc" stroke="#94a3b8" stroke-width="2">
+    <rect x="166" y="716" width="320" height="42" rx="10"/>
+    <rect x="536" y="716" width="320" height="42" rx="10"/>
+    <rect x="906" y="716" width="320" height="42" rx="10"/>
+  </g>
+  <g font-family="Arial, sans-serif" font-size="17" fill="#64748b">
+    <text x="184" y="743">https://alexsamplefornh.com</text>
+    <text x="554" y="743">@alexsamplefornh</text>
+    <text x="924" y="743">facebook.com/alexsamplefornh</text>
+  </g>
+  <rect x="166" y="806" width="194" height="46" rx="23" fill="#142c46"/>
+  <text x="198" y="836" fill="#fffaf1" font-family="Arial, sans-serif" font-size="18" font-weight="900">Save profile</text>
+  <rect x="392" y="806" width="236" height="46" rx="23" fill="#fff7ed" stroke="#fdba74" stroke-width="2"/>
+  <text x="420" y="836" fill="#9a3412" font-family="Arial, sans-serif" font-size="18" font-weight="900">Upload profile photo</text>
+</svg>

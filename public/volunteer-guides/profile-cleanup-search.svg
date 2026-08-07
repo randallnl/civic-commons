@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Search verification screenshot</title>
+  <desc id="desc">A screenshot-style illustration of searching a candidate name plus New Hampshire and checking web and image results.</desc>
+  <rect width="1440" height="900" fill="#f8fafc"/>
+  <rect x="88" y="70" width="1264" height="760" rx="26" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>
+  <rect x="136" y="118" width="1168" height="66" rx="33" fill="#fff" stroke="#94a3b8" stroke-width="3"/>
+  <text x="178" y="160" fill="#1f2933" font-family="Arial, sans-serif" font-size="27" font-weight="800">Alex Sample NH</text>
+  <circle cx="1252" cy="151" r="20" fill="#dc4d09"/>
+  <path d="M1243 151h18M1252 142v18" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  <g font-family="Arial, sans-serif" font-size="19" font-weight="800">
+    <text x="150" y="232" fill="#1d4ed8">All</text>
+    <text x="210" y="232" fill="#475569">Images</text>
+    <text x="302" y="232" fill="#475569">News</text>
+    <text x="380" y="232" fill="#475569">Social</text>
+  </g>
+  <line x1="150" y1="246" x2="180" y2="246" stroke="#1d4ed8" stroke-width="4" stroke-linecap="round"/>
+  <g>
+    <rect x="150" y="280" width="660" height="126" rx="16" fill="#f8fafc" stroke="#dbeafe"/>
+    <text x="178" y="318" fill="#1d4ed8" font-family="Arial, sans-serif" font-size="24" font-weight="900">Alex Sample for State Representative</text>
+    <text x="178" y="352" fill="#047857" font-family="Arial, sans-serif" font-size="18" font-weight="800">alexsamplefornh.com</text>
+    <text x="178" y="382" fill="#475569" font-family="Arial, sans-serif" font-size="18">Official campaign website with district, photo, and contact information.</text>
+  </g>
+  <g opacity="0.9">
+    <rect x="150" y="432" width="660" height="126" rx="16" fill="#f8fafc" stroke="#dbeafe"/>
+    <text x="178" y="470" fill="#1d4ed8" font-family="Arial, sans-serif" font-size="24" font-weight="900">Candidate filing profile - NH Secretary of State</text>
+    <text x="178" y="504" fill="#047857" font-family="Arial, sans-serif" font-size="18" font-weight="800">sos.nh.gov</text>
+    <text x="178" y="534" fill="#475569" font-family="Arial, sans-serif" font-size="18">Cross-check office, county, district, and spelling.</text>
+  </g>
+  <g opacity="0.9">
+    <rect x="150" y="584" width="660" height="126" rx="16" fill="#f8fafc" stroke="#dbeafe"/>
+    <text x="178" y="622" fill="#1d4ed8" font-family="Arial, sans-serif" font-size="24" font-weight="900">Alex Sample - Facebook</text>
+    <text x="178" y="656" fill="#047857" font-family="Arial, sans-serif" font-size="18" font-weight="800">facebook.com/alexsamplefornh</text>
+    <text x="178" y="686" fill="#475569" font-family="Arial, sans-serif" font-size="18">Only use public campaign or candidate pages that clearly match the person.</text>
+  </g>
+  <rect x="868" y="280" width="388" height="430" rx="18" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2"/>
+  <text x="900" y="328" fill="#1e3a8a" font-family="Arial, sans-serif" font-size="28" font-weight="900">Image results check</text>
+  <g>
+    <rect x="900" y="362" width="142" height="142" rx="14" fill="#dbeafe"/>
+    <circle cx="971" cy="422" r="38" fill="#94a3b8"/>
+    <rect x="929" y="464" width="84" height="30" rx="15" fill="#64748b"/>
+    <rect x="1074" y="362" width="142" height="142" rx="14" fill="#fde68a"/>
+    <circle cx="1145" cy="422" r="38" fill="#f59e0b"/>
+    <rect x="1103" y="464" width="84" height="30" rx="15" fill="#b45309"/>
+    <rect x="900" y="536" width="142" height="142" rx="14" fill="#fee2e2"/>
+    <circle cx="971" cy="596" r="38" fill="#fca5a5"/>
+    <rect x="929" y="638" width="84" height="30" rx="15" fill="#b91c1c"/>
+    <rect x="1074" y="536" width="142" height="142" rx="14" fill="#dcfce7"/>
+    <circle cx="1145" cy="596" r="38" fill="#22c55e"/>
+    <rect x="1103" y="638" width="84" height="30" rx="15" fill="#15803d"/>
+  </g>
+  <rect x="900" y="730" width="356" height="46" rx="23" fill="#142c46"/>
+  <text x="930" y="760" fill="#fffaf1" font-family="Arial, sans-serif" font-size="18" font-weight="900">Use only a confident match</text>
+</svg>

@@ -1,0 +1,472 @@
+---
+export const prerender = false;
+
+import TopNav from "../components/TopNav.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+
+const screenshots = [
+  {
+    src: "/volunteer-guides/profile-cleanup-queue.svg",
+    alt: "Screenshot-style view of the profile cleanup queue with filters and profile cards.",
+    caption: "Start in the profile cleanup queue and open one candidate or legislator profile at a time.",
+  },
+  {
+    src: "/volunteer-guides/profile-cleanup-search.svg",
+    alt: "Screenshot-style view of search results and image results for a candidate name plus NH.",
+    caption: "Search the person's name plus NH, check the first two result pages, and review image results.",
+  },
+  {
+    src: "/volunteer-guides/profile-cleanup-edit.svg",
+    alt: "Screenshot-style view of a profile edit form with website and social media fields.",
+    caption: "Use edit view to add only information you are confident belongs to the correct person.",
+  },
+];
+
+const quickChecklist = [
+  "Open one profile from the cleanup queue.",
+  "Search the person's name plus NH.",
+  "Check the first two pages of web results.",
+  "Check image results for a confident photo match.",
+  "Save a public photo only when you are confident it is the candidate or legislator.",
+  "Add the campaign or public website if it clearly belongs to that person.",
+  "Add public social media accounts that appear in the first two result pages.",
+  "Save the profile, or mark reviewed if no confident update is found.",
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/NH%20DB%20Logo.svg" />
+    <link rel="apple-touch-icon" href="/NH%20DB%20Logo.svg" />
+    <title>Profile Cleanup Work Instructions | NH Deserves Better</title>
+    <meta
+      name="description"
+      content="Volunteer work instructions for reviewing candidate and legislator profiles, finding reliable photos, websites, and public social links."
+    />
+  </head>
+
+  <body>
+    <TopNav />
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">Volunteer Resource</p>
+        <h1>Profile cleanup work instructions</h1>
+        <p class="lede">
+          This guide explains how volunteers should review candidate and
+          legislator profiles, find public photos and links, and update NH
+          Deserves Better without introducing bad data.
+        </p>
+      </section>
+
+      <section class="instruction-layout">
+        <article class="main-guide">
+          <section class="panel">
+            <div class="section-heading">
+              <p class="eyebrow">Goal</p>
+              <h2>Make profiles more useful without guessing.</h2>
+            </div>
+            <p>
+              Profile cleanup is practical civic maintenance. The job is to add
+              clear public information: a correct photo, campaign or public
+              website, and social media accounts that are easy to verify. If a
+              result is uncertain, leave it out and mark the profile reviewed.
+            </p>
+          </section>
+
+          <section class="panel screenshot-panel">
+            <img src={screenshots[0].src} alt={screenshots[0].alt} loading="eager" />
+            <p>{screenshots[0].caption}</p>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <p class="eyebrow">Standard Workflow</p>
+              <h2>Review one profile at a time.</h2>
+            </div>
+
+            <ol class="steps">
+              <li>
+                <strong>Open a profile from the cleanup queue.</strong>
+                <p>
+                  Start with profiles missing a photo or website. Keep the queue
+                  open in one tab and the person profile in another.
+                </p>
+              </li>
+              <li>
+                <strong>Search the person's name plus NH.</strong>
+                <p>
+                  Use a simple search like <code>Jane Sample NH</code>. If the
+                  name is common, add the office or town, such as
+                  <code>Jane Sample NH State Representative</code>.
+                </p>
+              </li>
+              <li>
+                <strong>Check the first two pages of results.</strong>
+                <p>
+                  Look for official campaign websites, Secretary of State filing
+                  pages, public candidate pages, news coverage, Ballotpedia,
+                  Citizens Count, public social media profiles, and organization
+                  pages that clearly identify the person.
+                </p>
+              </li>
+              <li>
+                <strong>Check image results.</strong>
+                <p>
+                  Use an image only if you are confident it is the same person.
+                  A good match usually appears on a campaign page, official
+                  profile, public social account, or reputable news source.
+                </p>
+              </li>
+              <li>
+                <strong>Update the profile.</strong>
+                <p>
+                  Turn on edit view, add the website and public social links,
+                  upload a confident photo, then save. Do not add uncertain or
+                  private information.
+                </p>
+              </li>
+              <li>
+                <strong>Mark reviewed when needed.</strong>
+                <p>
+                  If you checked the first two result pages and image results
+                  but did not find a confident update, use the reviewed button
+                  so the profile leaves the default cleanup queue for now.
+                </p>
+              </li>
+            </ol>
+          </section>
+
+          <section class="panel screenshot-panel">
+            <img src={screenshots[1].src} alt={screenshots[1].alt} loading="lazy" />
+            <p>{screenshots[1].caption}</p>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <p class="eyebrow">Confidence Rules</p>
+              <h2>Only add what you can stand behind.</h2>
+            </div>
+
+            <div class="rule-grid">
+              <article>
+                <h3>Good to add</h3>
+                <ul>
+                  <li>Official campaign website or public candidate page.</li>
+                  <li>Photo from a campaign, government, news, or public social profile.</li>
+                  <li>Public Facebook, Instagram, TikTok, or Substack account clearly tied to the person.</li>
+                  <li>Website or social account that matches name, office, town, district, or campaign branding.</li>
+                </ul>
+              </article>
+              <article>
+                <h3>Do not add</h3>
+                <ul>
+                  <li>Private personal accounts that are not being used publicly for civic or campaign activity.</li>
+                  <li>Photos where the person could reasonably be someone else.</li>
+                  <li>Old campaign pages for a different office unless they clearly identify the same current person.</li>
+                  <li>Information from anonymous posts, screenshots, or unverified copies.</li>
+                </ul>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel screenshot-panel">
+            <img src={screenshots[2].src} alt={screenshots[2].alt} loading="lazy" />
+            <p>{screenshots[2].caption}</p>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <p class="eyebrow">Photo Handling</p>
+              <h2>Save photos carefully.</h2>
+            </div>
+            <p>
+              When you find a confident public photo, save the image locally,
+              then upload it from the profile edit view. Prefer a clear headshot
+              or portrait. Avoid tiny thumbnails, group photos, heavily cropped
+              images, or images where the candidate is not clearly identifiable.
+            </p>
+            <p>
+              If the source page blocks saving, skip the photo unless there is
+              another public source. Never use a photo if you are relying on a
+              guess.
+            </p>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <p class="eyebrow">Before Saving</p>
+              <h2>Final check</h2>
+            </div>
+            <ul class="final-list">
+              <li>The name matches the candidate or legislator profile.</li>
+              <li>The office, district, town, or campaign branding supports the match.</li>
+              <li>The website or social account is public and relevant.</li>
+              <li>The photo is clearly the right person.</li>
+              <li>You did not add anything you would have to explain as a guess.</li>
+            </ul>
+          </section>
+        </article>
+
+        <aside class="sidebar">
+          <section class="panel checklist-panel">
+            <p class="eyebrow">Quick Checklist</p>
+            <h2>Profile cleanup</h2>
+            <ol>
+              {quickChecklist.map((item) => <li>{item}</li>)}
+            </ol>
+          </section>
+
+          <section class="panel">
+            <p class="eyebrow">Search Formula</p>
+            <h2>Start simple</h2>
+            <div class="search-examples">
+              <code>First Last NH</code>
+              <code>First Last NH candidate</code>
+              <code>First Last NH State Representative</code>
+              <code>First Last town NH</code>
+            </div>
+          </section>
+
+          <section class="panel">
+            <p class="eyebrow">When Unsure</p>
+            <h2>Leave it blank.</h2>
+            <p>
+              It is better to have a missing photo or link than an incorrect
+              one. Mark the profile reviewed and move on.
+            </p>
+          </section>
+
+          <section class="panel action-panel">
+            <p class="eyebrow">Volunteer</p>
+            <h2>Need access?</h2>
+            <p>Apply to help review profiles and submitted updates.</p>
+            <a href="/volunteer-reviewers">Volunteer to review</a>
+          </section>
+        </aside>
+      </section>
+    </main>
+    <SiteFooter />
+  </body>
+</html>
+
+<style>
+  .hero {
+    background: linear-gradient(135deg, #eff6ff, #ffffff 58%, #fff7ed);
+    border: 1px solid var(--nhdb-line);
+    border-radius: 14px;
+    padding: clamp(28px, 5vw, 58px);
+  }
+
+  .hero h1 {
+    color: var(--nhdb-ink);
+    font-size: clamp(2.2rem, 6vw, 5rem);
+    line-height: 0.95;
+    margin: 0;
+    max-width: 860px;
+  }
+
+  .lede {
+    color: var(--nhdb-muted);
+    font-size: 1.1rem;
+    line-height: 1.65;
+    max-width: 760px;
+  }
+
+  .instruction-layout {
+    align-items: start;
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    margin-top: 28px;
+  }
+
+  .main-guide,
+  .sidebar {
+    display: grid;
+    gap: 18px;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 86px;
+  }
+
+  .panel {
+    background: #ffffff;
+    border: 1px solid var(--nhdb-line);
+    border-radius: 12px;
+    padding: clamp(20px, 3vw, 30px);
+  }
+
+  .section-heading {
+    margin-bottom: 16px;
+  }
+
+  .section-heading h2,
+  .sidebar h2 {
+    color: var(--nhdb-ink);
+    line-height: 1.05;
+    margin: 0;
+  }
+
+  .section-heading h2 {
+    font-size: clamp(1.7rem, 3vw, 2.7rem);
+  }
+
+  .panel p,
+  .panel li {
+    color: #475569;
+    line-height: 1.65;
+  }
+
+  .steps {
+    counter-reset: cleanup-step;
+    display: grid;
+    gap: 14px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .steps li {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    counter-increment: cleanup-step;
+    display: grid;
+    gap: 8px;
+    padding: 18px;
+    position: relative;
+  }
+
+  .steps li::before {
+    background: #142c46;
+    border-radius: 999px;
+    color: #fffaf1;
+    content: counter(cleanup-step);
+    display: inline-grid;
+    font-weight: 950;
+    height: 34px;
+    place-items: center;
+    width: 34px;
+  }
+
+  .steps strong {
+    color: var(--nhdb-ink);
+    font-size: 1.1rem;
+  }
+
+  .steps p,
+  .panel p:last-child {
+    margin-bottom: 0;
+  }
+
+  code {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    color: #1e3a8a;
+    font-weight: 850;
+    padding: 2px 6px;
+  }
+
+  .screenshot-panel {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .screenshot-panel img {
+    background: #eaf4ff;
+    display: block;
+    width: 100%;
+  }
+
+  .screenshot-panel p {
+    border-top: 1px solid var(--nhdb-line);
+    color: #334155;
+    font-size: 0.95rem;
+    font-weight: 850;
+    margin: 0;
+    padding: 16px 20px;
+  }
+
+  .rule-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rule-grid article {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 18px;
+  }
+
+  .rule-grid h3 {
+    color: var(--nhdb-ink);
+    margin-top: 0;
+  }
+
+  .final-list {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+
+  .checklist-panel {
+    background: #142c46;
+  }
+
+  .checklist-panel h2,
+  .checklist-panel li {
+    color: #fffaf1;
+  }
+
+  .checklist-panel .eyebrow {
+    color: #f4b35f;
+  }
+
+  .checklist-panel ol {
+    display: grid;
+    gap: 10px;
+    padding-left: 20px;
+  }
+
+  .search-examples {
+    display: grid;
+    gap: 8px;
+  }
+
+  .search-examples code {
+    display: block;
+  }
+
+  .action-panel {
+    background: #fff7ed;
+  }
+
+  .action-panel a {
+    background: #dc4d09;
+    border-radius: 999px;
+    color: #fffaf1;
+    display: inline-flex;
+    font-weight: 950;
+    margin-top: 8px;
+    padding: 10px 14px;
+    text-decoration: none;
+  }
+
+  @media (max-width: 920px) {
+    .instruction-layout,
+    .rule-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+      position: static;
+    }
+  }
+</style>

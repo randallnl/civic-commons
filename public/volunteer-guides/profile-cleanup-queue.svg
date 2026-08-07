@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Profile cleanup queue screenshot</title>
+  <desc id="desc">A screenshot-style illustration of the admin profile cleanup queue, with filters and candidate profile cards.</desc>
+  <rect width="1440" height="900" fill="#eaf4ff"/>
+  <rect x="84" y="72" width="1272" height="756" rx="28" fill="#fff" stroke="#cbd5e1" stroke-width="3"/>
+  <rect x="84" y="72" width="1272" height="82" rx="28" fill="#142c46"/>
+  <text x="132" y="124" fill="#fffaf1" font-family="Arial, sans-serif" font-size="34" font-weight="800">NH Deserves Better Admin</text>
+  <text x="132" y="205" fill="#b6390a" font-family="Arial, sans-serif" font-size="18" font-weight="800" letter-spacing="2">PROFILE CLEANUP</text>
+  <text x="132" y="252" fill="#1f2933" font-family="Arial, sans-serif" font-size="48" font-weight="900">Find profiles that need public details</text>
+  <rect x="132" y="294" width="1176" height="122" rx="18" fill="#f8fafc" stroke="#dbeafe" stroke-width="2"/>
+  <g font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#334155">
+    <text x="168" y="333">Gap type</text>
+    <text x="424" y="333">Missing</text>
+    <text x="680" y="333">Office</text>
+    <text x="936" y="333">Search by name</text>
+  </g>
+  <g fill="#fff" stroke="#94a3b8" stroke-width="2">
+    <rect x="168" y="352" width="212" height="38" rx="10"/>
+    <rect x="424" y="352" width="212" height="38" rx="10"/>
+    <rect x="680" y="352" width="212" height="38" rx="10"/>
+    <rect x="936" y="352" width="212" height="38" rx="10"/>
+  </g>
+  <g font-family="Arial, sans-serif" font-size="18" fill="#475569">
+    <text x="184" y="377">Candidate</text>
+    <text x="440" y="377">Photo or website</text>
+    <text x="696" y="377">State Representative</text>
+    <text x="952" y="377">Start typing...</text>
+  </g>
+  <rect x="1168" y="348" width="112" height="46" rx="23" fill="#1f2933"/>
+  <text x="1201" y="378" fill="#fffaf1" font-family="Arial, sans-serif" font-size="17" font-weight="900">Filter</text>
+  <g>
+    <rect x="132" y="456" width="360" height="242" rx="18" fill="#fff" stroke="#d1d5db" stroke-width="2"/>
+    <circle cx="188" cy="522" r="38" fill="#dbeafe"/>
+    <text x="250" y="511" fill="#1f2933" font-family="Arial, sans-serif" font-size="27" font-weight="900">Alex Sample</text>
+    <text x="250" y="544" fill="#64748b" font-family="Arial, sans-serif" font-size="18" font-weight="800">State Representative</text>
+    <text x="250" y="574" fill="#64748b" font-family="Arial, sans-serif" font-size="18">Merrimack, District 6</text>
+    <rect x="168" y="614" width="130" height="34" rx="17" fill="#fee2e2"/>
+    <text x="184" y="637" fill="#991b1b" font-family="Arial, sans-serif" font-size="16" font-weight="900">Missing photo</text>
+    <rect x="314" y="614" width="144" height="34" rx="17" fill="#fef3c7"/>
+    <text x="330" y="637" fill="#92400e" font-family="Arial, sans-serif" font-size="16" font-weight="900">Missing website</text>
+    <rect x="168" y="666" width="156" height="42" rx="21" fill="#142c46"/>
+    <text x="197" y="693" fill="#fffaf1" font-family="Arial, sans-serif" font-size="17" font-weight="900">Open profile</text>
+  </g>
+  <g opacity="0.8">
+    <rect x="536" y="456" width="360" height="242" rx="18" fill="#fff" stroke="#d1d5db" stroke-width="2"/>
+    <circle cx="592" cy="522" r="38" fill="#dbeafe"/>
+    <text x="654" y="511" fill="#1f2933" font-family="Arial, sans-serif" font-size="27" font-weight="900">Jordan Public</text>
+    <text x="654" y="544" fill="#64748b" font-family="Arial, sans-serif" font-size="18" font-weight="800">State Senator</text>
+    <text x="654" y="574" fill="#64748b" font-family="Arial, sans-serif" font-size="18">District 12</text>
+    <rect x="572" y="614" width="144" height="34" rx="17" fill="#fef3c7"/>
+    <text x="588" y="637" fill="#92400e" font-family="Arial, sans-serif" font-size="16" font-weight="900">Missing website</text>
+    <rect x="572" y="666" width="156" height="42" rx="21" fill="#142c46"/>
+    <text x="601" y="693" fill="#fffaf1" font-family="Arial, sans-serif" font-size="17" font-weight="900">Open profile</text>
+  </g>
+  <g opacity="0.8">
+    <rect x="940" y="456" width="360" height="242" rx="18" fill="#fff" stroke="#d1d5db" stroke-width="2"/>
+    <circle cx="996" cy="522" r="38" fill="#dbeafe"/>
+    <text x="1058" y="511" fill="#1f2933" font-family="Arial, sans-serif" font-size="27" font-weight="900">Casey Demo</text>
+    <text x="1058" y="544" fill="#64748b" font-family="Arial, sans-serif" font-size="18" font-weight="800">State Representative</text>
+    <text x="1058" y="574" fill="#64748b" font-family="Arial, sans-serif" font-size="18">Rockingham, District 2</text>
+    <rect x="976" y="614" width="130" height="34" rx="17" fill="#fee2e2"/>
+    <text x="992" y="637" fill="#991b1b" font-family="Arial, sans-serif" font-size="16" font-weight="900">Missing photo</text>
+    <rect x="976" y="666" width="156" height="42" rx="21" fill="#142c46"/>
+    <text x="1005" y="693" fill="#fffaf1" font-family="Arial, sans-serif" font-size="17" font-weight="900">Open profile</text>
+  </g>
+  <rect x="132" y="735" width="1176" height="48" rx="24" fill="#eff6ff"/>
+  <text x="168" y="766" fill="#1e3a8a" font-family="Arial, sans-serif" font-size="20" font-weight="800">Start with profiles marked missing photo or website. Open one profile at a time.</text>
+</svg>

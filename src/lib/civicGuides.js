@@ -53,6 +53,16 @@ export const civicGuides = [
     image: organizationAssetUrl("nh chamber.jpg"),
   },
   {
+    href: "/profile-cleanup-guide",
+    title: "Profile Cleanup Work Instructions",
+    kicker: "Volunteer Resource",
+    category: "Volunteer",
+    description:
+      "Step-by-step instructions for checking candidate and legislator profiles, finding reliable photos, websites, and public social links.",
+    readTime: "8 min read",
+    image: "/volunteer-guides/profile-cleanup-queue.svg",
+  },
+  {
     href: "/reports/nh-education-aid-per-pupil",
     title: "Education Aid Per Pupil Report",
     kicker: "Research",
