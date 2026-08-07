@@ -103,8 +103,6 @@ const trackedVotesHref = `/people/${slug}/votes`;
 const apiTerm = representative
   ? representativeToTerm(representative)
   : candidateToTerm(profileCandidate);
-const officeTerms = [{ ...apiTerm, status: "current" }];
-const currentOfficeTerms = officeTerms;
 
 let trackedBills = new Map();
 let billSummaries = new Map();
@@ -1389,47 +1387,6 @@ function uniqueTowns(towns = []) {
         </div>
 
         <aside class="stack">
-          {hasLegislatorProfile && (
-          <section class="panel compact-panel">
-            <div class="section-heading">
-              <p class="eyebrow">Service</p>
-              <h2>Current and Past Offices</h2>
-            </div>
-
-            {officeTerms.length ? (
-              <div class="timeline-list">
-                {officeTerms.map((term) => (
-                  <article class="timeline-item">
-                    <div class="timeline-item-heading">
-                      <div>
-                        <h3>{term.title}</h3>
-                        <p>
-                          {formatDistrictLabel(term)}
-                        </p>
-                      </div>
-                      <span class:list={["status-pill", term.status]}>
-                        {term.status}
-                      </span>
-                    </div>
-                    {term.status === "current" && townServiceAreas.length ? (
-                      <div class="office-town-list">
-                        <span>Towns served</span>
-                        <div>
-                          {townServiceAreas.flatMap((area) =>
-                            area.towns.map((town) => <em>{town}</em>)
-                          )}
-                        </div>
-                      </div>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p class="empty">No office history is listed yet.</p>
-            )}
-          </section>
-          )}
-
           <section class="panel compact-panel endorsements-panel">
             <div class="section-heading">
               <div>
@@ -1607,7 +1564,7 @@ function uniqueTowns(towns = []) {
     align-items: stretch;
     display: grid;
     gap: 20px;
-    grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+    grid-template-columns: minmax(280px, 400px) minmax(0, 1fr);
     margin-top: 16px;
     padding: 20px;
   }
@@ -1767,7 +1724,7 @@ function uniqueTowns(towns = []) {
   }
 
   .candidate-role-panel {
-    margin-top: 18px;
+    margin: 18px 0 28px;
   }
 
   .role-tabs {
@@ -2461,7 +2418,6 @@ function uniqueTowns(towns = []) {
     margin-top: 10px;
   }
 
-  .timeline-list,
   .vote-list,
   .side-list,
   .detail-list,
@@ -2471,7 +2427,6 @@ function uniqueTowns(towns = []) {
     margin: 0;
   }
 
-  .timeline-item,
   .vote-card,
   .side-list article,
   .detail-list div,
@@ -2531,56 +2486,6 @@ function uniqueTowns(towns = []) {
     text-decoration: none;
   }
 
-  .timeline-item {
-    display: grid;
-    gap: 14px;
-  }
-
-  .timeline-item-heading {
-    align-items: start;
-    display: flex;
-    gap: 16px;
-    justify-content: space-between;
-  }
-
-  .timeline-item-heading > div {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .office-town-list {
-    display: grid;
-    gap: 8px;
-    margin-top: 12px;
-  }
-
-  .office-town-list > span {
-    color: #6b7280;
-    font-size: 0.72rem;
-    font-weight: 950;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .office-town-list div {
-    display: grid;
-    gap: 7px;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  }
-
-  .office-town-list em {
-    background: #ffffff;
-    border: 1px solid #dbeafe;
-    border-radius: 999px;
-    color: #1f2933;
-    font-size: 0.82rem;
-    font-style: normal;
-    font-weight: 850;
-    overflow-wrap: anywhere;
-    padding: 6px 9px;
-  }
-
-  .timeline-item h3,
   .vote-card h3,
   .side-list h3,
   .towns-list h3 {
@@ -2616,7 +2521,6 @@ function uniqueTowns(towns = []) {
     margin: 0;
   }
 
-  .timeline-item p,
   .side-list p,
   .vote-card p {
     color: #4b5563;
@@ -2767,7 +2671,7 @@ function uniqueTowns(towns = []) {
 
   @media (max-width: 1120px) {
     .profile-hero {
-      grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
+      grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
     }
   }
 
@@ -2798,10 +2702,6 @@ function uniqueTowns(towns = []) {
     .role-tab-list {
       display: grid;
       justify-self: stretch;
-    }
-
-    .office-town-list div {
-      grid-template-columns: 1fr;
     }
 
     .split-heading {
