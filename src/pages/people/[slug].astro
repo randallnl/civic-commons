@@ -776,8 +776,8 @@ function uniqueTowns(towns = []) {
         <section class="panel candidate-role-panel" id="candidate-role">
           <div class="section-heading split-heading">
             <div>
-              <p class="eyebrow">2026 Candidate Role</p>
-              <h2>Candidate information for this person</h2>
+              <p class="eyebrow">{hasLegislatorProfile ? "Roles" : "2026 Candidate Role"}</p>
+              <h2>{hasLegislatorProfile ? "Current role and candidacies" : "Candidate information for this person"}</h2>
             </div>
             {adminSession && currentCandidateProfile && (
               <button
@@ -790,26 +790,112 @@ function uniqueTowns(towns = []) {
             )}
           </div>
 
-          <div class="candidate-role-grid">
-            <article>
-              <span>Office sought</span>
-              <strong>{linkedCandidateOfficeLine || "Office not listed"}</strong>
-            </article>
-            <article>
-              <span>Party</span>
-              <strong>{formatCandidateParty(linkedCandidateForEndorsements.politicalParty)}</strong>
-            </article>
-            <article>
-              <span>Election year</span>
-              <strong>{linkedCandidateForEndorsements.electionYear || "2026"}</strong>
-            </article>
-            {linkedCandidateTowns && (
-              <article class="candidate-role-wide">
-                <span>Towns represented</span>
-                <strong>{linkedCandidateTowns}</strong>
+          {hasLegislatorProfile ? (
+            <div class="role-tabs">
+              <input type="radio" name="profile-role-tabs" id="role-tab-current" checked />
+              <input type="radio" name="profile-role-tabs" id="role-tab-candidate" />
+
+              <div class="role-tab-list" role="tablist" aria-label="Profile roles">
+                <label for="role-tab-current" id="role-tab-current-label" role="tab" aria-controls="role-panel-current">
+                  Current role
+                </label>
+                <label for="role-tab-candidate" id="role-tab-candidate-label" role="tab" aria-controls="role-panel-candidate">
+                  2026 candidacy
+                </label>
+              </div>
+
+              <div
+                class="role-tab-panel role-tab-panel-current"
+                id="role-panel-current"
+                role="tabpanel"
+                aria-labelledby="role-tab-current-label"
+              >
+                <div class="candidate-role-grid">
+                  <article>
+                    <span>Office</span>
+                    <strong>{officeLabel || "Not listed"}</strong>
+                  </article>
+                  <article>
+                    <span>Legislative body</span>
+                    <strong>{bodyLabel || "Not listed"}</strong>
+                  </article>
+                  <article>
+                    <span>District</span>
+                    <strong>{districtLabel || "Not listed"}</strong>
+                  </article>
+                  <article>
+                    <span>Party</span>
+                    <strong>{formatParty(person.party)}</strong>
+                  </article>
+                  <article>
+                    <span>Vote attendance</span>
+                    <strong>
+                      {voteAttendance.percent === null
+                        ? "No data"
+                        : `${Math.round(voteAttendance.percent * 100)}%`}
+                    </strong>
+                  </article>
+                  {townServiceAreas.length ? (
+                    <article class="candidate-role-wide">
+                      <span>Towns represented</span>
+                      <strong>
+                        {townServiceAreas.flatMap((area) => area.towns).join(", ")}
+                      </strong>
+                    </article>
+                  ) : null}
+                </div>
+              </div>
+
+              <div
+                class="role-tab-panel role-tab-panel-candidate"
+                id="role-panel-candidate"
+                role="tabpanel"
+                aria-labelledby="role-tab-candidate-label"
+              >
+                <div class="candidate-role-grid">
+                  <article>
+                    <span>Office sought</span>
+                    <strong>{linkedCandidateOfficeLine || "Office not listed"}</strong>
+                  </article>
+                  <article>
+                    <span>Party</span>
+                    <strong>{formatCandidateParty(linkedCandidateForEndorsements.politicalParty)}</strong>
+                  </article>
+                  <article>
+                    <span>Election year</span>
+                    <strong>{linkedCandidateForEndorsements.electionYear || "2026"}</strong>
+                  </article>
+                  {linkedCandidateTowns && (
+                    <article class="candidate-role-wide">
+                      <span>Towns represented</span>
+                      <strong>{linkedCandidateTowns}</strong>
+                    </article>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div class="candidate-role-grid">
+              <article>
+                <span>Office sought</span>
+                <strong>{linkedCandidateOfficeLine || "Office not listed"}</strong>
               </article>
-            )}
-          </div>
+              <article>
+                <span>Party</span>
+                <strong>{formatCandidateParty(linkedCandidateForEndorsements.politicalParty)}</strong>
+              </article>
+              <article>
+                <span>Election year</span>
+                <strong>{linkedCandidateForEndorsements.electionYear || "2026"}</strong>
+              </article>
+              {linkedCandidateTowns && (
+                <article class="candidate-role-wide">
+                  <span>Towns represented</span>
+                  <strong>{linkedCandidateTowns}</strong>
+                </article>
+              )}
+            </div>
+          )}
         </section>
       )}
 
@@ -1682,6 +1768,63 @@ function uniqueTowns(towns = []) {
 
   .candidate-role-panel {
     margin-top: 18px;
+  }
+
+  .role-tabs {
+    display: grid;
+    gap: 14px;
+  }
+
+  .role-tabs > input {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+  }
+
+  .role-tab-list {
+    background: #eaf4ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    display: inline-grid;
+    gap: 4px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-self: start;
+    padding: 4px;
+  }
+
+  .role-tab-list label {
+    border-radius: 999px;
+    color: #1d4ed8;
+    cursor: pointer;
+    font-size: 0.84rem;
+    font-weight: 950;
+    line-height: 1;
+    padding: 10px 14px;
+    text-align: center;
+    transition:
+      background 140ms ease,
+      color 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  #role-tab-current:checked ~ .role-tab-list label[for="role-tab-current"],
+  #role-tab-candidate:checked ~ .role-tab-list label[for="role-tab-candidate"] {
+    background: #1f2933;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+    color: #fff7ed;
+  }
+
+  .role-tab-panel {
+    display: none;
+  }
+
+  #role-tab-current:checked ~ .role-tab-panel-current,
+  #role-tab-candidate:checked ~ .role-tab-panel-candidate {
+    display: block;
   }
 
   .candidate-role-grid {
@@ -2650,6 +2793,11 @@ function uniqueTowns(towns = []) {
 
     .candidate-role-grid {
       grid-template-columns: 1fr;
+    }
+
+    .role-tab-list {
+      display: grid;
+      justify-self: stretch;
     }
 
     .office-town-list div {
