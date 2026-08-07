@@ -6,31 +6,35 @@ import SiteFooter from "../components/SiteFooter.astro";
 
 const screenshots = [
   {
-    src: "/volunteer-guides/profile-cleanup-queue.svg",
-    alt: "Screenshot-style view of the profile cleanup queue with filters and profile cards.",
-    caption: "Start in the profile cleanup queue and open one candidate or legislator profile at a time.",
+    src: "/volunteer-guides/profile-cleanup-admin-menu.png",
+    alt: "Admin tools work queue panel with the Profiles button selected.",
+    caption: "Use the admin button at the bottom of the site to reach the admin tools, then choose Profiles from the work queue.",
   },
   {
-    src: "/volunteer-guides/profile-cleanup-search.svg",
-    alt: "Screenshot-style view of search results and image results for a candidate name plus NH.",
-    caption: "Search the person's name plus NH, check the first two result pages, and review image results.",
+    src: "/volunteer-guides/profile-cleanup-queue-reviewed.png",
+    alt: "Profile cleanup queue showing filters, Open profile, and Confirm reviewed buttons.",
+    caption: "Open a person profile from the cleanup card. After reviewing, use Confirm reviewed if the card is still in the queue.",
   },
   {
-    src: "/volunteer-guides/profile-cleanup-edit.svg",
-    alt: "Screenshot-style view of a profile edit form with website and social media fields.",
-    caption: "Use edit view to add only information you are confident belongs to the correct person.",
+    src: "/volunteer-guides/profile-cleanup-edit-view.png",
+    alt: "Candidate profile page with a Show edit view button circled.",
+    caption: "On the profile page, click Show edit view when needed to reveal editable profile fields.",
   },
 ];
 
 const quickChecklist = [
-  "Open one profile from the cleanup queue.",
+  "Open Admin from the bottom of the site.",
+  "Choose Profiles in the admin tools panel.",
+  "Use the Profile cleanup queue, prioritizing missing photos when possible.",
+  "Open one profile from the person card.",
+  "Click Show edit view if editable fields are hidden.",
   "Search the person's name plus NH.",
   "Check the first two pages of web results.",
   "Check image results for a confident photo match.",
-  "Save a public photo only when you are confident it is the candidate or legislator.",
-  "Add the campaign or public website if it clearly belongs to that person.",
-  "Add public social media accounts that appear in the first two result pages.",
-  "Save the profile, or mark reviewed if no confident update is found.",
+  "Update the website, social links, or photo only when confident.",
+  "Save after each update so no data is lost.",
+  "Use the browser back button to return to the queue.",
+  "Click Confirm reviewed if the card is still present.",
 ];
 ---
 
@@ -88,10 +92,28 @@ const quickChecklist = [
 
             <ol class="steps">
               <li>
-                <strong>Open a profile from the cleanup queue.</strong>
+                <strong>Go to the admin tools.</strong>
                 <p>
-                  Start with profiles missing a photo or website. Keep the queue
-                  open in one tab and the person profile in another.
+                  Use the admin button at the bottom of the site. On the admin
+                  page, scroll to the admin tools panel and select
+                  <strong>Profiles</strong> to open the profile cleanup queue.
+                </p>
+              </li>
+              <li>
+                <strong>Choose a cleanup filter.</strong>
+                <p>
+                  The queue defaults to profiles that need review. You can
+                  change the missing-field filter to <strong>Photo</strong>
+                  because photos are a priority, but leaving the default filter
+                  is fine too.
+                </p>
+              </li>
+              <li>
+                <strong>Open a person profile.</strong>
+                <p>
+                  Use <strong>Open profile</strong> on the person card. This
+                  opens the candidate or legislator profile where updates should
+                  be made.
                 </p>
               </li>
               <li>
@@ -122,17 +144,19 @@ const quickChecklist = [
               <li>
                 <strong>Update the profile.</strong>
                 <p>
-                  Turn on edit view, add the website and public social links,
-                  upload a confident photo, then save. Do not add uncertain or
-                  private information.
+                  On the profile page, click <strong>Show edit view</strong> if
+                  the editable fields are hidden. Add the website, public social
+                  links, or a confident photo. Save after each individual update
+                  so work is not lost.
                 </p>
               </li>
               <li>
-                <strong>Mark reviewed when needed.</strong>
+                <strong>Return to the queue and confirm review.</strong>
                 <p>
-                  If you checked the first two result pages and image results
-                  but did not find a confident update, use the reviewed button
-                  so the profile leaves the default cleanup queue for now.
+                  Use the browser back button to return to the cleanup queue.
+                  If the card is still present, click
+                  <strong>Confirm reviewed</strong> to remove it from the
+                  review queue.
                 </p>
               </li>
             </ol>
