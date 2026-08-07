@@ -3,7 +3,6 @@ export const prerender = false;
 
 import CandidateCard from "../../components/CandidateCard.astro";
 import FilterBar from "../../components/FilterBar.astro";
-import PageHero from "../../components/PageHero.astro";
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import {
@@ -515,13 +514,18 @@ function uniqueOptions(values = []) {
   <body>
     <TopNav />
     <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.candidate-card[data-fuzzy-item]', idleLimit: 12 })">
-      <PageHero
-        backHref="/"
-        backLabel="Back home"
-        eyebrow="House and Senate Candidates"
-        title="Browse candidates for the New Hampshire Legislature."
-        lede="NH Deserves Better focuses on State Representative and State Senate races because those offices shape state law, local funding, public services, and the daily civic decisions closest to most people."
-      >
+      <section class="candidate-hero">
+        <div class="candidate-hero-copy">
+          <a class="back-link" href="/">Back home</a>
+          <p class="eyebrow">House and Senate Candidates</p>
+          <h1>Find My NH Candidate by NH Deserves Better</h1>
+          <p class="lede">
+            Enter an address to find the State Representative and State Senate
+            candidates connected to your community, or use the filters below to
+            browse candidates by name, town, county, and office.
+          </p>
+        </div>
+
         <form class="address-lookup" action="/candidates" method="get">
           <label for="address">Find State House and State Senate candidates for your address</label>
 
@@ -536,8 +540,11 @@ function uniqueOptions(values = []) {
             />
             <button type="submit">Find Legislative Candidates</button>
           </div>
+          <p>Example: 107 North Main Street, Concord, New Hampshire</p>
         </form>
+      </section>
 
+      <section class="candidate-filter-panel" aria-label="Candidate filters">
         <FilterBar
           action="/candidates"
           submitLabel="Filter candidates"
@@ -620,7 +627,7 @@ function uniqueOptions(values = []) {
           </label>
         </FilterBar>
         <div class="filter-chips" data-fuzzy-chips hidden></div>
-      </PageHero>
+      </section>
 
       {error ? (
         <p class="status-message">{error}</p>
@@ -758,6 +765,80 @@ function uniqueOptions(values = []) {
     font-weight: 800;
   }
 
+  .page {
+    margin: 0 auto;
+    padding: 18px 0 56px;
+    width: min(1280px, calc(100% - clamp(28px, 4vw, 64px)));
+  }
+
+  .candidate-hero {
+    align-items: center;
+    background:
+      radial-gradient(circle at 82% 18%, rgba(220, 77, 9, 0.16), transparent 28%),
+      linear-gradient(135deg, #eff6ff 0%, #ffffff 48%, #f8fbff 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 18px;
+    box-sizing: border-box;
+    display: grid;
+    gap: 22px;
+    justify-items: center;
+    margin: 0 0 26px;
+    min-height: clamp(430px, 40vw, 520px);
+    overflow: hidden;
+    padding: clamp(28px, 5vw, 62px);
+    position: relative;
+    text-align: center;
+    width: 100%;
+  }
+
+  .candidate-hero::before {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(96, 165, 250, 0.04));
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    border-radius: 999px;
+    content: "";
+    height: 320px;
+    position: absolute;
+    right: -120px;
+    top: -130px;
+    width: 320px;
+  }
+
+  .candidate-hero::after {
+    background: rgba(220, 77, 9, 0.13);
+    border-radius: 999px;
+    bottom: -90px;
+    content: "";
+    height: 220px;
+    left: -80px;
+    position: absolute;
+    width: 220px;
+  }
+
+  .candidate-hero-copy,
+  .address-lookup {
+    position: relative;
+    z-index: 2;
+  }
+
+  .candidate-hero-copy {
+    display: grid;
+    gap: 16px;
+    justify-items: center;
+    width: min(900px, 100%);
+  }
+
+  .back-link {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1e3a8a;
+    display: inline-flex;
+    font-size: 0.84rem;
+    padding: 8px 12px;
+    text-decoration: none;
+  }
+
   .eyebrow {
     color: #6b4f2a;
     font-size: 0.78rem;
@@ -767,39 +848,62 @@ function uniqueOptions(values = []) {
     text-transform: uppercase;
   }
 
-  .address-lookup {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    box-shadow: none;
-    padding: 24px;
+  .candidate-hero .eyebrow {
+    color: #1d4ed8;
+    margin: 0;
+  }
+
+  h1 {
+    color: #1f2933;
+    font-size: clamp(2rem, 4.2vw, 3.45rem);
+    line-height: 1;
+    margin: 0;
+    max-width: 930px;
+  }
+
+  .lede {
+    color: #334155;
+    font-size: clamp(1rem, 1.4vw, 1.18rem);
+    font-weight: 760;
+    line-height: 1.6;
+    margin: 0;
+    max-width: 790px;
   }
 
   .address-lookup {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, rgba(37, 99, 235, 0.62), rgba(220, 77, 9, 0.38)) border-box;
+    border: 1px solid transparent;
+    border-radius: 18px;
+    box-shadow: 0 18px 50px rgba(37, 99, 235, 0.12);
     display: grid;
-    gap: 10px;
+    gap: 14px;
+    padding: clamp(16px, 2vw, 22px);
+    text-align: left;
+    width: min(760px, 100%);
   }
 
-  .address-lookup + :global(.nhdb-filter-bar) {
-    margin-top: 32px;
+  .candidate-filter-panel {
+    margin-top: 26px;
   }
 
-  .address-row,
-  .address-lookup {
-    align-items: end;
-    display: grid;
-    gap: 12px;
+  .candidate-filter-panel :global(.nhdb-filter-bar) {
+    margin-top: 0;
   }
 
   .address-row {
-    grid-template-columns: minmax(0, 1fr) 180px;
+    align-items: stretch;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .address-lookup label {
-    color: #4b5563;
-    font-size: 0.74rem;
+    color: #1e3a8a;
+    font-size: 0.78rem;
     font-weight: 950;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
   }
 
@@ -809,16 +913,42 @@ function uniqueOptions(values = []) {
     border-radius: 999px;
     box-sizing: border-box;
     font: inherit;
+    min-height: 56px;
+  }
+
+  .address-lookup input {
+    background: #f8fbff;
+    border-color: rgba(37, 99, 235, 0.38);
+    color: #1f2933;
+    font-size: 1.05rem;
     font-weight: 800;
-    min-height: 54px;
-    padding: 16px 18px;
+    padding: 14px 18px;
     width: 100%;
   }
 
+  .address-lookup input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+    outline: none;
+  }
+
   .address-lookup button {
-    background: #1f2933;
-    color: white;
+    background: #dc4d09;
+    border-color: #b83f07;
+    color: #ffffff;
     cursor: pointer;
+    font-weight: 950;
+    padding: 14px 22px;
+    white-space: nowrap;
+  }
+
+  .address-lookup p {
+    color: #475569;
+    font-size: 0.94rem;
+    font-weight: 850;
+    line-height: 1.4;
+    margin: 0;
+    text-align: center;
   }
 
   .results-heading {
@@ -921,9 +1051,23 @@ function uniqueOptions(values = []) {
   }
 
   @media (max-width: 900px) {
+    .candidate-hero {
+      min-height: 0;
+      padding: 28px 18px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 10vw, 2.65rem);
+    }
+
     .address-row,
     .candidate-grid {
       grid-template-columns: 1fr;
+    }
+
+    .address-lookup button {
+      width: 100%;
+      white-space: normal;
     }
   }
 </style>
