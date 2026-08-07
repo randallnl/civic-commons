@@ -290,83 +290,98 @@ function previewText(value = "", length = 260) {
           </section>
 
           {votes.length ? (
-            <section class="vote-grid">
-              {votes.map((vote) => {
-                const stance = voteStanceFor(vote);
-                const voteImpact = voteImpactFor(vote);
-                const billYear = vote.billSummary?.sessionyear || vote.sessionyear;
-                const summary =
-                  vote.billSummary?.summary ||
-                  vote.trackedBill?.summary ||
-                  "";
-                const billCode = billCodeFor(vote);
-                const action = voteActionFor(vote);
+            <>
+              <section class="vote-color-legend" aria-label="Representative vote color legend">
+                <div>
+                  <p class="eyebrow">Legend</p>
+                  <h2>Representative vote colors</h2>
+                </div>
+                <div class="legend-items">
+                  <span class="legend-item legislator-support">Aligned with testimony position</span>
+                  <span class="legend-item legislator-oppose">Not aligned with testimony position</span>
+                  <span class="legend-item legislator-neutral">Neutral or no clear testimony position</span>
+                </div>
+                <a href="/vote-interpretations">How vote labels work</a>
+              </section>
 
-                return (
-                  <article class="vote-bill-card">
-                    <div class="bill-topline">
-                      <strong>
+              <section class="vote-grid">
+                {votes.map((vote) => {
+                  const stance = voteStanceFor(vote);
+                  const voteImpact = voteImpactFor(vote);
+                  const billYear = vote.billSummary?.sessionyear || vote.sessionyear;
+                  const summary =
+                    vote.billSummary?.summary ||
+                    vote.trackedBill?.summary ||
+                    "";
+                  const billCode = billCodeFor(vote);
+                  const action = voteActionFor(vote);
+
+                  return (
+                    <article class="vote-bill-card">
+                      <div class="bill-topline">
+                        <strong>
+                          <a href={billDetailPath(billCode, billYear)}>
+                            {billCode}
+                          </a>
+                        </strong>
+                        {billYear && <span>{billYear}</span>}
+                        {vote.trackedBill ? (
+                          <span class="tracker-pill">Tracked</span>
+                        ) : (
+                          <span>Untracked</span>
+                        )}
+                      </div>
+
+                      <h2>
                         <a href={billDetailPath(billCode, billYear)}>
-                          {billCode}
+                          {billTitleFor(vote)}
                         </a>
-                      </strong>
-                      {billYear && <span>{billYear}</span>}
-                      {vote.trackedBill ? (
-                        <span class="tracker-pill">Tracked</span>
+                      </h2>
+
+                      {summary && <p>{previewText(summary)}</p>}
+
+                      {action && (
+                        <div class="vote-action">
+                          <strong>Voting action</strong>
+                          <span>{previewText(action, 180)}</span>
+                        </div>
+                      )}
+
+                      <div class:list={["vote-interpretation", stance.className]}>
+                        <strong>Vote</strong>
+                        <a
+                          class:list={["legislator-vote-pill", stance.className]}
+                          href="/vote-interpretations"
+                          title="How do we determine this?"
+                          aria-label={`How do we determine this? ${stance.label}`}
+                        >
+                          {stance.label}
+                        </a>
+                        {voteImpact && <p class="vote-impact">{cleanText(voteImpact)}</p>}
+                      </div>
+
+                      {vote.billSummary ? (
+                        <BillPositionSummary bill={vote.billSummary} />
                       ) : (
-                        <span>Untracked</span>
+                        <div class="position-placeholder">
+                          Public testimony summary not available.
+                        </div>
                       )}
-                    </div>
 
-                    <h2>
-                      <a href={billDetailPath(billCode, billYear)}>
-                        {billTitleFor(vote)}
-                      </a>
-                    </h2>
-
-                    {summary && <p>{previewText(summary)}</p>}
-
-                    {action && (
-                      <div class="vote-action">
-                        <strong>Voting action</strong>
-                        <span>{previewText(action, 180)}</span>
+                      <div class="bill-meta">
+                        {vote.vote_date && <span>{formatDate(vote.vote_date)}</span>}
+                        {vote.votesequencenumber && (
+                          <span>Roll call {vote.votesequencenumber}</span>
+                        )}
+                        {vote.trackedBill?.issueArea && (
+                          <span>{cleanText(vote.trackedBill.issueArea)}</span>
+                        )}
                       </div>
-                    )}
-
-                    <div class:list={["vote-interpretation", stance.className]}>
-                      <strong>Vote</strong>
-                      <a
-                        class:list={["legislator-vote-pill", stance.className]}
-                        href="/vote-interpretations"
-                        title="How do we determine this?"
-                        aria-label={`How do we determine this? ${stance.label}`}
-                      >
-                        {stance.label}
-                      </a>
-                      {voteImpact && <p class="vote-impact">{cleanText(voteImpact)}</p>}
-                    </div>
-
-                    {vote.billSummary ? (
-                      <BillPositionSummary bill={vote.billSummary} />
-                    ) : (
-                      <div class="position-placeholder">
-                        Public testimony summary not available.
-                      </div>
-                    )}
-
-                    <div class="bill-meta">
-                      {vote.vote_date && <span>{formatDate(vote.vote_date)}</span>}
-                      {vote.votesequencenumber && (
-                        <span>Roll call {vote.votesequencenumber}</span>
-                      )}
-                      {vote.trackedBill?.issueArea && (
-                        <span>{cleanText(vote.trackedBill.issueArea)}</span>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
-            </section>
+                    </article>
+                  );
+                })}
+              </section>
+            </>
           ) : (
             <p class="status-message">No votes were returned.</p>
           )}
@@ -439,6 +454,55 @@ function previewText(value = "", length = 260) {
     display: grid;
     gap: 18px;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+
+  .vote-color-legend {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(180px, auto) minmax(0, 1fr) auto;
+    margin: 0 0 18px;
+    padding: 16px;
+  }
+
+  .vote-color-legend h2 {
+    color: #1f2933;
+    font-size: 1.15rem;
+    line-height: 1.1;
+    margin: 0;
+  }
+
+  .vote-color-legend .eyebrow {
+    margin-bottom: 4px;
+  }
+
+  .legend-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .legend-item {
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.78rem;
+    font-weight: 950;
+    line-height: 1.15;
+    padding: 8px 10px;
+  }
+
+  .vote-color-legend a {
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    padding: 9px 11px;
+    text-align: center;
+    text-decoration: none;
   }
 
   .vote-bill-card,
@@ -565,6 +629,11 @@ function previewText(value = "", length = 260) {
   }
 
   @media (max-width: 640px) {
+    .vote-color-legend {
+      align-items: start;
+      grid-template-columns: 1fr;
+    }
+
     .vote-grid {
       grid-template-columns: 1fr;
     }
