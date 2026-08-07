@@ -57,6 +57,7 @@ let linkedRepresentativePersonId = "";
 const adminSession = await currentAdminSession(Astro.request);
 const message = Astro.url.searchParams.get("message") || "";
 const error = Astro.url.searchParams.get("error") || "";
+const adminEditInitiallyOpen = adminSession && Astro.url.searchParams.get("edit") === "1";
 
 try {
   apiData = await getRepresentative(slug);
@@ -676,6 +677,22 @@ function uniqueTowns(towns = []) {
       {error && <p class="status-message error">{error}</p>}
       {message && <p class="status-message success">{message}</p>}
 
+      {adminSession && (
+        <section class="admin-edit-toolbar" aria-label="Admin profile tools">
+          <div>
+            <p class="eyebrow">Admin</p>
+            <strong>Edit view is off by default</strong>
+          </div>
+          <button
+            type="button"
+            data-admin-edit-toggle
+            aria-expanded={adminEditInitiallyOpen ? "true" : "false"}
+          >
+            {adminEditInitiallyOpen ? "Hide edit view" : "Show edit view"}
+          </button>
+        </section>
+      )}
+
       <section class="profile-hero">
         <div class="portrait-card">
           {portraitUrl ? (
@@ -823,12 +840,13 @@ function uniqueTowns(towns = []) {
               <h2>Candidate information for this person</h2>
             </div>
             {adminSession && currentCandidateProfile && (
-              <a
+              <button
+                type="button"
                 class="section-action"
-                href={hasLegislatorProfile ? currentCandidateProfile.href : `/candidates/${candidateSlug(linkedCandidateForEndorsements)}`}
+                data-admin-edit-toggle
               >
-                Edit candidate fields
-              </a>
+                Show edit view
+              </button>
             )}
           </div>
 
@@ -856,7 +874,7 @@ function uniqueTowns(towns = []) {
       )}
 
       {adminSession && (
-        <section class="panel admin-edit-panel">
+        <section class="panel admin-edit-panel" data-admin-edit-panel hidden={!adminEditInitiallyOpen}>
           <div class="section-heading">
             <p class="eyebrow">Admin</p>
             <h2>Edit People Profile</h2>
@@ -1062,7 +1080,7 @@ function uniqueTowns(towns = []) {
       )}
 
       {adminSession && linkedCandidateForEndorsements && (
-        <section class="panel admin-edit-panel">
+        <section class="panel admin-edit-panel" data-admin-edit-panel hidden={!adminEditInitiallyOpen}>
           <div class="section-heading">
             <p class="eyebrow">Admin</p>
             <h2>Edit Candidate Role</h2>
@@ -1643,6 +1661,51 @@ function uniqueTowns(towns = []) {
         // Recently viewed profiles are a convenience; ignore storage failures.
       }
     </script>
+    <script>
+      (() => {
+        const panels = Array.from(document.querySelectorAll("[data-admin-edit-panel]"));
+        const toggles = Array.from(document.querySelectorAll("[data-admin-edit-toggle]"));
+        if (!panels.length || !toggles.length) return;
+
+        const storageKey = `nhdb:admin-edit-view:${window.location.pathname}`;
+        const urlWantsEdit = new URLSearchParams(window.location.search).get("edit") === "1";
+        let isOpen = urlWantsEdit;
+
+        try {
+          const stored = localStorage.getItem(storageKey);
+          if (!urlWantsEdit && stored !== null) isOpen = stored === "1";
+        } catch {
+          // Edit view persistence is a convenience; ignore storage failures.
+        }
+
+        function render() {
+          panels.forEach((panel) => {
+            panel.hidden = !isOpen;
+          });
+          toggles.forEach((toggle) => {
+            toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+            toggle.textContent = isOpen ? "Hide edit view" : "Show edit view";
+          });
+        }
+
+        toggles.forEach((toggle) => {
+          toggle.addEventListener("click", () => {
+            isOpen = !isOpen;
+            try {
+              localStorage.setItem(storageKey, isOpen ? "1" : "0");
+            } catch {
+              // Ignore storage failures.
+            }
+            render();
+            if (isOpen) {
+              panels[0]?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          });
+        });
+
+        render();
+      })();
+    </script>
     <SiteFooter />
   </body>
 </html>
@@ -2121,6 +2184,52 @@ function uniqueTowns(towns = []) {
     padding: 24px;
   }
 
+  .admin-edit-toolbar {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    margin-top: 18px;
+    padding: 14px 16px;
+  }
+
+  .admin-edit-toolbar strong {
+    color: #1f2933;
+    display: block;
+    font-size: 1rem;
+    font-weight: 950;
+  }
+
+  .admin-edit-toolbar .eyebrow {
+    margin-bottom: 2px;
+  }
+
+  .admin-edit-toolbar button,
+  .section-action {
+    background: #1f2933;
+    border: 1px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 950;
+    letter-spacing: 0;
+    padding: 10px 14px;
+    text-decoration: none;
+  }
+
+  .section-action {
+    align-self: start;
+  }
+
+  .admin-edit-panel[hidden] {
+    display: none;
+  }
+
   .compact-panel {
     padding: 20px;
   }
@@ -2296,7 +2405,9 @@ function uniqueTowns(towns = []) {
     border: 1px solid #e2e8f0;
     border-radius: 999px;
     color: white;
+    cursor: pointer;
     flex: 0 0 auto;
+    font: inherit;
     font-size: 0.86rem;
     font-weight: 900;
     line-height: 1;
