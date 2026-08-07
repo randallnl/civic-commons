@@ -280,7 +280,7 @@ async function getCandidateGaps(db, { missing, office, limit }) {
         row.county,
         row.district && `District ${row.district}`,
       ].filter(Boolean).join(" · "),
-      profilePath: `/candidates/${encodeURIComponent(row.slug || row.filer_entity_number)}`,
+      profilePath: `/people/${encodeURIComponent(row.slug || row.person_id || row.filer_entity_number)}`,
       missing: {
         photo: !hasUsefulPhoto(row.photo_url),
         email: !String(row.candidate_email || "").trim(),
