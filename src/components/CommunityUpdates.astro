@@ -196,7 +196,15 @@ const isReport = entityType === "report";
                 </div>
               ) : update.social?.type === "facebook" ? (
                 <div class="social-embed-wrap facebook-embed-wrap">
-                  <a class="rich-link-preview social-preview-card facebook-preview-card" href={update.social.permalink || update.linkUrl}>
+                  <a
+                    class:list={[
+                      "rich-link-preview",
+                      "social-preview-card",
+                      "facebook-preview-card",
+                      !update.linkPreview?.imageUrl && "social-preview-card-no-image",
+                    ]}
+                    href={update.social.permalink || update.linkUrl}
+                  >
                     <span class="social-icon facebook-icon" aria-hidden="true">FB</span>
                     {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
                     <span>
@@ -204,21 +212,6 @@ const isReport = entityType === "report";
                       <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
                     </span>
                   </a>
-                  {update.social.embedUrl && (
-                    <iframe
-                      class="facebook-embed"
-                      src={update.social.embedUrl}
-                      width="500"
-                      height="520"
-                      style="border:none;overflow:hidden"
-                      scrolling="no"
-                      frameborder="0"
-                      allowfullscreen="true"
-                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                      loading="lazy"
-                      title="Facebook post preview"
-                    ></iframe>
-                  )}
                 </div>
               ) : update.social?.type === "instagram" ? (
                 <div class="instagram-embed-wrap">
@@ -583,11 +576,13 @@ const isReport = entityType === "report";
   }
 
   .community-update-media {
+    align-content: start;
     display: grid;
     gap: 8px;
   }
 
   .community-update-media span {
+    align-self: start;
     background: #e0f2fe;
     border: 1px solid #7dd3fc;
     border-radius: 999px;
@@ -597,6 +592,7 @@ const isReport = entityType === "report";
     font-weight: 950;
     justify-self: start;
     letter-spacing: 0.04em;
+    line-height: 1;
     padding: 5px 8px;
     text-transform: uppercase;
   }
@@ -607,6 +603,7 @@ const isReport = entityType === "report";
     border-radius: 8px;
     cursor: zoom-in;
     display: block;
+    height: auto;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -997,6 +994,23 @@ const isReport = entityType === "report";
   .social-preview-card > span:not(.social-icon) {
     display: block;
     padding: 12px 14px 14px;
+  }
+
+  .social-preview-card-no-image {
+    align-items: center;
+    grid-template-columns: 42px minmax(0, 1fr);
+    padding: 10px;
+  }
+
+  .social-preview-card-no-image .social-icon {
+    left: auto;
+    position: static;
+    top: auto;
+  }
+
+  .social-preview-card-no-image > span:not(.social-icon) {
+    min-width: 0;
+    padding: 0;
   }
 
   .instagram-preview-card strong,
