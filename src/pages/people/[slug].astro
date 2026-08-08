@@ -11,12 +11,12 @@ import {
   Camera,
   ExternalLink,
   Globe,
+  Landmark,
   Mail,
   MessageCircle,
   Newspaper,
   Phone,
   Music2,
-  UserRoundCheck,
 } from "@lucide/astro";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
@@ -408,8 +408,8 @@ const profileResourceLinks = [
   },
   person.website_url && {
     href: contactHref("web", person.website_url),
-    label: "Website",
-    icon: Globe,
+    label: officialProfileLabel(person.website_url) || "Website",
+    icon: officialProfileLabel(person.website_url) ? Landmark : Globe,
   },
   linkedCandidateForEndorsements?.candidateWebsite && {
     href: linkedCandidateForEndorsements.candidateWebsite,
@@ -501,6 +501,14 @@ function contactHref(type, value) {
   if (type === "email") return `mailto:${value}`;
   if (type === "phone") return `tel:${value}`;
   return value;
+}
+
+function officialProfileLabel(value = "") {
+  const url = String(value || "").toLowerCase();
+  if (!/gencourt\.state\.nh\.us|gc\.nh\.gov/.test(url)) return "";
+  if (/\/house\/members\/member\.aspx/.test(url)) return "State House Profile";
+  if (/\/senate\/members\//.test(url)) return "State Senate Profile";
+  return "General Court Profile";
 }
 
 function socialField(primary = {}, fallback = {}, platform = "") {
@@ -692,20 +700,11 @@ function uniqueTowns(towns = []) {
 
           {person.bio ? (
             <p class="bio">{person.bio}</p>
-          ) : (
+          ) : !hasLegislatorProfile ? (
             <p class="bio">
               Profile details are being assembled from public civic records.
             </p>
-          )}
-
-          {hasLegislatorProfile && currentCandidateProfile && (
-            <a class="linked-profile-action" href="#candidate-role">
-              <span class="link-icon" aria-hidden="true">
-                <UserRoundCheck size={19} stroke-width={2.4} />
-              </span>
-              <span>2026 Candidate Role</span>
-            </a>
-          )}
+          ) : null}
 
           <aside class="hero-details" aria-label="Profile details">
             <div class="hero-details-heading">
@@ -731,23 +730,6 @@ function uniqueTowns(towns = []) {
                 <dd>{hasLegislatorProfile ? formatParty(person.party) : formatCandidateParty(person.party)}</dd>
               </div>
             </dl>
-
-            {hasLegislatorProfile && (
-              <div class="attendance-card" aria-label={voteAttendance.label}>
-                <div>
-                  <span>Vote Attendance</span>
-                  <strong>
-                    {voteAttendance.percent === null
-                      ? "No data"
-                      : `${Math.round(voteAttendance.percent * 100)}%`}
-                  </strong>
-                </div>
-                <p>
-                  {voteAttendance.recorded} recorded of {voteAttendance.accountableTotal} documented voting actions.
-                  {voteAttendance.notVoting > 0 && ` ${voteAttendance.notVoting} absent, excused, or not voting.`}
-                </p>
-              </div>
-            )}
 
           </aside>
         </div>
@@ -825,13 +807,21 @@ function uniqueTowns(towns = []) {
                     <span>Party</span>
                     <strong>{formatParty(person.party)}</strong>
                   </article>
-                  <article>
-                    <span>Vote attendance</span>
-                    <strong>
-                      {voteAttendance.percent === null
-                        ? "No data"
-                        : `${Math.round(voteAttendance.percent * 100)}%`}
-                    </strong>
+                  <article class="candidate-role-wide role-attendance-item">
+                    <div class="attendance-card" aria-label={voteAttendance.label}>
+                      <div>
+                        <span>Vote Attendance</span>
+                        <strong>
+                          {voteAttendance.percent === null
+                            ? "No data"
+                            : `${Math.round(voteAttendance.percent * 100)}%`}
+                        </strong>
+                      </div>
+                      <p>
+                        {voteAttendance.recorded} recorded of {voteAttendance.accountableTotal} documented voting actions.
+                        {voteAttendance.notVoting > 0 && ` ${voteAttendance.notVoting} absent, excused, or not voting.`}
+                      </p>
+                    </div>
                   </article>
                   {townServiceAreas.length ? (
                     <article class="candidate-role-wide">
@@ -1799,6 +1789,12 @@ function uniqueTowns(towns = []) {
     padding: 16px;
   }
 
+  .candidate-role-grid .role-attendance-item {
+    background: transparent;
+    border: 0;
+    padding: 0;
+  }
+
   .candidate-role-grid span {
     color: #6b7280;
     font-size: 0.72rem;
@@ -1952,7 +1948,8 @@ function uniqueTowns(towns = []) {
     padding: 10px;
   }
 
-  .hero-details .attendance-card {
+  .hero-details .attendance-card,
+  .role-attendance-item .attendance-card {
     margin-top: 0;
     max-width: none;
   }
