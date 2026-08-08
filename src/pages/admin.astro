@@ -823,10 +823,10 @@ function reviewerDisplayName(email = "") {
                       {profile.missing.email && <span>Missing email</span>}
                       {profile.missing.website && <span>Missing website</span>}
                       <span class:list={["review-chip", !profile.review?.reviewedAt && "review-chip-empty"]}>
-                        Last reviewed: {profile.review?.reviewedAt ? reviewDate(profile.review.reviewedAt) : "Never"}
+                        Reviewed {profile.review?.reviewedAt ? reviewDate(profile.review.reviewedAt) : "Never"}
                       </span>
                       <span class:list={["assignment-chip", !profile.review?.assignedTo && "assignment-chip-empty"]}>
-                        Assigned: {profile.review?.assignedTo ? reviewerDisplayName(profile.review.assignedTo) : "Unassigned"}
+                        {profile.review?.assignedTo ? `Assigned ${reviewerDisplayName(profile.review.assignedTo)}` : "Unassigned"}
                       </span>
                     </div>
                     <div class="gap-actions">
@@ -2603,14 +2603,14 @@ function reviewerDisplayName(email = "") {
   }
 
   .profile-gap-list article {
-    align-items: center;
+    align-items: start;
     background: #f8fafc;
     border: 1px solid #d1d5db;
     border-radius: 12px;
     display: grid;
-    gap: 12px;
-    grid-template-columns: minmax(0, 1.3fr) minmax(180px, 0.75fr) auto;
-    padding: 14px;
+    gap: 14px 18px;
+    grid-template-columns: minmax(320px, 1.25fr) minmax(220px, 0.9fr);
+    padding: 18px;
     transition: opacity 160ms ease, transform 160ms ease;
   }
 
@@ -2664,10 +2664,10 @@ function reviewerDisplayName(email = "") {
     border: 1px solid #bfdbfe;
     border-radius: 999px;
     color: #1e3a8a;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 950;
     line-height: 1;
-    padding: 5px 7px;
+    padding: 5px 8px;
   }
 
   .profile-gap-kicker span {
@@ -2685,11 +2685,12 @@ function reviewerDisplayName(email = "") {
   }
 
   .gap-actions {
-    align-items: center;
-    display: flex;
-    flex-wrap: wrap;
+    align-items: end;
+    display: grid;
     gap: 8px;
-    justify-content: flex-end;
+    grid-column: 2;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
   }
 
   .profile-gap-list strong {
@@ -2721,10 +2722,14 @@ function reviewerDisplayName(email = "") {
   .profile-gap-list a {
     border: 1px solid #e2e8f0;
     border-radius: 999px;
-    padding: 9px 12px;
+    padding: 8px 11px;
     text-align: center;
     text-decoration: none;
     white-space: nowrap;
+  }
+
+  .gap-actions > a {
+    justify-self: stretch;
   }
 
   .profile-gap-list .profile-gap-avatar {
@@ -2746,7 +2751,7 @@ function reviewerDisplayName(email = "") {
 
   .compact-button {
     min-height: 0;
-    padding: 8px 10px;
+    padding: 8px 11px;
     white-space: nowrap;
   }
 
@@ -2754,13 +2759,17 @@ function reviewerDisplayName(email = "") {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    justify-content: flex-start;
+    justify-content: flex-end;
+    min-width: 0;
   }
 
   .missing-chips span {
     background: #fee2e2;
     border-color: #fecaca;
     color: #7f1d1d;
+    font-size: 0.72rem;
+    line-height: 1.1;
+    padding: 6px 8px;
   }
 
   .missing-chips .review-chip {
@@ -2789,10 +2798,10 @@ function reviewerDisplayName(email = "") {
 
   .profile-assignment-form {
     align-items: end;
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
     gap: 7px;
-    justify-content: flex-end;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
   }
 
   .profile-assignment-form label {
@@ -2810,7 +2819,8 @@ function reviewerDisplayName(email = "") {
 
   .profile-assignment-form select {
     min-height: 36px;
-    min-width: 170px;
+    min-width: 0;
+    width: 100%;
     padding: 7px 28px 7px 10px;
   }
 
@@ -3147,6 +3157,22 @@ function reviewerDisplayName(email = "") {
     padding: 2px 5px;
   }
 
+  @media (max-width: 1180px) {
+    .profile-gap-list article {
+      grid-template-columns: minmax(280px, 1fr) minmax(220px, 300px);
+    }
+
+    .gap-actions {
+      grid-column: 1 / -1;
+      grid-template-columns: auto minmax(220px, 300px) auto;
+      justify-content: end;
+    }
+
+    .gap-actions > a {
+      justify-self: start;
+    }
+  }
+
   @media (max-width: 840px) {
     .admin-hero {
       align-items: start;
@@ -3163,6 +3189,24 @@ function reviewerDisplayName(email = "") {
 
     .gap-filters,
     .profile-gap-list article {
+      grid-template-columns: 1fr;
+    }
+
+    .missing-chips {
+      justify-content: flex-start;
+    }
+
+    .gap-actions {
+      grid-column: auto;
+      grid-template-columns: 1fr;
+      justify-content: stretch;
+    }
+
+    .gap-actions > a {
+      justify-self: stretch;
+    }
+
+    .profile-assignment-form {
       grid-template-columns: 1fr;
     }
 
