@@ -611,11 +611,17 @@ function isVotingAction(vote = {}) {
           <p>Example: 107 North Main Street, Concord, New Hampshire</p>
         </form>
 
+        <p class="help-text">
+          Address lookups and filters focus on current New Hampshire State
+          Representatives and State Senators.
+        </p>
+      </section>
+
+      <section class="legislator-filter-panel" aria-label="Legislator filters">
         <FilterBar
           action="/my-state-rep#rep-results"
           submitLabel="Filter current legislators"
           clearHref={hasDirectoryFilters ? "/my-state-rep#rep-results" : ""}
-          columns="dense"
           dataResultsForm
           live
         >
@@ -692,11 +698,6 @@ function isVotingAction(vote = {}) {
           </label>
         </FilterBar>
         <div class="filter-chips" data-fuzzy-chips hidden></div>
-
-        <p class="help-text">
-          Address lookups and filters focus on current New Hampshire State
-          Representatives and State Senators.
-        </p>
       </section>
 
       <div id="rep-results" data-results-region>
@@ -1062,8 +1063,7 @@ function isVotingAction(vote = {}) {
   }
 
   .hero-copy,
-  .address-lookup,
-  .hero :global(.nhdb-filter-bar) {
+  .address-lookup {
     position: relative;
     z-index: 2;
   }
@@ -1120,8 +1120,12 @@ function isVotingAction(vote = {}) {
     width: min(760px, 100%);
   }
 
-  .address-lookup + :global(.nhdb-filter-bar) {
-    margin-top: 32px;
+  .legislator-filter-panel {
+    margin-top: 26px;
+  }
+
+  .legislator-filter-panel :global(.nhdb-filter-bar) {
+    margin-top: 0;
   }
 
   .filters {
@@ -1273,55 +1277,6 @@ function isVotingAction(vote = {}) {
     color: #4b5563;
     line-height: 1.5;
     margin: 14px 0 0;
-  }
-
-  .hero :global(.nhdb-filter-bar) {
-    background: rgba(255, 255, 255, 0.9);
-    border-color: #dbeafe;
-    gap: 12px;
-    margin-top: 0;
-    padding: 14px;
-    text-align: left;
-    width: min(1000px, 100%);
-  }
-
-  .hero :global(.nhdb-filter-fields) {
-    gap: 10px;
-    grid-template-columns: repeat(5, minmax(126px, 1fr));
-  }
-
-  .hero :global(.nhdb-filter-bar label) {
-    gap: 5px;
-    letter-spacing: 0.06em;
-  }
-
-  .hero :global(.nhdb-filter-bar label > span) {
-    font-size: 0.68rem;
-    letter-spacing: 0.06em;
-  }
-
-  .hero :global(.nhdb-filter-bar input),
-  .hero :global(.nhdb-filter-bar select) {
-    background-color: white;
-    border-color: #c7d7e8;
-    font-size: 0.88rem;
-    font-weight: 750;
-    min-height: 40px;
-    padding-bottom: 8px;
-    padding-top: 8px;
-  }
-
-  .hero :global(.nhdb-filter-bar select) {
-    padding-right: 34px;
-  }
-
-  .hero :global(.nhdb-filter-actions) {
-    justify-content: flex-end;
-  }
-
-  .hero :global(.nhdb-filter-actions button) {
-    min-height: 40px;
-    padding: 8px 14px;
   }
 
   .status-message {
@@ -1865,18 +1820,18 @@ function isVotingAction(vote = {}) {
     }
 
     .address-row {
-      flex-direction: column;
+      grid-template-columns: 1fr;
     }
 
     button {
       width: 100%;
     }
 
-    .hero :global(.nhdb-filter-fields) {
+    .legislator-filter-panel :global(.nhdb-filter-fields) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .hero :global(.nhdb-filter-actions button) {
+    .legislator-filter-panel :global(.nhdb-filter-actions button) {
       width: auto;
     }
 
@@ -1902,7 +1857,7 @@ function isVotingAction(vote = {}) {
       padding-top: 32px;
     }
 
-    .hero :global(.nhdb-filter-fields),
+    .legislator-filter-panel :global(.nhdb-filter-fields),
     .results-heading {
       grid-template-columns: 1fr;
     }
@@ -1911,8 +1866,8 @@ function isVotingAction(vote = {}) {
       display: grid;
     }
 
-    .hero :global(.nhdb-filter-actions),
-    .hero :global(.nhdb-filter-actions button) {
+    .legislator-filter-panel :global(.nhdb-filter-actions),
+    .legislator-filter-panel :global(.nhdb-filter-actions button) {
       width: 100%;
     }
 
