@@ -1636,7 +1636,7 @@ async function handleCommunities(request, env) {
       COALESCE(dm.communities_represented, d.towns_represented, '') AS communities_represented,
       d.towns_represented,
       COALESCE(dm.is_floterial_district, d.floterial, 0) AS floterial,
-      d.seats
+      COALESCE(dm.seats, d.seats) AS seats
     FROM divisions d
     LEFT JOIN county_codes cc
       ON LOWER(cc.name) = LOWER(d.county)
@@ -1969,7 +1969,7 @@ async function getHouseDistrictsForCounty(env, county) {
       COALESCE(dm.communities_represented, d.towns_represented, '') AS communities_represented,
       d.towns_represented,
       COALESCE(dm.is_floterial_district, d.floterial, 0) AS floterial,
-      d.seats
+      COALESCE(dm.seats, d.seats) AS seats
     FROM divisions d
     LEFT JOIN county_codes cc
       ON LOWER(cc.name) = LOWER(d.county)
@@ -2023,6 +2023,7 @@ async function findTownDistricts(env, townName) {
       dm.district,
       dm.district_label,
       dm.communities_represented,
+      dm.seats,
       COALESCE(dm.is_floterial_district, 0) AS is_floterial_district,
       COALESCE(dm.is_floterial_district, 0) AS floterial
     FROM d1_district_mapping dm
@@ -2342,7 +2343,7 @@ async function getCommunityDistrict(env, { body, county, districtNumber }) {
       COALESCE(dm.communities_represented, d.towns_represented, '') AS communities_represented,
       d.towns_represented,
       COALESCE(dm.is_floterial_district, d.floterial, 0) AS floterial,
-      d.seats
+      COALESCE(dm.seats, d.seats) AS seats
     FROM divisions d
     LEFT JOIN county_codes cc
       ON LOWER(cc.name) = LOWER(d.county)
@@ -3103,7 +3104,8 @@ function candidateBaseCte() {
         cc.source_county_id AS source_county_id,
         COALESCE(dm.district_label, '') AS district_label,
         COALESCE(dm.communities_represented, '') AS communities_represented,
-        COALESCE(dm.communities_represented, '') AS towns_represented
+        COALESCE(dm.communities_represented, '') AS towns_represented,
+        dm.seats AS seats
       FROM d1_people p
       LEFT JOIN d1_person_candidate_roles cr
         ON cr.person_id = p.id
@@ -3177,6 +3179,7 @@ function candidateBaseSelectColumns(tableAlias = "c") {
     "district_label",
     "communities_represented",
     "towns_represented",
+    "seats",
   ]
     .map((column) =>
       column.includes(" AS ") ? column : `${prefix}${column}`
@@ -3258,6 +3261,7 @@ function formatCandidate(candidate) {
     communities_represented: candidate.communities_represented,
     townsRepresented: candidate.towns_represented,
     towns_represented: candidate.towns_represented,
+    seats: candidate.seats,
   };
 }
 
@@ -3279,6 +3283,7 @@ function formatCandidateRole(candidate) {
     communities_represented: candidate.communities_represented,
     townsRepresented: candidate.towns_represented,
     towns_represented: candidate.towns_represented,
+    seats: candidate.seats,
   };
 }
 
@@ -4538,6 +4543,7 @@ async function findDistrictMapping(env, body, county, district) {
       district,
       district_label,
       communities_represented,
+      seats,
       COALESCE(is_floterial_district, 0) AS is_floterial_district,
       COALESCE(is_floterial_district, 0) AS floterial
     FROM d1_district_mapping
@@ -4592,6 +4598,7 @@ async function expandFloterialDistricts(env, districts) {
       dm.district,
       dm.district_label,
       dm.communities_represented,
+      dm.seats,
       COALESCE(dm.is_floterial_district, 1) AS is_floterial_district,
       1 AS floterial
     FROM d1_floterial_components fc
