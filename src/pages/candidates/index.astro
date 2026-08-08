@@ -19,6 +19,7 @@ import { getCommunities, getTownCommunity } from "../../lib/communitiesApi";
 const API_BASE = civicApiBase();
 
 const address = Astro.url.searchParams.get("address")?.trim() || "";
+const selectedWard = normalizeWardNumber(Astro.url.searchParams.get("ward") || "");
 const county = Astro.url.searchParams.get("county")?.trim() || "";
 const name = Astro.url.searchParams.get("name")?.trim() || "";
 const office = Astro.url.searchParams.get("office")?.trim() || "";
@@ -26,6 +27,21 @@ const town = Astro.url.searchParams.get("town")?.trim() || "";
 const sort = Astro.url.searchParams.get("sort")?.trim() || "";
 const electionYear = "2026";
 const INITIAL_CANDIDATE_PREVIEW_LIMIT = 12;
+const WARD_COMMUNITY_COUNTS = new Map([
+  ["berlin", 4],
+  ["claremont", 3],
+  ["concord", 10],
+  ["dover", 6],
+  ["franklin", 3],
+  ["keene", 5],
+  ["laconia", 6],
+  ["lebanon", 3],
+  ["manchester", 12],
+  ["nashua", 9],
+  ["portsmouth", 5],
+  ["rochester", 6],
+  ["somersworth", 5],
+]);
 const officeOptions = [
   "State Representative",
   "State Senate",
@@ -50,6 +66,7 @@ let error = "";
 let resultContext = "";
 let nameOptions = [];
 let townOptions = [];
+let lookupData = null;
 
 try {
   if (address) {
@@ -67,7 +84,14 @@ try {
       throw new Error(data.error || "Unable to look up candidates for that address.");
     }
 
-    candidates = candidatesFromLookup(data);
+    lookupData = data;
+    const lookupPlace = data.civic?.place?.name || data.normalizedInput?.city || "";
+    const lookupWardOptions = wardOptionsFor(lookupPlace);
+    const lookupWard = lookupWardOptions.length
+      ? selectedWard || normalizeWardNumber(data.civic?.ward?.number || "")
+      : "";
+
+    candidates = candidatesFromLookup(data, { ward: lookupWard, warded: lookupWardOptions.length > 0 });
     meta = data.meta || {};
     resultContext = formatAddress(data.normalizedInput) || data.address || address;
   } else if (town) {
@@ -135,6 +159,14 @@ const hasFilters = address || county || selectedOffice || town || name;
 const resultCount = candidates.length;
 const addressOfficeGroups = address ? groupCandidatesByOfficeDistrict(candidates) : [];
 const addressSeatTotal = totalSeats(addressOfficeGroups);
+const civic = lookupData?.civic || {};
+const normalizedInput = lookupData?.normalizedInput || {};
+const place = civic.place?.name || normalizedInput.city || "";
+const wardOptions = wardOptionsFor(place);
+const isWardedCommunity = wardOptions.length > 0;
+const wardNumber = isWardedCommunity
+  ? selectedWard || normalizeWardNumber(civic.ward?.number || "")
+  : "";
 
 async function getDirectoryCandidates({
   q = "",
@@ -224,13 +256,24 @@ async function getCandidatePages({
   return candidates;
 }
 
-function candidatesFromLookup(data = {}) {
+function candidatesFromLookup(data = {}, { ward = "", warded = false } = {}) {
   const candidateGroups = data.groups?.candidates || {};
+  const senateCandidates = candidateGroups.senate || [];
+  const houseCandidates = warded && ward
+    ? (candidateGroups.house || []).filter((candidate) => representsWard(candidate, ward))
+    : (candidateGroups.house || []);
+  const groupedCandidates = [...senateCandidates, ...houseCandidates];
+  const fallbackCandidates = warded && ward
+    ? (data.candidates || []).filter((candidate) => {
+        if (!isHouseCandidate(candidate)) return true;
+        return representsWard(candidate, ward);
+      })
+    : (data.candidates || []);
+
   return uniqueCandidates([
-    ...(data.candidates || []),
-    ...(candidateGroups.senate || []),
-    ...(candidateGroups.house || []),
-    ...findNestedCandidates(candidateGroups),
+    ...fallbackCandidates,
+    ...groupedCandidates,
+    ...(warded && ward ? [] : findNestedCandidates(candidateGroups)),
   ]);
 }
 
@@ -414,8 +457,75 @@ function normalizeSearch(value = "") {
     .trim();
 }
 
+function normalizeWardNumber(value = "") {
+  const match = String(value || "").match(/\d+/);
+  return match ? String(Number(match[0])) : "";
+}
+
+function normalizedTownName(value = "") {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function wardOptionsFor(townName = "") {
+  const count = WARD_COMMUNITY_COUNTS.get(normalizedTownName(townName)) || 0;
+  return Array.from({ length: count }, (_, index) => String(index + 1));
+}
+
+function representsWard(record = {}, wardValue = "") {
+  const wardNumber = normalizeWardNumber(wardValue);
+  if (!wardNumber) return true;
+
+  const text = recordText(record);
+  const directWard = new RegExp(`\\bward(?:s)?\\s*${escapeRegExp(wardNumber)}\\b`, "i");
+  if (directWard.test(text)) return true;
+
+  for (const match of text.matchAll(/\bwards?\s+(\d{1,2})\s*(?:-|–|—|to|through)\s*(\d{1,2})\b/gi)) {
+    const start = Number(match[1]);
+    const end = Number(match[2]);
+    const selected = Number(wardNumber);
+    if (selected >= Math.min(start, end) && selected <= Math.max(start, end)) return true;
+  }
+
+  return false;
+}
+
+function recordText(record = {}) {
+  return [
+    record.location_text,
+    record.locationText,
+    record.towns_represented,
+    record.townsRepresented,
+    record.towns,
+    record.town,
+    record.city,
+    record.district_label,
+    record.districtLabel,
+    record.name,
+    record.office,
+    record.district,
+    record.raw_district,
+  ].flatMap(stringifyValue).filter(Boolean).join(" ");
+}
+
+function stringifyValue(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.flatMap(stringifyValue);
+  if (typeof value === "object") {
+    return [value.town, value.name, value.label, value.location_text, value.locationText].flatMap(stringifyValue);
+  }
+  return [String(value)];
+}
+
+function escapeRegExp(value = "") {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function filterLegislativeCandidates(items = []) {
   return items.filter(isLegislativeCandidate);
+}
+
+function isHouseCandidate(candidate = {}) {
+  return /representative|house/i.test(`${candidate.office || ""} ${candidate.officeType || ""}`);
 }
 
 function prioritizeLegislativeCandidates(items = []) {
@@ -728,6 +838,31 @@ function uniqueOptions(values = []) {
             <>
               {address && addressOfficeGroups.length ? (
                 <div class="address-office-results">
+                  {isWardedCommunity && (
+                    <form class:list={["ward-filter", !wardNumber && "needs-ward"]} action="/candidates" method="get" data-results-form>
+                      <input type="hidden" name="address" value={address} />
+                      <div class="ward-filter-copy">
+                        <label for="ward">Select your ward</label>
+                        <p>
+                          {wardNumber
+                            ? "Confirm or change your ward to narrow State House candidates."
+                            : "This city has ward-based districts, but the address lookup did not return a ward. Select your ward so the candidate results are not town-wide."}
+                        </p>
+                      </div>
+                      <div class="ward-filter-controls">
+                        <select id="ward" name="ward">
+                          <option value="">Use address result</option>
+                          {wardOptions.map((option) => (
+                            <option value={option} selected={selectedWard === option}>
+                              Ward {option}
+                            </option>
+                          ))}
+                        </select>
+                        <button type="submit">Apply</button>
+                      </div>
+                    </form>
+                  )}
+
                   <section class="address-office-summary" aria-label="Offices up for election">
                     <div class="summary-stat">
                       <strong>{addressOfficeGroups.length}</strong>
@@ -1098,6 +1233,68 @@ function uniqueOptions(values = []) {
     gap: 22px;
   }
 
+  .ward-filter {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #d97706;
+    border-radius: 10px;
+    box-shadow: none;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 12px;
+  }
+
+  .ward-filter.needs-ward {
+    background: #fffbeb;
+    border-color: #b45309;
+  }
+
+  .ward-filter label {
+    color: #6b4f2a;
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    margin: 0 0 4px;
+    text-transform: uppercase;
+  }
+
+  .ward-filter p {
+    color: #4b5563;
+    font-size: 0.9rem;
+    font-weight: 750;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .ward-filter-controls {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .ward-filter select {
+    background: white;
+    border: 1px solid #9ca3af;
+    border-radius: 999px;
+    color: #1f2933;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 800;
+    min-height: 38px;
+    padding: 7px 34px 7px 12px;
+  }
+
+  .ward-filter button {
+    border-width: 1px;
+    font-size: 0.86rem;
+    min-height: 38px;
+    padding: 8px 12px;
+  }
+
   .address-office-summary {
     background: linear-gradient(135deg, #eff6ff, #ffffff);
     border: 1px solid #bfdbfe;
@@ -1290,6 +1487,14 @@ function uniqueOptions(values = []) {
     .office-result-heading {
       align-items: start;
       display: grid;
+    }
+
+    .ward-filter {
+      grid-template-columns: 1fr;
+    }
+
+    .ward-filter-controls {
+      justify-content: flex-start;
     }
 
     .office-metrics {
