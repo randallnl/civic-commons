@@ -4,7 +4,9 @@ export const prerender = false;
 import BillPositionSummary from "../../../components/BillPositionSummary.astro";
 import TopNav from "../../../components/TopNav.astro";
 import SiteFooter from "../../../components/SiteFooter.astro";
+import profileIcon from "../../../assets/profile icon.png";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../../lib/billsApi";
+import { profilePhotoUrl } from "../../../lib/photos";
 import { getRepresentative, repName } from "../../../lib/repsApi";
 import { cleanText } from "../../../lib/text";
 import {
@@ -46,6 +48,11 @@ if (!error && !representative) {
 }
 
 const representativeName = repName(representative || {}) || "Representative";
+const portraitUrl = profilePhotoUrl(representative?.photo || representative?.photo_url);
+const partyLabel = formatParty(representative?.party);
+const roleLabel = representativeRoleLabel(representative || {});
+const districtLabel = representativeDistrictLabel(representative || {});
+const townsRepresented = locationLabel(representative || {});
 let votes = (apiData?.voteHistory || []).map((vote) =>
   normalizeVote(vote, trackedBills, billSummaries),
 ).filter((vote) => isVotingAction(vote) && isKnownVote(vote));
@@ -248,6 +255,48 @@ function previewText(value = "", length = 260) {
   if (text.length <= length) return text;
   return `${text.slice(0, length).trim()}...`;
 }
+
+function formatParty(value = "") {
+  const party = String(value || "").trim().toUpperCase();
+  if (party === "D") return "Democratic";
+  if (party === "R") return "Republican";
+  if (party === "I") return "Independent";
+  return cleanText(value || "Party not listed");
+}
+
+function legislativeBody(person = {}) {
+  const value = String(person.chamber || person.legislativebody || person.body || "").toLowerCase();
+  if (value === "h" || value === "house") return "House";
+  if (value === "s" || value === "senate") return "Senate";
+  return cleanText(person.chamber || "");
+}
+
+function representativeRoleLabel(person = {}) {
+  const body = legislativeBody(person);
+  if (body === "House") return "New Hampshire House of Representatives";
+  if (body === "Senate") return "New Hampshire Senate";
+  return cleanText(person.office || person.role || "Legislator");
+}
+
+function representativeDistrictLabel(person = {}) {
+  const district = cleanText(person.district || person.raw_district || "");
+  const body = legislativeBody(person);
+  if (!district) return "";
+  if (body === "House") return `NH House District ${district}`;
+  if (body === "Senate") return `NH Senate District ${district}`;
+  return `District ${district}`;
+}
+
+function locationLabel(person = {}) {
+  const value =
+    person.location_text ||
+    person.locationText ||
+    person.towns_represented ||
+    person.townsRepresented ||
+    "";
+  if (Array.isArray(value)) return value.map(cleanText).filter(Boolean).join(", ");
+  return cleanText(value);
+}
 ---
 
 <html lang="en">
@@ -273,19 +322,39 @@ function previewText(value = "", length = 260) {
       ) : (
         <>
           <section class="hero">
-            <p class="eyebrow">Vote History</p>
-            <h1>{representativeName}</h1>
-            <p>
-              These are all votes currently returned for this legislator. Votes
-              are limited to bill actions with a documented roll-call action.
-              Votes connected to the bill tracker include tracker summaries,
-              interpretations, and public testimony summary data where available.
-            </p>
-            <div class="hero-meta">
-              <span>{votes.length} votes</span>
-              <span>{trackedVoteCount} tracked</span>
-              {representative?.chamber && <span>{representative.chamber}</span>}
-              {representative?.district && <span>{representative.district}</span>}
+            <a class="portrait-card" href={`/people/${slug}`}>
+              {portraitUrl ? (
+                <img src={portraitUrl} alt={`Photo of ${representativeName}`} />
+              ) : (
+                <img class="portrait-fallback" src={profileIcon.src} alt="" />
+              )}
+            </a>
+
+            <div class="hero-copy">
+              <p class="eyebrow">Vote History</p>
+              <h1>{representativeName}</h1>
+
+              <div class="hero-meta">
+                {partyLabel && <span>{partyLabel}</span>}
+                {roleLabel && <span>{roleLabel}</span>}
+                {districtLabel && <span>{districtLabel}</span>}
+                <span>{votes.length} votes</span>
+                <span>{trackedVoteCount} tracked</span>
+              </div>
+
+              {townsRepresented && (
+                <p class="towns-served">
+                  <strong>Towns served</strong>
+                  {townsRepresented}
+                </p>
+              )}
+
+              <p>
+                These are all votes currently returned for this legislator. Votes
+                are limited to bill actions with a documented roll-call action.
+                Votes connected to the bill tracker include tracker summaries,
+                interpretations, and public testimony summary data where available.
+              </p>
             </div>
           </section>
 
@@ -400,7 +469,52 @@ function previewText(value = "", length = 260) {
   }
 
   .hero {
-    padding: 28px 0 18px;
+    align-items: stretch;
+    background:
+      radial-gradient(circle at 82% 18%, rgba(220, 77, 9, 0.14), transparent 28%),
+      linear-gradient(135deg, #eff6ff 0%, #ffffff 48%, #f8fbff 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 18px;
+    display: grid;
+    gap: clamp(18px, 3vw, 28px);
+    grid-template-columns: minmax(160px, 260px) minmax(0, 1fr);
+    margin: 18px 0 24px;
+    overflow: hidden;
+    padding: clamp(18px, 3vw, 28px);
+    position: relative;
+  }
+
+  .portrait-card {
+    aspect-ratio: 4 / 5;
+    background: #d8cfc0;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    display: block;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .portrait-card img,
+  .portrait-fallback {
+    display: block;
+    height: 100%;
+    width: 100%;
+  }
+
+  .portrait-card img {
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  .portrait-card img.portrait-fallback {
+    background: transparent;
+    object-fit: cover;
+    padding: 0;
+  }
+
+  .hero-copy {
+    align-self: center;
+    min-width: 0;
   }
 
   .eyebrow {
@@ -413,16 +527,34 @@ function previewText(value = "", length = 260) {
   }
 
   h1 {
-    font-size: clamp(2.35rem, 6vw, 4.5rem);
+    font-size: clamp(2.15rem, 5vw, 4rem);
     line-height: 0.92;
-    margin: 0 0 18px;
+    margin: 0 0 14px;
   }
 
   .hero p {
     color: #4b5563;
-    font-size: 1.08rem;
+    font-size: 1.02rem;
     line-height: 1.6;
     max-width: 780px;
+  }
+
+  .towns-served {
+    background: rgba(255, 255, 255, 0.74);
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    display: grid;
+    gap: 5px;
+    margin: 14px 0;
+    padding: 12px 14px;
+  }
+
+  .towns-served strong {
+    color: #6b4f2a;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   .hero-meta,
@@ -629,6 +761,14 @@ function previewText(value = "", length = 260) {
   }
 
   @media (max-width: 640px) {
+    .hero {
+      grid-template-columns: 1fr;
+    }
+
+    .portrait-card {
+      max-width: 220px;
+    }
+
     .vote-color-legend {
       align-items: start;
       grid-template-columns: 1fr;
