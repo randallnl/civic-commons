@@ -58,6 +58,7 @@ const gapMissing = Astro.url.searchParams.get("gapMissing") || "photoWebsite";
 const gapOffice = Astro.url.searchParams.get("gapOffice") || "";
 const gapProfile = Astro.url.searchParams.get("gapProfile") || "";
 const gapReview = Astro.url.searchParams.get("gapReview") || "needs-review";
+const gapAssigned = Astro.url.searchParams.get("gapAssigned") || "";
 const hasProfileGapFilters = [
   "gapType",
   "gapMissing",
@@ -65,6 +66,7 @@ const hasProfileGapFilters = [
   "gapProfile",
   "gapProfileSearch",
   "gapReview",
+  "gapAssigned",
 ].some((param) => Astro.url.searchParams.has(param));
 const requestedArea =
   Astro.url.searchParams.get("area") ||
@@ -113,6 +115,10 @@ const showProfilePanels = adminArea === "profiles";
 const showModerationPanels = adminArea === "moderation";
 const showReviewerPanels = adminArea === "reviewers";
 const showDataPanels = adminArea === "data";
+const profileAssignmentReviewers = () =>
+  volunteerReviewers
+    .filter((reviewer) => reviewer.status === "approved")
+    .sort((a, b) => cleanText(a.name || a.email).localeCompare(cleanText(b.name || b.email)));
 
 if (session) {
   try {
@@ -277,6 +283,7 @@ if (session) {
       office: gapOffice,
       profile: gapProfile,
       review: gapReview,
+      assignedTo: gapAssigned,
       limit: 100,
     });
   } catch (error) {
@@ -300,6 +307,13 @@ function reviewDate(value = "") {
 
 function workflowClass(value = "") {
   return `workflow-${String(value || "unassigned").replace(/[^a-z_ -]/gi, "").replace(/\s+/g, "-")}`;
+}
+
+function reviewerDisplayName(email = "") {
+  const normalized = String(email || "").trim().toLowerCase();
+  if (!normalized) return "";
+  const reviewer = volunteerReviewers.find((item) => item.email === normalized);
+  return cleanText(reviewer?.name || normalized);
 }
 ---
 
@@ -724,6 +738,19 @@ function workflowClass(value = "") {
               </label>
 
               <label>
+                Assigned to
+                <select name="gapAssigned">
+                  <option value="" selected={!gapAssigned}>Anyone</option>
+                  <option value="unassigned" selected={gapAssigned === "unassigned"}>Unassigned</option>
+                  {profileAssignmentReviewers().map((reviewer) => (
+                    <option value={reviewer.email} selected={gapAssigned === reviewer.email}>
+                      {cleanText(reviewer.name || reviewer.email)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
                 Name
                 <input
                   id="gapProfileSearch"
@@ -752,6 +779,8 @@ function workflowClass(value = "") {
               <span><strong>{profileGaps.counts.missingPhoto || 0}</strong> Missing Photos</span>
               <span><strong>{profileGaps.counts.missingEmail || 0}</strong> Missing Emails</span>
               <span><strong>{profileGaps.counts.missingWebsite || 0}</strong> Missing Websites</span>
+              <span><strong>{profileGaps.counts.assigned || 0}</strong> Assigned</span>
+              <span><strong>{profileGaps.counts.unassigned || 0}</strong> Unassigned</span>
               <span>
                 <strong>{profileGaps.counts.recentlyReviewed || 0}</strong>
                 Reviewed in {profileGaps.counts.recentReviewDays || 30} days
@@ -796,9 +825,32 @@ function workflowClass(value = "") {
                       <span class:list={["review-chip", !profile.review?.reviewedAt && "review-chip-empty"]}>
                         Last reviewed: {profile.review?.reviewedAt ? reviewDate(profile.review.reviewedAt) : "Never"}
                       </span>
+                      <span class:list={["assignment-chip", !profile.review?.assignedTo && "assignment-chip-empty"]}>
+                        Assigned: {profile.review?.assignedTo ? reviewerDisplayName(profile.review.assignedTo) : "Unassigned"}
+                      </span>
                     </div>
                     <div class="gap-actions">
                       <a href={profile.profilePath}>Open profile</a>
+                      {userCanManageReviewers && (
+                        <form action="/api/admin/profile" method="post" class="profile-assignment-form">
+                          <input type="hidden" name="entityType" value={profile.type} />
+                          <input type="hidden" name="entityKey" value={profile.key} />
+                          <input type="hidden" name="profileAction" value="assign-review" />
+                          <input type="hidden" name="redirectTo" value={Astro.url.pathname + Astro.url.search} />
+                          <label>
+                            <span>Assign</span>
+                            <select name="assignedTo" aria-label={`Assign ${cleanText(profile.name || profile.key)} to reviewer`}>
+                              <option value="" selected={!profile.review?.assignedTo}>Unassigned</option>
+                              {profileAssignmentReviewers().map((reviewer) => (
+                                <option value={reviewer.email} selected={profile.review?.assignedTo === reviewer.email}>
+                                  {cleanText(reviewer.name || reviewer.email)}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <button class="secondary compact-button" type="submit">Save</button>
+                        </form>
+                      )}
                       <form action="/api/admin/profile" method="post" data-profile-review-form>
                         <input type="hidden" name="entityType" value={profile.type} />
                         <input type="hidden" name="entityKey" value={profile.key} />
@@ -2519,7 +2571,7 @@ function workflowClass(value = "") {
     align-items: end;
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(5, minmax(150px, 1fr)) auto;
+    grid-template-columns: repeat(6, minmax(135px, 1fr)) auto;
     margin-bottom: 18px;
   }
 
@@ -2721,6 +2773,45 @@ function workflowClass(value = "") {
     background: #f8fafc;
     border-color: #d1d5db;
     color: #64748b;
+  }
+
+  .missing-chips .assignment-chip {
+    background: #fef3c7;
+    border-color: #facc15;
+    color: #713f12;
+  }
+
+  .missing-chips .assignment-chip-empty {
+    background: #f8fafc;
+    border-color: #d1d5db;
+    color: #64748b;
+  }
+
+  .profile-assignment-form {
+    align-items: end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    justify-content: flex-end;
+  }
+
+  .profile-assignment-form label {
+    display: grid;
+    gap: 4px;
+  }
+
+  .profile-assignment-form label span {
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .profile-assignment-form select {
+    min-height: 36px;
+    min-width: 170px;
+    padding: 7px 28px 7px 10px;
   }
 
   .moderation-list {

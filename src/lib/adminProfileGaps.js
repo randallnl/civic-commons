@@ -25,6 +25,7 @@ export async function getProfileGaps({
   office = "",
   profile = "",
   review = "needs-review",
+  assignedTo = "",
   limit = 75,
 } = {}) {
   const db = adminProfileGapsDb();
@@ -41,6 +42,7 @@ export async function getProfileGaps({
   const normalizedReview = ["needs-review", "all", "recent"].includes(review)
     ? review
     : "needs-review";
+  const normalizedAssignedTo = normalizeAssignedFilter(assignedTo);
   const queryLimit = Math.max(limit, 1000);
   const reviews = await profileReviewMap(db);
 
@@ -58,6 +60,7 @@ export async function getProfileGaps({
     .sort((a, b) => a.name.localeCompare(b.name));
   const allResults = reviewedResults
     .filter((item) => reviewMatches(item.review, normalizedReview))
+    .filter((item) => assignmentMatches(item.review, normalizedAssignedTo))
     .sort((a, b) => a.name.localeCompare(b.name));
   const results = allResults
     .filter((item) => !normalizedProfile || profileOptionValue(item) === normalizedProfile)
@@ -82,6 +85,8 @@ export async function getProfileGaps({
       missingEmail: matchingResults.filter((item) => item.missing.email).length,
       missingWebsite: matchingResults.filter((item) => item.missing.website).length,
       recentlyReviewed: reviewedMatchingResults.filter((item) => item.review?.isRecent).length,
+      assigned: matchingResults.filter((item) => item.review?.assignedTo).length,
+      unassigned: matchingResults.filter((item) => !item.review?.assignedTo).length,
       recentReviewDays: RECENT_REVIEW_DAYS,
     },
   };
@@ -306,6 +311,8 @@ function emptyCounts() {
     missingWebsite: 0,
     shown: 0,
     recentlyReviewed: 0,
+    assigned: 0,
+    unassigned: 0,
     recentReviewDays: RECENT_REVIEW_DAYS,
   };
 }
@@ -336,4 +343,14 @@ function reviewMatches(review, filter) {
   if (filter === "all") return true;
   if (filter === "recent") return Boolean(review?.isRecent);
   return !review?.isRecent;
+}
+
+function normalizeAssignedFilter(value = "") {
+  return String(value || "").trim().toLowerCase();
+}
+
+function assignmentMatches(review, filter) {
+  if (!filter || filter === "all") return true;
+  if (filter === "unassigned") return !review?.assignedTo;
+  return String(review?.assignedTo || "").toLowerCase() === filter;
 }

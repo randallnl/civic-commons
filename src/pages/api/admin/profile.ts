@@ -3,11 +3,12 @@ export const prerender = false;
 import {
   adminDb,
   canEditProfiles,
+  canManageReviewers,
   canReviewProfiles,
   forbiddenAdminResponse,
   requireAdmin,
 } from "../../../lib/adminAuth";
-import { markProfileReviewed } from "../../../lib/adminProfileReviews";
+import { assignProfileReview, markProfileReviewed } from "../../../lib/adminProfileReviews";
 import {
   linkCandidateToLegislator,
   linkLegislatorToCandidate,
@@ -133,6 +134,22 @@ export async function POST({ request }) {
         redirectTo,
         "Profile marked reviewed. It will be hidden from the default cleanup queue for 30 days.",
       );
+    }
+
+    if (profileAction === "assign-review") {
+      if (!canManageReviewers(auth.session)) return forbiddenAdminResponse();
+      const assignment = await assignProfileReview({
+        entityType,
+        entityKey,
+        assignedTo: String(form.get("assignedTo") || ""),
+        assignedBy: auth.session?.email || "",
+        assignmentNote: String(form.get("assignmentNote") || ""),
+      });
+      const assignedMessage = assignment.assignedTo
+        ? `Profile assigned to ${assignment.assignedTo}.`
+        : "Profile assignment cleared.";
+      if (wantsHtml) return htmlMessage(assignedMessage, "success");
+      return redirectWithMessage(redirectTo, assignedMessage);
     }
 
     if (!canEditProfiles(auth.session)) return forbiddenAdminResponse();
