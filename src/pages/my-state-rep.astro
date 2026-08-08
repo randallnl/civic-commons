@@ -757,63 +757,63 @@ function isVotingAction(vote = {}) {
       {lookupData && (allReps.length > 0 || allCandidates.length > 0) && (
         <>
           <section class="district-summary">
-            <div class="summary-card panel">
-              <div>
+            <div class="address-office-results">
+              <div class="address-result-heading">
                 <p class="summary-label">Showing results for</p>
                 <h2>{prettyAddress || lookupData.address || "This address"}</h2>
-
-                {isWardedCommunity && (
-                  <form class:list={["ward-filter", !wardNumber && "needs-ward"]} action="/my-state-rep#rep-results" method="get" data-results-form>
-                    <input type="hidden" name="address" value={address} />
-                    <div class="ward-filter-copy">
-                      <label for="ward">Select your ward</label>
-                      <p>
-                        {wardNumber
-                          ? "Confirm or change your ward to narrow State House representatives and candidates."
-                          : "This city has ward-based districts, but the address lookup did not return a ward. Select your ward so the results are not town-wide."}
-                      </p>
-                    </div>
-                    <div class="ward-filter-controls">
-                      <select id="ward" name="ward">
-                        <option value="">Use address result</option>
-                        {wardOptions.map((option) => (
-                          <option value={option} selected={selectedWard === option}>
-                            Ward {option}
-                          </option>
-                        ))}
-                      </select>
-                      <button type="submit">Apply</button>
-                    </div>
-                  </form>
-                )}
               </div>
 
-              <div class="summary-grid">
+              {isWardedCommunity && (
+                <form class:list={["ward-filter", !wardNumber && "needs-ward"]} action="/my-state-rep#rep-results" method="get" data-results-form>
+                  <input type="hidden" name="address" value={address} />
+                  <div class="ward-filter-copy">
+                    <label for="ward">Select your ward</label>
+                    <p>
+                      {wardNumber
+                        ? "Confirm or change your ward to narrow State House representatives and candidates."
+                        : "This city has ward-based districts, but the address lookup did not return a ward. Select your ward so the results are not town-wide."}
+                    </p>
+                  </div>
+                  <div class="ward-filter-controls">
+                    <select id="ward" name="ward">
+                      <option value="">Use address result</option>
+                      {wardOptions.map((option) => (
+                        <option value={option} selected={selectedWard === option}>
+                          Ward {option}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="submit">Apply</button>
+                  </div>
+                </form>
+              )}
+
+              <div class="address-office-summary">
                 {place && (
-                  <div class="summary-item">
-                    <span>Community</span>
+                  <div class="summary-stat">
                     <strong>{place}</strong>
+                    <span>Community</span>
                   </div>
                 )}
 
                 {ward && (
-                  <div class="summary-item">
-                    <span>Ward</span>
+                  <div class="summary-stat">
                     <strong>{ward}</strong>
+                    <span>Ward</span>
                   </div>
                 )}
 
                 {senateDistrict && (
-                  <div class="summary-item">
+                  <div class="summary-stat">
+                    <strong>{senateDistrict}</strong>
                     <span>State Senate</span>
-                    <strong>District {senateDistrict}</strong>
                   </div>
                 )}
 
                 {houseDistricts.length > 0 && (
-                  <div class="summary-item">
-                    <span>State House</span>
+                  <div class="summary-stat">
                     <strong>{houseDistricts.join(", ")}</strong>
+                    <span>State House</span>
                   </div>
                 )}
               </div>
@@ -1049,7 +1049,7 @@ function isVotingAction(vote = {}) {
 
   .eyebrow,
   .summary-label,
-  .summary-item span {
+  .summary-stat span {
     text-transform: uppercase;
     letter-spacing: 0.12em;
     font-size: 0.8rem;
@@ -1290,13 +1290,24 @@ function isVotingAction(vote = {}) {
     margin-top: 24px;
   }
 
-  .summary-card {
-    padding: 24px;
+  .address-office-results {
+    display: grid;
+    gap: 22px;
   }
 
-  .summary-card h2 {
+  .address-result-heading h2 {
     font-size: clamp(1.5rem, 4vw, 2.4rem);
     margin: 0;
+  }
+
+  .address-office-summary {
+    background: linear-gradient(135deg, #eff6ff, #ffffff);
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    padding: 18px 20px;
   }
 
   .ward-filter {
@@ -1308,8 +1319,6 @@ function isVotingAction(vote = {}) {
     display: grid;
     gap: 10px;
     grid-template-columns: minmax(0, 1fr) auto;
-    margin-top: 14px;
-    max-width: 760px;
     padding: 12px;
   }
 
@@ -1362,26 +1371,6 @@ function isVotingAction(vote = {}) {
     font-size: 0.86rem;
     min-height: 38px;
     padding: 8px 12px;
-  }
-
-  .summary-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin-top: 20px;
-  }
-
-  .summary-item {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 16px;
-  }
-
-  .summary-item span {
-    display: block;
-    color: #6b7280;
-    margin-bottom: 6px;
   }
 
   .results {
@@ -1802,7 +1791,7 @@ function isVotingAction(vote = {}) {
   }
 
   @media (max-width: 900px) {
-    .summary-grid,
+    .address-office-summary,
     .candidate-summary-strip,
     .rep-grid,
     .candidate-grid,

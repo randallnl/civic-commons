@@ -159,6 +159,8 @@ const hasFilters = address || county || selectedOffice || town || name;
 const resultCount = candidates.length;
 const addressOfficeGroups = address ? groupCandidatesByOfficeDistrict(candidates) : [];
 const addressSeatTotal = totalSeats(addressOfficeGroups);
+const addressSenateDistricts = districtSummaryFor(addressOfficeGroups, "senate");
+const addressHouseDistricts = districtSummaryFor(addressOfficeGroups, "house");
 const civic = lookupData?.civic || {};
 const normalizedInput = lookupData?.normalizedInput || {};
 const place = civic.place?.name || normalizedInput.city || "";
@@ -591,6 +593,21 @@ function totalSeats(groups = []) {
   return total > 0 ? total : 0;
 }
 
+function districtSummaryFor(groups = [], body = "") {
+  const normalizedBody = body.toLowerCase();
+  const districts = groups
+    .filter((group) => {
+      const office = `${group.office || ""} ${group.officeLabel || ""}`.toLowerCase();
+      if (normalizedBody === "senate") return /senate/.test(office);
+      if (normalizedBody === "house") return /representative|house/.test(office);
+      return true;
+    })
+    .map((group) => cleanDisplay(group.district))
+    .filter(Boolean);
+
+  return [...new Set(districts)].join(", ");
+}
+
 function candidateOfficeDistrictLabel(candidate = {}) {
   const officeLabel = normalizeOfficeLabel(candidate.office);
   const isSenateOffice = /state senate|state senator/i.test(officeLabel);
@@ -867,6 +884,14 @@ function uniqueOptions(values = []) {
                     <div class="summary-stat">
                       <strong>{addressOfficeGroups.length}</strong>
                       <span>{addressOfficeGroups.length === 1 ? "Office" : "Offices"}</span>
+                    </div>
+                    <div class="summary-stat">
+                      <strong>{addressSenateDistricts || "—"}</strong>
+                      <span>Senate District</span>
+                    </div>
+                    <div class="summary-stat">
+                      <strong>{addressHouseDistricts || "—"}</strong>
+                      <span>House Districts</span>
                     </div>
                     <div class="summary-stat">
                       <strong>{addressSeatTotal || "—"}</strong>
@@ -1301,7 +1326,7 @@ function uniqueOptions(values = []) {
     border-radius: 12px;
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     padding: 18px 20px;
   }
 

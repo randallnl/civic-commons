@@ -18,9 +18,12 @@ const officeTypeLabel =
   String(candidate.officeType || "").trim().toLowerCase() === "general court"
     ? ""
     : candidate.officeType;
+const isSenateOffice = /state senate|state senator|senate/i.test(
+  `${candidate.office || ""} ${candidate.officeType || ""}`,
+);
 const officeParts = [
   candidate.office,
-  candidate.county,
+  isSenateOffice ? "" : candidate.county,
   candidate.district ? `District ${candidate.district}` : "",
 ].filter(Boolean);
 const districtLabel = [
