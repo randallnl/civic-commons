@@ -177,11 +177,7 @@ const filteredCandidates = [
   ...filteredHouseCandidates,
 ];
 const candidateOfficeGroups = groupCandidatesByOfficeDistrict(filteredCandidates);
-const candidateOfficeLabels = candidateOfficeGroups.map((group) => group.label);
 const candidateSeatTotal = totalSeats(candidateOfficeGroups);
-const candidateOfficeSummary = candidateOfficeLabels.length
-  ? `${formatList(candidateOfficeLabels)} ${candidateOfficeLabels.length === 1 ? "is" : "are"} the ${candidateOfficeLabels.length === 1 ? "office" : "offices"} up for election for people in ${prettyAddress || lookupData?.address || address}.${candidateSeatTotal ? ` Together, that means ${candidateSeatTotal} ${candidateSeatTotal === 1 ? "seat is" : "seats are"} up for election.` : ""}`
-  : "";
 const senateDistrict =
   civic.senate?.districtLabel || civic.senate?.district || "";
 const houseDistricts = matchedDistricts
@@ -322,6 +318,8 @@ function groupCandidatesByOfficeDistrict(items = []) {
         county: candidate.county || "",
         district: candidate.district || "",
         seats: seatsForCandidateOffice(candidate),
+        officeLabel: normalizeCandidateOffice(candidate.office),
+        districtLabel: districtDisplay(candidate),
         candidates: [],
       });
     }
@@ -361,14 +359,23 @@ function candidateOfficePriority(value = "") {
 
 function candidateOfficeDistrictLabel(candidate = {}) {
   const officeLabel = normalizeCandidateOffice(candidate.office);
+  const isSenateOffice = /state senate|state senator/i.test(officeLabel);
   const countyLabel = cleanDisplay(candidate.county);
   const districtLabel = cleanDisplay(candidate.district);
 
   return [
     officeLabel || "Office",
-    countyLabel,
+    isSenateOffice ? "" : countyLabel,
     districtLabel ? `District ${districtLabel}` : "",
   ].filter(Boolean).join(", ");
+}
+
+function districtDisplay(candidate = {}) {
+  const districtLabel = cleanDisplay(candidate.district);
+  if (!districtLabel) return "District not listed";
+  const officeLabel = normalizeCandidateOffice(candidate.office);
+  if (/state senate|state senator/i.test(officeLabel)) return `District ${districtLabel}`;
+  return [cleanDisplay(candidate.county), `District ${districtLabel}`].filter(Boolean).join(", ");
 }
 
 function normalizeCandidateOffice(value = "") {
@@ -385,12 +392,6 @@ function cleanDisplay(value = "") {
 function numericSortValue(value = "") {
   const number = Number(value);
   return Number.isFinite(number) ? number : 999;
-}
-
-function formatList(items = []) {
-  const values = items.filter(Boolean);
-  if (values.length <= 2) return values.join(values.length === 2 ? " and " : "");
-  return `${values.slice(0, -1).join("; ")}; and ${values.at(-1)}`;
 }
 
 function normalizeWardNumber(value = "") {
@@ -866,21 +867,34 @@ function isVotingAction(vote = {}) {
               <section class="candidate-results">
                 <div class="group-header">
                   <h2>2026 Legislative Candidates</h2>
-                  <p>
-                    {candidateOfficeSummary ||
-                      "State House and State Senate candidates returned for the same address lookup."}
-                  </p>
+                  <div class="candidate-summary-strip" aria-label="Election summary">
+                    <div class="summary-stat">
+                      <strong>{candidateOfficeGroups.length}</strong>
+                      <span>{candidateOfficeGroups.length === 1 ? "Office" : "Offices"}</span>
+                    </div>
+                    <div class="summary-stat">
+                      <strong>{candidateSeatTotal || "—"}</strong>
+                      <span>{candidateSeatTotal === 1 ? "Seat" : "Seats"}</span>
+                    </div>
+                    <div class="summary-stat">
+                      <strong>{filteredCandidates.length}</strong>
+                      <span>{filteredCandidates.length === 1 ? "Candidate" : "Candidates"}</span>
+                    </div>
+                  </div>
                 </div>
 
                 {candidateOfficeGroups.map((group) => (
                   <section class="candidate-group" aria-labelledby={`candidate-office-${group.label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}>
                     <div class="candidate-group-heading">
-                      <p class="eyebrow">Office up for election</p>
-                      <h3 id={`candidate-office-${group.label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}>{group.label}</h3>
-                      <p>
-                        {group.candidates.length} {group.candidates.length === 1 ? "candidate" : "candidates"} returned for this district
-                        {group.seats ? `, with ${group.seats} ${group.seats === 1 ? "seat" : "seats"} up for election` : ""}.
-                      </p>
+                      <div>
+                        <p class="eyebrow">Office up for election</p>
+                        <h3 id={`candidate-office-${group.label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}>{group.officeLabel || group.label}</h3>
+                        <p>{group.districtLabel}</p>
+                      </div>
+                      <div class="office-metrics" aria-label={`${group.label} summary`}>
+                        <span><strong>{group.seats || "—"}</strong> {group.seats === 1 ? "seat" : "seats"}</span>
+                        <span><strong>{group.candidates.length}</strong> {group.candidates.length === 1 ? "candidate" : "candidates"}</span>
+                      </div>
                     </div>
                     <div class="candidate-grid">
                       {group.candidates.map((candidate) => (
@@ -1320,6 +1334,40 @@ function isVotingAction(vote = {}) {
     margin-top: 56px;
   }
 
+  .candidate-summary-strip {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 14px;
+    width: min(560px, 100%);
+  }
+
+  .summary-stat {
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    display: grid;
+    gap: 4px;
+    justify-items: center;
+    padding: 14px 10px;
+    text-align: center;
+  }
+
+  .summary-stat strong {
+    color: #1e3a8a;
+    font-size: clamp(1.75rem, 4vw, 2.35rem);
+    font-weight: 950;
+    line-height: 1;
+  }
+
+  .summary-stat span {
+    color: #475569;
+    font-size: 0.74rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
   .secondary-preview {
     border-top: 2px solid #d1d5db;
     padding-top: 28px;
@@ -1340,9 +1388,11 @@ function isVotingAction(vote = {}) {
   }
 
   .candidate-group-heading {
+    align-items: center;
     border-bottom: 1px solid #e5edf9;
-    display: grid;
-    gap: 4px;
+    display: flex;
+    gap: 14px;
+    justify-content: space-between;
     padding-bottom: 12px;
   }
 
@@ -1362,6 +1412,28 @@ function isVotingAction(vote = {}) {
     color: #64748b;
     font-weight: 850;
     margin: 0;
+  }
+
+  .office-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .office-metrics span {
+    background: #eef6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1e3a8a;
+    font-size: 0.82rem;
+    font-weight: 900;
+    padding: 7px 10px;
+    white-space: nowrap;
+  }
+
+  .office-metrics strong {
+    color: #1f2933;
   }
 
   .group-header h2 {
@@ -1656,10 +1728,20 @@ function isVotingAction(vote = {}) {
 
   @media (max-width: 900px) {
     .summary-grid,
+    .candidate-summary-strip,
     .rep-grid,
     .candidate-grid,
     .sample-grid {
       grid-template-columns: 1fr;
+    }
+
+    .candidate-group-heading {
+      align-items: start;
+      display: grid;
+    }
+
+    .office-metrics {
+      justify-content: flex-start;
     }
 
     .address-row {
