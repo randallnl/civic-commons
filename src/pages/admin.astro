@@ -7,7 +7,6 @@ import profileIcon from "../assets/profile icon.png";
 import { getBills, normalizeBillCodeForUrl } from "../lib/billsApi";
 import {
   canEditOrganizations,
-  canEditProfiles,
   canManageReviewers,
   canModerateContent,
   canReviewProfiles,
@@ -103,7 +102,6 @@ let workflowStats = { total: 0, byStatus: {}, byQueue: {} };
 let volunteerReviewers = [];
 let volunteerReviewerCounts = { total: 0, pending: 0, approved: 0, disabled: 0, rejected: 0 };
 const userCanReviewProfiles = session ? canReviewProfiles(session) : false;
-const userCanEditProfiles = session ? canEditProfiles(session) : false;
 const userCanModerateContent = session ? canModerateContent(session) : false;
 const userCanEditOrganizations = session ? canEditOrganizations(session) : false;
 const userCanUploadAssets = session ? canUploadAssets(session) : false;
@@ -115,6 +113,7 @@ const showProfilePanels = adminArea === "profiles";
 const showModerationPanels = adminArea === "moderation";
 const showReviewerPanels = adminArea === "reviewers";
 const showDataPanels = adminArea === "data";
+const effectiveGapAssigned = userCanManageReviewers ? gapAssigned : session?.email || "";
 const profileAssignmentReviewers = () =>
   volunteerReviewers
     .filter((reviewer) => reviewer.status === "approved")
@@ -283,7 +282,8 @@ if (session) {
       office: gapOffice,
       profile: gapProfile,
       review: gapReview,
-      assignedTo: gapAssigned,
+      assignedTo: effectiveGapAssigned,
+      reviewerEmail: session.email || "",
       limit: 100,
     });
   } catch (error) {
@@ -578,24 +578,6 @@ function reviewerDisplayName(email = "") {
           </section>
           )}
 
-          {userCanEditProfiles && showProfilePanels && (
-          <section id="profile-editing" class="panel">
-            <div class="panel-heading">
-              <p class="eyebrow">Profiles</p>
-              <h2>Edit candidates and legislators</h2>
-              <p>
-                Open a candidate or legislator profile while signed in. An admin
-                editor appears on the page and saves updates directly to the
-                source D1 tables used by the local API.
-              </p>
-            </div>
-            <div class="profile-actions">
-              <a href="/people">Find a legislator</a>
-              <a href="/candidates">Find a candidate</a>
-            </div>
-          </section>
-          )}
-
           {userCanUseSourceDataTools && showDataPanels && (
           <section id="bill-admin" class="panel">
             <div class="panel-heading">
@@ -737,18 +719,22 @@ function reviewerDisplayName(email = "") {
                 </select>
               </label>
 
-              <label>
-                Assigned to
-                <select name="gapAssigned">
-                  <option value="" selected={!gapAssigned}>Anyone</option>
-                  <option value="unassigned" selected={gapAssigned === "unassigned"}>Unassigned</option>
-                  {profileAssignmentReviewers().map((reviewer) => (
-                    <option value={reviewer.email} selected={gapAssigned === reviewer.email}>
-                      {cleanText(reviewer.name || reviewer.email)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {userCanManageReviewers ? (
+                <label>
+                  Assigned to
+                  <select name="gapAssigned">
+                    <option value="" selected={!gapAssigned}>Anyone</option>
+                    <option value="unassigned" selected={gapAssigned === "unassigned"}>Unassigned</option>
+                    {profileAssignmentReviewers().map((reviewer) => (
+                      <option value={reviewer.email} selected={gapAssigned === reviewer.email}>
+                        {cleanText(reviewer.name || reviewer.email)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <input type="hidden" name="gapAssigned" value={effectiveGapAssigned} />
+              )}
 
               <label>
                 Name
@@ -2457,12 +2443,6 @@ function reviewerDisplayName(email = "") {
     margin-top: 14px;
   }
 
-  .profile-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
   .role-chip {
     background: #eff6ff;
     border: 1px solid #93c5fd;
@@ -3156,13 +3136,6 @@ function reviewerDisplayName(email = "") {
   .secondary.danger {
     border-color: #991b1b;
     color: #991b1b;
-  }
-
-  .profile-actions a {
-    border: 1px solid #e2e8f0;
-    border-radius: 999px;
-    padding: 10px 14px;
-    text-decoration: none;
   }
 
   label {

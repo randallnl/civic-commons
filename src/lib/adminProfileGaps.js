@@ -26,6 +26,7 @@ export async function getProfileGaps({
   profile = "",
   review = "needs-review",
   assignedTo = "",
+  reviewerEmail = "",
   limit = 75,
 } = {}) {
   const db = adminProfileGapsDb();
@@ -43,6 +44,7 @@ export async function getProfileGaps({
     ? review
     : "needs-review";
   const normalizedAssignedTo = normalizeAssignedFilter(assignedTo);
+  const normalizedReviewerEmail = normalizeAssignedFilter(reviewerEmail);
   const queryLimit = Math.max(limit, 1000);
   const reviews = await profileReviewMap(db);
 
@@ -61,7 +63,7 @@ export async function getProfileGaps({
   const allResults = reviewedResults
     .filter((item) => reviewMatches(item.review, normalizedReview))
     .filter((item) => assignmentMatches(item.review, normalizedAssignedTo))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => profileGapSort(a, b, normalizedAssignedTo || normalizedReviewerEmail));
   const results = allResults
     .filter((item) => !normalizedProfile || profileOptionValue(item) === normalizedProfile)
     .slice(0, limit);
@@ -353,4 +355,18 @@ function assignmentMatches(review, filter) {
   if (!filter || filter === "all") return true;
   if (filter === "unassigned") return !review?.assignedTo;
   return String(review?.assignedTo || "").toLowerCase() === filter;
+}
+
+function profileGapSort(a = {}, b = {}, priorityAssignee = "") {
+  const priorityA = assignedPriority(a.review, priorityAssignee);
+  const priorityB = assignedPriority(b.review, priorityAssignee);
+  if (priorityA !== priorityB) return priorityA - priorityB;
+  return String(a.name || "").localeCompare(String(b.name || ""));
+}
+
+function assignedPriority(review, priorityAssignee = "") {
+  const assignedTo = String(review?.assignedTo || "").toLowerCase();
+  if (priorityAssignee && assignedTo === priorityAssignee) return 0;
+  if (assignedTo) return 1;
+  return 2;
 }
