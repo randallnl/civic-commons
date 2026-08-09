@@ -5,10 +5,9 @@ import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import FilterBar from "../../components/FilterBar.astro";
 import profileIcon from "../../assets/profile icon.png";
-import { currentAdminSession } from "../../lib/adminAuth";
+import { adminDb, currentAdminSession } from "../../lib/adminAuth";
 import {
   candidateName,
-  candidatePath,
   formatCandidateParty,
   getCandidate,
   partyClassName,
@@ -17,8 +16,10 @@ import { isFreeStater, isTpActionAligned } from "../../lib/civicTags";
 import {
   getOrganization,
   normalizeBillCode,
+  slugify,
 } from "../../lib/organizationsApi";
 import { profilePhotoUrl } from "../../lib/photos";
+import { ensureUnifiedPeopleTables } from "../../lib/unifiedPeople";
 
 const { slug = "" } = Astro.params;
 
@@ -39,18 +40,16 @@ const title = organization?.name || "Organization";
 const enrichedEndorsements = organization
   ? await Promise.all(
       (organization.endorsements || []).map(async (endorsement) => {
-        if (!endorsement.candidateSlug) return { ...endorsement, candidateProfile: null };
+        const [candidateProfile, personProfile] = await Promise.all([
+          loadEndorsedCandidate(endorsement),
+          loadEndorsedPerson(endorsement),
+        ]);
 
-        try {
-          const data = await getCandidate(endorsement.candidateSlug);
-          return {
-            ...endorsement,
-            candidateProfile: data.candidate || data,
-          };
-        } catch (error) {
-          console.error(error?.message || "Unable to load endorsed candidate.");
-          return { ...endorsement, candidateProfile: null };
-        }
+        return {
+          ...endorsement,
+          candidateProfile,
+          personProfile,
+        };
       }),
     )
   : [];
@@ -104,36 +103,165 @@ function endorsementPillClass(endorsement = {}) {
 }
 
 function endorsedCandidateName(endorsement = {}) {
-  return candidateName(endorsement.candidateProfile || {}) || endorsement.candidateName || "Candidate";
+  return (
+    candidateName(endorsement.candidateProfile || {}) ||
+    endorsement.personProfile?.name ||
+    endorsement.candidateName ||
+    "Candidate"
+  );
 }
 
 function endorsedCandidateHref(endorsement = {}) {
-  if (endorsement.candidateProfile) return candidatePath(endorsement.candidateProfile);
-  return endorsement.candidateSlug ? `/candidates/${endorsement.candidateSlug}` : "/candidates";
+  const candidate = endorsement.candidateProfile || {};
+  const legislatorPath = String(candidate.legislatorProfileUrl || "").trim();
+  if (legislatorPath.startsWith("/people/")) return legislatorPath;
+
+  const slug =
+    endorsement.personProfile?.slug ||
+    candidate.slug ||
+    slugify(candidateName(candidate)) ||
+    endorsement.candidateSlug ||
+    endorsement.candidateSlugKey ||
+    slugify(endorsement.candidateName || "");
+
+  return slug ? `/people/${encodeURIComponent(slug)}` : "/people";
 }
 
 function endorsedCandidatePhoto(endorsement = {}) {
   const candidate = endorsement.candidateProfile || {};
-  return profilePhotoUrl(candidate.photoUrl) || profilePhotoUrl(candidate.legislatorPhotoUrl);
+  const person = endorsement.personProfile || {};
+  return (
+    profilePhotoUrl(endorsement.photoUrl) ||
+    profilePhotoUrl(person.photoUrl) ||
+    profilePhotoUrl(person.photo_url) ||
+    profilePhotoUrl(candidate.photoUrl) ||
+    profilePhotoUrl(candidate.photo_url) ||
+    profilePhotoUrl(candidate.photo) ||
+    profilePhotoUrl(candidate.legislatorPhotoUrl)
+  );
 }
 
 function endorsedCandidateOfficeLine(endorsement = {}) {
   const candidate = endorsement.candidateProfile || {};
+  const person = endorsement.personProfile || {};
+  const office = candidate.office || person.office || endorsement.office;
+  const county = /senate/i.test(office || "") ? "" : candidate.county || person.county;
+  const district = candidate.district || person.district || endorsement.district;
   return [
-    candidate.office || endorsement.office,
-    candidate.county,
-    candidate.district ? `District ${candidate.district}` : endorsement.district,
+    office,
+    county,
+    district ? `District ${district}` : "",
   ].filter(Boolean).join(", ");
 }
 
 function endorsedCandidateParty(endorsement = {}) {
   const candidate = endorsement.candidateProfile || {};
-  return candidate.politicalParty || candidate.party || "";
+  return candidate.politicalParty || candidate.party || endorsement.personProfile?.party || "";
 }
 
 function endorsedCandidateIsCurrentLegislator(endorsement = {}) {
   const candidate = endorsement.candidateProfile || {};
-  return Boolean(candidate.currentLegislator || candidate.legislatorPersonId || candidate.legislatorProfileUrl);
+  const person = endorsement.personProfile || {};
+  return Boolean(
+    candidate.currentLegislator ||
+    candidate.legislatorPersonId ||
+    candidate.legislatorProfileUrl ||
+    person.isCurrentLegislator,
+  );
+}
+
+async function loadEndorsedCandidate(endorsement = {}) {
+  const keys = endorsementLookupKeys(endorsement);
+
+  for (const key of keys) {
+    try {
+      const data = await getCandidate(key);
+      return data.candidate || data;
+    } catch (error) {
+      // Try the next possible identifier.
+    }
+  }
+
+  return null;
+}
+
+async function loadEndorsedPerson(endorsement = {}) {
+  const db = adminDb();
+  if (!db) return null;
+
+  await ensureUnifiedPeopleTables(db);
+
+  const keys = endorsementLookupKeys(endorsement);
+  const filerKeys = keys
+    .map((key) => String(key || "").match(/^\d+/)?.[0] || "")
+    .filter(Boolean);
+  const name = cleanName(endorsement.candidateName);
+  const slugKeys = [
+    ...keys,
+    slugify(name),
+    ...keys.map((key) => String(key).replace(/^\d+-/, "").replace(/-\d+$/, "")),
+  ].filter(Boolean);
+
+  const result = await db
+    .prepare(
+      `SELECT
+         p.id,
+         p.display_name,
+         p.slug,
+         p.party,
+         p.photo_url,
+         p.is_current_legislator,
+         COALESCE(cr.office, CASE WHEN lr.legislativebody = 'S' THEN 'State Senate' WHEN lr.legislativebody = 'H' THEN 'State Representative' ELSE '' END) AS office,
+         COALESCE(cr.county, '') AS county,
+         COALESCE(cr.district, lr.district, '') AS district
+       FROM d1_people p
+       LEFT JOIN d1_person_candidate_roles cr
+         ON cr.person_id = p.id
+         AND cr.election_year = 2026
+         AND cr.status != 'removed'
+       LEFT JOIN d1_person_legislator_roles lr
+         ON lr.person_id = p.id
+         AND lr.active = 1
+       WHERE p.slug IN (${placeholders(slugKeys)})
+          OR p.filer_entity_number IN (${placeholders(filerKeys)})
+          OR lower(p.display_name) = lower(?)
+       ORDER BY p.is_2026_candidate DESC, p.is_current_legislator DESC, p.updated_at DESC
+       LIMIT 1`,
+    )
+    .bind(...slugKeys, ...filerKeys, name)
+    .first();
+
+  if (!result) return null;
+  return {
+    id: result.id,
+    name: cleanName(result.display_name),
+    slug: result.slug,
+    party: result.party || "",
+    photoUrl: result.photo_url || "",
+    office: result.office || "",
+    county: result.county || "",
+    district: result.district || "",
+    isCurrentLegislator: Number(result.is_current_legislator) === 1,
+  };
+}
+
+function endorsementLookupKeys(endorsement = {}) {
+  return [
+    endorsement.candidateSlug,
+    endorsement.candidateSlugKey,
+    slugify(endorsement.candidateName || ""),
+  ]
+    .filter(Boolean)
+    .map((key) => String(key).trim())
+    .filter(Boolean);
+}
+
+function placeholders(values = []) {
+  return values.length ? values.map(() => "?").join(", ") : "''";
+}
+
+function cleanName(value = "") {
+  return String(value || "").trim();
 }
 ---
 
