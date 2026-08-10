@@ -3,6 +3,7 @@ export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
+import CommunityUpdateCard from "../components/CommunityUpdateCard.astro";
 import profileIcon from "../assets/profile icon.png";
 import { getBills, normalizeBillCodeForUrl } from "../lib/billsApi";
 import {
@@ -26,6 +27,7 @@ import {
   countPendingCommunityUpdates,
   getPendingCommunityUpdates,
 } from "../lib/communityUpdates";
+import { getCommunityUpdateCards } from "../lib/communityUpdateCards";
 import {
   countPendingOrganizationEndorsements,
   getOrganizations,
@@ -85,6 +87,7 @@ const gapReviewOptions = [
   { value: "recent", label: "Recently reviewed only" },
 ];
 let pendingCommunityUpdates = [];
+let pendingCommunityUpdateCards = [];
 let pendingCommunityUpdateCount = 0;
 let pendingArticleSubmissions = [];
 let pendingArticleSubmissionCount = 0;
@@ -142,6 +145,7 @@ if (session) {
       getPendingCommunityUpdates({ limit: 50 }),
       countPendingCommunityUpdates(),
     ]);
+    pendingCommunityUpdateCards = await getCommunityUpdateCards(pendingCommunityUpdates);
   } catch (error) {
     console.error(error?.message || "Unable to load pending community updates.");
   }
@@ -315,6 +319,9 @@ function reviewerDisplayName(email = "") {
   const reviewer = volunteerReviewers.find((item) => item.email === normalized);
   return cleanText(reviewer?.name || normalized);
 }
+
+const pendingCommunityHasInstagramEmbeds = pendingCommunityUpdateCards.some((card) => card.social?.type === "instagram" && card.social.isEmbeddable);
+const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) => card.social?.type === "tiktok" && card.social.videoId);
 ---
 
 <html lang="en">
@@ -875,7 +882,7 @@ function reviewerDisplayName(email = "") {
 
             {pendingCommunityUpdates.length ? (
               <div class="moderation-list">
-                {pendingCommunityUpdates.map((update) => (
+                {pendingCommunityUpdates.map((update, index) => (
                   <article>
                     <div class="moderation-topline">
                       <strong>{cleanText(update.entityName || update.entityKey)}</strong>
@@ -917,6 +924,10 @@ function reviewerDisplayName(email = "") {
                     </div>
 
                     {update.pageUrl && <a href={update.pageUrl}>Open profile page</a>}
+                    <div class="moderation-rendered-preview">
+                      <span>Pending public preview</span>
+                      <CommunityUpdateCard update={pendingCommunityUpdateCards[index] || update} variant="admin-preview" />
+                    </div>
                     <form
                       class="moderation-edit-form"
                       action="/api/admin/community-updates"
@@ -957,27 +968,6 @@ function reviewerDisplayName(email = "") {
                         <span class="moderation-inline-status" aria-live="polite"></span>
                       </div>
                     </form>
-                    {update.mentions?.length > 0 && (
-                      <div class="moderation-mentions">
-                        <span>Tagged people</span>
-                        {update.mentions.map((mention) => (
-                          <a href={mention.path || `/people/${mention.personid}`}>
-                            {cleanText(mention.name)}
-                            {(mention.roleLabel || mention.chamber) && (
-                              <small>{cleanText(mention.roleLabel || mention.chamber)}</small>
-                            )}
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                    {update.linkUrl && <a href={update.linkUrl}>Open submitted link</a>}
-                    {update.photoUrls?.length > 0 && (
-                      <div class="moderation-photo-grid">
-                        {update.photoUrls.map((photoUrl) => (
-                          <img src={photoUrl} alt="" loading="lazy" />
-                        ))}
-                      </div>
-                    )}
                   </article>
                 ))}
               </div>
@@ -1733,6 +1723,8 @@ function reviewerDisplayName(email = "") {
         </div>
       )}
     </main>
+    {pendingCommunityHasInstagramEmbeds && <script async src="https://www.instagram.com/embed.js"></script>}
+    {pendingCommunityHasTikTokEmbeds && <script async src="https://www.tiktok.com/embed.js"></script>}
     <script define:vars={{ organizationAdminData, candidateEndorsementOptions, billCommentOptions, billAdminData }}>
       const profileSearch = document.getElementById("gapProfileSearch");
       const profileValue = document.getElementById("gapProfileValue");
@@ -2925,6 +2917,24 @@ function reviewerDisplayName(email = "") {
     display: grid;
     gap: 10px;
     margin-top: 12px;
+  }
+
+  .moderation-rendered-preview {
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+    border-radius: 16px;
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 12px;
+  }
+
+  .moderation-rendered-preview > span {
+    color: #1d4ed8;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   .workflow-controls {

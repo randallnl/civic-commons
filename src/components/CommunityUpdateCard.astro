@@ -1,0 +1,613 @@
+---
+import {
+  communityUpdateDate,
+} from "../lib/communityUpdates";
+import {
+  mentionParts,
+  peopleProfilePath,
+  previewDescription,
+  previewTitle,
+} from "../lib/communityUpdateCards";
+import { cleanText } from "../lib/text";
+import profileIcon from "../assets/profile icon.png";
+
+const {
+  update,
+  variant = "",
+} = Astro.props;
+---
+
+<article class:list={["community-update-card", update.photoUrls?.length && "has-photo", variant && `community-update-card-${variant}`]}>
+  {update.photoUrls?.length > 0 && (
+    <div class="community-update-media">
+      <div class="community-photo-grid">
+        {update.photoUrls.map((photoUrl) => (
+          <a
+            class="community-photo-link"
+            href={photoUrl}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open community update photo"
+          >
+            <img src={photoUrl} alt="" loading="lazy" />
+          </a>
+        ))}
+      </div>
+      <span>{update.photoUrls.length === 1 ? "Photo update" : `${update.photoUrls.length} photo updates`}</span>
+    </div>
+  )}
+
+  <div class="community-update-copy">
+    <div class="community-update-meta">
+      <strong>{cleanText(update.displayName || "Community member")}</strong>
+      {communityUpdateDate(update.createdAt) && (
+        <span>{communityUpdateDate(update.createdAt)}</span>
+      )}
+    </div>
+
+    {update.comment && (
+      <p>
+        {mentionParts(update.comment, update.mentions).map((part) =>
+          part.href ? (
+            <a class="comment-mention-link" href={part.href}>{part.text}</a>
+          ) : (
+            part.text
+          ),
+        )}
+      </p>
+    )}
+
+    {update.mentions?.length > 0 && (
+      <div class="mention-list" aria-label="Tagged people">
+        <span>Tagged people</span>
+        {update.mentions.map((mention) => (
+          <a href={peopleProfilePath(mention)}>
+            {cleanText(mention.name)}
+            {(mention.roleLabel || mention.chamber) && (
+              <small>{cleanText(mention.roleLabel || mention.chamber)}</small>
+            )}
+          </a>
+        ))}
+      </div>
+    )}
+
+    {update.linkUrl && (
+      update.social?.type === "tiktok" ? (
+        <div class="social-embed-wrap tiktok-embed-wrap">
+          <a
+            class="rich-link-preview social-preview-card tiktok-preview-card"
+            href={update.social.permalink || update.linkUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span class="social-icon tiktok-icon" aria-hidden="true">TT</span>
+            {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+            <span>
+              <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+              <small>
+                {update.social.handle
+                  ? `${update.social.isProfile ? "Profile: " : ""}@${update.social.handle}`
+                  : previewDescription(update.linkPreview, update.linkUrl)}
+              </small>
+            </span>
+          </a>
+          {update.social.isEmbeddable && update.social.videoId && (
+            <blockquote
+              class="tiktok-embed"
+              cite={update.social.permalink}
+              data-video-id={update.social.videoId}
+            >
+              <section>
+                <a href={update.social.permalink || update.linkUrl}>
+                  View this video on TikTok
+                </a>
+              </section>
+            </blockquote>
+          )}
+        </div>
+      ) : update.social?.type === "facebook" ? (
+        <div class="social-embed-wrap facebook-embed-wrap">
+          <a
+            class:list={[
+              "rich-link-preview",
+              "social-preview-card",
+              "facebook-preview-card",
+              !update.linkPreview?.imageUrl && "social-preview-card-no-image",
+            ]}
+            href={update.social.permalink || update.linkUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span class="social-icon facebook-icon" aria-hidden="true">FB</span>
+            {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+            <span>
+              <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+              <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
+            </span>
+          </a>
+        </div>
+      ) : update.social?.type === "instagram" ? (
+        <div class="instagram-embed-wrap">
+          <a
+            class="rich-link-preview instagram-preview-card"
+            href={update.social.permalink || update.linkUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span class="instagram-icon" aria-hidden="true">IG</span>
+            {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+            <span>
+              <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+              <small>
+                {update.social.handle
+                  ? `${update.social.isProfile ? "Profile: " : ""}@${update.social.handle}`
+                  : previewDescription(update.linkPreview, update.linkUrl)}
+              </small>
+            </span>
+          </a>
+          {update.social.isEmbeddable && (
+            <blockquote
+              class="instagram-media"
+              data-instgrm-captioned
+              data-instgrm-permalink={update.social.permalink}
+              data-instgrm-version="14"
+            >
+              <a href={update.social.permalink || update.linkUrl}>
+                View this post on Instagram
+              </a>
+            </blockquote>
+          )}
+        </div>
+      ) : update.social?.type === "substack" ? (
+        <a
+          class="rich-link-preview social-preview-card substack-preview-card"
+          href={update.social.permalink || update.linkUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span class="social-icon substack-icon" aria-hidden="true">S</span>
+          {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+          <span>
+            <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+            <small>
+              {update.social.handle
+                ? `@${update.social.handle} on Substack`
+                : update.social.publication
+                  ? `${update.social.publication} on Substack`
+                  : previewDescription(update.linkPreview, update.linkUrl)}
+            </small>
+          </span>
+        </a>
+      ) : (
+        <a
+          class="community-link-preview rich-link-preview"
+          href={update.linkUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+          <span>
+            <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+            {previewDescription(update.linkPreview, update.linkUrl) && (
+              <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
+            )}
+          </span>
+        </a>
+      )
+    )}
+
+    {update.people?.length > 0 && (
+      <div class="community-people-preview" aria-label="People connected to this update">
+        <span>People</span>
+        {update.people.map((person) => (
+          <a class="mini-person-card" href={peopleProfilePath(person)}>
+            <img
+              class:list={[!person.photoUrl && "profile-icon"]}
+              src={person.photoUrl || profileIcon.src}
+              alt={person.photoUrl ? `Photo of ${person.name}` : ""}
+              loading="lazy"
+            />
+            <span>
+              <strong>{cleanText(person.name)}</strong>
+              {person.role && <small>{cleanText(person.role)}</small>}
+              {person.districtLabel && <small>{cleanText(person.districtLabel)}</small>}
+            </span>
+          </a>
+        ))}
+      </div>
+    )}
+  </div>
+</article>
+
+<style>
+  .community-update-card {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, rgba(96, 165, 250, 0.68), rgba(191, 219, 254, 0.42)) border-box;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .community-update-card-admin-preview {
+    box-shadow: 0 12px 34px rgba(37, 99, 235, 0.08);
+  }
+
+  .community-update-card.has-photo {
+    align-items: stretch;
+    grid-template-columns: minmax(160px, 34%) minmax(0, 1fr);
+  }
+
+  .community-update-media {
+    align-content: start;
+    display: grid;
+    gap: 8px;
+  }
+
+  .community-update-media span {
+    align-self: start;
+    background: #e0f2fe;
+    border: 1px solid #7dd3fc;
+    border-radius: 999px;
+    color: #075985;
+    display: inline-flex;
+    font-size: 0.72rem;
+    font-weight: 950;
+    justify-self: start;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    padding: 5px 8px;
+    text-transform: uppercase;
+  }
+
+  .community-photo-grid {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  }
+
+  .community-photo-grid .community-photo-link:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .community-photo-link {
+    border-radius: 8px;
+    display: block;
+    width: 100%;
+  }
+
+  .community-photo-link img {
+    aspect-ratio: 16 / 9;
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    display: block;
+    height: 100%;
+    min-height: 92px;
+    object-fit: contain;
+    width: 100%;
+  }
+
+  .community-photo-grid .community-photo-link:first-child img {
+    min-height: 130px;
+  }
+
+  .community-update-copy {
+    align-content: start;
+    display: grid;
+    min-width: 0;
+  }
+
+  .community-update-meta {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  .community-update-meta span {
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 900;
+  }
+
+  .community-update-copy p {
+    color: #4b5563;
+    font-weight: 800;
+    line-height: 1.5;
+    margin: 8px 0 0;
+    overflow-wrap: anywhere;
+  }
+
+  .comment-mention-link {
+    color: #1d4ed8;
+    font-weight: 950;
+  }
+
+  .mention-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 12px;
+  }
+
+  .mention-list > span,
+  .community-people-preview > span {
+    color: #6b4f2a;
+    flex-basis: 100%;
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .mention-list a {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #93c5fd;
+    border-radius: 999px;
+    color: #1e3a8a;
+    display: inline-flex;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 900;
+    padding: 6px 9px;
+    text-decoration: none;
+  }
+
+  .mention-list small {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 900;
+  }
+
+  .instagram-embed-wrap,
+  .social-embed-wrap {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .instagram-preview-card,
+  .social-preview-card {
+    align-items: stretch;
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #f97316, #db2777, #7c3aed) border-box;
+    border: 2px solid transparent;
+    border-radius: 14px;
+    color: #1f2933;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 430px;
+    padding: 0;
+    position: relative;
+    text-decoration: none;
+  }
+
+  .rich-link-preview {
+    overflow: hidden;
+  }
+
+  .rich-link-preview > img {
+    aspect-ratio: 16 / 9;
+    background: #f8fafc;
+    border: 0;
+    border-radius: 0;
+    grid-column: 1 / -1;
+    max-height: 250px;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  .community-link-preview {
+    background: #ffffff;
+    border: 1px solid #93c5fd;
+    border-radius: 14px;
+    color: #1f2933;
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 12px;
+    text-decoration: none;
+  }
+
+  .community-link-preview strong,
+  .community-link-preview small,
+  .instagram-preview-card strong,
+  .instagram-preview-card small,
+  .social-preview-card strong,
+  .social-preview-card small {
+    display: block;
+  }
+
+  .community-link-preview strong,
+  .instagram-preview-card strong,
+  .social-preview-card strong {
+    color: #1f2933;
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .community-link-preview small,
+  .instagram-preview-card small,
+  .social-preview-card small {
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 850;
+    line-height: 1.35;
+    margin-top: 4px;
+  }
+
+  .instagram-preview-card > span:not(.instagram-icon),
+  .social-preview-card > span:not(.social-icon) {
+    display: block;
+    min-width: 0;
+    padding: 12px 14px 14px;
+  }
+
+  .social-preview-card-no-image {
+    align-items: center;
+    grid-template-columns: 42px minmax(0, 1fr);
+    padding: 10px;
+  }
+
+  .social-preview-card-no-image .social-icon {
+    left: auto;
+    position: static;
+    top: auto;
+  }
+
+  .social-preview-card-no-image > span:not(.social-icon) {
+    padding: 0;
+  }
+
+  .tiktok-preview-card {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #111827, #06b6d4, #ef4444) border-box;
+  }
+
+  .facebook-preview-card {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #1877f2, #60a5fa, #1d4ed8) border-box;
+  }
+
+  .substack-preview-card {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, #ff6719, #f59e0b, #7c2d12) border-box;
+  }
+
+  .instagram-icon,
+  .social-icon {
+    align-items: center;
+    background: linear-gradient(135deg, #f97316, #db2777, #7c3aed);
+    border-radius: 10px;
+    color: #ffffff;
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 950;
+    height: 38px;
+    justify-content: center;
+    left: 10px;
+    position: absolute;
+    top: 10px;
+    width: 38px;
+    z-index: 2;
+  }
+
+  .tiktok-icon {
+    background: linear-gradient(135deg, #111827, #06b6d4, #ef4444);
+  }
+
+  .facebook-icon {
+    background: linear-gradient(135deg, #1877f2, #60a5fa);
+  }
+
+  .substack-icon {
+    background: linear-gradient(135deg, #ff6719, #f97316);
+  }
+
+  .community-people-preview {
+    border-top: 1px solid #dbeafe;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+
+  .mini-person-card {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    color: #1f2933;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 42px minmax(0, 1fr);
+    min-width: 0;
+    padding: 8px;
+    text-decoration: none;
+  }
+
+  .mini-person-card img {
+    aspect-ratio: 4 / 5;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    display: block;
+    height: 52px;
+    object-fit: cover;
+    object-position: center top;
+    width: 42px;
+  }
+
+  .mini-person-card img.profile-icon {
+    object-fit: cover;
+  }
+
+  .mini-person-card span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .mini-person-card strong,
+  .mini-person-card small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mini-person-card strong {
+    font-size: 0.9rem;
+    line-height: 1.15;
+  }
+
+  .mini-person-card small {
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 850;
+  }
+
+  .instagram-media,
+  .tiktok-embed {
+    background: #ffffff;
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 0 1px rgba(0, 0, 0, 0.35), 0 4px 18px rgba(17, 24, 39, 0.12);
+    box-sizing: border-box;
+    margin: 0;
+    max-width: 540px;
+    min-width: 0;
+    overflow: hidden;
+    padding: 14px;
+    width: 100%;
+  }
+
+  .instagram-media a,
+  .tiktok-embed a {
+    color: #3897f0;
+    font-weight: 900;
+    text-decoration: none;
+  }
+
+  @media (max-width: 760px) {
+    .community-update-card.has-photo {
+      grid-template-columns: 1fr;
+    }
+
+    .community-update-meta {
+      align-items: start;
+      display: grid;
+      justify-content: start;
+    }
+  }
+</style>
