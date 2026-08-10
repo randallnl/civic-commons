@@ -562,6 +562,8 @@ function textPreview(value = "", maxLength = 170) {
   .page {
     display: grid;
     gap: 18px;
+    padding-inline: clamp(14px, 2vw, 28px);
+    width: 100%;
   }
 
   .hero {
@@ -668,14 +670,18 @@ function textPreview(value = "", maxLength = 170) {
   .updates-layout {
     align-items: start;
     display: grid;
-    gap: 18px;
+    gap: clamp(18px, 2vw, 30px);
     grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
+    width: 100%;
   }
 
   .updates-main {
     display: grid;
     gap: 18px;
+    justify-self: center;
+    max-width: 1120px;
     min-width: 0;
+    width: 100%;
   }
 
   .recently-updated-panel {
