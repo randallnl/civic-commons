@@ -333,10 +333,6 @@ function textPreview(value = "", maxLength = 170) {
               candidates. The public record gets stronger when people add what they
               are seeing in their own communities.
             </p>
-            <div class="hero-actions">
-              <a href="/volunteer-reviewers">Help review updates</a>
-              <a href="/people">Find legislators</a>
-            </div>
           </section>
 
       <FilterBar action="/updates" submitLabel="Filter updates" clearHref="/updates" columns="wide" live={true}>
@@ -568,14 +564,13 @@ function textPreview(value = "", maxLength = 170) {
 
   .hero {
     background:
-      radial-gradient(circle at 85% 18%, rgba(255, 103, 25, 0.14), transparent 24%),
-      radial-gradient(circle at 15% 80%, rgba(37, 99, 235, 0.12), transparent 28%),
+      radial-gradient(circle at 88% 16%, rgba(255, 103, 25, 0.22), transparent 18%),
       linear-gradient(135deg, #eff6ff 0%, #ffffff 54%, #fff7ed 100%);
     border: 1px solid var(--nhdb-line);
     border-radius: 16px;
     color: #1f2933;
     overflow: hidden;
-    padding: clamp(28px, 5vw, 54px);
+    padding: clamp(26px, 4vw, 46px);
     position: relative;
   }
 
@@ -587,8 +582,19 @@ function textPreview(value = "", maxLength = 170) {
     position: absolute;
   }
 
-  .hero-kicker-row,
-  .hero-actions {
+  .hero::before {
+    background: #ff6719;
+    border-radius: 999px;
+    content: "";
+    height: 72px;
+    opacity: 0.9;
+    position: absolute;
+    right: clamp(20px, 4vw, 46px);
+    top: clamp(22px, 4vw, 44px);
+    width: 10px;
+  }
+
+  .hero-kicker-row {
     align-items: center;
     display: flex;
     flex-wrap: wrap;
@@ -596,8 +602,7 @@ function textPreview(value = "", maxLength = 170) {
     justify-content: space-between;
   }
 
-  .hero-kicker-row a,
-  .hero-actions a {
+  .hero-kicker-row a {
     background: #1f2933;
     border: 1px solid #111827;
     border-radius: 999px;
@@ -608,17 +613,12 @@ function textPreview(value = "", maxLength = 170) {
     text-decoration: none;
   }
 
-  .hero-actions {
-    justify-content: flex-start;
-    margin-top: 20px;
-  }
-
   .hero h1 {
-    font-size: clamp(2.25rem, 6vw, 4.8rem);
+    font-size: clamp(2.2rem, 5.2vw, 4.35rem);
     letter-spacing: 0;
-    line-height: 0.94;
+    line-height: 0.96;
     margin: 0 0 16px;
-    max-width: 980px;
+    max-width: 880px;
   }
 
   .lede {
@@ -696,9 +696,27 @@ function textPreview(value = "", maxLength = 170) {
     gap: 14px;
     grid-column: 2;
     grid-row: 1;
+    max-height: calc(100vh - 108px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 18px;
     position: sticky;
+    scrollbar-color: #bfdbfe transparent;
+    scrollbar-width: thin;
     top: 84px;
+  }
+
+  .recently-updated-panel::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .recently-updated-panel::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .recently-updated-panel::-webkit-scrollbar-thumb {
+    background: #bfdbfe;
+    border-radius: 999px;
   }
 
   .sidebar-heading {
@@ -1158,6 +1176,8 @@ function textPreview(value = "", maxLength = 170) {
     }
 
     .recently-updated-panel {
+      max-height: none;
+      overflow: visible;
       order: 2;
       position: static;
     }
