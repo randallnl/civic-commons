@@ -1913,20 +1913,36 @@ function organizationAssetUrl(filename = "") {
   }
 
   .list .free-stater-inline {
-    background: #8a4b22;
+    background: #4a2414;
     border: 2px solid #f97316;
-    border-radius: 999px;
-    box-shadow: none;
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px rgba(255, 180, 60, 0.25), 0 0 12px rgba(255, 107, 26, 0.18);
     color: #fff8ed;
-    display: inline-block;
+    display: inline-flex;
     font-size: 0.74rem;
+    font-weight: 900;
+    letter-spacing: 0.03em;
     margin-top: 8px;
     padding: 4px 8px;
     text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .list .free-stater-inline::before {
+    content: "!";
+    align-items: center;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.62rem;
+    height: 0.95rem;
+    justify-content: center;
+    margin-right: 5px;
+    width: 0.95rem;
   }
 
   .list .free-stater-inline:hover {
-    background: #6f3a1b;
+    background: #35180d;
     color: #fffdf7;
   }
 

@@ -280,24 +280,6 @@ function textPreview(value = "", maxLength = 170) {
       class="page"
       x-data="nhdbFuzzyFilter({ itemSelector: '.media-card[data-fuzzy-item]', pageSize: 18, threshold: 0.32 })"
     >
-      <section class="hero">
-        <div class="hero-kicker-row">
-          <p class="eyebrow">Community Updates</p>
-          <a href="/suggest-update">Submit context</a>
-        </div>
-        <h1>Local context that helps neighbors understand public power.</h1>
-        <p class="lede">
-          Browse community-submitted posts, photos, links, reels, TikToks, and
-          newsletter updates connected to New Hampshire legislators and
-          candidates. The public record gets stronger when people add what they
-          are seeing in their own communities.
-        </p>
-        <div class="hero-actions">
-          <a href="/volunteer-reviewers">Help review updates</a>
-          <a href="/people">Find legislators</a>
-        </div>
-      </section>
-
       <div class="updates-layout">
         <aside class="recently-updated-panel" aria-label="Recently updated profiles">
           <div class="sidebar-heading">
@@ -339,6 +321,24 @@ function textPreview(value = "", maxLength = 170) {
         </aside>
 
         <div class="updates-main">
+          <section class="hero">
+            <div class="hero-kicker-row">
+              <p class="eyebrow">Community Updates</p>
+              <a href="/suggest-update">Submit context</a>
+            </div>
+            <h1>Local context that helps neighbors understand public power.</h1>
+            <p class="lede">
+              Browse community-submitted posts, photos, links, reels, TikToks, and
+              newsletter updates connected to New Hampshire legislators and
+              candidates. The public record gets stronger when people add what they
+              are seeing in their own communities.
+            </p>
+            <div class="hero-actions">
+              <a href="/volunteer-reviewers">Help review updates</a>
+              <a href="/people">Find legislators</a>
+            </div>
+          </section>
+
       <FilterBar action="/updates" submitLabel="Filter updates" clearHref="/updates" columns="wide" live={true}>
         <label for="q">
           <span>Search</span>

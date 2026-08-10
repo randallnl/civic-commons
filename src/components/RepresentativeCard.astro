@@ -441,21 +441,41 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
   }
 
   .rep-meta .free-stater-pill {
-    background: #8a4b22;
+    background: #4a2414;
     border-color: #f97316;
-    box-shadow: inset 0 0 0 1px rgba(124, 45, 18, 0.12);
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px rgba(255, 180, 60, 0.25), 0 0 12px rgba(255, 107, 26, 0.18);
     color: #fff8ed;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .rep-meta .free-stater-pill::before,
+  .rep-meta .tpaction-pill::before {
+    content: "!";
+    align-items: center;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.62rem;
+    height: 0.95rem;
+    justify-content: center;
+    margin-right: 5px;
+    width: 0.95rem;
   }
 
   .rep-meta .free-stater-pill:hover {
-    background: #6f3a1b;
+    background: #35180d;
     color: #fffdf7;
   }
 
   .rep-meta .tpaction-pill {
-    background: #6f5a22;
+    background: #4b3a0b;
+    border-radius: 6px;
     border-color: #facc15;
+    box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.25), 0 0 12px rgba(250, 204, 21, 0.16);
     color: #fff8ed;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
   }
 
