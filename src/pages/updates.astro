@@ -26,6 +26,7 @@ const NOTE_PREVIEW_LENGTH = 114;
 
 let mediaItems = [];
 let recentlyUpdatedPeople = [];
+let countyUpdates = [];
 let error = "";
 
 try {
@@ -36,6 +37,7 @@ try {
     .map((update) => mediaFeedItem(update))
     .sort((a, b) => b.sortDate - a.sortDate);
   recentlyUpdatedPeople = recentPeopleFromUpdates(mediaItems);
+  countyUpdates = countiesFromUpdates(mediaItems);
 } catch (loadError) {
   error = loadError?.message || "Unable to load community updates.";
 }
@@ -85,6 +87,7 @@ function mediaFeedItem(update = {}) {
     isPortrait,
     sortDate: Date.parse(dateValue || "") || 0,
     sortName: title,
+    counties: updateCounties(people),
     text: [
       title,
       description,
@@ -97,6 +100,51 @@ function mediaFeedItem(update = {}) {
       people.map((person) => person.name || person.role || person.districtLabel).join(" "),
     ].filter(Boolean).join(" "),
   };
+}
+
+function updateCounties(people = []) {
+  return [
+    ...new Set(
+      people
+        .map((person) => cleanText(person.county || ""))
+        .filter(Boolean),
+    ),
+  ];
+}
+
+function countiesFromUpdates(items = []) {
+  const countiesByName = new Map();
+
+  for (const item of items) {
+    for (const county of item.counties || []) {
+      const existing = countiesByName.get(county);
+      const sortDate = Number(item.sortDate) || 0;
+      if (!existing) {
+        countiesByName.set(county, {
+          county,
+          updateCount: 1,
+          latestDate: sortDate,
+          latestDateText: item.dateText,
+          latestPlatform: item.platformLabel,
+          latestTitle: item.titlePreview || item.title || "Community update",
+          text: [county, item.title, item.body, item.platformLabel].filter(Boolean).join(" "),
+        });
+      } else {
+        existing.updateCount += 1;
+        existing.text = [existing.text, item.title, item.body, item.platformLabel].filter(Boolean).join(" ");
+        if (sortDate > existing.latestDate) {
+          existing.latestDate = sortDate;
+          existing.latestDateText = item.dateText;
+          existing.latestPlatform = item.platformLabel;
+          existing.latestTitle = item.titlePreview || item.title || "Community update";
+        }
+      }
+    }
+  }
+
+  return [...countiesByName.values()]
+    .sort((a, b) => b.latestDate - a.latestDate)
+    .slice(0, 12);
 }
 
 function recentPeopleFromUpdates(items = []) {
@@ -281,6 +329,38 @@ function textPreview(value = "", maxLength = 170) {
       x-data="nhdbFuzzyFilter({ itemSelector: '.media-card[data-fuzzy-item]', pageSize: 18, threshold: 0.32 })"
     >
       <div class="updates-layout">
+        <aside class="county-updates-panel" aria-label="Community updates by county">
+          <div class="sidebar-heading">
+            <p class="eyebrow">By County</p>
+            <h3>Where updates are connected</h3>
+          </div>
+
+          {countyUpdates.length ? (
+            <div class="recent-people-list">
+              {countyUpdates.map((county) => (
+                <button
+                  class="county-update-card"
+                  type="button"
+                  data-county-filter={county.county}
+                  data-fuzzy-sidebar-item
+                  data-fuzzy-sidebar-text={county.text}
+                >
+                  <span>
+                    <strong>{county.county}</strong>
+                    <small>{county.latestPlatform || "Community context"}</small>
+                    <em>
+                      {county.updateCount} {county.updateCount === 1 ? "update" : "updates"}
+                      {county.latestDateText && ` · ${county.latestDateText}`}
+                    </em>
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p>No county-tagged updates yet.</p>
+          )}
+        </aside>
+
         <aside class="recently-updated-panel" aria-label="Recently updated profiles">
           <div class="sidebar-heading">
             <p class="eyebrow">Recently Updated</p>
@@ -336,6 +416,15 @@ function textPreview(value = "", maxLength = 170) {
           </section>
 
       <FilterBar action="/updates" submitLabel="Filter updates" clearHref="/updates" columns="wide" live={true}>
+        <input
+          type="hidden"
+          name="county"
+          value={Astro.url.searchParams.get("county")?.trim() || ""}
+          data-fuzzy-filter-field
+          data-fuzzy-field="county"
+          data-fuzzy-match="includes"
+          data-fuzzy-label="County"
+        />
         <label for="q">
           <span>Search</span>
           <input
@@ -390,6 +479,7 @@ function textPreview(value = "", maxLength = 170) {
                   data-fuzzy-item
                   data-fuzzy-text={item.text}
                   data-fuzzy-platform={item.platform}
+                  data-fuzzy-county={(item.counties || []).join(" ")}
                   data-fuzzy-sort-name={item.sortName}
                   data-fuzzy-sort-updated={item.sortDate}
                   data-fuzzy-sort-platform={item.platformLabel}
@@ -551,6 +641,33 @@ function textPreview(value = "", maxLength = 170) {
         setupUpdateAutoLoad();
       }
     </script>
+    <script>
+      function setupCountyUpdateFilters() {
+        const page = document.querySelector(".page");
+        if (!(page instanceof HTMLElement)) return;
+
+        const countyInput = page.querySelector('input[name="county"][data-fuzzy-filter-field]');
+        if (!(countyInput instanceof HTMLInputElement)) return;
+
+        page.querySelectorAll("[data-county-filter]").forEach((button) => {
+          button.addEventListener("click", () => {
+            countyInput.value = button.getAttribute("data-county-filter") || "";
+            countyInput.dispatchEvent(new Event("input", { bubbles: true }));
+            countyInput.dispatchEvent(new Event("change", { bubbles: true }));
+            page.querySelector("[data-fuzzy-search]")?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+          });
+        });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", setupCountyUpdateFilters, { once: true });
+      } else {
+        setupCountyUpdateFilters();
+      }
+    </script>
   </body>
 </html>
 
@@ -580,18 +697,6 @@ function textPreview(value = "", maxLength = 170) {
     inset: auto 0 0;
     height: 8px;
     position: absolute;
-  }
-
-  .hero::before {
-    background: #ff6719;
-    border-radius: 999px;
-    content: "";
-    height: 72px;
-    opacity: 0.9;
-    position: absolute;
-    right: clamp(20px, 4vw, 46px);
-    top: clamp(22px, 4vw, 44px);
-    width: 10px;
   }
 
   .hero-kicker-row {
@@ -671,7 +776,7 @@ function textPreview(value = "", maxLength = 170) {
     align-items: start;
     display: grid;
     gap: clamp(26px, 3vw, 48px);
-    grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+    grid-template-columns: minmax(210px, 270px) minmax(0, 1fr) minmax(230px, 300px);
     width: 100%;
   }
 
@@ -679,7 +784,7 @@ function textPreview(value = "", maxLength = 170) {
     box-sizing: border-box;
     display: grid;
     gap: 18px;
-    grid-column: 1;
+    grid-column: 2;
     grid-row: 1;
     justify-self: center;
     max-width: 1120px;
@@ -688,14 +793,13 @@ function textPreview(value = "", maxLength = 170) {
     width: 100%;
   }
 
+  .county-updates-panel,
   .recently-updated-panel {
     background: #ffffff;
     border: 1px solid var(--nhdb-line);
     border-radius: 14px;
     display: grid;
     gap: 14px;
-    grid-column: 2;
-    grid-row: 1;
     max-height: calc(100vh - 108px);
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -706,14 +810,27 @@ function textPreview(value = "", maxLength = 170) {
     top: 84px;
   }
 
+  .county-updates-panel {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .recently-updated-panel {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .county-updates-panel::-webkit-scrollbar,
   .recently-updated-panel::-webkit-scrollbar {
     width: 8px;
   }
 
+  .county-updates-panel::-webkit-scrollbar-track,
   .recently-updated-panel::-webkit-scrollbar-track {
     background: transparent;
   }
 
+  .county-updates-panel::-webkit-scrollbar-thumb,
   .recently-updated-panel::-webkit-scrollbar-thumb {
     background: #bfdbfe;
     border-radius: 999px;
@@ -748,6 +865,58 @@ function textPreview(value = "", maxLength = 170) {
     grid-template-columns: 48px minmax(0, 1fr);
     padding: 9px;
     text-decoration: none;
+  }
+
+  .county-update-card {
+    background:
+      linear-gradient(#ffffff, #ffffff) padding-box,
+      linear-gradient(135deg, rgba(37, 99, 235, 0.45), rgba(255, 103, 25, 0.28)) border-box;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: #1f2933;
+    cursor: pointer;
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+    text-align: left;
+    width: 100%;
+  }
+
+  .county-update-card:hover {
+    border-color: #60a5fa;
+    transform: translateY(-1px);
+  }
+
+  .county-update-card span {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .county-update-card strong,
+  .county-update-card small,
+  .county-update-card em {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .county-update-card strong,
+  .county-update-card small {
+    white-space: nowrap;
+  }
+
+  .county-update-card small {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 850;
+  }
+
+  .county-update-card em {
+    color: #1d4ed8;
+    font-size: 0.74rem;
+    font-style: normal;
+    font-weight: 950;
+    line-height: 1.3;
   }
 
   .recent-person-card:hover {
@@ -1165,6 +1334,7 @@ function textPreview(value = "", maxLength = 170) {
     }
 
     .updates-main,
+    .county-updates-panel,
     .recently-updated-panel {
       grid-column: auto;
       grid-row: auto;
@@ -1175,10 +1345,17 @@ function textPreview(value = "", maxLength = 170) {
       padding-inline: 0;
     }
 
+    .county-updates-panel {
+      max-height: none;
+      order: 2;
+      overflow: visible;
+      position: static;
+    }
+
     .recently-updated-panel {
       max-height: none;
       overflow: visible;
-      order: 2;
+      order: 3;
       position: static;
     }
 
@@ -1190,6 +1367,18 @@ function textPreview(value = "", maxLength = 170) {
   @media (min-width: 721px) and (max-width: 1040px) {
     .updates-layout {
       grid-template-columns: minmax(0, 1fr) minmax(210px, 260px);
+    }
+
+    .county-updates-panel {
+      display: none;
+    }
+
+    .updates-main {
+      grid-column: 1;
+    }
+
+    .recently-updated-panel {
+      grid-column: 2;
     }
 
     .media-grid {
