@@ -84,10 +84,14 @@ function sanitizeKey(value = "") {
 
 async function updateProfilePhoto({ entityType, entityKey, key, publicUrl }) {
   if (!entityType && !entityKey) return "";
-  if (!["candidate", "representative", "organization-logo"].includes(entityType)) {
-    throw new Error("Choose candidate, legislator, or organization logo before updating D1.");
+  if (!["candidate", "person", "representative", "organization-logo"].includes(entityType)) {
+    throw new Error("Choose person, candidate, legislator, or organization logo before updating D1.");
   }
   if (!entityKey) throw new Error("A profile identifier is required to update D1.");
+
+  if (entityType === "person") {
+    return updatePersonPhoto(entityKey, key, publicUrl);
+  }
 
   if (entityType === "candidate") {
     return updateCandidatePhoto(entityKey, publicUrl);
@@ -98,6 +102,96 @@ async function updateProfilePhoto({ entityType, entityKey, key, publicUrl }) {
   }
 
   return updateRepresentativePhoto(entityKey, key, publicUrl);
+}
+
+async function updatePersonPhoto(entityKey, key, publicUrl) {
+  const db = adminDb();
+  if (!db) throw new Error("D1 database binding is not configured.");
+
+  await ensureUnifiedPeopleTables(db);
+  const resolved = await resolvePersonPhotoTarget(db, entityKey);
+  if (!resolved?.id) throw new Error("No matching people profile row was found.");
+
+  let changed = 0;
+  const unifiedResult = await db
+    .prepare(
+      `UPDATE d1_people
+       SET photo_url = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+    )
+    .bind(publicUrl, resolved.id)
+    .run();
+  changed += unifiedResult.meta?.changes ?? unifiedResult.changes ?? 0;
+
+  if (resolved.filerEntityNumber) {
+    const candidateResult = await db
+      .prepare(
+        `UPDATE candidates
+         SET photo_url = ?
+         WHERE filer_entity_number = ?`,
+      )
+      .bind(publicUrl, resolved.filerEntityNumber)
+      .run();
+    changed += candidateResult.meta?.changes ?? candidateResult.changes ?? 0;
+  }
+
+  if (resolved.gcPersonid || resolved.employeeno) {
+    const photoResult = await db
+      .prepare(
+        `INSERT INTO d1_legislator_photos (
+           employeeno,
+           personid,
+           firstname,
+           lastname,
+           filename,
+           photo_url,
+           source,
+           updated_at
+         )
+         VALUES (?, ?, ?, ?, ?, ?, 'admin-upload', CURRENT_TIMESTAMP)
+         ON CONFLICT(employeeno) DO UPDATE SET
+           personid = excluded.personid,
+           firstname = excluded.firstname,
+           lastname = excluded.lastname,
+           filename = excluded.filename,
+           photo_url = excluded.photo_url,
+           source = excluded.source,
+           updated_at = CURRENT_TIMESTAMP`,
+      )
+      .bind(
+        resolved.employeeno || resolved.gcPersonid,
+        resolved.gcPersonid || null,
+        resolved.firstname || "",
+        resolved.lastname || "",
+        key.split("/").pop(),
+        publicUrl,
+      )
+      .run();
+    changed += photoResult.meta?.changes ?? photoResult.changes ?? 0;
+  }
+
+  if (!changed) throw new Error("No matching people profile row was updated.");
+  return "people profile photo_url";
+}
+
+async function resolvePersonPhotoTarget(db, entityKey) {
+  const key = String(entityKey || "").trim();
+  const numericKey = numericId(key);
+
+  return db
+    .prepare(
+      `SELECT id, gc_personid, employeeno, filer_entity_number, firstname, lastname, slug
+       FROM d1_people
+       WHERE slug = ?
+          OR CAST(id AS TEXT) = ?
+          OR gc_personid = ?
+          OR employeeno = ?
+          OR filer_entity_number = ?
+       LIMIT 1`,
+    )
+    .bind(key, key, numericKey, numericKey, key)
+    .first();
 }
 
 async function updateCandidatePhoto(entityKey, publicUrl) {
@@ -323,13 +417,15 @@ function generatedKey(entityType, entityKey, file) {
   const filename = sanitizeFilename(file.name || "profile-photo");
   const prefix = entityType === "candidate"
     ? "candidates"
+    : entityType === "person"
+      ? "people"
     : entityType === "representative"
       ? "legislators"
       : entityType === "organization-logo"
         ? "organizations/logos"
       : "uploads";
   const id = slugify(entityKey || "image");
-  return sanitizeKey(`${prefix}/${id}-${filename}`);
+  return sanitizeKey(`${prefix}/${id}-${Date.now()}-${filename}`);
 }
 
 function uploadBucket(entityType) {
