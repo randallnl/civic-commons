@@ -28,6 +28,7 @@ import {
   candidateSlug,
   formatCandidateParty,
   getCandidate,
+  getCandidates,
 } from "../../lib/candidatesApi";
 import { isFreeStater, isTpActionAligned } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
@@ -176,6 +177,7 @@ const currentCandidateProfile = representative
     : null;
 const linkedCandidateForEndorsements = currentCandidateProfile?.candidate || null;
 const linkedCandidateOfficeLine = candidateOfficeLine(linkedCandidateForEndorsements);
+const linkedCandidateOfficeContext = await candidateOfficeContext(linkedCandidateForEndorsements);
 const linkedCandidateTowns = candidateTownsRepresented(linkedCandidateForEndorsements, representative);
 const recentlyViewedProfile = {
   kind: hasLegislatorProfile ? "legislator" : "candidate",
@@ -547,12 +549,70 @@ function legislatorOptionLabel(rep = {}) {
 
 function candidateOfficeLine(candidate = {}) {
   if (!candidate) return "";
+  const office = cleanDisplay(candidate.office);
+  const isSenateOffice = /state senate|state senator/i.test(office);
 
   return [
-    candidate.office,
-    candidate.county,
+    office,
+    isSenateOffice ? "" : candidate.county,
     candidate.district ? `District ${candidate.district}` : "",
   ].filter(Boolean).join(", ");
+}
+
+async function candidateOfficeContext(candidate = {}) {
+  if (!candidate) return null;
+
+  const label = candidateOfficeLine(candidate);
+  const office = cleanDisplay(candidate.office);
+  const district = cleanDisplay(candidate.district);
+  const isSenateOffice = /state senate|state senator/i.test(office);
+  const county = isSenateOffice ? "" : cleanDisplay(candidate.county);
+  const electionYear = cleanDisplay(candidate.electionYear || "2026");
+  const seats = candidateOfficeSeats(candidate);
+  let candidateCount = 0;
+
+  try {
+    const data = await getCandidates({
+      office,
+      county,
+      district,
+      electionYear,
+      limit: 100,
+    });
+    candidateCount = (data.candidates || []).length;
+  } catch (error) {
+    console.error(error?.message || "Unable to load candidate race count.");
+  }
+
+  const params = new URLSearchParams();
+  if (office) params.set("office", office);
+  if (county) params.set("county", county);
+  if (district) params.set("district", district);
+  if (electionYear) params.set("electionYear", electionYear);
+
+  const metaParts = [
+    seats ? `${seats} ${seats === 1 ? "seat" : "seats"}` : "",
+    candidateCount ? `${candidateCount} ${candidateCount === 1 ? "candidate" : "candidates"} for this seat` : "",
+  ].filter(Boolean);
+
+  return {
+    label,
+    href: `/candidates${params.toString() ? `?${params.toString()}` : ""}#candidate-results`,
+    metaLabel: metaParts.join(" · ") || "View matching candidates",
+    seats,
+    candidateCount,
+  };
+}
+
+function candidateOfficeSeats(candidate = {}) {
+  const office = String(candidate.office || "");
+  if (/state senate|state senator/i.test(office)) return 1;
+  const seats = Number(candidate.seats);
+  return Number.isFinite(seats) && seats > 0 ? seats : 0;
+}
+
+function cleanDisplay(value = "") {
+  return cleanText(value).trim();
 }
 
 function candidateTownsRepresented(candidate = {}, legislator = {}) {
@@ -752,6 +812,76 @@ function uniqueTowns(towns = []) {
         </nav>
       )}
 
+      <section class="panel profile-update-panel" aria-label="Suggest profile updates">
+        <details class="profile-update-disclosure">
+          <summary>
+            <span>
+              <strong>Help improve this profile</strong>
+              <small>Submit a photo, website, or social account for review</small>
+            </span>
+            <strong>+</strong>
+          </summary>
+
+          <form class="profile-update-form" action="/api/profile-updates" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="personKey" value={slug} />
+            <input type="hidden" name="personName" value={person.full_name} />
+            <input type="hidden" name="pageUrl" value={Astro.url.href} />
+            <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+
+            <div class="form-grid">
+              <label>
+                Your name
+                <input name="submitterName" autocomplete="name" placeholder="Community member" />
+              </label>
+              <label>
+                Your email
+                <input name="submitterEmail" type="email" autocomplete="email" placeholder="Used for moderation follow-up" required />
+              </label>
+            </div>
+
+            <label class="profile-update-photo-field">
+              Profile photo
+              <input name="photo" type="file" accept="image/*" />
+              <small>Upload only photos you are confident show {person.full_name}.</small>
+            </label>
+
+            <div class="form-grid">
+              <label>
+                Website
+                <input name="websiteUrl" type="url" placeholder="https://example.com" />
+              </label>
+              <label>
+                Substack
+                <input name="substackUrl" placeholder="https://example.substack.com or @handle" />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Instagram
+                <input name="instagramUrl" placeholder="https://instagram.com/name or @handle" />
+              </label>
+              <label>
+                Facebook
+                <input name="facebookUrl" placeholder="https://facebook.com/name" />
+              </label>
+            </div>
+
+            <label>
+              TikTok
+              <input name="tiktokUrl" placeholder="https://tiktok.com/@handle or @handle" />
+            </label>
+
+            <label>
+              Source or note
+              <textarea name="notes" rows="3" placeholder="Where did you find this, or what should reviewers know?"></textarea>
+            </label>
+
+            <button type="submit">Submit Profile Update</button>
+          </form>
+        </details>
+      </section>
+
       {linkedCandidateForEndorsements && (
         <section class="panel candidate-role-panel" id="candidate-role">
           <div class="section-heading split-heading">
@@ -839,7 +969,16 @@ function uniqueTowns(towns = []) {
                 <div class="candidate-role-grid">
                   <article>
                     <span>Office sought</span>
-                    <strong>{linkedCandidateOfficeLine || "Office not listed"}</strong>
+                    {linkedCandidateOfficeContext?.href ? (
+                      <a class="candidate-office-link" href={linkedCandidateOfficeContext.href}>
+                        <strong>{linkedCandidateOfficeContext.label || "Office not listed"}</strong>
+                        <small>
+                          {linkedCandidateOfficeContext.metaLabel}
+                        </small>
+                      </a>
+                    ) : (
+                      <strong>{linkedCandidateOfficeLine || "Office not listed"}</strong>
+                    )}
                   </article>
                   <article>
                     <span>Party</span>
@@ -862,7 +1001,14 @@ function uniqueTowns(towns = []) {
             <div class="candidate-role-grid">
               <article>
                 <span>Office sought</span>
-                <strong>{linkedCandidateOfficeLine || "Office not listed"}</strong>
+                {linkedCandidateOfficeContext?.href ? (
+                  <a class="candidate-office-link" href={linkedCandidateOfficeContext.href}>
+                    <strong>{linkedCandidateOfficeContext.label || "Office not listed"}</strong>
+                    <small>{linkedCandidateOfficeContext.metaLabel}</small>
+                  </a>
+                ) : (
+                  <strong>{linkedCandidateOfficeLine || "Office not listed"}</strong>
+                )}
               </article>
               <article>
                 <span>Party</span>
@@ -1713,6 +1859,141 @@ function uniqueTowns(towns = []) {
     margin: 18px 0 28px;
   }
 
+  .profile-update-panel {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border-color: #bfdbfe;
+    margin-top: 16px;
+  }
+
+  .profile-update-disclosure summary {
+    align-items: center;
+    background: #eff6ff;
+    border: 1px solid #60a5fa;
+    border-radius: 16px;
+    box-sizing: border-box;
+    color: #1e3a8a;
+    cursor: pointer;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    list-style: none;
+    padding: 10px;
+  }
+
+  .profile-update-disclosure summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .profile-update-disclosure summary > span {
+    background: #ffffff;
+    border: 1px solid rgba(37, 99, 235, 0.38);
+    border-radius: 999px;
+    display: flex;
+    flex: 1 1 auto;
+    gap: 10px;
+    min-width: 0;
+    padding: 11px 14px;
+  }
+
+  .profile-update-disclosure summary > span strong {
+    color: #1f2933;
+    flex: 0 0 auto;
+    font-size: 0.92rem;
+    line-height: 1.2;
+  }
+
+  .profile-update-disclosure summary small {
+    color: #64748b;
+    font-size: 0.86rem;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profile-update-disclosure summary > strong {
+    align-items: center;
+    background: #1f2933;
+    border-radius: 999px;
+    color: #ffffff;
+    display: inline-flex;
+    flex: 0 0 auto;
+    height: 24px;
+    justify-content: center;
+    line-height: 1;
+    width: 24px;
+  }
+
+  .profile-update-disclosure[open] summary > strong {
+    transform: rotate(45deg);
+  }
+
+  .profile-update-form {
+    background: rgba(239, 246, 255, 0.72);
+    border: 1px solid #bfdbfe;
+    border-radius: 16px;
+    display: grid;
+    gap: 14px;
+    margin-top: 12px;
+    padding: 16px;
+  }
+
+  .profile-update-form label {
+    color: #1e3a8a;
+    display: grid;
+    font-size: 0.78rem;
+    font-weight: 900;
+    gap: 7px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .profile-update-form input,
+  .profile-update-form textarea {
+    background: #ffffff;
+    border: 1px solid rgba(37, 99, 235, 0.35);
+    border-radius: 12px;
+    box-sizing: border-box;
+    color: #1f2933;
+    font: inherit;
+    font-weight: 750;
+    letter-spacing: 0;
+    padding: 12px 13px;
+    text-transform: none;
+    width: 100%;
+  }
+
+  .profile-update-form textarea {
+    resize: vertical;
+  }
+
+  .profile-update-photo-field {
+    background: #ffffff;
+    border: 1px dashed #93c5fd;
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .profile-update-photo-field small {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .profile-update-form button {
+    background: #1d4ed8;
+    border: 1px solid #1e40af;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+    justify-self: start;
+    padding: 12px 16px;
+  }
+
   .role-tabs {
     display: grid;
     gap: 14px;
@@ -1802,6 +2083,25 @@ function uniqueTowns(towns = []) {
   .candidate-role-grid strong {
     color: #1f2933;
     font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  .candidate-office-link {
+    color: #1f2933;
+    display: grid;
+    gap: 5px;
+    text-decoration: none;
+  }
+
+  .candidate-office-link:hover strong {
+    color: #1d4ed8;
+    text-decoration: underline;
+  }
+
+  .candidate-office-link small {
+    color: #1d4ed8;
+    font-size: 0.84rem;
+    font-weight: 900;
     line-height: 1.25;
   }
 
@@ -2009,20 +2309,21 @@ function uniqueTowns(towns = []) {
   }
 
   .free-stater-pill {
-    background: #7f1d1d;
-    border-color: #111827;
-    box-shadow: none;
-    color: white;
+    background: #fb923c;
+    border-color: #c2410c;
+    box-shadow: inset 0 0 0 1px rgba(124, 45, 18, 0.12);
+    color: #1f2933;
   }
 
   .free-stater-pill:hover {
-    background: #450a0a;
+    background: #f97316;
+    color: #111827;
   }
 
   .tpaction-pill {
-    background: #172554;
-    border-color: #f59e0b;
-    color: #fef3c7;
+    background: #fde047;
+    border-color: #a16207;
+    color: #1f2933;
     text-transform: uppercase;
   }
 

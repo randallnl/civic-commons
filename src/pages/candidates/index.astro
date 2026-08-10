@@ -21,6 +21,7 @@ const API_BASE = civicApiBase();
 const address = Astro.url.searchParams.get("address")?.trim() || "";
 const selectedWard = normalizeWardNumber(Astro.url.searchParams.get("ward") || "");
 const county = Astro.url.searchParams.get("county")?.trim() || "";
+const district = Astro.url.searchParams.get("district")?.trim() || "";
 const name = Astro.url.searchParams.get("name")?.trim() || "";
 const office = Astro.url.searchParams.get("office")?.trim() || "";
 const town = Astro.url.searchParams.get("town")?.trim() || "";
@@ -100,6 +101,7 @@ try {
       getDirectoryCandidates({
         q: name || town,
         county,
+        district,
         office: selectedOffice,
         electionYear,
         limit: 500,
@@ -114,7 +116,7 @@ try {
     meta = townData.meta || directoryData.meta || {};
     resultContext = townData.town?.name || townData.community?.name || town;
   } else {
-    if (!name && !county && !selectedOffice) {
+    if (!name && !county && !district && !selectedOffice) {
       const data = await getDirectoryCandidates({
         electionYear,
         limit: INITIAL_CANDIDATE_PREVIEW_LIMIT,
@@ -125,6 +127,7 @@ try {
       const data = await getDirectoryCandidates({
         q: name || town,
         county,
+        district,
         office: selectedOffice,
         electionYear,
         limit: 500,
@@ -155,7 +158,7 @@ try {
   townOptions = town ? [town] : [];
 }
 
-const hasFilters = address || county || selectedOffice || town || name;
+const hasFilters = address || county || district || selectedOffice || town || name;
 const resultCount = candidates.length;
 const addressOfficeGroups = address ? groupCandidatesByOfficeDistrict(candidates) : [];
 const addressSeatTotal = totalSeats(addressOfficeGroups);
@@ -173,6 +176,7 @@ const wardNumber = isWardedCommunity
 async function getDirectoryCandidates({
   q = "",
   county = "",
+  district = "",
   office = "",
   electionYear = "",
   limit = 100,
@@ -181,6 +185,7 @@ async function getDirectoryCandidates({
     return getCandidates({
       q,
       county,
+      district,
       office,
       electionYear,
       limit,
@@ -191,6 +196,7 @@ async function getDirectoryCandidates({
     getCandidates({
       q,
       county,
+      district,
       office: "State Representative",
       electionYear,
       limit,
@@ -198,6 +204,7 @@ async function getDirectoryCandidates({
     getCandidates({
       q,
       county,
+      district,
       office: "State Senate",
       electionYear,
       limit,

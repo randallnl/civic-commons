@@ -636,7 +636,7 @@ function cleanName(value = "") {
                               </a>
                             )}
                             {isTpActionAligned(endorsement.candidateProfile) && (
-                              <span class="warning-tag">TPAction Aligned</span>
+                              <span class="warning-tag tpaction-warning-tag">TPAction Aligned</span>
                             )}
                           </div>
 
@@ -1012,9 +1012,16 @@ function cleanName(value = "") {
   }
 
   .warning-tag {
-    background: #fef3c7;
-    border-color: #f59e0b;
-    color: #92400e;
+    background: #fb923c;
+    border-color: #c2410c;
+    color: #1f2933;
+  }
+
+  .tpaction-warning-tag {
+    background: #fde047;
+    border-color: #a16207;
+    color: #1f2933;
+    text-transform: uppercase;
   }
 
   .comment-topline {

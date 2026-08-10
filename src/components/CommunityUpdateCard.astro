@@ -125,6 +125,21 @@ const {
               <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
             </span>
           </a>
+          {!update.linkPreview?.imageUrl && update.social.embedUrl && (
+            <iframe
+              class="facebook-embed facebook-media-embed"
+              src={update.social.embedUrl}
+              width="500"
+              height="520"
+              style="border:none;overflow:hidden"
+              scrolling="no"
+              frameborder="0"
+              allowfullscreen="true"
+              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+              loading="lazy"
+              title="Facebook post preview"
+            ></iframe>
+          )}
         </div>
       ) : update.social?.type === "instagram" ? (
         <div class="instagram-embed-wrap">
@@ -578,7 +593,8 @@ const {
   }
 
   .instagram-media,
-  .tiktok-embed {
+  .tiktok-embed,
+  .facebook-embed {
     background: #ffffff;
     border: 0;
     border-radius: 12px;
@@ -590,6 +606,11 @@ const {
     overflow: hidden;
     padding: 14px;
     width: 100%;
+  }
+
+  .facebook-embed {
+    min-height: 260px;
+    padding: 0;
   }
 
   .instagram-media a,

@@ -34,6 +34,11 @@ import {
   getPendingOrganizationEndorsements,
 } from "../lib/organizationsApi";
 import {
+  countPendingProfileUpdateSubmissions,
+  getPendingProfileUpdateSubmissions,
+  profileUpdateDate,
+} from "../lib/profileUpdateSubmissions";
+import {
   candidateName,
   candidateSlug,
   getLegislativeCandidates,
@@ -91,6 +96,8 @@ let pendingCommunityUpdateCards = [];
 let pendingCommunityUpdateCount = 0;
 let pendingArticleSubmissions = [];
 let pendingArticleSubmissionCount = 0;
+let pendingProfileUpdateSubmissions = [];
+let pendingProfileUpdateSubmissionCount = 0;
 let profileGaps = { results: [], counts: {} };
 let gapProfileLabel = "";
 let peopleOptions = [];
@@ -157,6 +164,15 @@ if (session) {
     ]);
   } catch (error) {
     console.error(error?.message || "Unable to load pending article submissions.");
+  }
+
+  try {
+    [pendingProfileUpdateSubmissions, pendingProfileUpdateSubmissionCount] = await Promise.all([
+      getPendingProfileUpdateSubmissions({ limit: 50 }),
+      countPendingProfileUpdateSubmissions(),
+    ]);
+  } catch (error) {
+    console.error(error?.message || "Unable to load pending profile update submissions.");
   }
 
   try {
@@ -404,6 +420,10 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
               <a href="/admin/moderation#endorsement-submissions">
                 <span>Endorsements</span>
                 <strong>{pendingOrganizationEndorsementCount}</strong>
+              </a>
+              <a href="/admin/moderation#profile-updates">
+                <span>Profile updates</span>
+                <strong>{pendingProfileUpdateSubmissionCount}</strong>
               </a>
               <a href="/admin/profiles#profile-cleanup">
                 <span>Profile cleanup</span>
@@ -973,6 +993,96 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
               </div>
             ) : (
               <p class="empty">No community updates are waiting for review.</p>
+            )}
+          </section>
+          )}
+
+          {userCanReviewProfiles && showModerationPanels && (
+          <section id="profile-updates" class="panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Moderation</p>
+              <h2>Profile updates</h2>
+              <p>
+                Review submitted profile photos, websites, and social accounts
+                before they update public profile data. Showing {pendingProfileUpdateSubmissions.length} of {pendingProfileUpdateSubmissionCount} pending.
+              </p>
+            </div>
+
+            {pendingProfileUpdateSubmissions.length ? (
+              <div class="moderation-list profile-update-moderation-list">
+                {pendingProfileUpdateSubmissions.map((submission) => {
+                  const proposedLinks = [
+                    ["Website", submission.websiteUrl],
+                    ["Substack", submission.substackUrl],
+                    ["Instagram", submission.instagramUrl],
+                    ["Facebook", submission.facebookUrl],
+                    ["TikTok", submission.tiktokUrl],
+                  ].filter(([, value]) => value);
+
+                  return (
+                    <article>
+                      <div class="moderation-topline">
+                        <strong>{cleanText(submission.personName || submission.personKey)}</strong>
+                        <span>Profile update</span>
+                      </div>
+
+                      <p class="moderation-meta">
+                        Submitted by {cleanText(submission.submitterName || "Community member")}
+                        {profileUpdateDate(submission.createdAt) && ` on ${profileUpdateDate(submission.createdAt)}`}
+                      </p>
+
+                      <div class="profile-update-preview">
+                        {submission.photoUrl && (
+                          <a class="profile-update-photo-preview" href={submission.photoUrl}>
+                            <img src={submission.photoUrl} alt="" loading="lazy" />
+                            <span>Submitted profile photo</span>
+                          </a>
+                        )}
+
+                        <div class="profile-update-proposed-fields">
+                          {submission.pageUrl && <a href={submission.pageUrl}>Open profile page</a>}
+                          {proposedLinks.length ? (
+                            <dl>
+                              {proposedLinks.map(([label, value]) => (
+                                <div>
+                                  <dt>{label}</dt>
+                                  <dd><a href={value}>{cleanText(value)}</a></dd>
+                                </div>
+                              ))}
+                            </dl>
+                          ) : null}
+                          {submission.notes && (
+                            <p>{cleanText(submission.notes)}</p>
+                          )}
+                          <small>{cleanText(submission.submitterEmail)}</small>
+                        </div>
+                      </div>
+
+                      <form
+                        class="moderation-edit-form"
+                        action="/api/admin/profile-updates"
+                        method="post"
+                        hx-post="/api/admin/profile-updates"
+                        hx-target="find .moderation-inline-status"
+                        hx-swap="innerHTML"
+                        x-data="{ busy: false, lastAction: '' }"
+                        @htmx:before-request="busy = true"
+                        @htmx:after-request="busy = false; if ($event.detail.successful && ['approve', 'reject'].includes(lastAction)) $el.closest('article')?.remove()"
+                      >
+                        <input type="hidden" name="id" value={submission.id} />
+                        <input type="hidden" name="redirectTo" value="/admin/moderation#profile-updates" />
+                        <div class="moderation-actions">
+                          <button type="submit" name="action" value="approve" @click="lastAction = 'approve'" :disabled="busy">Approve and update profile</button>
+                          <button class="secondary danger" type="submit" name="action" value="reject" @click="lastAction = 'reject'" :disabled="busy">Reject</button>
+                          <span class="moderation-inline-status" aria-live="polite"></span>
+                        </div>
+                      </form>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <p class="empty">No profile updates are waiting for review.</p>
             )}
           </section>
           )}
@@ -2937,6 +3047,97 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
     text-transform: uppercase;
   }
 
+  .profile-update-preview {
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+    border-radius: 16px;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(140px, 220px) minmax(0, 1fr);
+    margin-top: 14px;
+    padding: 12px;
+  }
+
+  .profile-update-photo-preview {
+    color: #075985;
+    display: grid;
+    gap: 8px;
+    text-decoration: none;
+  }
+
+  .profile-update-photo-preview img {
+    aspect-ratio: 4 / 5;
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    display: block;
+    object-fit: cover;
+    object-position: center top;
+    width: 100%;
+  }
+
+  .profile-update-photo-preview span {
+    background: #e0f2fe;
+    border: 1px solid #7dd3fc;
+    border-radius: 999px;
+    color: #075985;
+    font-size: 0.72rem;
+    font-weight: 950;
+    justify-self: start;
+    letter-spacing: 0.04em;
+    padding: 5px 8px;
+    text-transform: uppercase;
+  }
+
+  .profile-update-proposed-fields {
+    align-content: start;
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .profile-update-proposed-fields dl {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .profile-update-proposed-fields dl div {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    display: grid;
+    gap: 3px;
+    padding: 9px 10px;
+  }
+
+  .profile-update-proposed-fields dt {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .profile-update-proposed-fields dd {
+    margin: 0;
+    min-width: 0;
+  }
+
+  .profile-update-proposed-fields a,
+  .profile-update-proposed-fields p,
+  .profile-update-proposed-fields small {
+    overflow-wrap: anywhere;
+  }
+
+  .profile-update-proposed-fields p,
+  .profile-update-proposed-fields small {
+    color: #475569;
+    font-weight: 850;
+    line-height: 1.45;
+    margin: 0;
+  }
+
   .workflow-controls {
     background: #eef6ff;
     border: 1px solid #bfdbfe;
@@ -3247,6 +3448,10 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
     }
 
     .manual-link-fields {
+      grid-template-columns: 1fr;
+    }
+
+    .profile-update-preview {
       grid-template-columns: 1fr;
     }
 

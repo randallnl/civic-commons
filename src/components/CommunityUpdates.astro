@@ -212,6 +212,21 @@ const isReport = entityType === "report";
                       <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
                     </span>
                   </a>
+                  {!update.linkPreview?.imageUrl && update.social.embedUrl && (
+                    <iframe
+                      class="facebook-embed facebook-media-embed"
+                      src={update.social.embedUrl}
+                      width="500"
+                      height="520"
+                      style="border:none;overflow:hidden"
+                      scrolling="no"
+                      frameborder="0"
+                      allowfullscreen="true"
+                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                      loading="lazy"
+                      title="Facebook post preview"
+                    ></iframe>
+                  )}
                 </div>
               ) : update.social?.type === "instagram" ? (
                 <div class="instagram-embed-wrap">
