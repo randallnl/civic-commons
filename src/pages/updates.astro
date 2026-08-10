@@ -298,6 +298,47 @@ function textPreview(value = "", maxLength = 170) {
         </div>
       </section>
 
+      <div class="updates-layout">
+        <aside class="recently-updated-panel" aria-label="Recently updated profiles">
+          <div class="sidebar-heading">
+            <p class="eyebrow">Recently Updated</p>
+            <h3>People with new community context</h3>
+          </div>
+
+          {recentlyUpdatedPeople.length ? (
+            <div class="recent-people-list">
+              {recentlyUpdatedPeople.map((person) => (
+                <a
+                  class="recent-person-card"
+                  href={peopleProfilePath(person)}
+                  data-fuzzy-sidebar-item
+                  data-fuzzy-sidebar-text={person.text}
+                >
+                  <img
+                    class:list={[!person.photoUrl && "profile-icon"]}
+                    src={person.photoUrl || profileIcon.src}
+                    alt={person.photoUrl ? `Photo of ${person.name}` : ""}
+                    loading="lazy"
+                  />
+                  <span>
+                    <strong>{cleanText(person.name)}</strong>
+                    {(person.role || person.districtLabel) && (
+                      <small>{cleanText([person.role, person.districtLabel].filter(Boolean).join(" - "))}</small>
+                    )}
+                    <em>
+                      {person.updateCount} {person.updateCount === 1 ? "update" : "updates"}
+                      {person.latestDateText && ` · ${person.latestDateText}`}
+                    </em>
+                  </span>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p>No tagged people yet.</p>
+          )}
+        </aside>
+
+        <div class="updates-main">
       <FilterBar action="/updates" submitLabel="Filter updates" clearHref="/updates" columns="wide" live={true}>
         <label for="q">
           <span>Search</span>
@@ -341,46 +382,6 @@ function textPreview(value = "", maxLength = 170) {
             </div>
             <a href="/suggest-update">Suggest an update</a>
           </div>
-
-          <div class="updates-layout">
-            <aside class="recently-updated-panel" aria-label="Recently updated profiles">
-              <div class="sidebar-heading">
-                <p class="eyebrow">Recently Updated</p>
-                <h3>People with new community context</h3>
-              </div>
-
-              {recentlyUpdatedPeople.length ? (
-                <div class="recent-people-list">
-                  {recentlyUpdatedPeople.map((person) => (
-                    <a
-                      class="recent-person-card"
-                      href={peopleProfilePath(person)}
-                      data-fuzzy-sidebar-item
-                      data-fuzzy-sidebar-text={person.text}
-                    >
-                      <img
-                        class:list={[!person.photoUrl && "profile-icon"]}
-                        src={person.photoUrl || profileIcon.src}
-                        alt={person.photoUrl ? `Photo of ${person.name}` : ""}
-                        loading="lazy"
-                      />
-                      <span>
-                        <strong>{cleanText(person.name)}</strong>
-                        {(person.role || person.districtLabel) && (
-                          <small>{cleanText([person.role, person.districtLabel].filter(Boolean).join(" - "))}</small>
-                        )}
-                        <em>
-                          {person.updateCount} {person.updateCount === 1 ? "update" : "updates"}
-                          {person.latestDateText && ` · ${person.latestDateText}`}
-                        </em>
-                      </span>
-                    </a>
-                  ))}
-                </div>
-              ) : (
-                <p>No tagged people yet.</p>
-              )}
-            </aside>
 
             <div class="media-grid">
               {mediaItems.map((item) => (
@@ -508,7 +509,6 @@ function textPreview(value = "", maxLength = 170) {
                 </article>
               ))}
             </div>
-          </div>
 
           <div class="status-message empty-state" data-fuzzy-empty hidden>
             <strong>No community updates matched those filters.</strong>
@@ -520,6 +520,8 @@ function textPreview(value = "", maxLength = 170) {
           <div class="scroll-load-sentinel" data-scroll-load-sentinel aria-hidden="true"></div>
         </section>
       )}
+        </div>
+      </div>
     </main>
     <SiteFooter />
     <script>
@@ -668,6 +670,12 @@ function textPreview(value = "", maxLength = 170) {
     display: grid;
     gap: 18px;
     grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
+  }
+
+  .updates-main {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
   }
 
   .recently-updated-panel {
