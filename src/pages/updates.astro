@@ -671,16 +671,20 @@ function textPreview(value = "", maxLength = 170) {
     align-items: start;
     display: grid;
     gap: clamp(26px, 3vw, 48px);
-    grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
     width: 100%;
   }
 
   .updates-main {
+    box-sizing: border-box;
     display: grid;
     gap: 18px;
+    grid-column: 1;
+    grid-row: 1;
     justify-self: center;
     max-width: 1120px;
     min-width: 0;
+    padding-inline: clamp(8px, 1.6vw, 28px);
     width: 100%;
   }
 
@@ -690,6 +694,8 @@ function textPreview(value = "", maxLength = 170) {
     border-radius: 14px;
     display: grid;
     gap: 14px;
+    grid-column: 2;
+    grid-row: 1;
     padding: 18px;
     position: sticky;
     top: 84px;
@@ -1140,7 +1146,19 @@ function textPreview(value = "", maxLength = 170) {
       grid-template-columns: 1fr;
     }
 
+    .updates-main,
     .recently-updated-panel {
+      grid-column: auto;
+      grid-row: auto;
+    }
+
+    .updates-main {
+      order: 1;
+      padding-inline: 0;
+    }
+
+    .recently-updated-panel {
+      order: 2;
       position: static;
     }
 
@@ -1151,7 +1169,7 @@ function textPreview(value = "", maxLength = 170) {
 
   @media (min-width: 721px) and (max-width: 1040px) {
     .updates-layout {
-      grid-template-columns: minmax(210px, 260px) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) minmax(210px, 260px);
     }
 
     .media-grid {
