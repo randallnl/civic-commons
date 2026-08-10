@@ -116,22 +116,143 @@ const isReport = entityType === "report";
   {updateCards.length ? (
     <div class="community-update-list">
       {updateCards.map((update) => (
-        <article class:list={["community-update-card", update.photoUrls?.length && "has-photo"]}>
-          {update.photoUrls?.length > 0 && (
+        <article class:list={["community-update-card", (update.photoUrls?.length || update.linkUrl) && "has-media"]}>
+          {(update.linkUrl || update.photoUrls?.length > 0) && (
             <div class="community-update-media">
-              <div class="community-photo-grid">
-                {update.photoUrls.map((photoUrl) => (
-                  <button
-                    class="community-photo-button"
-                    type="button"
-                    data-community-photo={photoUrl}
-                    aria-label="Open community update photo"
-                  >
-                    <img src={photoUrl} alt="" loading="lazy" />
-                  </button>
-                ))}
-              </div>
-              <span>{update.photoUrls.length === 1 ? "Photo update" : `${update.photoUrls.length} photo updates`}</span>
+              {update.linkUrl && (
+                update.social?.type === "tiktok" ? (
+                  <div class="social-embed-wrap tiktok-embed-wrap">
+                    <a class="rich-link-preview social-preview-card tiktok-preview-card" href={update.social.permalink || update.linkUrl}>
+                      <span class="social-icon tiktok-icon" aria-hidden="true">TT</span>
+                      {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+                      <span>
+                        <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+                        <small>
+                        {update.social.handle
+                            ? `${update.social.isProfile ? "Profile: " : ""}@${update.social.handle}`
+                            : previewDescription(update.linkPreview, update.linkUrl)}
+                        </small>
+                      </span>
+                    </a>
+                    {update.social.isEmbeddable && update.social.videoId && (
+                      <blockquote
+                        class="tiktok-embed"
+                        cite={update.social.permalink}
+                        data-video-id={update.social.videoId}
+                      >
+                        <section>
+                          <a href={update.social.permalink || update.linkUrl}>
+                            View this video on TikTok
+                          </a>
+                        </section>
+                      </blockquote>
+                    )}
+                  </div>
+                ) : update.social?.type === "facebook" ? (
+                  <div class="social-embed-wrap facebook-embed-wrap">
+                    <a
+                      class:list={[
+                        "rich-link-preview",
+                        "social-preview-card",
+                        "facebook-preview-card",
+                        !update.linkPreview?.imageUrl && "social-preview-card-no-image",
+                      ]}
+                      href={update.social.permalink || update.linkUrl}
+                    >
+                      <span class="social-icon facebook-icon" aria-hidden="true">FB</span>
+                      {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+                      <span>
+                        <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+                        <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
+                      </span>
+                    </a>
+                    {!update.linkPreview?.imageUrl && update.social.embedUrl && (
+                      <iframe
+                        class="facebook-embed facebook-media-embed"
+                        src={update.social.embedUrl}
+                        width="500"
+                        height="520"
+                        style="border:none;overflow:hidden"
+                        scrolling="no"
+                        frameborder="0"
+                        allowfullscreen="true"
+                        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                        loading="lazy"
+                        title="Facebook post preview"
+                      ></iframe>
+                    )}
+                  </div>
+                ) : update.social?.type === "instagram" ? (
+                  <div class="instagram-embed-wrap">
+                    <a class="rich-link-preview instagram-preview-card" href={update.social.permalink || update.linkUrl}>
+                      <span class="instagram-icon" aria-hidden="true">IG</span>
+                      {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+                      <span>
+                        <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+                        <small>
+                          {update.social.handle
+                            ? `${update.social.isProfile ? "Profile: " : ""}@${update.social.handle}`
+                            : previewDescription(update.linkPreview, update.linkUrl)}
+                        </small>
+                      </span>
+                    </a>
+                    {update.social.isEmbeddable && (
+                      <blockquote
+                        class="instagram-media"
+                        data-instgrm-captioned
+                        data-instgrm-permalink={update.social.permalink}
+                        data-instgrm-version="14"
+                      >
+                        <a href={update.social.permalink || update.linkUrl}>
+                          View this post on Instagram
+                        </a>
+                      </blockquote>
+                    )}
+                  </div>
+                ) : update.social?.type === "substack" ? (
+                  <a class="rich-link-preview social-preview-card substack-preview-card" href={update.social.permalink || update.linkUrl}>
+                    <span class="social-icon substack-icon" aria-hidden="true">S</span>
+                    {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+                    <span>
+                      <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+                      <small>
+                        {update.social.handle
+                          ? `@${update.social.handle} on Substack`
+                          : update.social.publication
+                            ? `${update.social.publication} on Substack`
+                            : previewDescription(update.linkPreview, update.linkUrl)}
+                      </small>
+                    </span>
+                  </a>
+                ) : (
+                  <a class="community-link-preview rich-link-preview" href={update.linkUrl}>
+                    {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
+                    <span>
+                      <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
+                      {previewDescription(update.linkPreview, update.linkUrl) && (
+                        <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
+                      )}
+                    </span>
+                  </a>
+                )
+              )}
+              {update.photoUrls?.length > 0 && (
+                <>
+                  <div class="community-photo-grid">
+                    {update.photoUrls.map((photoUrl) => (
+                      <button
+                        class="community-photo-button"
+                        type="button"
+                        data-community-photo={photoUrl}
+                        aria-label="Open community update photo"
+                      >
+                        <img src={photoUrl} alt="" loading="lazy" />
+                      </button>
+                    ))}
+                  </div>
+                  <span>{update.photoUrls.length === 1 ? "Photo update" : `${update.photoUrls.length} photo updates`}</span>
+                </>
+              )}
             </div>
           )}
           <div class="community-update-copy">
@@ -164,123 +285,6 @@ const isReport = entityType === "report";
                   </a>
                 ))}
               </div>
-            )}
-            {update.linkUrl && (
-              update.social?.type === "tiktok" ? (
-                <div class="social-embed-wrap tiktok-embed-wrap">
-                  <a class="rich-link-preview social-preview-card tiktok-preview-card" href={update.social.permalink || update.linkUrl}>
-                    <span class="social-icon tiktok-icon" aria-hidden="true">TT</span>
-                    {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
-                    <span>
-                      <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
-                      <small>
-                      {update.social.handle
-                          ? `${update.social.isProfile ? "Profile: " : ""}@${update.social.handle}`
-                          : previewDescription(update.linkPreview, update.linkUrl)}
-                      </small>
-                    </span>
-                  </a>
-                  {update.social.isEmbeddable && update.social.videoId && (
-                    <blockquote
-                      class="tiktok-embed"
-                      cite={update.social.permalink}
-                      data-video-id={update.social.videoId}
-                    >
-                      <section>
-                        <a href={update.social.permalink || update.linkUrl}>
-                          View this video on TikTok
-                        </a>
-                      </section>
-                    </blockquote>
-                  )}
-                </div>
-              ) : update.social?.type === "facebook" ? (
-                <div class="social-embed-wrap facebook-embed-wrap">
-                  <a
-                    class:list={[
-                      "rich-link-preview",
-                      "social-preview-card",
-                      "facebook-preview-card",
-                      !update.linkPreview?.imageUrl && "social-preview-card-no-image",
-                    ]}
-                    href={update.social.permalink || update.linkUrl}
-                  >
-                    <span class="social-icon facebook-icon" aria-hidden="true">FB</span>
-                    {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
-                    <span>
-                      <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
-                      <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
-                    </span>
-                  </a>
-                  {!update.linkPreview?.imageUrl && update.social.embedUrl && (
-                    <iframe
-                      class="facebook-embed facebook-media-embed"
-                      src={update.social.embedUrl}
-                      width="500"
-                      height="520"
-                      style="border:none;overflow:hidden"
-                      scrolling="no"
-                      frameborder="0"
-                      allowfullscreen="true"
-                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                      loading="lazy"
-                      title="Facebook post preview"
-                    ></iframe>
-                  )}
-                </div>
-              ) : update.social?.type === "instagram" ? (
-                <div class="instagram-embed-wrap">
-                  <a class="rich-link-preview instagram-preview-card" href={update.social.permalink || update.linkUrl}>
-                    <span class="instagram-icon" aria-hidden="true">IG</span>
-                    {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
-                    <span>
-                      <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
-                      <small>
-                        {update.social.handle
-                          ? `${update.social.isProfile ? "Profile: " : ""}@${update.social.handle}`
-                          : previewDescription(update.linkPreview, update.linkUrl)}
-                      </small>
-                    </span>
-                  </a>
-                  {update.social.isEmbeddable && (
-                    <blockquote
-                      class="instagram-media"
-                      data-instgrm-captioned
-                      data-instgrm-permalink={update.social.permalink}
-                      data-instgrm-version="14"
-                    >
-                      <a href={update.social.permalink || update.linkUrl}>
-                        View this post on Instagram
-                      </a>
-                    </blockquote>
-                  )}
-                </div>
-              ) : update.social?.type === "substack" ? (
-                <a class="rich-link-preview social-preview-card substack-preview-card" href={update.social.permalink || update.linkUrl}>
-                  <span class="social-icon substack-icon" aria-hidden="true">S</span>
-                  {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
-                  <span>
-                    <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
-                    <small>
-                      {update.social.handle
-                        ? `@${update.social.handle} on Substack`
-                        : update.social.publication
-                          ? `${update.social.publication} on Substack`
-                          : previewDescription(update.linkPreview, update.linkUrl)}
-                    </small>
-                  </span>
-                </a>
-              ) : (
-                <a class="community-link-preview rich-link-preview" href={update.linkUrl}>
-                  {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
-                  <span>
-                    <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
-                    {previewDescription(update.linkPreview, update.linkUrl) && (
-                      <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
-                    )}
-                  </span>
-                </a>
-              )
             )}
             {update.people?.length > 0 && (
               <div class="community-people-preview" aria-label="People connected to this update">
@@ -357,9 +361,14 @@ const isReport = entityType === "report";
   )}
 
   <dialog class="community-photo-dialog" aria-label="Community update photo">
-    <form method="dialog">
-      <button type="submit" aria-label="Close photo preview">Close</button>
-    </form>
+    <div class="community-photo-dialog-toolbar">
+      <button type="button" data-community-photo-prev aria-label="Previous photo">Previous</button>
+      <span data-community-photo-count></span>
+      <button type="button" data-community-photo-next aria-label="Next photo">Next</button>
+      <form method="dialog">
+        <button type="submit" aria-label="Close photo preview">Close</button>
+      </form>
+    </div>
     <img src="" alt="" />
   </dialog>
 </section>
@@ -374,9 +383,41 @@ const isReport = entityType === "report";
   document.querySelectorAll(".community-updates-panel").forEach((panel) => {
     const dialog = panel.querySelector(".community-photo-dialog");
     const preview = dialog?.querySelector("img");
+    const previousButton = dialog?.querySelector("[data-community-photo-prev]");
+    const nextButton = dialog?.querySelector("[data-community-photo-next]");
+    const counter = dialog?.querySelector("[data-community-photo-count]");
 
-    if (!(dialog instanceof HTMLDialogElement) || !(preview instanceof HTMLImageElement)) {
+    if (
+      !(dialog instanceof HTMLDialogElement) ||
+      !(preview instanceof HTMLImageElement) ||
+      !(previousButton instanceof HTMLButtonElement) ||
+      !(nextButton instanceof HTMLButtonElement) ||
+      !(counter instanceof HTMLElement)
+    ) {
       return;
+    }
+
+    let activePhotos = [];
+    let activeIndex = 0;
+
+    function renderPhoto() {
+      const photoUrl = activePhotos[activeIndex];
+      if (!photoUrl) return;
+
+      preview.src = photoUrl;
+      const hasMultiplePhotos = activePhotos.length > 1;
+      previousButton.hidden = !hasMultiplePhotos;
+      nextButton.hidden = !hasMultiplePhotos;
+      counter.hidden = !hasMultiplePhotos;
+      counter.textContent = hasMultiplePhotos
+        ? `${activeIndex + 1} of ${activePhotos.length}`
+        : "";
+    }
+
+    function movePhoto(direction) {
+      if (activePhotos.length <= 1) return;
+      activeIndex = (activeIndex + direction + activePhotos.length) % activePhotos.length;
+      renderPhoto();
     }
 
     panel.querySelectorAll("[data-community-photo]").forEach((button) => {
@@ -384,9 +425,32 @@ const isReport = entityType === "report";
         const photoUrl = button.getAttribute("data-community-photo");
         if (!photoUrl) return;
 
-        preview.src = photoUrl;
+        const updateCard = button.closest(".community-update-card");
+        const photoButtons = updateCard
+          ? Array.from(updateCard.querySelectorAll("[data-community-photo]"))
+          : [button];
+        activePhotos = photoButtons
+          .map((photoButton) => photoButton.getAttribute("data-community-photo"))
+          .filter(Boolean);
+        activeIndex = Math.max(0, activePhotos.indexOf(photoUrl));
+
+        renderPhoto();
         dialog.showModal();
       });
+    });
+
+    previousButton.addEventListener("click", () => movePhoto(-1));
+    nextButton.addEventListener("click", () => movePhoto(1));
+
+    dialog.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        movePhoto(-1);
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        movePhoto(1);
+      }
     });
 
     dialog.addEventListener("click", (event) => {
@@ -396,7 +460,10 @@ const isReport = entityType === "report";
     });
 
     dialog.addEventListener("close", () => {
+      activePhotos = [];
+      activeIndex = 0;
       preview.removeAttribute("src");
+      counter.textContent = "";
     });
   });
 
@@ -585,7 +652,7 @@ const isReport = entityType === "report";
     padding: 16px;
   }
 
-  .community-update-card.has-photo {
+  .community-update-card.has-media {
     align-items: stretch;
     grid-template-columns: minmax(160px, 34%) minmax(0, 1fr);
   }
@@ -596,7 +663,7 @@ const isReport = entityType === "report";
     gap: 8px;
   }
 
-  .community-update-media span {
+  .community-update-media > span {
     align-self: start;
     background: #e0f2fe;
     border: 1px solid #7dd3fc;
@@ -774,17 +841,32 @@ const isReport = entityType === "report";
     background: rgba(17, 24, 39, 0.72);
   }
 
-  .community-photo-dialog form {
-    display: flex;
-    justify-content: end;
+  .community-photo-dialog-toolbar {
+    align-items: center;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: auto 1fr auto auto;
     margin: 0 0 10px;
   }
 
-  .community-photo-dialog button {
+  .community-photo-dialog-toolbar form {
+    display: flex;
+    justify-content: end;
+    margin: 0;
+  }
+
+  .community-photo-dialog-toolbar button {
     background: #ffffff;
     border-color: #ffffff;
     color: #1f2933;
     padding: 8px 12px;
+  }
+
+  .community-photo-dialog-toolbar span {
+    color: #ffffff;
+    font-size: 0.88rem;
+    font-weight: 900;
+    justify-self: center;
   }
 
   .community-photo-dialog img {
@@ -885,6 +967,12 @@ const isReport = entityType === "report";
     display: grid;
     gap: 10px;
     margin-top: 12px;
+  }
+
+  .community-update-media .instagram-embed-wrap,
+  .community-update-media .social-embed-wrap,
+  .community-update-media .community-link-preview {
+    margin-top: 0;
   }
 
   .instagram-preview-card,
@@ -1335,7 +1423,7 @@ const isReport = entityType === "report";
       white-space: normal;
     }
 
-    .community-update-card.has-photo {
+    .community-update-card.has-media {
       grid-template-columns: 1fr;
     }
 
