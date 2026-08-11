@@ -352,13 +352,13 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
 
     .crowdfunding-popup {
       align-items: flex-end;
-      padding: 12px;
+      padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
     }
 
     .crowdfunding-card {
       border-radius: 18px 18px 10px 10px;
-      max-height: 86vh;
-      padding: 24px;
+      max-height: min(74vh, 560px);
+      padding: 22px;
     }
 
     .crowdfunding-card h2 {
@@ -368,6 +368,21 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
 
     .crowdfunding-body {
       grid-template-columns: 1fr;
+    }
+
+    .crowdfunding-actions {
+      background: linear-gradient(180deg, rgba(255, 250, 241, 0.86), #fffaf1 34%);
+      bottom: -22px;
+      margin-inline: -22px;
+      padding: 14px 22px 22px;
+      position: sticky;
+      z-index: 2;
+    }
+
+    .crowdfunding-primary,
+    .crowdfunding-secondary {
+      flex: 1 1 160px;
+      text-align: center;
     }
   }
 </style>
