@@ -149,33 +149,6 @@ function organizationAssetUrl(filename = "") {
         </div>
       </section>
 
-      <section class="portal-sidebar-row" aria-label="Social and trending links">
-        <aside class="portal-widget trending-widget">
-          <h2>Trending Post</h2>
-          <div class="trending-list">
-            {recentArticles.slice(0, 4).map((article, index) => (
-              <a class="trending-item" href={articleDetailPath(article)}>
-                <strong>{index + 1}</strong>
-                <span>{cleanText(article.preview?.title || article.title || "Community update")}</span>
-                {articlePublishDate(article) && <small>{articlePublishDate(article)}</small>}
-              </a>
-            ))}
-          </div>
-        </aside>
-
-        <aside class="portal-widget follow-widget">
-          <h2>Follow Us</h2>
-          <div class="social-grid">
-            <a href="#">Facebook</a>
-            <a href="#">Twitter</a>
-            <a href="#">Instagram</a>
-            <a href="#">Youtube</a>
-            <a href="#">Linkedin</a>
-            <a href="#">Telegram</a>
-          </div>
-        </aside>
-      </section>
-
       <section class="cta">
         <h2>Help keep civic information accurate and useful.</h2>
         <p>
@@ -961,104 +934,6 @@ function organizationAssetUrl(filename = "") {
     font-size: 1.25rem;
     line-height: 1.15;
     margin: 0;
-  }
-
-  .portal-sidebar-row {
-    display: grid;
-    gap: 18px;
-    grid-template-columns: minmax(240px, 0.72fr) minmax(320px, 1.28fr);
-    margin: 42px 0;
-  }
-
-  .portal-widget {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    display: grid;
-    gap: 16px;
-    padding: 20px;
-  }
-
-  .portal-widget h2 {
-    border-left: 3px solid #dc4d09;
-    font-size: 1.12rem;
-    line-height: 1.1;
-    margin: 0;
-    padding-left: 10px;
-  }
-
-  .social-grid {
-    display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .social-grid a {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    color: #1f2933;
-    font-size: 0.82rem;
-    font-weight: 900;
-    padding: 10px;
-    text-align: center;
-    text-decoration: none;
-  }
-
-  .social-grid a:hover {
-    background: #fff7ed;
-    border-color: #fed7aa;
-    color: #b6390a;
-  }
-
-  .trending-list {
-    display: grid;
-    gap: 0;
-  }
-
-  .trending-item {
-    align-items: start;
-    border-top: 1px solid #e2e8f0;
-    color: #1f2933;
-    display: grid;
-    gap: 4px 12px;
-    grid-template-columns: 36px minmax(0, 1fr);
-    padding: 13px 0;
-    text-decoration: none;
-  }
-
-  .trending-item:first-child {
-    border-top: 0;
-    padding-top: 0;
-  }
-
-  .trending-item > strong {
-    align-items: center;
-    background: #1f2933;
-    border-radius: 999px;
-    color: #fffaf1;
-    display: inline-flex;
-    font-size: 0.86rem;
-    height: 30px;
-    justify-content: center;
-    width: 30px;
-  }
-
-  .trending-item > span {
-    font-weight: 950;
-    line-height: 1.25;
-  }
-
-  .trending-item > small {
-    color: #6b7280;
-    font-size: 0.76rem;
-    font-weight: 850;
-    grid-column: 2;
-  }
-
-  .trending-item:hover span {
-    color: #b6390a;
-    text-decoration: underline;
   }
 
   .homepage-stack {
@@ -1928,19 +1803,6 @@ function organizationAssetUrl(filename = "") {
     text-transform: uppercase;
   }
 
-  .list .free-stater-inline::before {
-    content: "!";
-    align-items: center;
-    border: 1px solid currentColor;
-    border-radius: 999px;
-    display: inline-flex;
-    font-size: 0.62rem;
-    height: 0.95rem;
-    justify-content: center;
-    margin-right: 5px;
-    width: 0.95rem;
-  }
-
   .list .free-stater-inline:hover {
     background: #35180d;
     color: #fffdf7;
@@ -1963,15 +1825,11 @@ function organizationAssetUrl(filename = "") {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .portal-sidebar-row {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-    }
   }
 
   @media (max-width: 900px) {
     .rep-preview,
-    .comment-columns,
-    .portal-sidebar-row {
+    .comment-columns {
       grid-template-columns: 1fr;
     }
   }

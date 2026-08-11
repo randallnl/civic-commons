@@ -15,6 +15,8 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS profile_update_submissions (
   instagram_url TEXT,
   facebook_url TEXT,
   tiktok_url TEXT,
+  x_url TEXT,
+  bluesky_url TEXT,
   photo_url TEXT,
   photo_key TEXT,
   notes TEXT,
@@ -31,6 +33,8 @@ export function profileUpdateDb() {
 export async function ensureProfileUpdateSubmissionTable(db = profileUpdateDb()) {
   if (!db) throw new Error("D1 database binding is not configured.");
   await db.prepare(TABLE_SQL).run();
+  await ensureColumn(db, "profile_update_submissions", "x_url", "TEXT");
+  await ensureColumn(db, "profile_update_submissions", "bluesky_url", "TEXT");
   await db
     .prepare(
       `CREATE INDEX IF NOT EXISTS idx_profile_update_submissions_status
@@ -59,10 +63,10 @@ export async function createProfileUpdateSubmission(data = {}, db = profileUpdat
     .prepare(
       `INSERT INTO profile_update_submissions (
         person_key, person_name, page_url, submitter_name, submitter_email,
-        website_url, substack_url, instagram_url, facebook_url, tiktok_url,
+        website_url, substack_url, instagram_url, facebook_url, tiktok_url, x_url, bluesky_url,
         photo_url, photo_key, notes, status, created_at
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)`,
     )
     .bind(
       normalized.personKey,
@@ -75,6 +79,8 @@ export async function createProfileUpdateSubmission(data = {}, db = profileUpdat
       normalized.instagramUrl,
       normalized.facebookUrl,
       normalized.tiktokUrl,
+      normalized.xUrl,
+      normalized.blueskyUrl,
       normalized.photoUrl,
       normalized.photoKey,
       normalized.notes,
@@ -192,6 +198,8 @@ async function applyProfileUpdateSubmission(submission = {}, db = profileUpdateD
     instagramUrl: normalized.instagramUrl,
     facebookUrl: normalized.facebookUrl,
     tiktokUrl: normalized.tiktokUrl,
+    xUrl: normalized.xUrl,
+    blueskyUrl: normalized.blueskyUrl,
     photoUrl: normalized.photoUrl,
   };
   const assignments = [];
@@ -203,6 +211,8 @@ async function applyProfileUpdateSubmission(submission = {}, db = profileUpdateD
     ["instagramUrl", "instagram_url"],
     ["facebookUrl", "facebook_url"],
     ["tiktokUrl", "tiktok_url"],
+    ["xUrl", "x_url"],
+    ["blueskyUrl", "bluesky_url"],
     ["photoUrl", "photo_url"],
   ]) {
     if (!data[field]) continue;
@@ -243,6 +253,8 @@ function normalizeSubmissionData(data = {}) {
     instagramUrl: normalizeSocialUrl(data.instagramUrl || data.instagram_url || "", "instagram"),
     facebookUrl: normalizeSocialUrl(data.facebookUrl || data.facebook_url || "", "facebook"),
     tiktokUrl: normalizeSocialUrl(data.tiktokUrl || data.tiktok_url || "", "tiktok"),
+    xUrl: normalizeSocialUrl(data.xUrl || data.x_url || "", "x"),
+    blueskyUrl: normalizeSocialUrl(data.blueskyUrl || data.bluesky_url || "", "bluesky"),
     photoUrl: String(data.photoUrl || data.photo_url || "").trim(),
     photoKey: String(data.photoKey || data.photo_key || "").trim(),
     notes: cleanText(data.notes || ""),
@@ -262,6 +274,8 @@ function normalizeSubmissionRow(row = {}) {
     instagramUrl: row.instagram_url || row.instagramUrl || "",
     facebookUrl: row.facebook_url || row.facebookUrl || "",
     tiktokUrl: row.tiktok_url || row.tiktokUrl || "",
+    xUrl: row.x_url || row.xUrl || "",
+    blueskyUrl: row.bluesky_url || row.blueskyUrl || "",
     photoUrl: row.photo_url || row.photoUrl || "",
     photoKey: row.photo_key || row.photoKey || "",
     notes: cleanText(row.notes || ""),
@@ -279,6 +293,8 @@ function hasSuggestedUpdate(data = {}) {
     data.instagramUrl ||
     data.facebookUrl ||
     data.tiktokUrl ||
+    data.xUrl ||
+    data.blueskyUrl ||
     data.photoUrl ||
     data.notes,
   );
@@ -306,8 +322,16 @@ function normalizeSocialUrl(value = "", platform = "") {
     instagram: "https://www.instagram.com/",
     facebook: "https://www.facebook.com/",
     tiktok: "https://www.tiktok.com/@",
+    x: "https://x.com/",
+    bluesky: "https://bsky.app/profile/",
   };
   return bases[platform] ? `${bases[platform]}${handle}` : normalizeUrl(cleaned);
+}
+
+async function ensureColumn(db, table, column, definition) {
+  const info = await db.prepare(`PRAGMA table_info(${table})`).all();
+  const exists = (info.results || []).some((row) => row.name === column);
+  if (!exists) await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`).run();
 }
 
 function publicPhotoUrl(key = "") {

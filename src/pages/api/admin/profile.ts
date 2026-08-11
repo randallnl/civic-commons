@@ -37,11 +37,15 @@ const CANDIDATE_FIELDS = [
   "totalRaised",
   "totalSpent",
   "is_free_stater",
+  "isFreeStateAligned2026",
+  "isTpActionAligned2026",
   "linkedRepresentativePersonId",
   "substackUrl",
   "instagramUrl",
   "facebookUrl",
   "tiktokUrl",
+  "xUrl",
+  "blueskyUrl",
 ];
 
 const PERSON_FIELDS = [
@@ -59,10 +63,14 @@ const PERSON_FIELDS = [
   "photoUrl",
   "notes",
   "is_free_stater",
+  "isFreeStateAligned2026",
+  "isTpActionAligned2026",
   "substackUrl",
   "instagramUrl",
   "facebookUrl",
   "tiktokUrl",
+  "xUrl",
+  "blueskyUrl",
 ];
 
 const REPRESENTATIVE_FIELDS = [
@@ -82,11 +90,15 @@ const REPRESENTATIVE_FIELDS = [
   "photo",
   "notes",
   "is_free_stater",
+  "isFreeStateAligned2026",
+  "isTpActionAligned2026",
   "linkedCandidateFilerEntityNumber",
   "substackUrl",
   "instagramUrl",
   "facebookUrl",
   "tiktokUrl",
+  "xUrl",
+  "blueskyUrl",
 ];
 
 export async function POST({ request }) {
@@ -178,7 +190,7 @@ function normalizeFieldValue(field, value) {
   if (field === "nameAliases") return normalizeAliases(value);
   if (field === "electionYear") return Number(value) || value;
   if (field === "totalRaised" || field === "totalSpent") return Number(value) || 0;
-  if (field === "is_free_stater") {
+  if (field === "is_free_stater" || field === "isFreeStateAligned2026" || field === "isTpActionAligned2026") {
     return ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
   }
   return value;
@@ -317,6 +329,7 @@ async function updateRepresentativeSource(db, entityKey, data) {
   await upsertPersonFromLegislator(personid, db);
   changed += await updatePersonAliases(db, { gcPersonid: personid }, data);
   changed += await updatePersonSocialLinks(db, { gcPersonid: personid }, data);
+  changed += await updatePersonAlignmentFlags(db, { gcPersonid: personid }, data);
 
   if (!changed) throw new Error("No matching legislator source row was updated.");
   return { changed };
@@ -353,6 +366,8 @@ async function updatePersonSource(db, entityKey, data) {
     websiteUrl: data.websiteUrl || "",
     photoUrl: data.photoUrl || "",
     freeStater: freeStaterValue(data),
+    freeStateAligned2026: booleanOverrideValue(data, "isFreeStateAligned2026"),
+    tpActionAligned2026: booleanOverrideValue(data, "isTpActionAligned2026"),
   });
 
   changed += await updatePersonAliases(
@@ -366,6 +381,16 @@ async function updatePersonSource(db, entityKey, data) {
     data,
   );
   changed += await updatePersonSocialLinks(
+    db,
+    {
+      key,
+      gcPersonid,
+      filerEntityNumber,
+      slug: key,
+    },
+    data,
+  );
+  changed += await updatePersonAlignmentFlags(
     db,
     {
       key,
@@ -583,6 +608,8 @@ async function updateUnifiedCandidatePerson(db, entityKey, data = {}) {
     "candidateWebsite",
     "photoUrl",
     "is_free_stater",
+    "isFreeStateAligned2026",
+    "isTpActionAligned2026",
   ].some((field) => Object.prototype.hasOwnProperty.call(data, field));
   if (!hasSuppliedValue) return 0;
 
@@ -605,6 +632,14 @@ async function updateUnifiedCandidatePerson(db, entityKey, data = {}) {
            WHEN ? IS NULL THEN is_free_stater
            ELSE ?
          END,
+         is_free_state_aligned_2026 = CASE
+           WHEN ? IS NULL THEN is_free_state_aligned_2026
+           ELSE ?
+         END,
+         is_tpaction_aligned_2026 = CASE
+           WHEN ? IS NULL THEN is_tpaction_aligned_2026
+           ELSE ?
+         END,
          updated_at = CURRENT_TIMESTAMP
      WHERE filer_entity_number = ?
         OR slug = ?
@@ -623,6 +658,10 @@ async function updateUnifiedCandidatePerson(db, entityKey, data = {}) {
       data.photoUrl || "",
       freeStaterValue(data),
       freeStaterValue(data),
+      booleanOverrideValue(data, "isFreeStateAligned2026"),
+      booleanOverrideValue(data, "isFreeStateAligned2026"),
+      booleanOverrideValue(data, "isTpActionAligned2026"),
+      booleanOverrideValue(data, "isTpActionAligned2026"),
       key,
       key,
       key,
@@ -644,6 +683,10 @@ async function updateUnifiedPerson(db, data = {}) {
     data.photoUrl || "",
     data.freeStater,
     data.freeStater,
+    data.freeStateAligned2026,
+    data.freeStateAligned2026,
+    data.tpActionAligned2026,
+    data.tpActionAligned2026,
   ];
 
   if (data.key) {
@@ -684,6 +727,14 @@ async function updateUnifiedPerson(db, data = {}) {
          photo_url = COALESCE(NULLIF(?, ''), photo_url),
          is_free_stater = CASE
            WHEN ? IS NULL THEN is_free_stater
+           ELSE ?
+         END,
+         is_free_state_aligned_2026 = CASE
+           WHEN ? IS NULL THEN is_free_state_aligned_2026
+           ELSE ?
+         END,
+         is_tpaction_aligned_2026 = CASE
+           WHEN ? IS NULL THEN is_tpaction_aligned_2026
            ELSE ?
          END,
          updated_at = CURRENT_TIMESTAMP
@@ -743,6 +794,8 @@ async function updatePersonSocialLinks(db, identifiers = {}, data = {}) {
     ["instagramUrl", "instagram_url"],
     ["facebookUrl", "facebook_url"],
     ["tiktokUrl", "tiktok_url"],
+    ["xUrl", "x_url"],
+    ["blueskyUrl", "bluesky_url"],
   ];
   const suppliedFields = socialFields.filter(([field]) =>
     Object.prototype.hasOwnProperty.call(data, field),
@@ -753,6 +806,62 @@ async function updatePersonSocialLinks(db, identifiers = {}, data = {}) {
 
   const assignments = suppliedFields.map(([, column]) => `${column} = ?`);
   const params = suppliedFields.map(([field]) => data[field] || "");
+  assignments.push("updated_at = CURRENT_TIMESTAMP");
+
+  const clauses = [];
+  if (identifiers.key) {
+    clauses.push("slug = ?");
+    params.push(identifiers.key);
+    clauses.push("CAST(id AS TEXT) = ?");
+    params.push(identifiers.key);
+  }
+  if (identifiers.gcPersonid) {
+    clauses.push("gc_personid = ?");
+    params.push(identifiers.gcPersonid);
+  }
+  if (identifiers.filerEntityNumber) {
+    clauses.push("filer_entity_number = ?");
+    params.push(identifiers.filerEntityNumber);
+  }
+  if (identifiers.slug) {
+    clauses.push("slug = ?");
+    params.push(identifiers.slug);
+    clauses.push(
+      `id IN (
+        SELECT person_id
+        FROM d1_person_candidate_roles
+        WHERE filer_entity_number = ?
+      )`,
+    );
+    params.push(identifiers.slug);
+  }
+  if (!clauses.length) return 0;
+
+  const result = await db
+    .prepare(
+      `UPDATE d1_people
+       SET ${assignments.join(", ")}
+       WHERE ${clauses.join(" OR ")}`,
+    )
+    .bind(...params)
+    .run();
+  return result.meta?.changes ?? result.changes ?? 0;
+}
+
+async function updatePersonAlignmentFlags(db, identifiers = {}, data = {}) {
+  const flagFields = [
+    ["isFreeStateAligned2026", "is_free_state_aligned_2026"],
+    ["isTpActionAligned2026", "is_tpaction_aligned_2026"],
+  ];
+  const suppliedFields = flagFields.filter(([field]) =>
+    Object.prototype.hasOwnProperty.call(data, field),
+  );
+  if (!suppliedFields.length) return 0;
+
+  await ensureUnifiedPeopleTables(db);
+
+  const assignments = suppliedFields.map(([, column]) => `${column} = ?`);
+  const params = suppliedFields.map(([field]) => (data[field] ? 1 : 0));
   assignments.push("updated_at = CURRENT_TIMESTAMP");
 
   const clauses = [];
@@ -820,6 +929,11 @@ function numberOrNull(value) {
 function freeStaterValue(data = {}) {
   if (!Object.prototype.hasOwnProperty.call(data, "is_free_stater")) return null;
   return data.is_free_stater ? 1 : 0;
+}
+
+function booleanOverrideValue(data = {}, field = "") {
+  if (!Object.prototype.hasOwnProperty.call(data, field)) return null;
+  return data[field] ? 1 : 0;
 }
 
 function firstNameFromFullName(value = "") {

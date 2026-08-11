@@ -28,6 +28,8 @@ export async function POST({ request }) {
       instagramUrl: form.get("instagramUrl"),
       facebookUrl: form.get("facebookUrl"),
       tiktokUrl: form.get("tiktokUrl"),
+      xUrl: form.get("xUrl"),
+      blueskyUrl: form.get("blueskyUrl"),
       notes: form.get("notes"),
       photoUrl: photo.photoUrl,
       photoKey: photo.photoKey,

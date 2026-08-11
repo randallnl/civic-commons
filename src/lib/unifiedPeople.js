@@ -40,6 +40,8 @@ export async function ensureUnifiedPeopleTables(db = adminDb()) {
   await ensureColumn(db, "d1_people", "instagram_url", "TEXT");
   await ensureColumn(db, "d1_people", "facebook_url", "TEXT");
   await ensureColumn(db, "d1_people", "tiktok_url", "TEXT");
+  await ensureColumn(db, "d1_people", "x_url", "TEXT");
+  await ensureColumn(db, "d1_people", "bluesky_url", "TEXT");
   await ensureColumn(db, "d1_people", "is_free_state_aligned_2026", "INTEGER NOT NULL DEFAULT 0");
   await ensureColumn(db, "d1_people", "is_tpaction_aligned_2026", "INTEGER NOT NULL DEFAULT 0");
 

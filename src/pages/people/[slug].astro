@@ -98,6 +98,8 @@ const person = {
   instagram_url: socialField(representative, profileCandidate, "instagram"),
   facebook_url: socialField(representative, profileCandidate, "facebook"),
   tiktok_url: socialField(representative, profileCandidate, "tiktok"),
+  x_url: socialField(representative, profileCandidate, "x"),
+  bluesky_url: socialField(representative, profileCandidate, "bluesky"),
 };
 const representativeEntityKey = representative?.personid || representative?.id || slug;
 const trackedVotesHref = `/people/${slug}/votes`;
@@ -463,6 +465,18 @@ const profileResourceLinks = [
     icon: Music2,
     platform: "tiktok",
   },
+  person.x_url && {
+    href: socialProfileUrl(person.x_url, "x"),
+    label: "X",
+    icon: ExternalLink,
+    platform: "x",
+  },
+  person.bluesky_url && {
+    href: socialProfileUrl(person.bluesky_url, "bluesky"),
+    label: "Bluesky",
+    icon: ExternalLink,
+    platform: "bluesky",
+  },
 ].filter(Boolean);
 
 function formatDate(value) {
@@ -535,6 +549,8 @@ function socialProfileUrl(value = "", platform = "") {
     instagram: "https://www.instagram.com/",
     facebook: "https://www.facebook.com/",
     tiktok: "https://www.tiktok.com/@",
+    x: "https://x.com/",
+    bluesky: "https://bsky.app/profile/",
   };
   return bases[platform] ? `${bases[platform]}${handle}` : cleaned;
 }
@@ -873,6 +889,17 @@ function uniqueTowns(towns = []) {
               <input name="tiktokUrl" placeholder="https://tiktok.com/@handle or @handle" />
             </label>
 
+            <div class="form-grid">
+              <label>
+                X
+                <input name="xUrl" placeholder="https://x.com/name or @handle" />
+              </label>
+              <label>
+                Bluesky
+                <input name="blueskyUrl" placeholder="https://bsky.app/profile/name.bsky.social or @handle" />
+              </label>
+            </div>
+
             <label>
               Source or note
               <textarea name="notes" rows="3" placeholder="Where did you find this, or what should reviewers know?"></textarea>
@@ -1058,6 +1085,8 @@ function uniqueTowns(towns = []) {
             <input type="hidden" name="clearFields" value="instagramUrl" />
             <input type="hidden" name="clearFields" value="facebookUrl" />
             <input type="hidden" name="clearFields" value="tiktokUrl" />
+            <input type="hidden" name="clearFields" value="xUrl" />
+            <input type="hidden" name="clearFields" value="blueskyUrl" />
 
             <label>
               Name
@@ -1139,14 +1168,35 @@ function uniqueTowns(towns = []) {
               </label>
             </div>
 
-            <label>
-              Free State Aligned
-              <select name="is_free_stater">
-                <option value="">No override</option>
-                <option value="true" selected={isFreeStater(representative) || isFreeStater(linkedCandidateForEndorsements)}>Yes</option>
-                <option value="false" selected={representative?.is_free_stater === false || linkedCandidateForEndorsements?.is_free_stater === false}>No</option>
-              </select>
-            </label>
+            <div class="form-grid">
+              <label>
+                X
+                <input name="xUrl" value={person.x_url || ""} placeholder="https://x.com/name or @handle" />
+              </label>
+              <label>
+                Bluesky
+                <input name="blueskyUrl" value={person.bluesky_url || ""} placeholder="https://bsky.app/profile/name.bsky.social or @handle" />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                Free State Aligned 2026
+                <select name="isFreeStateAligned2026">
+                  <option value="">No override</option>
+                  <option value="true" selected={isFreeStater(representative) || isFreeStater(linkedCandidateForEndorsements)}>Yes</option>
+                  <option value="false" selected={representative?.is_free_state_aligned_2026 === false || linkedCandidateForEndorsements?.is_free_state_aligned_2026 === false}>No</option>
+                </select>
+              </label>
+              <label>
+                TPAction Aligned 2026
+                <select name="isTpActionAligned2026">
+                  <option value="">No override</option>
+                  <option value="true" selected={isTpActionAligned(representative) || isTpActionAligned(linkedCandidateForEndorsements)}>Yes</option>
+                  <option value="false" selected={representative?.is_tpaction_aligned_2026 === false || linkedCandidateForEndorsements?.is_tpaction_aligned_2026 === false}>No</option>
+                </select>
+              </label>
+            </div>
             <input
               type="hidden"
               name="reviewNote"
@@ -2159,6 +2209,14 @@ function uniqueTowns(towns = []) {
     background: linear-gradient(135deg, #111827, #06b6d4, #ef4444);
   }
 
+  .resource-link-bar .social-link-x {
+    background: #111827;
+  }
+
+  .resource-link-bar .social-link-bluesky {
+    background: #0285ff;
+  }
+
   .resource-link-bar a[class*="social-link-"]:hover {
     border-color: rgba(255, 255, 255, 0.8);
     color: #ffffff;
@@ -2326,20 +2384,6 @@ function uniqueTowns(towns = []) {
     color: #fff8ed;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-  }
-
-  .free-stater-pill::before,
-  .tpaction-pill::before {
-    content: "!";
-    align-items: center;
-    border: 1px solid currentColor;
-    border-radius: 999px;
-    display: inline-flex;
-    font-size: 0.62rem;
-    height: 0.95rem;
-    justify-content: center;
-    margin-right: 5px;
-    width: 0.95rem;
   }
 
   .free-stater-pill:hover {

@@ -161,6 +161,8 @@ function socialProfileUrl(value = "", platform = "") {
     instagram: "https://www.instagram.com/",
     facebook: "https://www.facebook.com/",
     tiktok: "https://www.tiktok.com/@",
+    x: "https://x.com/",
+    bluesky: "https://bsky.app/profile/",
   };
   return bases[platform] ? `${bases[platform]}${handle}` : cleaned;
 }
@@ -222,6 +224,18 @@ const sourceLinks = [
     label: "TikTok",
     icon: Music2,
     platform: "tiktok",
+  },
+  socialField(candidate, "x") && {
+    href: socialProfileUrl(socialField(candidate, "x"), "x"),
+    label: "X",
+    icon: ExternalLink,
+    platform: "x",
+  },
+  socialField(candidate, "bluesky") && {
+    href: socialProfileUrl(socialField(candidate, "bluesky"), "bluesky"),
+    label: "Bluesky",
+    icon: ExternalLink,
+    platform: "bluesky",
   },
 ].filter(Boolean);
 const linkedLegislatorProfile = sourceLinks.find((link) => link.primary);
@@ -759,6 +773,8 @@ function uniqueArticles(articles = []) {
             <input type="hidden" name="clearFields" value="instagramUrl" />
             <input type="hidden" name="clearFields" value="facebookUrl" />
             <input type="hidden" name="clearFields" value="tiktokUrl" />
+            <input type="hidden" name="clearFields" value="xUrl" />
+            <input type="hidden" name="clearFields" value="blueskyUrl" />
 
             <label>
               Name
@@ -792,10 +808,10 @@ function uniqueArticles(articles = []) {
               </label>
               <label>
                 Free State Aligned
-                <select name="is_free_stater">
+                <select name="isFreeStateAligned2026">
                   <option value="">No override</option>
-                  <option value="true" selected={candidate.is_free_stater === true}>Yes</option>
-                  <option value="false" selected={candidate.is_free_stater === false}>No</option>
+                  <option value="true" selected={isFreeStater(candidate)}>Yes</option>
+                  <option value="false" selected={candidate.is_free_state_aligned_2026 === false}>No</option>
                 </select>
               </label>
             </div>
@@ -879,6 +895,17 @@ function uniqueArticles(articles = []) {
               <label>
                 TikTok
                 <input name="tiktokUrl" value={socialField(candidate, "tiktok")} placeholder="https://tiktok.com/@handle or @handle" />
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                X
+                <input name="xUrl" value={socialField(candidate, "x")} placeholder="https://x.com/name or @handle" />
+              </label>
+              <label>
+                Bluesky
+                <input name="blueskyUrl" value={socialField(candidate, "bluesky")} placeholder="https://bsky.app/profile/name.bsky.social or @handle" />
               </label>
             </div>
             <input
@@ -1115,20 +1142,6 @@ function uniqueArticles(articles = []) {
     text-transform: uppercase;
   }
 
-  .free-stater-pill::before,
-  .tpaction-pill::before {
-    content: "!";
-    align-items: center;
-    border: 1px solid currentColor;
-    border-radius: 999px;
-    display: inline-flex;
-    font-size: 0.62rem;
-    height: 0.95rem;
-    justify-content: center;
-    margin-right: 5px;
-    width: 0.95rem;
-  }
-
   .free-stater-pill:hover {
     background: #35180d;
     color: #fffdf7;
@@ -1311,6 +1324,14 @@ function uniqueArticles(articles = []) {
 
   .resource-link-bar .social-link-tiktok {
     background: linear-gradient(135deg, #111827, #06b6d4, #ef4444);
+  }
+
+  .resource-link-bar .social-link-x {
+    background: #111827;
+  }
+
+  .resource-link-bar .social-link-bluesky {
+    background: #0285ff;
   }
 
   .resource-link-bar a[class*="social-link-"]:hover {
