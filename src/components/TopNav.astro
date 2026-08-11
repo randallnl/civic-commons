@@ -1,6 +1,7 @@
 ---
 import GlobalTheme from "./GlobalTheme.astro";
 import ClientEnhancements from "./ClientEnhancements.astro";
+import CrowdfundingPopup from "./CrowdfundingPopup.astro";
 
 const currentPath = Astro.url.pathname;
 const suggestHref = `/suggest-update?page=${encodeURIComponent(Astro.url.href)}`;
@@ -44,6 +45,7 @@ const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
 
 <GlobalTheme />
 <ClientEnhancements />
+<CrowdfundingPopup />
 
 <header
   class="site-nav"
@@ -76,7 +78,7 @@ const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
     <a class="return-link" href="/" data-return-link hidden>Return</a>
 
     <a class="brand" href="/">
-      <img src="/NH%20DB%20Logo.svg" alt="" width="40" height="40" />
+      <img src="/nhdb-logo-circle.png" alt="" width="40" height="40" />
       <span>NH Deserves Better</span>
     </a>
 

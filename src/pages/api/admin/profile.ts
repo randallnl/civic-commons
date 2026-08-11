@@ -783,7 +783,7 @@ async function updatePersonAliases(db, identifiers = {}, data = {}) {
        SET name_aliases = ?, updated_at = CURRENT_TIMESTAMP
        WHERE ${clauses.join(" OR ")}`,
     )
-    .bind(...params)
+    .bind(...params.map(d1Param))
     .run();
   return result.meta?.changes ?? result.changes ?? 0;
 }
@@ -843,7 +843,7 @@ async function updatePersonSocialLinks(db, identifiers = {}, data = {}) {
        SET ${assignments.join(", ")}
        WHERE ${clauses.join(" OR ")}`,
     )
-    .bind(...params)
+    .bind(...params.map(d1Param))
     .run();
   return result.meta?.changes ?? result.changes ?? 0;
 }
@@ -899,14 +899,18 @@ async function updatePersonAlignmentFlags(db, identifiers = {}, data = {}) {
        SET ${assignments.join(", ")}
        WHERE ${clauses.join(" OR ")}`,
     )
-    .bind(...params)
+    .bind(...params.map(d1Param))
     .run();
   return result.meta?.changes ?? result.changes ?? 0;
 }
 
 async function runSourceUpdate(db, sql, params) {
-  const result = await db.prepare(sql).bind(...params).run();
+  const result = await db.prepare(sql).bind(...params.map(d1Param)).run();
   return result.meta?.changes ?? result.changes ?? 0;
+}
+
+function d1Param(value) {
+  return value === undefined ? null : value;
 }
 
 function chamberToBody(value = "") {

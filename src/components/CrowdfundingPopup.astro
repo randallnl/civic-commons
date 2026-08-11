@@ -1,0 +1,370 @@
+---
+const campaignUrl = "https://givebutter.com/findmyNHcandidate";
+const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
+---
+
+{showFundraisingTools && (
+  <>
+    <script
+      is:inline
+      async
+      src="https://widgets.givebutter.com/latest.umd.cjs?acct=iq1I5oL6otdFZf0i&p=other"
+    ></script>
+
+    <div class="crowdfunding-popup" data-crowdfunding-popup hidden>
+      <div class="crowdfunding-scrim" data-crowdfunding-dismiss></div>
+      <section
+        class="crowdfunding-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="crowdfunding-title"
+        aria-describedby="crowdfunding-description"
+      >
+        <button
+          class="crowdfunding-close"
+          type="button"
+          aria-label="Close crowdfunding message"
+          data-crowdfunding-dismiss
+        >
+          x
+        </button>
+
+        <p class="crowdfunding-eyebrow">Before the September primary</p>
+        <h2 id="crowdfunding-title">Help finish FindMyNHCandidate.org</h2>
+        <p id="crowdfunding-description" class="crowdfunding-lede">
+          New Hampshire's citizen legislature only works when people know what
+          they're voting for. NH Deserves Better is building free civic tools
+          that make informed voting easier.
+        </p>
+
+        <div class="crowdfunding-body">
+          <div>
+            <h3>Democracy shouldn't be this hard.</h3>
+            <p>
+              Most people do not have hours to search legislative websites,
+              read lengthy bills, or piece together how State House decisions
+              affect everyday life. We are bringing public information and
+              community context together in one place.
+            </p>
+          </div>
+
+          <ul class="crowdfunding-features" aria-label="What donations support">
+            <li>Candidate and legislator profiles</li>
+            <li>Voting records with public testimony context</li>
+            <li>Plain-language bill summaries</li>
+            <li>Community-submitted civic context</li>
+          </ul>
+        </div>
+
+        <div class="crowdfunding-actions">
+          <a class="crowdfunding-primary" href={campaignUrl} target="_blank" rel="noopener">
+            Support the work
+          </a>
+          <button class="crowdfunding-secondary" type="button" data-crowdfunding-dismiss>
+            Maybe later
+          </button>
+        </div>
+
+        <p class="crowdfunding-note">
+          Donation levels start at $25 and help expand access, connect the dots,
+          and build long-term civic infrastructure for New Hampshire.
+        </p>
+      </section>
+    </div>
+
+    <div class="givebutter-persistent-widget" aria-label="Donation widget">
+      <givebutter-widget id="p5MnmO"></givebutter-widget>
+    </div>
+  </>
+)}
+
+<script>
+  const popup = document.querySelector("[data-crowdfunding-popup]");
+  const storageKey = "nhdb_crowdfunding_popup_dismissed_v1";
+
+  function dismissCrowdfundingPopup() {
+    if (!(popup instanceof HTMLElement)) return;
+    popup.hidden = true;
+    document.documentElement.classList.remove("crowdfunding-open");
+    try {
+      window.localStorage.setItem(storageKey, "true");
+    } catch {
+      // Ignore storage failures; the close button should still work.
+    }
+  }
+
+  function shouldShowCrowdfundingPopup() {
+    if (window.location.pathname.startsWith("/admin")) return false;
+    try {
+      return window.localStorage.getItem(storageKey) !== "true";
+    } catch {
+      return true;
+    }
+  }
+
+  if (popup instanceof HTMLElement && shouldShowCrowdfundingPopup()) {
+    window.setTimeout(() => {
+      popup.hidden = false;
+      document.documentElement.classList.add("crowdfunding-open");
+    }, 900);
+  }
+
+  popup?.addEventListener("click", (event) => {
+    if (
+      event.target instanceof Element &&
+      event.target.closest("[data-crowdfunding-dismiss]")
+    ) {
+      dismissCrowdfundingPopup();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && popup instanceof HTMLElement && !popup.hidden) {
+      dismissCrowdfundingPopup();
+    }
+  });
+</script>
+
+<style is:global>
+  html.crowdfunding-open {
+    overflow: hidden;
+  }
+</style>
+
+<style>
+  .crowdfunding-popup[hidden] {
+    display: none;
+  }
+
+  .givebutter-persistent-widget {
+    bottom: 18px;
+    position: fixed;
+    right: 18px;
+    z-index: 900;
+  }
+
+  .givebutter-persistent-widget givebutter-widget {
+    display: block;
+  }
+
+  .crowdfunding-popup {
+    align-items: center;
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    padding: clamp(16px, 4vw, 40px);
+    position: fixed;
+    z-index: 1000;
+  }
+
+  .crowdfunding-scrim {
+    background:
+      radial-gradient(circle at 25% 20%, rgba(220, 77, 9, 0.28), transparent 34%),
+      rgba(15, 23, 42, 0.68);
+    inset: 0;
+    position: absolute;
+  }
+
+  .crowdfunding-card {
+    background: #fffaf1;
+    border: 1px solid rgba(120, 53, 15, 0.24);
+    border-radius: 18px;
+    box-shadow: 0 30px 90px rgba(15, 23, 42, 0.32);
+    box-sizing: border-box;
+    color: #1f2933;
+    max-height: min(88vh, 760px);
+    max-width: 720px;
+    overflow: auto;
+    padding: clamp(24px, 5vw, 40px);
+    position: relative;
+    width: min(100%, 720px);
+  }
+
+  .crowdfunding-card::before {
+    background: linear-gradient(90deg, #dc4d09, #f59e0b, #2563eb);
+    border-radius: 999px;
+    content: "";
+    display: block;
+    height: 7px;
+    margin-bottom: 22px;
+    width: min(320px, 62%);
+  }
+
+  .crowdfunding-close {
+    align-items: center;
+    background: #1f2933;
+    border: 0;
+    border-radius: 999px;
+    color: #fffaf1;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.9rem;
+    font-weight: 950;
+    height: 34px;
+    justify-content: center;
+    line-height: 1;
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    width: 34px;
+  }
+
+  .crowdfunding-eyebrow {
+    color: #8a3a07;
+    font-size: 0.78rem;
+    font-weight: 950;
+    letter-spacing: 0.14em;
+    margin: 0 44px 10px 0;
+    text-transform: uppercase;
+  }
+
+  .crowdfunding-card h2 {
+    color: #111827;
+    font-size: clamp(2rem, 6vw, 4.1rem);
+    letter-spacing: 0;
+    line-height: 0.96;
+    margin: 0;
+    max-width: 11ch;
+  }
+
+  .crowdfunding-lede {
+    color: #374151;
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    font-weight: 750;
+    line-height: 1.55;
+    margin: 18px 0 0;
+    max-width: 58ch;
+  }
+
+  .crowdfunding-body {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: minmax(0, 1.1fr) minmax(220px, 0.9fr);
+    margin-top: 24px;
+  }
+
+  .crowdfunding-body h3 {
+    color: #6b2805;
+    font-size: 0.92rem;
+    letter-spacing: 0.08em;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+  }
+
+  .crowdfunding-body p {
+    color: #4b5563;
+    font-size: 0.98rem;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .crowdfunding-features {
+    background: white;
+    border: 1px solid #fed7aa;
+    border-radius: 14px;
+    display: grid;
+    gap: 10px;
+    list-style: none;
+    margin: 0;
+    padding: 16px;
+  }
+
+  .crowdfunding-features li {
+    color: #1f2933;
+    font-size: 0.92rem;
+    font-weight: 850;
+    line-height: 1.35;
+    padding-left: 24px;
+    position: relative;
+  }
+
+  .crowdfunding-features li::before {
+    background: #dc4d09;
+    border-radius: 999px;
+    color: white;
+    content: "✓";
+    font-size: 0.72rem;
+    font-weight: 950;
+    height: 16px;
+    left: 0;
+    line-height: 16px;
+    position: absolute;
+    text-align: center;
+    top: 2px;
+    width: 16px;
+  }
+
+  .crowdfunding-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 26px;
+  }
+
+  .crowdfunding-primary,
+  .crowdfunding-secondary {
+    border-radius: 999px;
+    font-size: 0.96rem;
+    font-weight: 950;
+    line-height: 1;
+    padding: 14px 18px;
+  }
+
+  .crowdfunding-primary {
+    background: #dc4d09;
+    border: 1px solid #dc4d09;
+    color: white;
+    text-decoration: none;
+  }
+
+  .crowdfunding-primary:hover {
+    background: #b6390a;
+    border-color: #b6390a;
+  }
+
+  .crowdfunding-secondary {
+    background: transparent;
+    border: 1px solid #d6b98f;
+    color: #4b5563;
+    cursor: pointer;
+  }
+
+  .crowdfunding-secondary:hover {
+    background: white;
+    color: #1f2933;
+  }
+
+  .crowdfunding-note {
+    color: #6b7280;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    margin: 18px 0 0;
+  }
+
+  @media (max-width: 680px) {
+    .givebutter-persistent-widget {
+      bottom: 10px;
+      right: 10px;
+    }
+
+    .crowdfunding-popup {
+      align-items: flex-end;
+      padding: 12px;
+    }
+
+    .crowdfunding-card {
+      border-radius: 18px 18px 10px 10px;
+      max-height: 86vh;
+      padding: 24px;
+    }
+
+    .crowdfunding-card h2 {
+      max-width: 10ch;
+    }
+
+    .crowdfunding-body {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
