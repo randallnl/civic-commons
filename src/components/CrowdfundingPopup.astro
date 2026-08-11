@@ -82,12 +82,21 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
   const popup = document.querySelector("[data-crowdfunding-popup]");
   const storageKey = "nhdb_crowdfunding_popup_dismissed_v1";
 
+  function todayKey() {
+    const now = new Date();
+    return [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+    ].join("-");
+  }
+
   function dismissCrowdfundingPopup() {
     if (!(popup instanceof HTMLElement)) return;
     popup.hidden = true;
     document.documentElement.classList.remove("crowdfunding-open");
     try {
-      window.localStorage.setItem(storageKey, "true");
+      window.localStorage.setItem(storageKey, todayKey());
     } catch {
       // Ignore storage failures; the close button should still work.
     }
@@ -96,7 +105,7 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
   function shouldShowCrowdfundingPopup() {
     if (window.location.pathname.startsWith("/admin")) return false;
     try {
-      return window.localStorage.getItem(storageKey) !== "true";
+      return window.localStorage.getItem(storageKey) !== todayKey();
     } catch {
       return true;
     }

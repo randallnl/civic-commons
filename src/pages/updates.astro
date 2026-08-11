@@ -14,6 +14,7 @@ import {
   previewDescription,
   previewTitle,
 } from "../lib/communityUpdateCards";
+import { getOrganizations, organizationPath } from "../lib/organizationsApi";
 import { cleanText } from "../lib/text";
 import profileIcon from "../assets/profile icon.png";
 
@@ -30,11 +31,24 @@ let countyUpdates = [];
 let error = "";
 
 try {
-  const updates = await getRecentApprovedCommunityUpdates({ limit: 120 });
+  const [updates, organizations] = await Promise.all([
+    getRecentApprovedCommunityUpdates({ limit: 120 }),
+    getOrganizations(),
+  ]);
   const cards = await getCommunityUpdateCards(updates || []);
+  const endorsementItems = organizations
+    .flatMap((organization) =>
+      (organization.endorsements || []).map((endorsement) =>
+        endorsementFeedItem(endorsement, organization),
+      ),
+    )
+    .filter((item) => item.title)
+    .slice(0, 80);
 
-  mediaItems = cards
-    .map((update) => mediaFeedItem(update))
+  mediaItems = [
+    ...cards.map((update) => mediaFeedItem(update)),
+    ...endorsementItems,
+  ]
     .sort((a, b) => b.sortDate - a.sortDate);
   recentlyUpdatedPeople = recentPeopleFromUpdates(mediaItems);
   countyUpdates = countiesFromUpdates(mediaItems);
@@ -51,6 +65,7 @@ const platformOptions = [
   ["photo", "Photos"],
   ["link", "Links"],
   ["update", "Notes"],
+  ["endorsement", "Organization endorsements"],
 ];
 
 function mediaFeedItem(update = {}) {
@@ -100,6 +115,95 @@ function mediaFeedItem(update = {}) {
       people.map((person) => person.name || person.role || person.districtLabel).join(" "),
     ].filter(Boolean).join(" "),
   };
+}
+
+function endorsementFeedItem(endorsement = {}, organization = {}) {
+  const dateValue = endorsement.date || endorsement.createdAt || "";
+  const candidateSlug =
+    endorsement.candidateSlug ||
+    endorsement.candidateSlugKey ||
+    slugifyLocal(endorsement.candidateName || "");
+  const candidateName = cleanText(endorsement.candidateName || "Candidate");
+  const organizationName = cleanText(organization.name || endorsement.organization || "Organization");
+  const position = cleanText(endorsement.position || "Endorsed");
+  const statement = cleanText(endorsement.statement || "");
+  const title = `${organizationName}: ${position} ${candidateName}`;
+  const titlePreview = textPreview(title, TITLE_PREVIEW_LENGTH);
+  const candidatePath = candidateSlug ? `/people/${encodeURIComponent(candidateSlug)}` : "/people";
+  const organizationHref = organization.slug ? organizationPath(organization) : "/organizations";
+  const officeLine = [endorsement.office, endorsement.district ? `District ${endorsement.district}` : ""]
+    .filter(Boolean)
+    .join(", ");
+  const person = {
+    name: candidateName,
+    slug: candidateSlug,
+    path: candidatePath,
+    role: endorsement.office || "Candidate",
+    district: endorsement.district || "",
+    districtLabel: officeLine,
+    photoUrl: "",
+  };
+
+  return {
+    id: `endorsement-${endorsement.id || candidateSlug || title}`,
+    title,
+    titlePreview: titlePreview.preview,
+    description: statement,
+    body: "",
+    dateText: formatDate(dateValue),
+    dateValue,
+    displayName: organizationName,
+    entityName: candidateName,
+    href: candidatePath,
+    imageUrl: endorsement.photoUrl || organization.logoUrl || "",
+    linkUrl: "",
+    people: [person],
+    platform: "endorsement",
+    platformLabel: "Organization endorsement",
+    fallbackLabel: {
+      mark: organizationName.slice(0, 1).toUpperCase(),
+      kicker: "Organization endorsement",
+      title: organizationName,
+    },
+    social: { type: "endorsement", label: "Organization endorsement", host: organizationName },
+    embedUrl: "",
+    isPortrait: false,
+    sortDate: Date.parse(dateValue || "") || 0,
+    sortName: title,
+    counties: [],
+    organizationName,
+    organizationHref,
+    text: [
+      title,
+      statement,
+      organizationName,
+      candidateName,
+      endorsement.office,
+      endorsement.district,
+      position,
+    ].filter(Boolean).join(" "),
+  };
+}
+
+function formatDate(value = "") {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return cleanText(value);
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function slugifyLocal(value = "") {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function updateCounties(people = []) {
@@ -568,7 +672,7 @@ function textPreview(value = "", maxLength = 170) {
 
                     {item.people.length > 0 && (
                       <div class="people-strip" aria-label="People connected to this post">
-                        <span>Legislator context</span>
+                        <span>People</span>
                         <div>
                           {item.people.slice(0, 3).map((person) => (
                             <a class="mini-person-card" href={peopleProfilePath(person)}>
@@ -590,6 +694,11 @@ function textPreview(value = "", maxLength = 170) {
 
                     <div class="media-actions">
                       <a href={item.href}>Open update</a>
+                      {item.organizationHref && (
+                        <a href={item.organizationHref}>
+                          Organization
+                        </a>
+                      )}
                       {item.linkUrl && (
                         <a href={item.linkUrl} target="_blank" rel="noopener noreferrer">
                           Open post
@@ -1085,6 +1194,17 @@ function textPreview(value = "", maxLength = 170) {
     background:
       linear-gradient(#ffffff, #ffffff) padding-box,
       linear-gradient(135deg, #1f2933, #60a5fa) border-box;
+  }
+
+  .platform-endorsement .media-frame {
+    background:
+      linear-gradient(#fffaf1, #ffffff) padding-box,
+      linear-gradient(135deg, #7c2d12, #f59e0b, #2563eb) border-box;
+  }
+
+  .platform-endorsement .platform-badge {
+    background: #7c2d12;
+    color: #fffaf1;
   }
 
   .media-fallback {
