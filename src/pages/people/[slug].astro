@@ -1103,6 +1103,18 @@ function uniqueTowns(towns = []) {
             <input type="hidden" name="entityKey" value={slug} />
             <input type="hidden" name="gcPersonid" value={representative?.personid || representative?.id || ""} />
             <input type="hidden" name="filerEntityNumber" value={linkedCandidateForEndorsements?.filerEntityNumber || ""} />
+            {representative?.personid || representative?.id ? (
+              <>
+                <input type="hidden" name="relatedReviewEntityType" value="representative" />
+                <input type="hidden" name="relatedReviewEntityKey" value={representative.personid || representative.id} />
+              </>
+            ) : null}
+            {linkedCandidateForEndorsements?.filerEntityNumber ? (
+              <>
+                <input type="hidden" name="relatedReviewEntityType" value="candidate" />
+                <input type="hidden" name="relatedReviewEntityKey" value={linkedCandidateForEndorsements.filerEntityNumber} />
+              </>
+            ) : null}
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
             <input type="hidden" name="clearFields" value="substackUrl" />
             <input type="hidden" name="clearFields" value="instagramUrl" />
@@ -1223,7 +1235,7 @@ function uniqueTowns(towns = []) {
             <input
               type="hidden"
               name="reviewNote"
-              value="Reviewed people profile for missing photo, website, or email; no update found."
+              value="Reviewed people profile for missing information."
             />
 
             {hasLegislatorProfile && (
@@ -1241,7 +1253,7 @@ function uniqueTowns(towns = []) {
                 name="profileAction"
                 value="confirm-reviewed"
               >
-                Confirm reviewed, no update found
+                Confirm reviewed
               </button>
               <span class="admin-inline-status" aria-live="polite"></span>
             </div>
@@ -1394,7 +1406,7 @@ function uniqueTowns(towns = []) {
             <input
               type="hidden"
               name="reviewNote"
-              value="Reviewed candidate role details; no update found."
+              value="Reviewed candidate role details."
             />
 
             <div class="form-grid">
@@ -1427,7 +1439,7 @@ function uniqueTowns(towns = []) {
                 name="profileAction"
                 value="confirm-reviewed"
               >
-                Confirm reviewed, no update found
+                Confirm reviewed
               </button>
               <span class="admin-inline-status" aria-live="polite"></span>
             </div>

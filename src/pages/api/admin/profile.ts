@@ -128,23 +128,21 @@ export async function POST({ request }) {
 
     if (profileAction === "confirm-reviewed") {
       if (!canReviewProfiles(auth.session)) return forbiddenAdminResponse();
-      await markProfileReviewed({
-        entityType,
-        entityKey,
-        reviewedBy: auth.session?.email || "",
-        reviewNote:
-          String(form.get("reviewNote") || "").trim() ||
-          "Reviewed for missing photo, website, or email; no update found.",
-      });
+      const reviewNote =
+        String(form.get("reviewNote") || "").trim() ||
+        "Reviewed for missing profile information.";
+      const reviewedBy = auth.session?.email || "";
+      await markProfileReviewed({ entityType, entityKey, reviewedBy, reviewNote });
+      await markRelatedProfilesReviewed({ form, reviewedBy, reviewNote });
       if (wantsHtml) {
         return htmlMessage(
-          "Profile marked reviewed. It will be hidden from the default cleanup queue for 30 days.",
+          "Profile marked reviewed and removed from the default cleanup queue.",
           "success",
         );
       }
       return redirectWithMessage(
         redirectTo,
-        "Profile marked reviewed. It will be hidden from the default cleanup queue for 30 days.",
+        "Profile marked reviewed and removed from the default cleanup queue.",
       );
     }
 
@@ -183,6 +181,25 @@ export async function POST({ request }) {
       return htmlMessage(error?.message || "Unable to save profile edits.", "error");
     }
     return redirectWithError(redirectTo, error?.message || "Unable to save profile edits.");
+  }
+}
+
+async function markRelatedProfilesReviewed({ form, reviewedBy, reviewNote }) {
+  const relatedTypes = form.getAll("relatedReviewEntityType").map(String);
+  const relatedKeys = form.getAll("relatedReviewEntityKey").map(String);
+  const relatedProfiles = relatedTypes
+    .map((type, index) => ({
+      entityType: type,
+      entityKey: relatedKeys[index] || "",
+    }))
+    .filter((profile) => profile.entityType.trim() && profile.entityKey.trim());
+
+  for (const profile of relatedProfiles) {
+    await markProfileReviewed({
+      ...profile,
+      reviewedBy,
+      reviewNote,
+    });
   }
 }
 
