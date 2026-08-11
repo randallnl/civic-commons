@@ -898,20 +898,33 @@ function uniqueOptions(values = []) {
                       <span>{addressOfficeGroups.length === 1 ? "Office" : "Offices"}</span>
                     </div>
                     <div class="summary-stat">
-                      <strong>{addressSenateDistricts || "—"}</strong>
-                      <span>Senate District</span>
-                    </div>
-                    <div class="summary-stat">
-                      <strong>{addressHouseDistricts || "—"}</strong>
-                      <span>House Districts</span>
-                    </div>
-                    <div class="summary-stat">
                       <strong>{addressSeatTotal || "—"}</strong>
                       <span>{addressSeatTotal === 1 ? "Seat" : "Seats"}</span>
                     </div>
                     <div class="summary-stat">
                       <strong>{resultCount}</strong>
                       <span>{resultCount === 1 ? "Candidate" : "Candidates"}</span>
+                    </div>
+                  </section>
+
+                  <section class="address-district-strip" aria-label="Districts for this address">
+                    <div class="district-strip-heading">
+                      <p class="eyebrow">Districts for this address</p>
+                      <strong>{resultContext || "Address result"}</strong>
+                    </div>
+                    <div class="district-chip-row">
+                      {addressSenateDistricts && (
+                        <span class="district-chip senate-chip">
+                          <small>State Senate</small>
+                          <strong>{addressSenateDistricts}</strong>
+                        </span>
+                      )}
+                      {addressHouseDistricts && (
+                        <span class="district-chip house-chip">
+                          <small>State House</small>
+                          <strong>{addressHouseDistricts}</strong>
+                        </span>
+                      )}
                     </div>
                   </section>
 
@@ -1369,6 +1382,80 @@ function uniqueOptions(values = []) {
     text-transform: uppercase;
   }
 
+  .address-district-strip {
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    display: grid;
+    gap: 12px;
+    padding: 16px 18px;
+  }
+
+  .district-strip-heading {
+    align-items: end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    justify-content: space-between;
+  }
+
+  .district-strip-heading .eyebrow {
+    color: #1d4ed8;
+    margin: 0;
+  }
+
+  .district-strip-heading strong {
+    color: #64748b;
+    font-size: 0.88rem;
+    line-height: 1.3;
+  }
+
+  .district-chip-row {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+  }
+
+  .district-chip {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    color: #1f2933;
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 10px;
+    min-height: 42px;
+    padding: 8px 14px;
+    white-space: nowrap;
+  }
+
+  .district-chip small {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .district-chip strong {
+    color: #1e3a8a;
+    font-size: 1rem;
+    font-weight: 950;
+  }
+
+  .senate-chip {
+    background: #eff6ff;
+    border-color: #93c5fd;
+  }
+
+  .house-chip {
+    background: #fff7ed;
+    border-color: #fed7aa;
+  }
+
   .office-result-group {
     background: #ffffff;
     border: 1px solid #dbeafe;
@@ -1519,6 +1606,11 @@ function uniqueOptions(values = []) {
     .candidate-grid,
     .address-office-summary {
       grid-template-columns: 1fr;
+    }
+
+    .district-strip-heading {
+      align-items: start;
+      display: grid;
     }
 
     .office-result-heading {
