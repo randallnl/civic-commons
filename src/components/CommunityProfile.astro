@@ -18,6 +18,8 @@ import { getTrackedBills, representativeGradeFor } from "../lib/trackedBills";
 
 const { community, meta = {}, error = "" } = Astro.props;
 const PROFILE_PREVIEW_LIMIT = 6;
+const DISTRICT_PREVIEW_LIMIT = 6;
+const TOWN_PREVIEW_LIMIT = 12;
 
 function townsFor(value = []) {
   const towns =
@@ -277,6 +279,10 @@ const towns = townsFor();
 const representatives = representativesFor();
 const articles = await enrichArticlesWithPreviews(articlesFor(), { limit: 10 });
 const districts = districtsFor();
+const visibleDistricts = districts.slice(0, DISTRICT_PREVIEW_LIMIT);
+const hiddenDistricts = districts.slice(DISTRICT_PREVIEW_LIMIT);
+const visibleTowns = towns.slice(0, TOWN_PREVIEW_LIMIT);
+const hiddenTowns = towns.slice(TOWN_PREVIEW_LIMIT);
 const candidates = candidatesFor();
 const representativePreview = await hydrateRepresentativePreview(
   representatives.slice(0, PROFILE_PREVIEW_LIMIT),
@@ -354,38 +360,6 @@ try {
 
           <section class="content-grid">
             <div class="stack">
-              {districts.length > 0 && (
-                <section class="panel">
-                  <div class="section-heading">
-                    <p class="eyebrow">Districts</p>
-                    <h2>District Profiles</h2>
-                  </div>
-
-                  <div class="chips">
-                    {districts.map((district) => (
-                      <a href={communityPath(district)}>{cleanText(district.name || district.label)}</a>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              <section class="panel">
-                <div class="section-heading">
-                  <p class="eyebrow">Towns</p>
-                  <h2>Towns Represented</h2>
-                </div>
-
-                {towns.length ? (
-                  <div class="chips">
-                    {towns.map((town) => (
-                      <a href={townProfilePath(town)}>{cleanText(town)}</a>
-                    ))}
-                  </div>
-                ) : (
-                  <p class="empty">No towns returned.</p>
-                )}
-              </section>
-
               <section class="panel">
                 <div class="section-heading split-heading">
                   <div>
@@ -544,33 +518,91 @@ try {
               </section>
             </div>
 
-            <aside class="panel">
-              <div class="section-heading">
-                <p class="eyebrow">Articles</p>
-                <h2>Related Coverage</h2>
-              </div>
+            <aside class="side-stack">
+              {districts.length > 0 && (
+                <section class="panel side-panel">
+                  <div class="section-heading">
+                    <p class="eyebrow">Districts</p>
+                    <h2>District Profiles</h2>
+                  </div>
 
-              {articles.length ? (
-                <div class="article-list">
-                  {articles.map((article) => (
-                    <article>
-                      {article.preview?.imageUrl && <img src={article.preview.imageUrl} alt="" loading="lazy" />}
-                      <h3><a href={article.url}>{articleTitle(article)}</a></h3>
-                      <div class="article-meta-inline">
-                        {articlePublisher(article) && <span>Source: {articlePublisher(article)}</span>}
-                        {articlePublishDate(article) && <span>Published: {articlePublishDate(article)}</span>}
+                  <div class="chips compact-chips">
+                    {visibleDistricts.map((district) => (
+                      <a href={communityPath(district)}>{cleanText(district.name || district.label)}</a>
+                    ))}
+                  </div>
+
+                  {hiddenDistricts.length > 0 && (
+                    <details class="show-more-details">
+                      <summary>Show {hiddenDistricts.length} more</summary>
+                      <div class="chips compact-chips">
+                        {hiddenDistricts.map((district) => (
+                          <a href={communityPath(district)}>{cleanText(district.name || district.label)}</a>
+                        ))}
                       </div>
-                      {article.preview?.description && <p>{cleanText(article.preview.description)}</p>}
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <p class="empty">No related articles returned.</p>
+                    </details>
+                  )}
+                </section>
               )}
 
-              {meta.articleLimit && (
-                <small>Showing up to {meta.articleLimit} articles.</small>
-              )}
+              <section class="panel side-panel">
+                <div class="section-heading">
+                  <p class="eyebrow">Towns</p>
+                  <h2>Towns Represented</h2>
+                </div>
+
+                {towns.length ? (
+                  <>
+                    <div class="chips compact-chips">
+                      {visibleTowns.map((town) => (
+                        <a href={townProfilePath(town)}>{cleanText(town)}</a>
+                      ))}
+                    </div>
+
+                    {hiddenTowns.length > 0 && (
+                      <details class="show-more-details">
+                        <summary>Show {hiddenTowns.length} more</summary>
+                        <div class="chips compact-chips">
+                          {hiddenTowns.map((town) => (
+                            <a href={townProfilePath(town)}>{cleanText(town)}</a>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </>
+                ) : (
+                  <p class="empty">No towns returned.</p>
+                )}
+              </section>
+
+              <section class="panel side-panel">
+                <div class="section-heading">
+                  <p class="eyebrow">Articles</p>
+                  <h2>Related Coverage</h2>
+                </div>
+
+                {articles.length ? (
+                  <div class="article-list">
+                    {articles.map((article) => (
+                      <article>
+                        {article.preview?.imageUrl && <img src={article.preview.imageUrl} alt="" loading="lazy" />}
+                        <h3><a href={article.url}>{articleTitle(article)}</a></h3>
+                        <div class="article-meta-inline">
+                          {articlePublisher(article) && <span>Source: {articlePublisher(article)}</span>}
+                          {articlePublishDate(article) && <span>Published: {articlePublishDate(article)}</span>}
+                        </div>
+                        {article.preview?.description && <p>{cleanText(article.preview.description)}</p>}
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p class="empty">No related articles returned.</p>
+                )}
+
+                {meta.articleLimit && (
+                  <small>Showing up to {meta.articleLimit} articles.</small>
+                )}
+              </section>
             </aside>
           </section>
         </>
@@ -680,6 +712,7 @@ try {
   }
 
   .stack,
+  .side-stack,
   .rep-list,
   .article-list {
     display: grid;
@@ -698,6 +731,50 @@ try {
   .section-heading h2 {
     font-size: 1.45rem;
     margin: 0 0 16px;
+  }
+
+  .side-panel {
+    padding: 16px;
+  }
+
+  .side-panel .section-heading h2 {
+    font-size: 1.14rem;
+    margin-bottom: 12px;
+  }
+
+  .compact-chips {
+    gap: 6px;
+  }
+
+  .compact-chips a {
+    font-size: 0.74rem;
+    line-height: 1.15;
+    padding: 5px 8px;
+  }
+
+  .show-more-details {
+    margin-top: 10px;
+  }
+
+  .show-more-details summary {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 999px;
+    color: #9a3412;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 950;
+    list-style: none;
+    padding: 7px 10px;
+  }
+
+  .show-more-details summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .show-more-details[open] summary {
+    margin-bottom: 10px;
   }
 
   .split-heading {
