@@ -14,9 +14,28 @@ import {
   previewDescription,
   previewTitle,
 } from "../lib/communityUpdateCards";
+import {
+  communityPath,
+  getCountyCommunity,
+} from "../lib/communitiesApi";
+import { countyImageUrl } from "../lib/communityImages";
 import { getOrganizations, organizationPath } from "../lib/organizationsApi";
+import { repName } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import profileIcon from "../assets/profile icon.png";
+
+const COUNTY_NAMES = [
+  "Belknap",
+  "Carroll",
+  "Cheshire",
+  "Coos",
+  "Grafton",
+  "Hillsborough",
+  "Merrimack",
+  "Rockingham",
+  "Strafford",
+  "Sullivan",
+];
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const platform = Astro.url.searchParams.get("platform")?.trim() || "";
@@ -27,13 +46,14 @@ const NOTE_PREVIEW_LENGTH = 114;
 
 let mediaItems = [];
 let recentlyUpdatedPeople = [];
-let countyUpdates = [];
+let countyGroups = [];
 let error = "";
 
 try {
-  const [updates, organizations] = await Promise.all([
+  const [updates, organizations, countyData] = await Promise.all([
     getRecentApprovedCommunityUpdates({ limit: 120 }),
     getOrganizations(),
+    getCountyGroups({ articleLimit: 3 }),
   ]);
   const cards = await getCommunityUpdateCards(updates || []);
   const endorsementItems = organizations
@@ -51,7 +71,7 @@ try {
   ]
     .sort((a, b) => b.sortDate - a.sortDate);
   recentlyUpdatedPeople = recentPeopleFromUpdates(mediaItems);
-  countyUpdates = countiesFromUpdates(mediaItems);
+  countyGroups = countyData.counties || [];
 } catch (loadError) {
   error = loadError?.message || "Unable to load community updates.";
 }
@@ -216,41 +236,6 @@ function updateCounties(people = []) {
   ];
 }
 
-function countiesFromUpdates(items = []) {
-  const countiesByName = new Map();
-
-  for (const item of items) {
-    for (const county of item.counties || []) {
-      const existing = countiesByName.get(county);
-      const sortDate = Number(item.sortDate) || 0;
-      if (!existing) {
-        countiesByName.set(county, {
-          county,
-          updateCount: 1,
-          latestDate: sortDate,
-          latestDateText: item.dateText,
-          latestPlatform: item.platformLabel,
-          latestTitle: item.titlePreview || item.title || "Community update",
-          text: [county, item.title, item.body, item.platformLabel].filter(Boolean).join(" "),
-        });
-      } else {
-        existing.updateCount += 1;
-        existing.text = [existing.text, item.title, item.body, item.platformLabel].filter(Boolean).join(" ");
-        if (sortDate > existing.latestDate) {
-          existing.latestDate = sortDate;
-          existing.latestDateText = item.dateText;
-          existing.latestPlatform = item.platformLabel;
-          existing.latestTitle = item.titlePreview || item.title || "Community update";
-        }
-      }
-    }
-  }
-
-  return [...countiesByName.values()]
-    .sort((a, b) => b.latestDate - a.latestDate)
-    .slice(0, 12);
-}
-
 function recentPeopleFromUpdates(items = []) {
   const peopleByKey = new Map();
 
@@ -301,6 +286,174 @@ function recentPeopleFromUpdates(items = []) {
   return [...peopleByKey.values()]
     .sort((a, b) => b.latestDate - a.latestDate)
     .slice(0, 12);
+}
+
+async function getCountyGroups({ articleLimit = 3 } = {}) {
+  const countyResults = await Promise.allSettled(
+    COUNTY_NAMES.map(async (county) => {
+      const data = await getCountyCommunity(county, {
+        body: "house",
+        articleLimit,
+      });
+      return normalizeCountyGroup(data, county, articleLimit);
+    }),
+  );
+
+  return {
+    counties: countyResults
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => result.value)
+      .filter(Boolean),
+  };
+}
+
+function normalizeCountyGroup(data = {}, fallbackCounty = "", articleLimit = 3) {
+  const county =
+    data.counties?.[0] ||
+    data.county ||
+    data.community ||
+    data.result ||
+    data;
+  const rawCommunities =
+    county.communities ||
+    county.districts ||
+    county.results ||
+    data.communities ||
+    data.districts ||
+    [];
+  const communities = rawCommunities.map((community) => ({
+    ...community,
+    county: community.county || county.name || county.county || fallbackCounty,
+  }));
+  const towns =
+    county.townsRepresented ||
+    county.towns ||
+    county.towns_represented ||
+    [];
+  const representatives =
+    county.representatives ||
+    county.reps ||
+    county.legislators ||
+    [];
+  const articles =
+    county.relatedArticles ||
+    county.articles ||
+    data.relatedArticles ||
+    data.articles ||
+    [];
+  const representativesMap = new Map(
+    [
+      ...representatives,
+      ...communities.flatMap((community) => representativesFor(community)),
+    ]
+      .filter(Boolean)
+      .map((rep) => [rep.personid || rep.id || repName(rep), rep])
+      .filter(([key]) => key),
+  );
+  const representativeSummaryCount = Number(
+    county.representativeCount ??
+      county.representativeSummary?.count ??
+      data.representativeCount ??
+      data.representativeSummary?.count ??
+      representativesMap.size ??
+      0,
+  );
+  const updateSummaryCount = Number(
+    county.articleCount ??
+      county.updateCount ??
+      county.relatedArticleCount ??
+      data.articleCount ??
+      data.updateCount ??
+      data.relatedArticleCount ??
+      articles.length ??
+      0,
+  );
+
+  return {
+    county: county.name || county.county || fallbackCounty,
+    slug: county.slug || slugifyLocal(county.name || county.county || fallbackCounty),
+    districtCount: county.districtCount || communities.length,
+    representativeCount: representativeSummaryCount,
+    updateCount: updateSummaryCount,
+    communities,
+    towns: new Set([
+      ...normalizeTowns(towns),
+      ...communities.flatMap((community) => townsFor(community)),
+    ]),
+    representatives: representativesMap,
+    articles: [...articles, ...communities.flatMap((community) => articlesFor(community))]
+      .filter(Boolean)
+      .slice(0, articleLimit),
+  };
+}
+
+function townsFor(community = {}) {
+  const value =
+    community.towns ||
+    community.towns_represented ||
+    community.townsRepresented ||
+    community.location_text ||
+    "";
+  if (Array.isArray(value)) return value.map(cleanTown).filter(Boolean);
+
+  return String(value)
+    .split(/;|,/)
+    .map(cleanTown)
+    .filter(Boolean);
+}
+
+function normalizeTowns(value = []) {
+  if (Array.isArray(value)) return value.map(cleanTown).filter(Boolean);
+
+  return String(value)
+    .split(/;|,/)
+    .map(cleanTown)
+    .filter(Boolean);
+}
+
+function cleanTown(value = "") {
+  if (typeof value === "object" && value !== null) {
+    return String(value.town || value.name || value.label || "").trim();
+  }
+
+  return String(value).trim();
+}
+
+function communityName(community = {}) {
+  return (
+    community.name ||
+    community.district_label ||
+    community.districtLabel ||
+    `${bodyLabel(community.body || community.chamber)} District ${formatDistrictNumber(community.district || community.raw_district || "")}`
+  );
+}
+
+function bodyLabel(value = "") {
+  const normalized = String(value).toLowerCase();
+  return normalized === "senate" || normalized === "s" ? "Senate" : "House";
+}
+
+function representativesFor(community = {}) {
+  return community.representatives || community.reps || community.legislators || [];
+}
+
+function articlesFor(community = {}) {
+  return community.articles || community.relatedArticles || [];
+}
+
+function countyProfilePath(county = {}) {
+  return `/communities/counties/${encodeURIComponent(county.slug || slugifyLocal(county.county))}`;
+}
+
+function townProfilePath(town = "") {
+  return `/communities/towns/${encodeURIComponent(town)}`;
+}
+
+function formatDistrictNumber(value = "") {
+  const district = String(value).trim();
+  if (!district) return "";
+  if (/^\d+$/.test(district)) return String(Number(district));
+  return district;
 }
 
 function fallbackLabel(social = {}, title = "") {
@@ -438,35 +591,81 @@ function textPreview(value = "", maxLength = 170) {
       x-data="nhdbFuzzyFilter({ itemSelector: '.media-card[data-fuzzy-item]', pageSize: 18, threshold: 0.32 })"
     >
       <div class="updates-layout">
-        <aside class="county-updates-panel" aria-label="Community updates by county">
+        <aside class="county-communities-panel" aria-label="County communities">
           <div class="sidebar-heading">
-            <p class="eyebrow">By County</p>
-            <h3>Where updates are connected</h3>
+            <p class="eyebrow">County Communities</p>
+            <h3>{countyGroups.length} County profiles</h3>
           </div>
 
-          {countyUpdates.length ? (
-            <div class="recent-people-list">
-              {countyUpdates.map((county) => (
-                <button
-                  class="county-update-card"
-                  type="button"
-                  data-county-filter={county.county}
-                  data-fuzzy-sidebar-item
-                  data-fuzzy-sidebar-text={county.text}
-                >
-                  <span>
-                    <strong>{county.county}</strong>
-                    <small>{county.latestPlatform || "Community context"}</small>
-                    <em>
-                      {county.updateCount} {county.updateCount === 1 ? "update" : "updates"}
-                      {county.latestDateText && ` · ${county.latestDateText}`}
-                    </em>
-                  </span>
-                </button>
-              ))}
+          {countyGroups.length ? (
+            <div class="county-community-list">
+              {countyGroups.map((countyGroup) => {
+                const towns = [...countyGroup.towns].sort((a, b) => a.localeCompare(b));
+                const houseDistricts = countyGroup.communities.filter((community) =>
+                  !String(community.body || community.chamber).toLowerCase().startsWith("s"),
+                );
+                const previewDistricts = houseDistricts.slice(0, 3);
+                const districtTotal = houseDistricts.length;
+                const hiddenDistrictCount = Math.max(
+                  0,
+                  districtTotal - previewDistricts.length,
+                );
+                const profileHref = countyProfilePath(countyGroup);
+                const imageUrl = countyImageUrl(countyGroup.county);
+                const representativeCount = countyGroup.representativeCount;
+                const updateCount = countyGroup.updateCount || countyGroup.articles.length;
+
+                return (
+                  <article
+                    class="county-community-card"
+                    data-fuzzy-sidebar-item
+                    data-fuzzy-sidebar-text={[
+                      countyGroup.county,
+                      ...towns,
+                      ...countyGroup.communities.map(communityName),
+                    ].filter(Boolean).join(" ")}
+                  >
+                    <a class="county-community-image" href={profileHref}>
+                      {imageUrl && <img src={imageUrl} alt="" loading="lazy" />}
+                      <div>
+                        <span>County Profile</span>
+                        <h4>{countyGroup.county}</h4>
+                      </div>
+                    </a>
+
+                    <div class="county-community-stats">
+                      <span><strong>{towns.length}</strong> Towns</span>
+                      <span><strong>{districtTotal}</strong> House districts</span>
+                      <span><strong>{representativeCount}</strong> Legislators</span>
+                      <span><strong>{updateCount}</strong> Updates</span>
+                    </div>
+
+                    {towns.length > 0 && (
+                      <div class="county-community-towns">
+                        {towns.slice(0, 6).map((town) => (
+                          <a href={townProfilePath(town)}>{town}</a>
+                        ))}
+                        {towns.length > 6 && (
+                          <a href={profileHref}>+{towns.length - 6} more</a>
+                        )}
+                      </div>
+                    )}
+
+                    <div class="county-community-districts">
+                      <strong>House districts</strong>
+                      {previewDistricts.map((community) => (
+                        <a href={communityPath(community)}>{communityName(community)}</a>
+                      ))}
+                      {hiddenDistrictCount > 0 && (
+                        <a href={profileHref}>+{hiddenDistrictCount} more</a>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           ) : (
-            <p>No county-tagged updates yet.</p>
+            <p>No county profiles found.</p>
           )}
         </aside>
 
@@ -755,33 +954,6 @@ function textPreview(value = "", maxLength = 170) {
         setupUpdateAutoLoad();
       }
     </script>
-    <script>
-      function setupCountyUpdateFilters() {
-        const page = document.querySelector(".page");
-        if (!(page instanceof HTMLElement)) return;
-
-        const countyInput = page.querySelector('input[name="county"][data-fuzzy-filter-field]');
-        if (!(countyInput instanceof HTMLInputElement)) return;
-
-        page.querySelectorAll("[data-county-filter]").forEach((button) => {
-          button.addEventListener("click", () => {
-            countyInput.value = button.getAttribute("data-county-filter") || "";
-            countyInput.dispatchEvent(new Event("input", { bubbles: true }));
-            countyInput.dispatchEvent(new Event("change", { bubbles: true }));
-            page.querySelector("[data-fuzzy-search]")?.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-            });
-          });
-        });
-      }
-
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", setupCountyUpdateFilters, { once: true });
-      } else {
-        setupCountyUpdateFilters();
-      }
-    </script>
   </body>
 </html>
 
@@ -908,7 +1080,7 @@ function textPreview(value = "", maxLength = 170) {
     width: 100%;
   }
 
-  .county-updates-panel,
+  .county-communities-panel,
   .recently-updated-panel {
     background: #ffffff;
     border: 1px solid var(--nhdb-line);
@@ -925,7 +1097,7 @@ function textPreview(value = "", maxLength = 170) {
     top: 84px;
   }
 
-  .county-updates-panel {
+  .county-communities-panel {
     grid-column: 1;
     grid-row: 1;
   }
@@ -935,17 +1107,17 @@ function textPreview(value = "", maxLength = 170) {
     grid-row: 1;
   }
 
-  .county-updates-panel::-webkit-scrollbar,
+  .county-communities-panel::-webkit-scrollbar,
   .recently-updated-panel::-webkit-scrollbar {
     width: 8px;
   }
 
-  .county-updates-panel::-webkit-scrollbar-track,
+  .county-communities-panel::-webkit-scrollbar-track,
   .recently-updated-panel::-webkit-scrollbar-track {
     background: transparent;
   }
 
-  .county-updates-panel::-webkit-scrollbar-thumb,
+  .county-communities-panel::-webkit-scrollbar-thumb,
   .recently-updated-panel::-webkit-scrollbar-thumb {
     background: #bfdbfe;
     border-radius: 999px;
@@ -982,56 +1154,142 @@ function textPreview(value = "", maxLength = 170) {
     text-decoration: none;
   }
 
-  .county-update-card {
+  .county-community-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .county-community-card {
     background:
       linear-gradient(#ffffff, #ffffff) padding-box,
       linear-gradient(135deg, rgba(37, 99, 235, 0.45), rgba(255, 103, 25, 0.28)) border-box;
     border: 1px solid transparent;
     border-radius: 12px;
     color: #1f2933;
-    cursor: pointer;
     display: grid;
-    gap: 10px;
-    padding: 10px;
-    text-align: left;
+    gap: 11px;
+    overflow: hidden;
+    padding: 0 0 12px;
     width: 100%;
   }
 
-  .county-update-card:hover {
+  .county-community-card:hover {
     border-color: #60a5fa;
     transform: translateY(-1px);
   }
 
-  .county-update-card span {
+  .county-community-image {
+    align-items: end;
+    aspect-ratio: 16 / 8;
+    background: #dbeafe;
+    color: white;
     display: grid;
-    gap: 2px;
-    min-width: 0;
-  }
-
-  .county-update-card strong,
-  .county-update-card small,
-  .county-update-card em {
     overflow: hidden;
-    text-overflow: ellipsis;
+    position: relative;
+    text-decoration: none;
   }
 
-  .county-update-card strong,
-  .county-update-card small {
-    white-space: nowrap;
+  .county-community-image::after {
+    background:
+      linear-gradient(180deg, rgba(15, 23, 42, 0.04), rgba(15, 23, 42, 0.72)),
+      linear-gradient(90deg, rgba(15, 23, 42, 0.5), rgba(15, 23, 42, 0.12));
+    content: "";
+    inset: 0;
+    position: absolute;
+    z-index: 1;
   }
 
-  .county-update-card small {
-    color: #64748b;
-    font-size: 0.75rem;
-    font-weight: 850;
+  .county-community-image img {
+    height: 100%;
+    inset: 0;
+    object-fit: cover;
+    position: absolute;
+    width: 100%;
+    z-index: 0;
   }
 
-  .county-update-card em {
-    color: #1d4ed8;
-    font-size: 0.74rem;
-    font-style: normal;
+  .county-community-image div {
+    display: grid;
+    gap: 3px;
+    padding: 12px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .county-community-image span {
+    color: #fde68a;
+    font-size: 0.68rem;
     font-weight: 950;
-    line-height: 1.3;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .county-community-image h4 {
+    color: #fffaf1;
+    font-size: 1.35rem;
+    line-height: 1;
+    margin: 0;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.38);
+  }
+
+  .county-community-stats {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-inline: 10px;
+  }
+
+  .county-community-stats span {
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #4b5563;
+    display: grid;
+    font-size: 0.62rem;
+    font-weight: 900;
+    gap: 2px;
+    padding: 7px;
+    text-transform: uppercase;
+  }
+
+  .county-community-stats strong {
+    color: #1f2933;
+    font-size: 0.98rem;
+    line-height: 1;
+  }
+
+  .county-community-towns,
+  .county-community-districts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-inline: 10px;
+  }
+
+  .county-community-towns a,
+  .county-community-districts a {
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.7rem;
+    font-weight: 900;
+    line-height: 1.15;
+    padding: 5px 7px;
+    text-decoration: none;
+  }
+
+  .county-community-districts {
+    border-top: 1px solid #d1d5db;
+    padding-top: 10px;
+  }
+
+  .county-community-districts strong {
+    color: #6b4f2a;
+    flex-basis: 100%;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
 
   .recent-person-card:hover {
@@ -1461,7 +1719,7 @@ function textPreview(value = "", maxLength = 170) {
     }
 
     .updates-main,
-    .county-updates-panel,
+    .county-communities-panel,
     .recently-updated-panel {
       grid-column: auto;
       grid-row: auto;
@@ -1472,7 +1730,7 @@ function textPreview(value = "", maxLength = 170) {
       padding-inline: 0;
     }
 
-    .county-updates-panel {
+    .county-communities-panel {
       max-height: none;
       order: 2;
       overflow: visible;
@@ -1493,7 +1751,7 @@ function textPreview(value = "", maxLength = 170) {
       grid-template-columns: minmax(0, 1fr) minmax(210px, 260px);
     }
 
-    .county-updates-panel {
+    .county-communities-panel {
       display: none;
     }
 
