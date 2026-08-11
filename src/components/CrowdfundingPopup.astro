@@ -220,11 +220,13 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
 
   .crowdfunding-card h2 {
     color: #111827;
-    font-size: clamp(2rem, 6vw, 4.1rem);
+    font-size: clamp(1.9rem, 5vw, 3.4rem);
     letter-spacing: 0;
-    line-height: 0.96;
+    line-height: 1;
     margin: 0;
-    max-width: 11ch;
+    max-width: min(100%, 13ch);
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .crowdfunding-lede {
@@ -360,7 +362,8 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
     }
 
     .crowdfunding-card h2 {
-      max-width: 10ch;
+      font-size: clamp(1.65rem, 9vw, 2.4rem);
+      max-width: calc(100% - 28px);
     }
 
     .crowdfunding-body {

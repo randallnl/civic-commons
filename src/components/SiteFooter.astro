@@ -60,6 +60,10 @@ const footerGuides = civicGuides.slice(0, 4);
         <a href="/profile-cleanup-guide">Profile cleanup guide</a>
         <a href="/volunteer-reviewers">Volunteer to review</a>
       </div>
+      <p class="footer-donation-note">
+        Please make donation checks out to Randall Nielsen, 82 Bobcat Way,
+        Manchester, NH 03109.
+      </p>
     </div>
 
     <div class="footer-bottom">
@@ -187,9 +191,9 @@ const footerGuides = civicGuides.slice(0, 4);
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    display: flex;
+    display: grid;
     gap: 18px;
-    justify-content: space-between;
+    grid-template-columns: minmax(0, 1fr) auto;
     padding: 22px;
   }
 
@@ -219,6 +223,19 @@ const footerGuides = civicGuides.slice(0, 4);
 
   .footer-callout-actions a:hover {
     background: #dc4d09;
+  }
+
+  .footer-donation-note {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 10px;
+    color: #7c2d12;
+    font-size: 0.9rem;
+    font-weight: 850;
+    grid-column: 1 / -1;
+    line-height: 1.45;
+    margin: 0;
+    padding: 12px 14px;
   }
 
   .footer-bottom {
@@ -254,6 +271,7 @@ const footerGuides = civicGuides.slice(0, 4);
     .footer-callout,
     .footer-bottom {
       align-items: stretch;
+      display: flex;
       flex-direction: column;
     }
 
