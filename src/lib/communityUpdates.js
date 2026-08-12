@@ -473,11 +473,17 @@ async function appendEntitySubjectMentions(updates = [], db = communityUpdatesDb
 async function findUpdateEntitySubject(entityType = "", entityKey = "", db) {
   const where =
     entityType === "candidate"
-      ? `(p.filer_entity_number = ? OR p.slug = ? OR CAST(p.id AS TEXT) = ?)`
+      ? `(p.filer_entity_number = ?
+          OR p.slug = ?
+          OR CAST(p.id AS TEXT) = ?
+          OR cr.filer_entity_number = ?
+          OR c.filer_entity_number = ?
+          OR c.slug = ?
+          OR LOWER(p.display_name) = LOWER(?))`
       : `(CAST(p.gc_personid AS TEXT) = ? OR CAST(p.employeeno AS TEXT) = ? OR p.slug = ? OR CAST(p.id AS TEXT) = ?)`;
   const bindings =
     entityType === "candidate"
-      ? [entityKey, entityKey, entityKey]
+      ? [entityKey, entityKey, entityKey, entityKey, entityKey, entityKey, cleanText(entityKey).replace(/-/g, " ")]
       : [entityKey, entityKey, entityKey, entityKey];
 
   const row = await db
@@ -507,6 +513,9 @@ async function findUpdateEntitySubject(entityType = "", entityKey = "", db) {
        LEFT JOIN d1_person_candidate_roles cr
          ON cr.person_id = p.id
          AND cr.election_year = 2026
+       LEFT JOIN candidates c
+         ON c.filer_entity_number = p.filer_entity_number
+         OR c.slug = p.slug
        LEFT JOIN d1_person_legislator_roles lr
          ON lr.person_id = p.id
          AND lr.active = 1

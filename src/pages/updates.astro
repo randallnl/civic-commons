@@ -4,6 +4,7 @@ export const prerender = false;
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import FilterBar from "../components/FilterBar.astro";
+import { adminDb } from "../lib/adminAuth";
 import {
   communityUpdateDate,
   getRecentApprovedCommunityUpdates,
@@ -20,6 +21,7 @@ import {
 } from "../lib/communitiesApi";
 import { countyImageUrl } from "../lib/communityImages";
 import { getOrganizations, organizationPath } from "../lib/organizationsApi";
+import { profilePhotoUrl } from "../lib/photos";
 import { repName } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import profileIcon from "../assets/profile icon.png";
@@ -56,12 +58,12 @@ try {
     getCountyGroups({ articleLimit: 3 }),
   ]);
   const cards = await getCommunityUpdateCards(updates || []);
-  const endorsementItems = organizations
-    .flatMap((organization) =>
-      (organization.endorsements || []).map((endorsement) =>
-        endorsementFeedItem(endorsement, organization),
-      ),
-    )
+  const rawEndorsements = organizations.flatMap((organization) =>
+    (organization.endorsements || []).map((endorsement) => ({ endorsement, organization })),
+  );
+  const endorsementPeople = await peopleForEndorsements(rawEndorsements.map((item) => item.endorsement));
+  const endorsementItems = rawEndorsements
+    .map(({ endorsement, organization }) => endorsementFeedItem(endorsement, organization, endorsementPeople))
     .filter((item) => item.title)
     .slice(0, 80);
 
@@ -137,31 +139,37 @@ function mediaFeedItem(update = {}) {
   };
 }
 
-function endorsementFeedItem(endorsement = {}, organization = {}) {
+function endorsementFeedItem(endorsement = {}, organization = {}, endorsementPeople = new Map()) {
   const dateValue = endorsement.date || endorsement.createdAt || "";
   const candidateSlug =
     endorsement.candidateSlug ||
     endorsement.candidateSlugKey ||
     slugifyLocal(endorsement.candidateName || "");
   const candidateName = cleanText(endorsement.candidateName || "Candidate");
+  const canonicalPerson = endorsementPeople.get(endorsementPersonKey(endorsement)) || {};
   const organizationName = cleanText(organization.name || endorsement.organization || "Organization");
   const position = cleanText(endorsement.position || "Endorsed");
   const statement = cleanText(endorsement.statement || "");
   const title = `${organizationName}: ${position} ${candidateName}`;
   const titlePreview = textPreview(title, TITLE_PREVIEW_LENGTH);
-  const candidatePath = candidateSlug ? `/people/${encodeURIComponent(candidateSlug)}` : "/people";
+  const candidatePath =
+    canonicalPerson.path ||
+    (candidateSlug ? `/people/${encodeURIComponent(candidateSlug)}` : "/people");
   const organizationHref = organization.slug ? organizationPath(organization) : "/organizations";
-  const officeLine = [endorsement.office, endorsement.district ? `District ${endorsement.district}` : ""]
+  const office = canonicalPerson.office || endorsement.office || "";
+  const district = canonicalPerson.profileDistrict || endorsement.district || "";
+  const officeLine = [office, district ? `District ${district}` : ""]
     .filter(Boolean)
     .join(", ");
   const person = {
-    name: candidateName,
-    slug: candidateSlug,
+    ...canonicalPerson,
+    name: canonicalPerson.name || candidateName,
+    slug: canonicalPerson.slug || candidateSlug,
     path: candidatePath,
-    role: endorsement.office || "Candidate",
-    district: endorsement.district || "",
+    role: office || canonicalPerson.role || "Candidate",
+    district,
     districtLabel: officeLine,
-    photoUrl: "",
+    photoUrl: canonicalPerson.photoUrl || "",
   };
 
   return {
@@ -203,6 +211,117 @@ function endorsementFeedItem(endorsement = {}, organization = {}) {
       position,
     ].filter(Boolean).join(" "),
   };
+}
+
+async function peopleForEndorsements(endorsements = []) {
+  const db = adminDb();
+  if (!db || !endorsements.length) return new Map();
+
+  const result = await db
+    .prepare(
+      `SELECT
+          p.id,
+          p.gc_personid,
+          p.employeeno,
+          p.filer_entity_number,
+          p.slug,
+          p.firstname,
+          p.lastname,
+          p.display_name,
+          p.photo_url AS person_photo_url,
+          p.is_current_legislator,
+          p.is_2026_candidate,
+          c.slug AS candidate_slug,
+          c.photo_url AS candidate_photo_url,
+          COALESCE(NULLIF(cr.office, ''), CASE
+            WHEN lr.legislativebody = 'S' THEN 'State Senator'
+            WHEN lr.legislativebody = 'H' THEN 'State Representative'
+            ELSE ''
+          END) AS office,
+          COALESCE(NULLIF(cr.county, ''), cc.name, '') AS county,
+          COALESCE(NULLIF(cr.district, ''), NULLIF(lr.district, ''), '') AS profile_district
+       FROM d1_people p
+       LEFT JOIN d1_person_candidate_roles cr
+         ON cr.person_id = p.id
+         AND cr.election_year = 2026
+       LEFT JOIN candidates c
+         ON c.filer_entity_number = p.filer_entity_number
+         OR c.slug = p.slug
+       LEFT JOIN d1_person_legislator_roles lr
+         ON lr.person_id = p.id
+         AND lr.active = 1
+       LEFT JOIN county_codes cc
+         ON cc.source_county_id = CAST(lr.countycode AS INTEGER)
+       WHERE p.is_current_legislator = 1
+          OR p.is_2026_candidate = 1`,
+    )
+    .all();
+
+  const peopleByKey = new Map();
+  for (const row of result.results || []) {
+    const name = cleanText(
+      row.display_name ||
+        [row.firstname, row.lastname].filter(Boolean).join(" "),
+    );
+    const person = {
+      personId: row.id,
+      personid: row.gc_personid || row.id,
+      employeeno: row.employeeno,
+      filerEntityNumber: row.filer_entity_number || "",
+      slug: row.slug || "",
+      name,
+      path: row.slug ? `/people/${encodeURIComponent(row.slug)}` : `/people/${encodeURIComponent(String(row.id))}`,
+      role: cleanText(row.office || (Number(row.is_current_legislator) === 1 ? "Legislator" : "Candidate")),
+      county: cleanText(row.county),
+      profileDistrict: cleanText(row.profile_district),
+      photoUrl: profilePhotoUrl(row.person_photo_url || row.candidate_photo_url || ""),
+      isCurrentLegislator: Number(row.is_current_legislator) === 1,
+      is2026Candidate: Number(row.is_2026_candidate) === 1,
+    };
+
+    for (const key of personLookupKeys({
+      ...person,
+      candidateSlug: row.candidate_slug,
+      displayName: name,
+    })) {
+      if (!peopleByKey.has(key)) peopleByKey.set(key, person);
+    }
+  }
+
+  const matched = new Map();
+  for (const endorsement of endorsements) {
+    const person = personLookupKeys(endorsement)
+      .map((key) => peopleByKey.get(key))
+      .find(Boolean);
+    if (person) matched.set(endorsementPersonKey(endorsement), person);
+  }
+
+  return matched;
+}
+
+function endorsementPersonKey(endorsement = {}) {
+  return personLookupKeys(endorsement)[0] || slugifyLocal(endorsement.candidateName || "");
+}
+
+function personLookupKeys(value = {}) {
+  return [
+    value.personId,
+    value.personid,
+    value.filerEntityNumber,
+    value.filer_entity_number,
+    value.slug,
+    value.personSlug,
+    value.person_slug,
+    value.candidateSlug,
+    value.candidate_slug,
+    value.candidateSlugKey,
+    value.candidate_slug_key,
+    value.displayName,
+    value.candidateName,
+    value.name,
+  ]
+    .map((key) => slugifyLocal(key || ""))
+    .filter(Boolean);
 }
 
 function formatDate(value = "") {

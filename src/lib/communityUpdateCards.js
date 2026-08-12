@@ -70,7 +70,19 @@ function uniqueMentions(mentions = []) {
 }
 
 function personPreview(mention = {}) {
-  const photoUrl = profilePhotoUrl(mention.photoUrl);
+  const photoUrl = profilePhotoUrl(
+    mention.photoUrl ||
+      mention.photo_url ||
+      mention.photo ||
+      mention.profilePhotoUrl ||
+      mention.profile_photo_url ||
+      mention.personPhotoUrl ||
+      mention.person_photo_url ||
+      mention.legislatorPhotoUrl ||
+      mention.legislator_photo_url ||
+      mention.candidatePhotoUrl ||
+      mention.candidate_photo_url,
+  );
   const role =
     mention.office ||
     mention.roleLabel ||
@@ -94,17 +106,21 @@ function personPreview(mention = {}) {
 export function peopleProfilePath(mention = {}) {
   const existingPath = String(mention.path || "").trim();
   const key =
+    mention.peopleSlug ||
+    mention.people_slug ||
     mention.personSlug ||
     mention.person_slug ||
+    mention.unifiedSlug ||
+    mention.unified_slug ||
     mention.personId ||
     mention.person_id ||
     mention.personid ||
     mention.gcPersonid ||
     mention.gc_personid ||
-    mention.slug ||
     mention.employeeno ||
     mention.filerEntityNumber ||
-    mention.filer_entity_number;
+    mention.filer_entity_number ||
+    mention.slug;
 
   if (key) return `/people/${encodeURIComponent(String(key))}`;
   if (existingPath.startsWith("/people/")) return existingPath;
