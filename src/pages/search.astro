@@ -5,6 +5,7 @@ import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import profileIcon from "../assets/profile icon.png";
 import { articlePublishDate, articleSourceName, getArticles } from "../lib/articlesApi";
+import { FREE_STATE_ALIGNED_TOOLTIP, TPACTION_ALIGNED_TOOLTIP } from "../lib/alignmentTags";
 import { billDetailPath, getBills } from "../lib/billsApi";
 import { isFreeStater, isTpActionAligned } from "../lib/civicTags";
 import { communityPath, getCommunities } from "../lib/communitiesApi";
@@ -209,16 +210,21 @@ function previewText(text = "", maxLength = 170) {
                           <a
                             class="free-stater-inline"
                             href="/free-staters"
-                            title="What is a Free Stater?"
-                            aria-label="What is a Free Stater?"
+                            title={FREE_STATE_ALIGNED_TOOLTIP}
+                            aria-label={FREE_STATE_ALIGNED_TOOLTIP}
                           >
                             Free State Aligned
                           </a>
                         )}
                         {isTpActionAligned(person) && (
-                          <span class="free-stater-inline tpaction-inline">
+                          <a
+                            class="free-stater-inline tpaction-inline"
+                            href="/tpaction-aligned"
+                            title={TPACTION_ALIGNED_TOOLTIP}
+                            aria-label={TPACTION_ALIGNED_TOOLTIP}
+                          >
                             TPAction Aligned
-                          </span>
+                          </a>
                         )}
                       </div>
                     </li>

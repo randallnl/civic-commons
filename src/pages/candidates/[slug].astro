@@ -19,6 +19,11 @@ import {
 } from "@lucide/astro";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
+import {
+  FREE_STATE_ALIGNED_TOOLTIP,
+  TPACTION_ALIGNED_TOOLTIP,
+  VOTE_GRADE_TOOLTIP,
+} from "../../lib/alignmentTags";
 import { getBillSummaries } from "../../lib/billsApi";
 import { representativePersonIdForCandidate } from "../../lib/candidateLegislatorLinks";
 import {
@@ -493,8 +498,8 @@ function uniqueArticles(articles = []) {
               <a
                 class:list={["legislator-grade-pill", currentLegislatorGrade.className]}
                 href="/vote-grades"
-                title="How do we determine this?"
-                aria-label={`How do we determine this? ${currentLegislatorGrade.label}`}
+                title={VOTE_GRADE_TOOLTIP}
+                aria-label={`${VOTE_GRADE_TOOLTIP} ${currentLegislatorGrade.label}`}
               >
                 <strong>{currentLegislatorGrade.letter}</strong>
                 <span>Legislator Grade</span>
@@ -511,14 +516,21 @@ function uniqueArticles(articles = []) {
               <a
                 class="meta-pill free-stater-pill"
                 href="/free-staters"
-                title="What is a Free Stater?"
-                aria-label="What is a Free Stater?"
+                title={FREE_STATE_ALIGNED_TOOLTIP}
+                aria-label={FREE_STATE_ALIGNED_TOOLTIP}
               >
                 Free State Aligned
               </a>
             )}
             {hasTpActionTag && (
-              <span class="meta-pill tpaction-pill">TPAction Aligned</span>
+              <a
+                class="meta-pill tpaction-pill"
+                href="/tpaction-aligned"
+                title={TPACTION_ALIGNED_TOOLTIP}
+                aria-label={TPACTION_ALIGNED_TOOLTIP}
+              >
+                TPAction Aligned
+              </a>
             )}
             {candidate.currentLegislator && <span class="meta-pill">Current Legislator</span>}
           </div>

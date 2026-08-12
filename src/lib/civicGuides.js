@@ -33,6 +33,16 @@ export const civicGuides = [
     featured: true,
   },
   {
+    href: "/tpaction-aligned",
+    title: "What TPAction Aligned Means",
+    kicker: "Political Context",
+    category: "Accountability",
+    description:
+      "Learn how NH Deserves Better identifies TPAction aligned candidates and legislators from imported scorecard data.",
+    readTime: "4 min read",
+    image: organizationAssetUrl("capital dome.png"),
+  },
+  {
     href: "/vote-grades",
     title: "How Vote Grades Are Calculated",
     kicker: "Data Guide",

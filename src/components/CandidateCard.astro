@@ -7,6 +7,7 @@ import {
 } from "../lib/candidatesApi";
 import profileIcon from "../assets/profile icon.png";
 import { isFreeStater, isTpActionAligned } from "../lib/civicTags";
+import { FREE_STATE_ALIGNED_TOOLTIP, TPACTION_ALIGNED_TOOLTIP } from "../lib/alignmentTags";
 import { profilePhotoUrl } from "../lib/photos";
 
 const { candidate } = Astro.props;
@@ -213,14 +214,21 @@ function uniqueTowns(towns = []) {
         <a
           class="free-stater-pill"
           href="/free-staters"
-          title="What is a Free Stater?"
-          aria-label="What is a Free Stater?"
+          title={FREE_STATE_ALIGNED_TOOLTIP}
+          aria-label={FREE_STATE_ALIGNED_TOOLTIP}
         >
           Free State Aligned
         </a>
       )}
       {isTpActionAligned(candidate) && (
-        <span class="tpaction-pill">TPAction Aligned</span>
+        <a
+          class="tpaction-pill"
+          href="/tpaction-aligned"
+          title={TPACTION_ALIGNED_TOOLTIP}
+          aria-label={TPACTION_ALIGNED_TOOLTIP}
+        >
+          TPAction Aligned
+        </a>
       )}
       {officeTypeLabel && <span>{officeTypeLabel}</span>}
       {candidate.currentLegislator && <span>Current Legislator</span>}

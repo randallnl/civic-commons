@@ -3,6 +3,7 @@ export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
+import { VOTE_GRADE_TOOLTIP } from "../lib/alignmentTags";
 import { articleDetailPath, articlePublishDate, getArticles } from "../lib/articlesApi";
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
@@ -166,7 +167,7 @@ function organizationAssetUrl(filename = "") {
         <a href="/suggest-update">Suggest an update</a>
       </section>
     </main>
-    <script>
+    <script define:vars={{ voteGradeTooltip: VOTE_GRADE_TOOLTIP }}>
       const lookupForm = document.querySelector("[data-hero-lookup]");
       const lookupHelp = lookupForm?.querySelector("[data-lookup-help]");
       const lookupTabs = lookupForm?.querySelectorAll("[data-lookup-target]");
@@ -319,6 +320,8 @@ function organizationAssetUrl(filename = "") {
           if (profile.grade) {
             const grade = document.createElement("span");
             grade.className = `recent-profile-grade grade-${String(profile.grade).trim().charAt(0).toLowerCase()}`;
+            grade.title = voteGradeTooltip;
+            grade.setAttribute("aria-label", voteGradeTooltip);
             appendText(grade, "strong", profile.grade);
             appendText(grade, "small", "Grade");
             card.append(grade);

@@ -20,6 +20,11 @@ import {
 } from "@lucide/astro";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
+import {
+  FREE_STATE_ALIGNED_TOOLTIP,
+  TPACTION_ALIGNED_TOOLTIP,
+  VOTE_GRADE_TOOLTIP,
+} from "../../lib/alignmentTags";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
 import { representativePersonIdForCandidate } from "../../lib/candidateLegislatorLinks";
 import { candidateProfileForLegislator } from "../../lib/candidateLegislators";
@@ -751,8 +756,8 @@ function uniqueTowns(towns = []) {
             <a
               class:list={["profile-grade", voteGrade.className]}
               href="/vote-grades"
-              title="How do we determine this?"
-              aria-label={`How do we determine this? ${voteGrade.label}`}
+              title={VOTE_GRADE_TOOLTIP}
+              aria-label={`${VOTE_GRADE_TOOLTIP} ${voteGrade.label}`}
             >
               <span>{voteGrade.letter}</span>
               <small>Vote Grade</small>
@@ -769,14 +774,21 @@ function uniqueTowns(towns = []) {
               <a
                 class="meta-pill free-stater-pill"
                 href="/free-staters"
-                title="What is a Free Stater?"
-                aria-label="What is a Free Stater?"
+                title={FREE_STATE_ALIGNED_TOOLTIP}
+                aria-label={FREE_STATE_ALIGNED_TOOLTIP}
               >
                 Free State Aligned
               </a>
             )}
             {(isTpActionAligned(representative) || isTpActionAligned(profileCandidate)) && (
-              <span class="meta-pill tpaction-pill">TPAction Aligned</span>
+              <a
+                class="meta-pill tpaction-pill"
+                href="/tpaction-aligned"
+                title={TPACTION_ALIGNED_TOOLTIP}
+                aria-label={TPACTION_ALIGNED_TOOLTIP}
+              >
+                TPAction Aligned
+              </a>
             )}
           </div>
 

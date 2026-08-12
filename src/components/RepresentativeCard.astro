@@ -3,6 +3,11 @@ import BillPositionSummary from "./BillPositionSummary.astro";
 import profileIcon from "../assets/profile icon.png";
 import { billDetailPath } from "../lib/billsApi";
 import { isFreeStater, isTpActionAligned } from "../lib/civicTags";
+import {
+  FREE_STATE_ALIGNED_TOOLTIP,
+  TPACTION_ALIGNED_TOOLTIP,
+  VOTE_GRADE_TOOLTIP,
+} from "../lib/alignmentTags";
 import { profilePhotoUrl } from "../lib/photos";
 import { cleanText } from "../lib/text";
 import {
@@ -190,8 +195,8 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
         <a
           class:list={["rep-grade", grade.className]}
           href="/vote-grades"
-          title="How do we determine this?"
-          aria-label={`How do we determine this? ${grade.label}`}
+          title={VOTE_GRADE_TOOLTIP}
+          aria-label={`${VOTE_GRADE_TOOLTIP} ${grade.label}`}
         >
           <span>{grade.letter}</span>
           <small>Grade</small>
@@ -205,14 +210,21 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
           <a
             class="free-stater-pill"
             href="/free-staters"
-            title="What is a Free Stater?"
-            aria-label="What is a Free Stater?"
+            title={FREE_STATE_ALIGNED_TOOLTIP}
+            aria-label={FREE_STATE_ALIGNED_TOOLTIP}
           >
             Free State Aligned
           </a>
         )}
         {isTpActionAligned(rep) && (
-          <span class="tpaction-pill">TPAction Aligned</span>
+          <a
+            class="tpaction-pill"
+            href="/tpaction-aligned"
+            title={TPACTION_ALIGNED_TOOLTIP}
+            aria-label={TPACTION_ALIGNED_TOOLTIP}
+          >
+            TPAction Aligned
+          </a>
         )}
       </div>
 

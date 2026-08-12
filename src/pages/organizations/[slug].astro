@@ -6,6 +6,7 @@ import SiteFooter from "../../components/SiteFooter.astro";
 import FilterBar from "../../components/FilterBar.astro";
 import profileIcon from "../../assets/profile icon.png";
 import { adminDb, currentAdminSession } from "../../lib/adminAuth";
+import { FREE_STATE_ALIGNED_TOOLTIP, TPACTION_ALIGNED_TOOLTIP } from "../../lib/alignmentTags";
 import {
   candidateName,
   formatCandidateParty,
@@ -634,14 +635,21 @@ function cleanName(value = "") {
                               <a
                                 class="warning-tag"
                                 href="/free-staters"
-                                title="What is a Free Stater?"
-                                aria-label="What is a Free Stater?"
+                                title={FREE_STATE_ALIGNED_TOOLTIP}
+                                aria-label={FREE_STATE_ALIGNED_TOOLTIP}
                               >
                                 Free State Aligned
                               </a>
                             )}
                             {isTpActionAligned(endorsement.candidateProfile) && (
-                              <span class="warning-tag tpaction-warning-tag">TPAction Aligned</span>
+                              <a
+                                class="warning-tag tpaction-warning-tag"
+                                href="/tpaction-aligned"
+                                title={TPACTION_ALIGNED_TOOLTIP}
+                                aria-label={TPACTION_ALIGNED_TOOLTIP}
+                              >
+                                TPAction Aligned
+                              </a>
                             )}
                           </div>
 

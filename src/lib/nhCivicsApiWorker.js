@@ -611,7 +611,7 @@ function handleVotingWidgetScript(request) {
     const partyTone = getPartyTone(rep.party);
     const districtLine = getDistrictLine(rep);
     const freeStaterTag = isFreeStater(rep)
-      ? \`<span class="nhcc-free-stater-tag">Free State Aligned</span>\`
+      ? \`<span class="nhcc-free-stater-tag" title="Free State Aligned: based on the 2026 NH Liberty Alliance scorecard. NH Deserves Better applies this to current state legislators with a B+ or higher combined grade; it indicates voting alignment, not confirmed membership.">Free State Aligned</span>\`
       : "";
 
     card.className = "nhcc-rep-card";

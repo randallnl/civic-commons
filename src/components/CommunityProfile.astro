@@ -8,6 +8,11 @@ import { getBillSummaries } from "../lib/billsApi";
 import { enrichCandidatesWithLegislators } from "../lib/candidateLegislators";
 import { candidateName, candidatePath, isLegislativeCandidate } from "../lib/candidatesApi";
 import { isFreeStater, isTpActionAligned } from "../lib/civicTags";
+import {
+  FREE_STATE_ALIGNED_TOOLTIP,
+  TPACTION_ALIGNED_TOOLTIP,
+  VOTE_GRADE_TOOLTIP,
+} from "../lib/alignmentTags";
 import { countyForCommunity, countyImageUrl } from "../lib/communityImages";
 import { communityPath } from "../lib/communitiesApi";
 import { profilePhotoUrl } from "../lib/photos";
@@ -395,8 +400,8 @@ try {
                             <a
                               class:list={["mini-grade", grade.className]}
                               href="/vote-grades"
-                              title="How do we determine this?"
-                              aria-label={`How do we determine this? ${grade.label}`}
+                              title={VOTE_GRADE_TOOLTIP}
+                              aria-label={`${VOTE_GRADE_TOOLTIP} ${grade.label}`}
                             >
                               <strong>{grade.letter}</strong>
                               <small>Grade</small>
@@ -407,19 +412,33 @@ try {
                             <div class="mini-tags">
                               <a
                                 href="/free-staters"
-                                title="What is a Free Stater?"
-                                aria-label="What is a Free Stater?"
+                                title={FREE_STATE_ALIGNED_TOOLTIP}
+                                aria-label={FREE_STATE_ALIGNED_TOOLTIP}
                               >
                                 Free State Aligned
                               </a>
                               {isTpActionAligned(rep) && (
-                                <span>TPAction Aligned</span>
+                                <a
+                                  class="tpaction-mini-tag"
+                                  href="/tpaction-aligned"
+                                  title={TPACTION_ALIGNED_TOOLTIP}
+                                  aria-label={TPACTION_ALIGNED_TOOLTIP}
+                                >
+                                  TPAction Aligned
+                                </a>
                               )}
                             </div>
                           )}
                           {!isFreeStater(rep) && isTpActionAligned(rep) && (
                             <div class="mini-tags">
-                              <span>TPAction Aligned</span>
+                              <a
+                                class="tpaction-mini-tag"
+                                href="/tpaction-aligned"
+                                title={TPACTION_ALIGNED_TOOLTIP}
+                                aria-label={TPACTION_ALIGNED_TOOLTIP}
+                              >
+                                TPAction Aligned
+                              </a>
                             </div>
                           )}
                         </div>
@@ -488,19 +507,33 @@ try {
                             <div class="mini-tags">
                               <a
                                 href="/free-staters"
-                                title="What is a Free Stater?"
-                                aria-label="What is a Free Stater?"
+                                title={FREE_STATE_ALIGNED_TOOLTIP}
+                                aria-label={FREE_STATE_ALIGNED_TOOLTIP}
                               >
                                 Free State Aligned
                               </a>
                               {isTpActionAligned(candidate) && (
-                                <span>TPAction Aligned</span>
+                                <a
+                                  class="tpaction-mini-tag"
+                                  href="/tpaction-aligned"
+                                  title={TPACTION_ALIGNED_TOOLTIP}
+                                  aria-label={TPACTION_ALIGNED_TOOLTIP}
+                                >
+                                  TPAction Aligned
+                                </a>
                               )}
                             </div>
                           )}
                           {!isFreeStater(candidate) && isTpActionAligned(candidate) && (
                             <div class="mini-tags">
-                              <span>TPAction Aligned</span>
+                              <a
+                                class="tpaction-mini-tag"
+                                href="/tpaction-aligned"
+                                title={TPACTION_ALIGNED_TOOLTIP}
+                                aria-label={TPACTION_ALIGNED_TOOLTIP}
+                              >
+                                TPAction Aligned
+                              </a>
                             </div>
                           )}
                         </div>
@@ -984,7 +1017,8 @@ try {
     color: #fffdf7;
   }
 
-  .mini-tags span {
+  .mini-tags span,
+  .mini-tags .tpaction-mini-tag {
     background: #4b3a0b;
     border-color: #facc15;
     box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.25), 0 0 12px rgba(250, 204, 21, 0.16);

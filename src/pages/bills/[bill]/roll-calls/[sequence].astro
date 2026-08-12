@@ -5,6 +5,7 @@ import { billDetailPath, getRollCallVotes } from "../../../../lib/billsApi";
 import TopNav from "../../../../components/TopNav.astro";
 import SiteFooter from "../../../../components/SiteFooter.astro";
 import profileIcon from "../../../../assets/profile icon.png";
+import { FREE_STATE_ALIGNED_TOOLTIP, TPACTION_ALIGNED_TOOLTIP } from "../../../../lib/alignmentTags";
 import { isFreeStater, isTpActionAligned } from "../../../../lib/civicTags";
 import { profilePhotoUrl } from "../../../../lib/photos";
 import { cleanText } from "../../../../lib/text";
@@ -400,14 +401,21 @@ function slugify(value = "") {
                             <a
                               class="free-stater-pill"
                               href="/free-staters"
-                              title="What is a Free Stater?"
-                              aria-label="What is a Free Stater?"
+                              title={FREE_STATE_ALIGNED_TOOLTIP}
+                              aria-label={FREE_STATE_ALIGNED_TOOLTIP}
                             >
                               Free State Aligned
                             </a>
                           )}
                           {isTpActionAligned(vote) && (
-                            <span class="free-stater-pill tpaction-pill">TPAction Aligned</span>
+                            <a
+                              class="free-stater-pill tpaction-pill"
+                              href="/tpaction-aligned"
+                              title={TPACTION_ALIGNED_TOOLTIP}
+                              aria-label={TPACTION_ALIGNED_TOOLTIP}
+                            >
+                              TPAction Aligned
+                            </a>
                           )}
                         </div>
                       </div>
