@@ -357,11 +357,17 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
           COALESCE(NULLIF(cr.county, ''), cc.name, '') AS county,
           COALESCE(NULLIF(cr.district, ''), NULLIF(lr.district, ''), m.district, '') AS profile_district
        FROM community_update_mentions m
+       LEFT JOIN candidates cm
+         ON m.path = '/candidates/' || cm.slug
+         OR m.path = '/people/' || cm.slug
        LEFT JOIN d1_people p
          ON p.id = m.person_id
          OR p.gc_personid = m.personid
          OR p.employeeno = m.employeeno
          OR p.filer_entity_number = m.filer_entity_number
+         OR p.filer_entity_number = cm.filer_entity_number
+         OR m.path = '/people/' || p.slug
+         OR m.path = '/candidates/' || p.slug
        LEFT JOIN d1_person_candidate_roles cr
          ON cr.person_id = p.id
          AND cr.election_year = 2026
