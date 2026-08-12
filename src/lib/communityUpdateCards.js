@@ -93,22 +93,26 @@ function personPreview(mention = {}) {
 
 export function peopleProfilePath(mention = {}) {
   const existingPath = String(mention.path || "").trim();
+  const key =
+    mention.personSlug ||
+    mention.person_slug ||
+    mention.personId ||
+    mention.person_id ||
+    mention.personid ||
+    mention.gcPersonid ||
+    mention.gc_personid ||
+    mention.slug ||
+    mention.employeeno ||
+    mention.filerEntityNumber ||
+    mention.filer_entity_number;
+
+  if (key) return `/people/${encodeURIComponent(String(key))}`;
   if (existingPath.startsWith("/people/")) return existingPath;
   if (existingPath.startsWith("/candidates/")) {
     return `/people/${existingPath.replace(/^\/candidates\/+/, "")}`;
   }
 
-  const key =
-    mention.personSlug ||
-    mention.person_slug ||
-    mention.slug ||
-    mention.personid ||
-    mention.personId ||
-    mention.employeeno ||
-    mention.filerEntityNumber ||
-    mention.filer_entity_number;
-
-  return key ? `/people/${encodeURIComponent(String(key))}` : existingPath;
+  return existingPath;
 }
 
 function linkHost(value = "") {

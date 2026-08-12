@@ -337,10 +337,18 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
           m.district,
           m.path,
           m.role_label,
-          p.photo_url,
+          p.id AS canonical_person_id,
+          p.gc_personid AS canonical_gc_personid,
+          p.employeeno AS canonical_employeeno,
+          p.filer_entity_number AS canonical_filer_entity_number,
+          p.firstname AS canonical_firstname,
+          p.lastname AS canonical_lastname,
+          p.display_name AS canonical_display_name,
+          p.photo_url AS person_photo_url,
           p.slug AS person_slug,
           p.is_current_legislator,
           p.is_2026_candidate,
+          lp.photo_url AS legislator_photo_url,
           COALESCE(NULLIF(cr.office, ''), CASE
             WHEN lr.legislativebody = 'S' THEN 'State Senator'
             WHEN lr.legislativebody = 'H' THEN 'State Representative'
@@ -360,6 +368,8 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
        LEFT JOIN d1_person_legislator_roles lr
          ON lr.person_id = p.id
          AND lr.active = 1
+       LEFT JOIN d1_legislator_photos lp
+         ON lp.employeeno = COALESCE(p.employeeno, m.employeeno)
        LEFT JOIN county_codes cc
          ON cc.source_county_id = CAST(lr.countycode AS INTEGER)
        WHERE m.update_id IN (${ids.map(() => "?").join(", ")})
@@ -371,24 +381,29 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
 
   for (const mention of result.results || []) {
     const list = mentionsByUpdate.get(mention.update_id) || [];
+    const name = cleanText(
+      mention.canonical_display_name ||
+        [mention.canonical_firstname, mention.canonical_lastname].filter(Boolean).join(" ") ||
+        mention.name,
+    );
     list.push({
-      personid: mention.personid,
-      personId: mention.person_id,
-      employeeno: mention.employeeno,
-      filerEntityNumber: mention.filer_entity_number,
-      name: cleanText(mention.name),
+      personid: mention.canonical_gc_personid || mention.personid || mention.canonical_person_id,
+      personId: mention.canonical_person_id || mention.person_id,
+      employeeno: mention.canonical_employeeno || mention.employeeno,
+      filerEntityNumber: mention.canonical_filer_entity_number || mention.filer_entity_number,
+      name,
       chamber: cleanText(mention.chamber),
       party: cleanText(mention.party),
       district: cleanText(mention.district),
       path: personMentionPath({
         slug: mention.person_slug,
-        gc_personid: mention.personid,
-        employeeno: mention.employeeno,
-        id: mention.person_id,
-        filer_entity_number: mention.filer_entity_number,
+        gc_personid: mention.canonical_gc_personid || mention.personid,
+        employeeno: mention.canonical_employeeno || mention.employeeno,
+        id: mention.canonical_person_id || mention.person_id,
+        filer_entity_number: mention.canonical_filer_entity_number || mention.filer_entity_number,
       }),
       roleLabel: cleanText(mention.role_label),
-      photoUrl: mention.photo_url || "",
+      photoUrl: mention.person_photo_url || mention.legislator_photo_url || "",
       office: cleanText(mention.office),
       county: cleanText(mention.county),
       profileDistrict: cleanText(mention.profile_district),
@@ -471,9 +486,10 @@ async function findUpdateEntitySubject(entityType = "", entityKey = "", db) {
           p.lastname,
           p.display_name,
           p.party,
-          p.photo_url,
+          p.photo_url AS person_photo_url,
           p.is_current_legislator,
           p.is_2026_candidate,
+          lp.photo_url AS legislator_photo_url,
           COALESCE(NULLIF(cr.office, ''), CASE
             WHEN lr.legislativebody = 'S' THEN 'State Senator'
             WHEN lr.legislativebody = 'H' THEN 'State Representative'
@@ -488,6 +504,8 @@ async function findUpdateEntitySubject(entityType = "", entityKey = "", db) {
        LEFT JOIN d1_person_legislator_roles lr
          ON lr.person_id = p.id
          AND lr.active = 1
+       LEFT JOIN d1_legislator_photos lp
+         ON lp.employeeno = p.employeeno
        LEFT JOIN county_codes cc
          ON cc.source_county_id = CAST(lr.countycode AS INTEGER)
        WHERE ${where}
@@ -527,7 +545,7 @@ async function findUpdateEntitySubject(entityType = "", entityKey = "", db) {
       is_current_legislator: isCurrentLegislator ? 1 : 0,
       is_2026_candidate: is2026Candidate ? 1 : 0,
     }),
-    photoUrl: row.photo_url || "",
+    photoUrl: row.person_photo_url || row.legislator_photo_url || "",
     office: cleanText(row.office),
     county: cleanText(row.county),
     profileDistrict: cleanText(row.profile_district),
