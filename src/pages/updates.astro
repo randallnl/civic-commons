@@ -269,6 +269,7 @@ async function peopleForEndorsements(endorsements = []) {
       employeeno: row.employeeno,
       filerEntityNumber: row.filer_entity_number || "",
       slug: row.slug || "",
+      personSlug: row.slug || "",
       name,
       path: row.slug ? `/people/${encodeURIComponent(row.slug)}` : `/people/${encodeURIComponent(String(row.id))}`,
       role: cleanText(row.office || (Number(row.is_current_legislator) === 1 ? "Legislator" : "Candidate")),

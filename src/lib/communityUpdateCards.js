@@ -105,13 +105,23 @@ function personPreview(mention = {}) {
 
 export function peopleProfilePath(mention = {}) {
   const existingPath = String(mention.path || "").trim();
-  const key =
+  if (existingPath.startsWith("/people/")) return existingPath;
+  if (existingPath.startsWith("/candidates/")) {
+    return `/people/${existingPath.replace(/^\/candidates\/+/, "")}`;
+  }
+
+  const slugKey =
     mention.peopleSlug ||
     mention.people_slug ||
     mention.personSlug ||
     mention.person_slug ||
     mention.unifiedSlug ||
     mention.unified_slug ||
+    mention.slug;
+
+  if (slugKey) return `/people/${encodeURIComponent(String(slugKey))}`;
+
+  const numericKey =
     mention.personId ||
     mention.person_id ||
     mention.personid ||
@@ -119,14 +129,9 @@ export function peopleProfilePath(mention = {}) {
     mention.gc_personid ||
     mention.employeeno ||
     mention.filerEntityNumber ||
-    mention.filer_entity_number ||
-    mention.slug;
+    mention.filer_entity_number;
 
-  if (key) return `/people/${encodeURIComponent(String(key))}`;
-  if (existingPath.startsWith("/people/")) return existingPath;
-  if (existingPath.startsWith("/candidates/")) {
-    return `/people/${existingPath.replace(/^\/candidates\/+/, "")}`;
-  }
+  if (numericKey) return `/people/${encodeURIComponent(String(numericKey))}`;
 
   return existingPath;
 }
