@@ -730,7 +730,7 @@ function uniqueOptions(values = []) {
 
   <body>
     <TopNav />
-    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.candidate-card[data-fuzzy-item]', idleLimit: 12 })">
+    <main class="page" x-data={`nhdbFuzzyFilter({ itemSelector: '.candidate-card[data-fuzzy-item]', idleLimit: ${address ? 0 : 12} })`}>
       <section class="candidate-hero">
         <div class="candidate-hero-copy">
           <p class="eyebrow">State House and State Senate Candidates</p>

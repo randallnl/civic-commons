@@ -23,6 +23,7 @@ const {
   entityName,
   pageUrl = Astro.url.pathname,
   variant = "",
+  embedded = false,
 } = Astro.props;
 
 const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
@@ -33,18 +34,21 @@ const hasInstagramEmbeds = updateCards.some((card) => card.social?.type === "ins
 const hasTikTokEmbeds = updateCards.some((card) => card.social?.type === "tiktok" && card.social.videoId);
 const hasFacebookEmbeds = updateCards.some((card) => card.social?.type === "facebook" && card.social.embedUrl);
 const isReport = entityType === "report";
+const Wrapper = embedded ? "div" : "section";
 ---
 
-<section class:list={["panel community-updates-panel", variant === "narrow" && "community-updates-panel-narrow"]}>
-  <div class="section-heading">
-    <p class="eyebrow">{isReport ? "Community updates" : "Share Your Thoughts"}</p>
-    <h2>{isReport ? "Help improve this public analysis" : "Community context"}</h2>
-    <p>
-      {isReport
-        ? "Share a source, correction, alternate calculation, or local context connected to this report. Submissions are reviewed before they appear publicly."
-        : "Share a local note, article, social post, image, or correction connected to this profile. These updates help neighbors understand how public decisions affect people and communities. Submissions are reviewed before they appear publicly."}
-    </p>
-  </div>
+<Wrapper class:list={[!embedded && "panel", "community-updates-panel", embedded && "community-updates-panel-embedded", variant === "narrow" && "community-updates-panel-narrow"]}>
+  {!embedded && (
+    <div class="section-heading">
+      <p class="eyebrow">{isReport ? "Community updates" : "Share Your Thoughts"}</p>
+      <h2>{isReport ? "Help improve this public analysis" : "Community context"}</h2>
+      <p>
+        {isReport
+          ? "Share a source, correction, alternate calculation, or local context connected to this report. Submissions are reviewed before they appear publicly."
+          : "Share a local note, article, social post, image, or correction connected to this profile. These updates help neighbors understand how public decisions affect people and communities. Submissions are reviewed before they appear publicly."}
+      </p>
+    </div>
+  )}
 
   <details class="community-update-disclosure">
     <summary>
@@ -371,7 +375,7 @@ const isReport = entityType === "report";
     </div>
     <img src="" alt="" />
   </dialog>
-</section>
+</Wrapper>
 
 {hasInstagramEmbeds && <script async src="https://www.instagram.com/embed.js"></script>}
 {hasTikTokEmbeds && <script async src="https://www.tiktok.com/embed.js"></script>}

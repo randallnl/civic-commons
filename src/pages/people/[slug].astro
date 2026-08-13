@@ -864,6 +864,7 @@ function uniqueTowns(towns = []) {
         </nav>
       )}
 
+      {!linkedCandidateForEndorsements && (
       <section class="panel profile-update-panel" aria-label="Suggest profile updates">
         <details class="profile-update-disclosure">
           <summary>
@@ -944,6 +945,7 @@ function uniqueTowns(towns = []) {
           </form>
         </details>
       </section>
+      )}
 
       {linkedCandidateForEndorsements && (
         <section class="panel candidate-role-panel" id="candidate-role">
@@ -1089,6 +1091,87 @@ function uniqueTowns(towns = []) {
               )}
             </div>
           )}
+
+          <div class="profile-update-panel profile-update-panel-inline" aria-label="Suggest profile updates">
+            <details class="profile-update-disclosure">
+              <summary>
+                <span>
+                  <strong>Help improve this profile</strong>
+                  <small>Submit a photo, website, or social account for review</small>
+                </span>
+                <strong>+</strong>
+              </summary>
+
+              <form class="profile-update-form" action="/api/profile-updates" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="personKey" value={slug} />
+                <input type="hidden" name="personName" value={person.full_name} />
+                <input type="hidden" name="pageUrl" value={Astro.url.href} />
+                <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+
+                <div class="form-grid">
+                  <label>
+                    Your name
+                    <input name="submitterName" autocomplete="name" placeholder="Community member" />
+                  </label>
+                  <label>
+                    Your email
+                    <input name="submitterEmail" type="email" autocomplete="email" placeholder="Used for moderation follow-up" required />
+                  </label>
+                </div>
+
+                <label class="profile-update-photo-field">
+                  Profile photo
+                  <input name="photo" type="file" accept="image/*" />
+                  <small>Upload only photos you are confident show {person.full_name}.</small>
+                </label>
+
+                <div class="form-grid">
+                  <label>
+                    Website
+                    <input name="websiteUrl" type="url" placeholder="https://example.com" />
+                  </label>
+                  <label>
+                    Substack
+                    <input name="substackUrl" placeholder="https://example.substack.com or @handle" />
+                  </label>
+                </div>
+
+                <div class="form-grid">
+                  <label>
+                    Instagram
+                    <input name="instagramUrl" placeholder="https://instagram.com/name or @handle" />
+                  </label>
+                  <label>
+                    Facebook
+                    <input name="facebookUrl" placeholder="https://facebook.com/name" />
+                  </label>
+                </div>
+
+                <label>
+                  TikTok
+                  <input name="tiktokUrl" placeholder="https://tiktok.com/@handle or @handle" />
+                </label>
+
+                <div class="form-grid">
+                  <label>
+                    X
+                    <input name="xUrl" placeholder="https://x.com/name or @handle" />
+                  </label>
+                  <label>
+                    Bluesky
+                    <input name="blueskyUrl" placeholder="https://bsky.app/profile/name.bsky.social or @handle" />
+                  </label>
+                </div>
+
+                <label>
+                  Source or note
+                  <textarea name="notes" rows="3" placeholder="Where did you find this, or what should reviewers know?"></textarea>
+                </label>
+
+                <button type="submit">Submit Profile Update</button>
+              </form>
+            </details>
+          </div>
         </section>
       )}
 
@@ -1616,13 +1699,71 @@ function uniqueTowns(towns = []) {
           </section>
           )}
 
-          <CommunityUpdates
-            entityType={hasLegislatorProfile ? "representative" : "candidate"}
-            entityKey={hasLegislatorProfile ? representativeEntityKey : profileCandidate?.filerEntityNumber || slug}
-            entityName={person.full_name}
-            pageUrl={Astro.url.pathname}
-            variant="narrow"
-          />
+          <section class="panel community-context-panel">
+            <div class="section-heading split-heading">
+              <div>
+                <p class="eyebrow">Community context</p>
+                <h2>Submissions and related coverage</h2>
+                <p>
+                  Community submissions and related articles help neighbors understand
+                  the public context around this profile.
+                </p>
+              </div>
+            </div>
+
+            <div class="context-tabs">
+              <input type="radio" name="profile-context-tabs" id="context-tab-submissions" checked />
+              <input type="radio" name="profile-context-tabs" id="context-tab-articles" />
+
+              <div class="context-tab-list" role="tablist" aria-label="Community context filters">
+                <label for="context-tab-submissions" id="context-tab-submissions-label" role="tab" aria-controls="context-panel-submissions">
+                  Community submissions
+                </label>
+                <label for="context-tab-articles" id="context-tab-articles-label" role="tab" aria-controls="context-panel-articles">
+                  Articles
+                  {relatedArticles.length > 0 && <span>{relatedArticles.length}</span>}
+                </label>
+              </div>
+
+              <div
+                class="context-tab-panel context-tab-panel-submissions"
+                id="context-panel-submissions"
+                role="tabpanel"
+                aria-labelledby="context-tab-submissions-label"
+              >
+                <CommunityUpdates
+                  entityType={hasLegislatorProfile ? "representative" : "candidate"}
+                  entityKey={hasLegislatorProfile ? representativeEntityKey : profileCandidate?.filerEntityNumber || slug}
+                  entityName={person.full_name}
+                  pageUrl={Astro.url.pathname}
+                  variant="narrow"
+                  embedded={true}
+                />
+              </div>
+
+              <div
+                class="context-tab-panel context-tab-panel-articles"
+                id="context-panel-articles"
+                role="tabpanel"
+                aria-labelledby="context-tab-articles-label"
+              >
+                <ArticleList
+                  articles={relatedArticles}
+                  compact={true}
+                  emptyText="No related articles returned."
+                />
+
+                {person.id && (
+                  <a
+                    class="text-link"
+                    href={`/articles?personid=${person.id}&include=relations`}
+                  >
+                    Browse all articles
+                  </a>
+                )}
+              </div>
+            </div>
+          </section>
         </div>
 
         <aside class="stack">
@@ -1696,28 +1837,6 @@ function uniqueTowns(towns = []) {
                   ? "No organizational endorsements have been published yet."
                   : "No linked candidate profile for endorsements yet."}
               </p>
-            )}
-          </section>
-
-          <section class="panel compact-panel">
-            <div class="section-heading">
-              <p class="eyebrow">Articles</p>
-              <h2>Relevant Coverage</h2>
-            </div>
-
-            <ArticleList
-              articles={relatedArticles}
-              compact={true}
-              emptyText="No related articles returned."
-            />
-
-            {person.id && (
-              <a
-                class="text-link"
-                href={`/articles?personid=${person.id}&include=relations`}
-              >
-                Browse all articles
-              </a>
             )}
           </section>
 
@@ -1980,6 +2099,13 @@ function uniqueTowns(towns = []) {
     margin-top: 16px;
   }
 
+  .profile-update-panel-inline {
+    border: 1px solid #bfdbfe;
+    border-radius: 16px;
+    margin-top: 16px;
+    padding: 12px;
+  }
+
   .profile-update-disclosure summary {
     align-items: center;
     background: #eff6ff;
@@ -2164,6 +2290,86 @@ function uniqueTowns(towns = []) {
   #role-tab-current:checked ~ .role-tab-panel-current,
   #role-tab-candidate:checked ~ .role-tab-panel-candidate {
     display: block;
+  }
+
+  .community-context-panel {
+    display: grid;
+    gap: 16px;
+  }
+
+  .context-tabs {
+    display: grid;
+    gap: 16px;
+  }
+
+  .context-tabs > input {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+  }
+
+  .context-tab-list {
+    background: #f8fafc;
+    border: 1px solid #dbe4ef;
+    border-radius: 999px;
+    display: inline-grid;
+    gap: 4px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-self: start;
+    padding: 4px;
+  }
+
+  .context-tab-list label {
+    align-items: center;
+    border-radius: 999px;
+    color: #475569;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.84rem;
+    font-weight: 950;
+    gap: 7px;
+    justify-content: center;
+    line-height: 1;
+    padding: 10px 14px;
+    text-align: center;
+    transition:
+      background 140ms ease,
+      color 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  .context-tab-list span {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.72rem;
+    min-height: 18px;
+    padding: 2px 6px;
+  }
+
+  #context-tab-submissions:checked ~ .context-tab-list label[for="context-tab-submissions"],
+  #context-tab-articles:checked ~ .context-tab-list label[for="context-tab-articles"] {
+    background: #1f2933;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+    color: #fff7ed;
+  }
+
+  .context-tab-panel {
+    display: none;
+  }
+
+  #context-tab-submissions:checked ~ .context-tab-panel-submissions,
+  #context-tab-articles:checked ~ .context-tab-panel-articles {
+    display: block;
+  }
+
+  .context-tab-panel-articles .text-link {
+    margin-top: 12px;
   }
 
   .candidate-role-grid {
