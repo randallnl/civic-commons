@@ -1712,10 +1712,14 @@ function uniqueTowns(towns = []) {
             </div>
 
             <div class="context-tabs">
-              <input type="radio" name="profile-context-tabs" id="context-tab-submissions" checked />
+              <input type="radio" name="profile-context-tabs" id="context-tab-all" checked />
+              <input type="radio" name="profile-context-tabs" id="context-tab-submissions" />
               <input type="radio" name="profile-context-tabs" id="context-tab-articles" />
 
               <div class="context-tab-list" role="tablist" aria-label="Community context filters">
+                <label for="context-tab-all" id="context-tab-all-label" role="tab" aria-controls="context-panel-all">
+                  All context
+                </label>
                 <label for="context-tab-submissions" id="context-tab-submissions-label" role="tab" aria-controls="context-panel-submissions">
                   Community submissions
                 </label>
@@ -1723,6 +1727,36 @@ function uniqueTowns(towns = []) {
                   Articles
                   {relatedArticles.length > 0 && <span>{relatedArticles.length}</span>}
                 </label>
+              </div>
+
+              <div
+                class="context-tab-panel context-tab-panel-all"
+                id="context-panel-all"
+                role="tabpanel"
+                aria-labelledby="context-tab-all-label"
+              >
+                <div class="combined-context-feed">
+                  <CommunityUpdates
+                    entityType={hasLegislatorProfile ? "representative" : "candidate"}
+                    entityKey={hasLegislatorProfile ? representativeEntityKey : profileCandidate?.filerEntityNumber || slug}
+                    entityName={person.full_name}
+                    pageUrl={Astro.url.pathname}
+                    variant="narrow"
+                    embedded={true}
+                  />
+
+                  <div class="context-feed-section">
+                    <div class="context-feed-section-heading">
+                      <p class="eyebrow">Related coverage</p>
+                      <h3>Articles</h3>
+                    </div>
+                    <ArticleList
+                      articles={relatedArticles}
+                      compact={true}
+                      emptyText="No related articles returned."
+                    />
+                  </div>
+                </div>
               </div>
 
               <div
@@ -2256,7 +2290,7 @@ function uniqueTowns(towns = []) {
     border-radius: 999px;
     display: inline-grid;
     gap: 4px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     justify-self: start;
     padding: 4px;
   }
@@ -2352,6 +2386,7 @@ function uniqueTowns(towns = []) {
     padding: 2px 6px;
   }
 
+  #context-tab-all:checked ~ .context-tab-list label[for="context-tab-all"],
   #context-tab-submissions:checked ~ .context-tab-list label[for="context-tab-submissions"],
   #context-tab-articles:checked ~ .context-tab-list label[for="context-tab-articles"] {
     background: #1f2933;
@@ -2363,9 +2398,27 @@ function uniqueTowns(towns = []) {
     display: none;
   }
 
+  #context-tab-all:checked ~ .context-tab-panel-all,
   #context-tab-submissions:checked ~ .context-tab-panel-submissions,
   #context-tab-articles:checked ~ .context-tab-panel-articles {
     display: block;
+  }
+
+  .combined-context-feed {
+    display: grid;
+    gap: 18px;
+  }
+
+  .context-feed-section {
+    border-top: 1px solid #dbeafe;
+    display: grid;
+    gap: 12px;
+    padding-top: 18px;
+  }
+
+  .context-feed-section-heading {
+    display: grid;
+    gap: 4px;
   }
 
   .context-tab-panel-articles .text-link {
