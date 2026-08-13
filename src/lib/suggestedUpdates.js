@@ -14,6 +14,7 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS suggested_updates (
   response_status TEXT,
   response_note TEXT,
   response_sent_at TEXT,
+  received_sent_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`;
 
@@ -29,6 +30,7 @@ export async function ensureSuggestedUpdatesTable(db = suggestedUpdatesDb()) {
   await addColumnIfMissing(db, "suggested_updates", "response_status", "TEXT");
   await addColumnIfMissing(db, "suggested_updates", "response_note", "TEXT");
   await addColumnIfMissing(db, "suggested_updates", "response_sent_at", "TEXT");
+  await addColumnIfMissing(db, "suggested_updates", "received_sent_at", "TEXT");
   await ensureWorkflowColumns(db, "suggested_updates");
   await db
     .prepare(
@@ -48,6 +50,40 @@ export async function createSuggestedUpdate({
   if (!db) throw new Error("D1 database binding is not configured.");
   await ensureSuggestedUpdatesTable(db);
 
+  const normalized = {
+    pageUrl: cleanText(pageUrl),
+    submitterEmail: cleanText(submitterEmail),
+    suggestion: cleanText(suggestion),
+    otherInfo: cleanText(otherInfo),
+  };
+  const duplicate = await db
+    .prepare(
+      `SELECT id, received_sent_at
+       FROM suggested_updates
+       WHERE COALESCE(page_url, '') = ?
+         AND COALESCE(submitter_email, '') = ?
+         AND COALESCE(suggestion, '') = ?
+         AND COALESCE(other_info, '') = ?
+         AND created_at >= datetime('now', '-10 minutes')
+       ORDER BY created_at DESC
+       LIMIT 1`,
+    )
+    .bind(
+      normalized.pageUrl,
+      normalized.submitterEmail,
+      normalized.suggestion,
+      normalized.otherInfo,
+    )
+    .first();
+
+  if (duplicate?.id) {
+    return {
+      id: duplicate.id,
+      duplicate: true,
+      receivedSentAt: duplicate.received_sent_at || "",
+    };
+  }
+
   const result = await db
     .prepare(
       `INSERT INTO suggested_updates (
@@ -56,14 +92,36 @@ export async function createSuggestedUpdate({
       VALUES (?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)`,
     )
     .bind(
-      cleanText(pageUrl),
-      cleanText(submitterEmail),
-      cleanText(suggestion),
-      cleanText(otherInfo),
+      normalized.pageUrl,
+      normalized.submitterEmail,
+      normalized.suggestion,
+      normalized.otherInfo,
     )
     .run();
 
-  return result.meta?.last_row_id || result.meta?.lastRowId || result.lastRowId;
+  return {
+    id: result.meta?.last_row_id || result.meta?.lastRowId || result.lastRowId,
+    duplicate: false,
+    receivedSentAt: "",
+  };
+}
+
+export async function claimSuggestedUpdateReceivedEmail(updateId, db = suggestedUpdatesDb()) {
+  if (!db || !updateId) return false;
+  await ensureSuggestedUpdatesTable(db);
+
+  const result = await db
+    .prepare(
+      `UPDATE suggested_updates
+       SET received_sent_at = CURRENT_TIMESTAMP
+       WHERE id = ?
+         AND received_sent_at IS NULL`,
+    )
+    .bind(updateId)
+    .run();
+
+  const changed = result.meta?.changes ?? result.changes ?? 0;
+  return changed > 0;
 }
 
 export async function getPendingSuggestedUpdates({ limit = 50 } = {}) {
@@ -75,8 +133,8 @@ export async function getPendingSuggestedUpdates({ limit = 50 } = {}) {
     .prepare(
       `SELECT id, page_url, submitter_email, suggestion, other_info, status,
               reviewed_by, reviewed_at, response_status, response_note,
-              response_sent_at, workflow_status, assigned_to, moderator_note,
-              workflow_updated_at, created_at
+              response_sent_at, received_sent_at, workflow_status, assigned_to,
+              moderator_note, workflow_updated_at, created_at
        FROM suggested_updates
        WHERE status = 'pending'
        ORDER BY created_at ASC
@@ -112,6 +170,7 @@ export function normalizeSuggestedUpdate(row = {}) {
     responseStatus: row.response_status || row.responseStatus || "",
     responseNote: cleanText(row.response_note || row.responseNote || ""),
     responseSentAt: row.response_sent_at || row.responseSentAt || "",
+    receivedSentAt: row.received_sent_at || row.receivedSentAt || "",
     createdAt: row.created_at || row.createdAt || "",
     ...normalizeWorkflowFields(row),
   };

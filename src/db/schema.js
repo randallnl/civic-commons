@@ -240,6 +240,7 @@ export const communityUpdates = sqliteTable(
     responseStatus: text("response_status"),
     responseNote: text("response_note"),
     responseSentAt: text("response_sent_at"),
+    receivedSentAt: text("received_sent_at"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({

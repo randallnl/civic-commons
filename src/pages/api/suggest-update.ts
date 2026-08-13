@@ -2,7 +2,10 @@ export const prerender = false;
 
 import { sendSubmissionReceivedEmail } from "../../lib/adminEmail";
 import { SuggestUpdateSchema } from "../../lib/schemas";
-import { createSuggestedUpdate } from "../../lib/suggestedUpdates";
+import {
+  claimSuggestedUpdateReceivedEmail,
+  createSuggestedUpdate,
+} from "../../lib/suggestedUpdates";
 
 export async function POST({ request }) {
   let submittedPageUrl = "";
@@ -27,20 +30,23 @@ export async function POST({ request }) {
 
     const { pageUrl, submitterEmail, suggestion, otherInfo } = parsedForm.data;
 
-    await createSuggestedUpdate({
+    const submitted = await createSuggestedUpdate({
       pageUrl,
       submitterEmail,
       suggestion,
       otherInfo,
     });
 
-    if (submitterEmail) {
+    if (submitterEmail && submitted?.id) {
       try {
-        await sendSubmissionReceivedEmail({
-          to: submitterEmail,
-          type: "feedback",
-          pageUrl,
-        });
+        const shouldSend = await claimSuggestedUpdateReceivedEmail(submitted.id);
+        if (shouldSend) {
+          await sendSubmissionReceivedEmail({
+            to: submitterEmail,
+            type: "feedback",
+            pageUrl,
+          });
+        }
       } catch (error) {
         console.error(error?.message || "Unable to send feedback received email.");
       }

@@ -42,7 +42,8 @@ export async function POST({ request }) {
 
     const existing = await db
       .prepare(
-        `SELECT id, page_url, submitter_email, status
+        `SELECT id, page_url, submitter_email, status,
+                response_status, response_note, response_sent_at
          FROM suggested_updates
          WHERE id = ?`,
       )
@@ -58,8 +59,7 @@ export async function POST({ request }) {
              reviewed_by = ?,
              reviewed_at = CASE WHEN ? = 'pending' THEN reviewed_at ELSE CURRENT_TIMESTAMP END,
              response_status = COALESCE(NULLIF(?, ''), response_status),
-             response_note = COALESCE(NULLIF(?, ''), response_note),
-             response_sent_at = CASE WHEN ? != '' THEN CURRENT_TIMESTAMP ELSE response_sent_at END
+             response_note = COALESCE(NULLIF(?, ''), response_note)
          WHERE id = ?`,
       )
       .bind(
@@ -68,7 +68,6 @@ export async function POST({ request }) {
         status,
         responseStatus,
         responseNote,
-        responseNote,
         id,
       )
       .run();
@@ -76,7 +75,11 @@ export async function POST({ request }) {
     const changed = result.meta?.changes ?? result.changes ?? 0;
     if (!changed) throw new Error("No matching feedback item was updated.");
 
-    if (responseNote && existing.submitter_email) {
+    const isSameResponse =
+      cleanText(existing.response_note || "") === responseNote &&
+      String(existing.response_status || "") === responseStatus &&
+      Boolean(existing.response_sent_at);
+    if (responseNote && existing.submitter_email && !isSameResponse) {
       try {
         await sendSubmissionResponseEmail({
           to: existing.submitter_email,
@@ -85,6 +88,14 @@ export async function POST({ request }) {
           note: responseNote,
           pageUrl: existing.page_url,
         });
+        await db
+          .prepare(
+            `UPDATE suggested_updates
+             SET response_sent_at = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+          )
+          .bind(id)
+          .run();
       } catch (emailError) {
         console.error(emailError?.message || "Unable to send feedback response email.");
         if (wantsHtml) return htmlMessage("Saved, but the response email could not be sent.", "error", 200);
