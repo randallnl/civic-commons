@@ -7,6 +7,7 @@ import {
   forbiddenAdminResponse,
   requireAdmin,
 } from "../../../lib/adminAuth";
+import { sendSubmissionResponseEmail } from "../../../lib/adminEmail";
 import {
   ensureCommunityUpdatesTable,
   communityUpdatesDb,
@@ -29,6 +30,8 @@ export async function POST({ request }) {
     const comment = cleanText(form.get("comment") || "");
     const displayName = cleanText(form.get("displayName") || "") || "Community member";
     const linkUrl = cleanText(form.get("linkUrl") || "");
+    const responseStatus = normalizeResponseStatus(form.get("responseStatus"));
+    const responseNote = cleanText(form.get("responseNote") || "");
     const files = form
       .getAll("photos")
       .concat(form.getAll("photo"))
@@ -38,6 +41,9 @@ export async function POST({ request }) {
     if (!id) throw new Error("Community update id is required.");
     if (!["approve", "reject", "save", "delete"].includes(action)) {
       throw new Error("Choose save, approve, reject, or delete.");
+    }
+    if (responseNote && !responseStatus) {
+      throw new Error("Choose whether the change was applied or not applied.");
     }
 
     const db = communityUpdatesDb();
@@ -65,7 +71,7 @@ export async function POST({ request }) {
 
     if (action === "save" || action === "approve") {
       const existing = await db
-        .prepare("SELECT entity_type, entity_key, photo_url FROM community_updates WHERE id = ?")
+        .prepare("SELECT entity_type, entity_key, photo_url, email, page_url FROM community_updates WHERE id = ?")
         .bind(id)
         .first();
       if (!existing) throw new Error("No matching community update was found.");
@@ -85,14 +91,17 @@ export async function POST({ request }) {
 
       await db
         .prepare(
-          `UPDATE community_updates
+         `UPDATE community_updates
            SET display_name = ?,
                comment = ?,
                link_url = ?,
-               photo_url = COALESCE(NULLIF(photo_url, ''), ?)
+               photo_url = COALESCE(NULLIF(photo_url, ''), ?),
+               response_status = COALESCE(NULLIF(?, ''), response_status),
+               response_note = COALESCE(NULLIF(?, ''), response_note),
+               response_sent_at = CASE WHEN ? != '' THEN CURRENT_TIMESTAMP ELSE response_sent_at END
            WHERE id = ?`,
         )
-        .bind(displayName, comment, linkUrl, photoUrls[0] || "", id)
+        .bind(displayName, comment, linkUrl, photoUrls[0] || "", responseStatus, responseNote, responseNote, id)
         .run();
 
       await db
@@ -110,24 +119,66 @@ export async function POST({ request }) {
     }
 
     if (action === "save") {
+      const saved = await db
+        .prepare("SELECT email, page_url FROM community_updates WHERE id = ?")
+        .bind(id)
+        .first();
+      if (responseNote && saved?.email) {
+        try {
+          await sendSubmissionResponseEmail({
+            to: saved.email,
+            type: "community-update",
+            outcome: responseStatus,
+            note: responseNote,
+            pageUrl: saved.page_url,
+          });
+        } catch (emailError) {
+          console.error(emailError?.message || "Unable to send community update response email.");
+          if (wantsHtml) return htmlMessage("Community update edits saved, but the response email could not be sent.", "error");
+          return redirectWithMessage(request, redirectTo, "Community update edits saved, but the response email could not be sent.");
+        }
+      }
       if (wantsHtml) return htmlMessage("Community update edits saved.", "success");
       return redirectWithMessage(request, redirectTo, "Community update edits saved.");
     }
 
     const status = action === "approve" ? "approved" : "rejected";
+    const existing = await db
+      .prepare("SELECT email, page_url FROM community_updates WHERE id = ?")
+      .bind(id)
+      .first();
     const result = await db
       .prepare(
         `UPDATE community_updates
          SET status = ?,
              reviewed_by = ?,
-             reviewed_at = CURRENT_TIMESTAMP
+             reviewed_at = CURRENT_TIMESTAMP,
+             response_status = COALESCE(NULLIF(?, ''), response_status),
+             response_note = COALESCE(NULLIF(?, ''), response_note),
+             response_sent_at = CASE WHEN ? != '' THEN CURRENT_TIMESTAMP ELSE response_sent_at END
          WHERE id = ?`,
       )
-      .bind(status, auth.session.email, id)
+      .bind(status, auth.session.email, responseStatus, responseNote, responseNote, id)
       .run();
 
     const changed = result.meta?.changes ?? result.changes ?? 0;
     if (!changed) throw new Error("No matching community update was found.");
+
+    if (responseNote && existing?.email) {
+      try {
+        await sendSubmissionResponseEmail({
+          to: existing.email,
+          type: "community-update",
+          outcome: responseStatus,
+          note: responseNote,
+          pageUrl: existing.page_url,
+        });
+      } catch (emailError) {
+        console.error(emailError?.message || "Unable to send community update response email.");
+        if (wantsHtml) return htmlMessage(`Community update ${status}, but the response email could not be sent.`, "error");
+        return redirectWithMessage(request, redirectTo, `Community update ${status}, but the response email could not be sent.`);
+      }
+    }
 
     if (wantsHtml) return htmlMessage(`Community update ${status}.`, "success");
     return redirectWithMessage(request, redirectTo, `Community update ${status}.`);
@@ -137,6 +188,13 @@ export async function POST({ request }) {
     }
     return redirectWithError(request, redirectTo, error?.message || "Unable to moderate community update.");
   }
+}
+
+function normalizeResponseStatus(value = "") {
+  const normalized = String(value || "").trim().toLowerCase().replace(/[-\s]+/g, "_");
+  if (normalized === "applied") return "applied";
+  if (normalized === "not_applied") return "not_applied";
+  return "";
 }
 
 function safeRedirectPath(value) {

@@ -16,6 +16,9 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_updates (
   status TEXT NOT NULL DEFAULT 'pending',
   reviewed_by TEXT,
   reviewed_at TEXT,
+  response_status TEXT,
+  response_note TEXT,
+  response_sent_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`;
 
@@ -53,6 +56,9 @@ export async function ensureCommunityUpdatesTable(db = communityUpdatesDb()) {
   await db.prepare(MENTIONS_TABLE_SQL).run();
   await db.prepare(PHOTOS_TABLE_SQL).run();
   await addColumnIfMissing(db, "community_updates", "link_url", "TEXT");
+  await addColumnIfMissing(db, "community_updates", "response_status", "TEXT");
+  await addColumnIfMissing(db, "community_updates", "response_note", "TEXT");
+  await addColumnIfMissing(db, "community_updates", "response_sent_at", "TEXT");
   await addColumnIfMissing(db, "community_update_mentions", "person_id", "INTEGER");
   await addColumnIfMissing(db, "community_update_mentions", "filer_entity_number", "TEXT");
   await addColumnIfMissing(db, "community_update_mentions", "path", "TEXT");
@@ -132,7 +138,8 @@ export async function getPendingCommunityUpdates({ limit = 25 } = {}) {
     .prepare(
       `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
               email, comment, link_url, photo_url, status, workflow_status,
-              assigned_to, moderator_note, workflow_updated_at, created_at
+              assigned_to, moderator_note, workflow_updated_at, response_status,
+              response_note, response_sent_at, created_at
        FROM community_updates
        WHERE status = 'pending'
        ORDER BY created_at ASC
@@ -181,6 +188,9 @@ export function normalizeUpdate(update = {}) {
     photoUrl: primaryPhoto,
     photoUrls: photoUrls.length ? photoUrls : primaryPhoto ? [primaryPhoto] : [],
     mentions: Array.isArray(update.mentions) ? update.mentions : [],
+    responseStatus: update.response_status || update.responseStatus || "",
+    responseNote: cleanText(update.response_note || update.responseNote || ""),
+    responseSentAt: update.response_sent_at || update.responseSentAt || "",
     createdAt: update.created_at || update.createdAt || "",
     ...normalizeWorkflowFields(update),
   };

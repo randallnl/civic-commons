@@ -237,6 +237,9 @@ export const communityUpdates = sqliteTable(
     status: text("status").notNull().default("pending"),
     reviewedBy: text("reviewed_by"),
     reviewedAt: text("reviewed_at"),
+    responseStatus: text("response_status"),
+    responseNote: text("response_note"),
+    responseSentAt: text("response_sent_at"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({
@@ -246,6 +249,27 @@ export const communityUpdates = sqliteTable(
       table.status,
       table.createdAt,
     ),
+  }),
+);
+
+export const suggestedUpdates = sqliteTable(
+  "suggested_updates",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    pageUrl: text("page_url").notNull(),
+    submitterEmail: text("submitter_email"),
+    suggestion: text("suggestion").notNull(),
+    otherInfo: text("other_info"),
+    status: text("status").notNull().default("pending"),
+    reviewedBy: text("reviewed_by"),
+    reviewedAt: text("reviewed_at"),
+    responseStatus: text("response_status"),
+    responseNote: text("response_note"),
+    responseSentAt: text("response_sent_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    statusIdx: index("idx_suggested_updates_status").on(table.status, table.createdAt),
   }),
 );
 

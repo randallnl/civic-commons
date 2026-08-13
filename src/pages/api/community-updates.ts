@@ -2,6 +2,7 @@ export const prerender = false;
 
 import { env } from "cloudflare:workers";
 import { adminR2Bucket } from "../../lib/adminAuth";
+import { sendSubmissionReceivedEmail } from "../../lib/adminEmail";
 import {
   ensureCommunityUpdatesTable,
   communityUpdatesDb,
@@ -73,6 +74,18 @@ export async function POST({ request }) {
     }
     if (updateId && photoUrls.length) {
       await saveCommunityUpdatePhotos(updateId, photoUrls, db);
+    }
+
+    if (email) {
+      try {
+        await sendSubmissionReceivedEmail({
+          to: email,
+          type: "community-update",
+          pageUrl,
+        });
+      } catch (emailError) {
+        console.error(emailError?.message || "Unable to send community update received email.");
+      }
     }
 
     return redirectWithMessage(

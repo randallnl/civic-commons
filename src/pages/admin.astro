@@ -39,6 +39,11 @@ import {
   profileUpdateDate,
 } from "../lib/profileUpdateSubmissions";
 import {
+  countPendingSuggestedUpdates,
+  getPendingSuggestedUpdates,
+  suggestedUpdateDate,
+} from "../lib/suggestedUpdates";
+import {
   candidateName,
   candidateSlug,
   getLegislativeCandidates,
@@ -94,6 +99,8 @@ const gapReviewOptions = [
 let pendingCommunityUpdates = [];
 let pendingCommunityUpdateCards = [];
 let pendingCommunityUpdateCount = 0;
+let pendingSuggestedUpdates = [];
+let pendingSuggestedUpdateCount = 0;
 let pendingArticleSubmissions = [];
 let pendingArticleSubmissionCount = 0;
 let pendingProfileUpdateSubmissions = [];
@@ -155,6 +162,15 @@ if (session) {
     pendingCommunityUpdateCards = await getCommunityUpdateCards(pendingCommunityUpdates);
   } catch (error) {
     console.error(error?.message || "Unable to load pending community updates.");
+  }
+
+  try {
+    [pendingSuggestedUpdates, pendingSuggestedUpdateCount] = await Promise.all([
+      getPendingSuggestedUpdates({ limit: 50 }),
+      countPendingSuggestedUpdates(),
+    ]);
+  } catch (error) {
+    console.error(error?.message || "Unable to load pending suggested updates.");
   }
 
   try {
@@ -417,6 +433,10 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
               <a href="/admin/moderation#community-updates">
                 <span>Community updates</span>
                 <strong>{pendingCommunityUpdateCount}</strong>
+              </a>
+              <a href="/admin/moderation#suggested-updates">
+                <span>Feedback</span>
+                <strong>{pendingSuggestedUpdateCount}</strong>
               </a>
               <a href="/admin/moderation#article-submissions">
                 <span>Submitted articles</span>
@@ -985,6 +1005,23 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
                         <input name="photos" type="file" accept="image/*" multiple />
                         <small>Optional. Uploaded photos are attached when you save or approve.</small>
                       </label>
+                      {update.email && (
+                        <div class="submitter-response-box">
+                          <label>
+                            Submitter response
+                            <select name="responseStatus">
+                              <option value="">No email response</option>
+                              <option value="applied">Change applied</option>
+                              <option value="not_applied">Change not applied</option>
+                            </select>
+                          </label>
+                          <label>
+                            Note to submitter
+                            <textarea name="responseNote" rows="3" placeholder="Optional response sent when you approve or reject."></textarea>
+                          </label>
+                          <small>Submitter: {cleanText(update.email)}</small>
+                        </div>
+                      )}
                       <div class="moderation-actions">
                         <button type="submit" name="action" value="save" @click="lastAction = 'save'" :disabled="busy">Save edits</button>
                         <button type="submit" name="action" value="approve" @click="lastAction = 'approve'" :disabled="busy">Approve</button>
@@ -998,6 +1035,113 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
               </div>
             ) : (
               <p class="empty">No community updates are waiting for review.</p>
+            )}
+          </section>
+          )}
+
+          {userCanModerateContent && showModerationPanels && (
+          <section id="suggested-updates" class="panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Moderation</p>
+              <h2>Feedback and suggested edits</h2>
+              <p>
+                Review page corrections and general feedback without sending
+                them through Monday. Showing {pendingSuggestedUpdates.length} of {pendingSuggestedUpdateCount} pending.
+              </p>
+            </div>
+
+            {pendingSuggestedUpdates.length ? (
+              <div class="moderation-list">
+                {pendingSuggestedUpdates.map((suggestion) => (
+                  <article>
+                    <div class="moderation-topline">
+                      <strong>{cleanText(suggestion.pageUrl || "Suggested update")}</strong>
+                      <span>Feedback</span>
+                    </div>
+
+                    <p class="moderation-meta">
+                      Submitted {suggestedUpdateDate(suggestion.createdAt) && `on ${suggestedUpdateDate(suggestion.createdAt)}`}
+                      {suggestion.submitterEmail && ` by ${cleanText(suggestion.submitterEmail)}`}
+                    </p>
+
+                    {suggestion.pageUrl && <a href={suggestion.pageUrl}>Open referenced page</a>}
+                    <p>{cleanText(suggestion.suggestion)}</p>
+                    {suggestion.otherInfo && <p><strong>Other info:</strong> {cleanText(suggestion.otherInfo)}</p>}
+
+                    <div class="workflow-controls">
+                      <span class:list={["workflow-status", workflowClass(suggestion.workflowStatus)]}>
+                        {workflowLabel(suggestion.workflowStatus)}
+                      </span>
+                      {suggestion.assignedTo && <span>Claimed by {cleanText(suggestion.assignedTo)}</span>}
+                      {suggestion.moderatorNote && <p>{cleanText(suggestion.moderatorNote)}</p>}
+                      <form
+                        action="/api/admin/workflow"
+                        method="post"
+                        hx-post="/api/admin/workflow"
+                        hx-target="find .workflow-inline-status"
+                        hx-swap="innerHTML"
+                      >
+                        <input type="hidden" name="entityType" value="suggested-update" />
+                        <input type="hidden" name="id" value={suggestion.id} />
+                        <input type="hidden" name="redirectTo" value="/admin/moderation#suggested-updates" />
+                        <label>
+                          Reviewer note
+                          <input name="moderatorNote" value={cleanText(suggestion.moderatorNote)} placeholder="Optional source/checklist note" />
+                        </label>
+                        <div class="workflow-actions">
+                          <button class="compact-button" type="submit" name="workflowAction" value="claim">Claim</button>
+                          <button class="compact-button secondary" type="submit" name="workflowAction" value="ready">Ready</button>
+                          <button class="compact-button secondary" type="submit" name="workflowAction" value="needs-followup">Needs follow-up</button>
+                          <button class="compact-button secondary" type="submit" name="workflowAction" value="release">Release</button>
+                          <span class="workflow-inline-status" aria-live="polite"></span>
+                        </div>
+                      </form>
+                    </div>
+
+                    <form
+                      class="moderation-edit-form"
+                      action="/api/admin/suggested-updates"
+                      method="post"
+                      hx-post="/api/admin/suggested-updates"
+                      hx-target="find .moderation-inline-status"
+                      hx-swap="innerHTML"
+                      x-data="{ busy: false, lastAction: '' }"
+                      @htmx:before-request="busy = true"
+                      @htmx:after-request="busy = false; if ($event.detail.successful && ['close', 'delete'].includes(lastAction)) $el.closest('article')?.remove()"
+                    >
+                      <input type="hidden" name="id" value={suggestion.id} />
+                      <input type="hidden" name="redirectTo" value="/admin/moderation#suggested-updates" />
+                      {suggestion.submitterEmail ? (
+                        <div class="submitter-response-box">
+                          <label>
+                            Submitter response
+                            <select name="responseStatus">
+                              <option value="">No email response</option>
+                              <option value="applied">Change applied</option>
+                              <option value="not_applied">Change not applied</option>
+                            </select>
+                          </label>
+                          <label>
+                            Note to submitter
+                            <textarea name="responseNote" rows="3" placeholder="What should the submitter know about this review?"></textarea>
+                          </label>
+                          <small>Submitter: {cleanText(suggestion.submitterEmail)}</small>
+                        </div>
+                      ) : (
+                        <p class="moderation-meta">No submitter email was provided.</p>
+                      )}
+                      <div class="moderation-actions">
+                        <button type="submit" name="action" value="save" @click="lastAction = 'save'" :disabled="busy">Save response note</button>
+                        <button type="submit" name="action" value="close" @click="lastAction = 'close'" :disabled="busy">Close feedback</button>
+                        <button class="secondary danger" type="submit" name="action" value="delete" @click="lastAction = 'delete'" :disabled="busy">Delete</button>
+                        <span class="moderation-inline-status" aria-live="polite"></span>
+                      </div>
+                    </form>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p class="empty">No feedback is waiting for review.</p>
             )}
           </section>
           )}
@@ -3214,6 +3358,24 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
 
   .moderation-edit-form textarea {
     min-height: 112px;
+  }
+
+  .submitter-response-box {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 12px;
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .submitter-response-box textarea {
+    min-height: 86px;
+  }
+
+  .submitter-response-box small {
+    color: #7c2d12;
+    font-weight: 850;
   }
 
   .moderation-file-field {

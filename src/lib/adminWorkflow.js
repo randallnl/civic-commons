@@ -10,6 +10,7 @@ export const WORKFLOW_STATUSES = [
 
 const TABLES = {
   "community-update": "community_updates",
+  "suggested-update": "suggested_updates",
   "article-submission": "article_submissions",
   endorsement: "organization_endorsements",
 };
@@ -144,6 +145,7 @@ function emptySummary() {
     },
     byQueue: {
       "community-update": 0,
+      "suggested-update": 0,
       "article-submission": 0,
       endorsement: 0,
     },
