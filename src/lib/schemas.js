@@ -140,7 +140,7 @@ export const ArticleSchema = z
   .passthrough();
 
 export const SuggestUpdateSchema = z.object({
-  pageUrl: stringish.pipe(z.string().url("Enter a valid page URL.")),
+  pageUrl: stringish.optional().default(""),
   submitterEmail: stringish.pipe(z.string().email("Enter a valid email address.")),
   suggestion: stringish.pipe(z.string().min(1, "Suggested update is required.")),
   otherInfo: stringish.optional().default(""),

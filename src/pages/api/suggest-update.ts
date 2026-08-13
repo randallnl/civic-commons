@@ -20,7 +20,7 @@ export async function POST({ request }) {
     if (!parsedForm.success) {
       return redirectToForm(
         submittedPageUrl,
-        parsedForm.error.issues[0]?.message || "Page, email, and suggested update are required.",
+        parsedForm.error.issues[0]?.message || "Email and suggested update are required.",
         request.url,
       );
     }

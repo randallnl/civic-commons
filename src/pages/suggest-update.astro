@@ -53,14 +53,14 @@ const error = Astro.url.searchParams.get("error") || "";
         <form class="suggest-form" action="/api/suggest-update" method="post">
           {error && <p class="error-message">{error}</p>}
 
-          <label for="pageUrl">Page</label>
+          <label for="pageUrl">Page <span>Optional</span></label>
           <input
             id="pageUrl"
             name="pageUrl"
-            type="url"
+            type="text"
             value={pageUrl}
+            placeholder="Optional page URL or context"
             readonly
-            required
           />
 
           <label for="submitterEmail">Email</label>
