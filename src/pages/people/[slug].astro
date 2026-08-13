@@ -1716,17 +1716,20 @@ function uniqueTowns(towns = []) {
               <input type="radio" name="profile-context-tabs" id="context-tab-submissions" />
               <input type="radio" name="profile-context-tabs" id="context-tab-articles" />
 
-              <div class="context-tab-list" role="tablist" aria-label="Community context filters">
-                <label for="context-tab-all" id="context-tab-all-label" role="tab" aria-controls="context-panel-all">
-                  All context
-                </label>
-                <label for="context-tab-submissions" id="context-tab-submissions-label" role="tab" aria-controls="context-panel-submissions">
-                  Community submissions
-                </label>
-                <label for="context-tab-articles" id="context-tab-articles-label" role="tab" aria-controls="context-panel-articles">
-                  Articles
-                  {relatedArticles.length > 0 && <span>{relatedArticles.length}</span>}
-                </label>
+              <div class="context-filter-control">
+                <span>Filter feed</span>
+                <div class="context-tab-list" role="tablist" aria-label="Community context filters">
+                  <label for="context-tab-all" id="context-tab-all-label" role="tab" aria-controls="context-panel-all">
+                    All context
+                  </label>
+                  <label for="context-tab-submissions" id="context-tab-submissions-label" role="tab" aria-controls="context-panel-submissions">
+                    Community submissions
+                  </label>
+                  <label for="context-tab-articles" id="context-tab-articles-label" role="tab" aria-controls="context-panel-articles">
+                    Articles
+                    {relatedArticles.length > 0 && <span>{relatedArticles.length}</span>}
+                  </label>
+                </div>
               </div>
 
               <div
@@ -2286,7 +2289,7 @@ function uniqueTowns(towns = []) {
     border-radius: 999px;
     display: inline-grid;
     gap: 4px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     justify-self: start;
     padding: 4px;
   }
@@ -2342,13 +2345,28 @@ function uniqueTowns(towns = []) {
     width: 1px;
   }
 
+  .context-filter-control {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .context-filter-control > span {
+    color: #6b4f2a;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
   .context-tab-list {
     background: #f8fafc;
     border: 1px solid #dbe4ef;
     border-radius: 999px;
     display: inline-grid;
     gap: 4px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     justify-self: start;
     padding: 4px;
   }
