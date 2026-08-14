@@ -32,6 +32,7 @@ const districtLabel = [
   candidate.district ? `District ${candidate.district}` : "",
 ].filter(Boolean).join(" ");
 const townsRepresented = candidateTownsRepresented(candidate);
+const countiesRepresented = candidateCountiesRepresented(candidate);
 const aliases = [candidate.nameAliases, candidate.name_aliases].filter(Boolean).join(" ");
 const searchableText = [
   name,
@@ -41,6 +42,8 @@ const searchableText = [
   candidate.officeType,
   candidate.office,
   candidate.county,
+  candidate.countiesRepresented,
+  candidate.counties_represented,
   candidate.district,
   districtLabel,
   candidate.politicalParty,
@@ -77,6 +80,7 @@ const searchableTown = [
   candidate.legislatorLocationText,
   townsRepresented,
 ].flat().filter(Boolean).join(" ");
+const searchableCounty = [countiesRepresented, candidate.county].filter(Boolean).join(" ");
 const searchableBody = /senate/i.test(`${candidate.office || ""} ${candidate.officeType || ""}`)
   ? "senate"
   : /representative|house/i.test(`${candidate.office || ""} ${candidate.officeType || ""}`)
@@ -136,6 +140,17 @@ function candidateTownsRepresented(candidate = {}) {
   return uniqueTowns(towns).join(", ");
 }
 
+function candidateCountiesRepresented(candidate = {}) {
+  const counties = [
+    candidate.countiesRepresented,
+    candidate.counties_represented,
+    candidate.legislator?.countiesRepresented,
+    candidate.legislator?.counties_represented,
+  ].flatMap(townsFromValue);
+
+  return uniqueTowns(counties).join(", ");
+}
+
 function townsFromValue(value = "") {
   if (Array.isArray(value)) {
     return value.flatMap((item) => {
@@ -181,7 +196,7 @@ function uniqueTowns(towns = []) {
   data-fuzzy-name={name}
   data-fuzzy-aliases={aliases}
   data-fuzzy-town={searchableTown}
-  data-fuzzy-county={candidate.county || ""}
+  data-fuzzy-county={searchableCounty}
   data-fuzzy-office={candidate.office || ""}
   data-fuzzy-district={districtLabel}
   data-fuzzy-body={searchableBody}
@@ -239,6 +254,12 @@ function uniqueTowns(towns = []) {
       <p class="towns-line">
         <span>Towns represented</span>
         {townsRepresented}
+      </p>
+    )}
+    {countiesRepresented && (
+      <p class="towns-line">
+        <span>Counties represented</span>
+        {countiesRepresented}
       </p>
     )}
 

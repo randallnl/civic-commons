@@ -73,6 +73,18 @@ function countyNameFor(rep = {}) {
   return prefixMap[prefix] || "";
 }
 
+function listText(value = "") {
+  if (Array.isArray(value)) return value.map(listText).filter(Boolean).join(", ");
+  if (typeof value === "object" && value !== null) {
+    return listText(value.name || value.label || value.county || "");
+  }
+  return cleanText(value);
+}
+
+function countiesRepresentedFor(rep = {}) {
+  return listText(rep.countiesRepresented || rep.counties_represented);
+}
+
 const name = cleanText(
   rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim(),
 );
@@ -99,6 +111,8 @@ const searchableText = cleanText([
   rep.raw_district,
   districtLabel,
   rep.county,
+  rep.countiesRepresented,
+  rep.counties_represented,
   rep.countycode,
   rep.location_text,
   rep.towns_represented,
@@ -112,7 +126,8 @@ const searchableTown = cleanText([
   rep.towns_represented,
   rep.townsRepresented,
 ].flat().filter(Boolean).join(" "));
-const searchableCounty = countyNameFor(rep);
+const countiesRepresented = countiesRepresentedFor(rep);
+const searchableCounty = countiesRepresented || countyNameFor(rep);
 const searchableBody = /senate/i.test(rep.chamber || "")
   ? "senate"
   : /house/i.test(rep.chamber || "")
@@ -231,6 +246,12 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
       <div class="district-line">
         <strong>District:</strong> {rep.district || "Not listed"}
       </div>
+
+      {countiesRepresented && (
+        <div class="location-line">
+          <strong>Counties represented:</strong> {countiesRepresented}
+        </div>
+      )}
 
       {rep.location_text && (
         <div class="location-line">

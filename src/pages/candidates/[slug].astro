@@ -106,12 +106,14 @@ const officeTypeLabel =
   String(candidate.officeType || "").trim().toLowerCase() === "general court"
     ? ""
     : candidate.officeType;
+const isSenateOffice = /state senate|state senator/i.test(candidate.office || "");
 const officeParts = [
   candidate.office,
-  candidate.county,
+  isSenateOffice ? "" : candidate.county,
   candidate.district ? `District ${candidate.district}` : "",
 ].filter(Boolean);
 const townsRepresented = candidateTownsRepresented(candidate, currentLegislator);
+const countiesRepresented = candidateCountiesRepresented(candidate, currentLegislator);
 const candidateRoles = uniqueCandidateRoles(candidate.candidateRoles?.length ? candidate.candidateRoles : [candidate]);
 const hasFreeStaterTag = isFreeStater(candidate) || isFreeStater(currentLegislator);
 const hasTpActionTag = isTpActionAligned(candidate) || isTpActionAligned(currentLegislator);
@@ -372,15 +374,20 @@ function uniqueCandidateRoles(roles = []) {
 }
 
 function roleOfficeLine(role = {}) {
+  const isSenateRole = /state senate|state senator/i.test(role.office || "");
   return [
     role.office,
-    role.county,
+    isSenateRole ? "" : role.county,
     role.district ? `District ${role.district}` : "",
   ].filter(Boolean).join(", ");
 }
 
 function roleTownsLine(role = {}) {
   return candidateTownsRepresented(role, currentLegislator) || townsRepresented;
+}
+
+function roleCountiesLine(role = {}) {
+  return candidateCountiesRepresented(role, currentLegislator) || countiesRepresented;
 }
 
 function candidateTownsRepresented(candidate = {}, legislator = null) {
@@ -403,6 +410,19 @@ function candidateTownsRepresented(candidate = {}, legislator = null) {
   ].flatMap(townsFromValue);
 
   return uniqueTowns(towns).join(", ");
+}
+
+function candidateCountiesRepresented(candidate = {}, legislator = null) {
+  const counties = [
+    candidate.countiesRepresented,
+    candidate.counties_represented,
+    candidate.legislator?.countiesRepresented,
+    candidate.legislator?.counties_represented,
+    legislator?.countiesRepresented,
+    legislator?.counties_represented,
+  ].flatMap(townsFromValue);
+
+  return uniqueTowns(counties).join(", ");
 }
 
 function townsFromValue(value = "") {
@@ -574,6 +594,12 @@ function uniqueArticles(articles = []) {
                 <strong>{townsRepresented}</strong>
               </div>
             )}
+            {countiesRepresented && (
+              <div class="role-towns">
+                <span>Counties represented</span>
+                <strong>{countiesRepresented}</strong>
+              </div>
+            )}
           </article>
         </div>
       </section>
@@ -600,6 +626,7 @@ function uniqueArticles(articles = []) {
         <div class="role-list">
           {candidateRoles.map((role) => {
             const roleTowns = roleTownsLine(role);
+            const roleCounties = roleCountiesLine(role);
 
             return (
               <article class="role-card">
@@ -619,6 +646,12 @@ function uniqueArticles(articles = []) {
                   <div class="role-towns">
                     <span>Towns represented</span>
                     <strong>{roleTowns}</strong>
+                  </div>
+                )}
+                {roleCounties && (
+                  <div class="role-towns">
+                    <span>Counties represented</span>
+                    <strong>{roleCounties}</strong>
                   </div>
                 )}
               </article>

@@ -53,6 +53,9 @@ const partyLabel = formatParty(representative?.party);
 const roleLabel = representativeRoleLabel(representative || {});
 const districtLabel = representativeDistrictLabel(representative || {});
 const townsRepresented = locationLabel(representative || {});
+const countiesRepresented = listText(
+  representative?.countiesRepresented || representative?.counties_represented
+);
 let votes = (apiData?.voteHistory || []).map((vote) =>
   normalizeVote(vote, trackedBills, billSummaries),
 ).filter((vote) => isVotingAction(vote) && isKnownVote(vote));
@@ -297,6 +300,14 @@ function locationLabel(person = {}) {
   if (Array.isArray(value)) return value.map(cleanText).filter(Boolean).join(", ");
   return cleanText(value);
 }
+
+function listText(value = "") {
+  if (Array.isArray(value)) return value.map(listText).filter(Boolean).join(", ");
+  if (typeof value === "object" && value !== null) {
+    return listText(value.name || value.label || value.county || "");
+  }
+  return cleanText(value);
+}
 ---
 
 <html lang="en">
@@ -351,6 +362,12 @@ function locationLabel(person = {}) {
                 <p class="towns-served">
                   <strong>Towns served</strong>
                   {townsRepresented}
+                </p>
+              )}
+              {countiesRepresented && (
+                <p class="towns-served">
+                  <strong>Counties represented</strong>
+                  {countiesRepresented}
                 </p>
               )}
 

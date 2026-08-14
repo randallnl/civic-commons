@@ -155,6 +155,9 @@ trackedVotes = await Promise.all(
 const officeLabel = apiTerm.title || "Civic profile";
 const bodyLabel = apiTerm.body || "New Hampshire";
 const districtLabel = formatDistrictLabel(apiTerm);
+const countiesRepresented = listText(
+  representative?.countiesRepresented || representative?.counties_represented
+);
 const townServiceAreas = [];
 if (representative?.towns_represented || representative?.location_text) {
   townServiceAreas.push({
@@ -657,6 +660,14 @@ function candidateTownsRepresented(candidate = {}, legislator = {}) {
   return uniqueTowns(towns).join(", ");
 }
 
+function listText(value = "") {
+  if (Array.isArray(value)) return value.map(listText).filter(Boolean).join(", ");
+  if (typeof value === "object" && value !== null) {
+    return listText(value.name || value.label || value.county || "");
+  }
+  return cleanDisplay(value);
+}
+
 function townsFromValue(value = "") {
   if (Array.isArray(value)) {
     return value.flatMap((item) => {
@@ -821,6 +832,12 @@ function uniqueTowns(towns = []) {
                     <dt>District</dt>
                     <dd>{districtLabel || "Not listed"}</dd>
                   </div>
+                  {countiesRepresented && (
+                    <div>
+                      <dt>Counties represented</dt>
+                      <dd>{countiesRepresented}</dd>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div class="hero-office-sought">
@@ -994,6 +1011,12 @@ function uniqueTowns(towns = []) {
                     <span>District</span>
                     <strong>{districtLabel || "Not listed"}</strong>
                   </article>
+                  {countiesRepresented && (
+                    <article>
+                      <span>Counties represented</span>
+                      <strong>{countiesRepresented}</strong>
+                    </article>
+                  )}
                   <article>
                     <span>Party</span>
                     <strong>{formatParty(person.party)}</strong>

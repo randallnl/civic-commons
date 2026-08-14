@@ -1483,6 +1483,7 @@ async function handleRepProfile(request, env) {
       COALESCE(dm.district_label, l.district) AS district,
       l.district AS raw_district,
       l.countycode,
+      COALESCE(dm.counties_represented, '') AS counties_represented,
       COALESCE(dm.communities_represented, l.city, '') AS location_text,
       l.address,
       l.address2,
@@ -1636,6 +1637,7 @@ async function handleCommunities(request, env) {
       ) AS district_number,
       COALESCE(dm.district_label, d.name) AS district_label,
       COALESCE(dm.communities_represented, d.towns_represented, '') AS communities_represented,
+      COALESCE(dm.counties_represented, d.county, '') AS counties_represented,
       d.towns_represented,
       COALESCE(dm.is_floterial_district, d.floterial, 0) AS floterial,
       COALESCE(dm.seats, d.seats) AS seats
@@ -1969,6 +1971,7 @@ async function getHouseDistrictsForCounty(env, county) {
       d.district AS district_number,
       COALESCE(dm.district_label, d.name) AS district_label,
       COALESCE(dm.communities_represented, d.towns_represented, '') AS communities_represented,
+      COALESCE(dm.counties_represented, d.county, '') AS counties_represented,
       d.towns_represented,
       COALESCE(dm.is_floterial_district, d.floterial, 0) AS floterial,
       COALESCE(dm.seats, d.seats) AS seats
@@ -2025,6 +2028,7 @@ async function findTownDistricts(env, townName) {
       dm.district,
       dm.district_label,
       dm.communities_represented,
+      dm.counties_represented,
       dm.seats,
       COALESCE(dm.is_floterial_district, 0) AS is_floterial_district,
       COALESCE(dm.is_floterial_district, 0) AS floterial
@@ -2133,6 +2137,7 @@ function formatTownDistrict(district) {
     countyNumber: district.county || null,
     district: district.district,
     label: district.district_label,
+    countiesRepresented: splitCommunityList(district.counties_represented),
     floterial: parseBooleanText(district.floterial ?? district.is_floterial_district),
     path:
       district.body === "S"
@@ -2343,6 +2348,7 @@ async function getCommunityDistrict(env, { body, county, districtNumber }) {
       ) AS district_number,
       COALESCE(dm.district_label, d.name) AS district_label,
       COALESCE(dm.communities_represented, d.towns_represented, '') AS communities_represented,
+      COALESCE(dm.counties_represented, d.county, '') AS counties_represented,
       d.towns_represented,
       COALESCE(dm.is_floterial_district, d.floterial, 0) AS floterial,
       COALESCE(dm.seats, d.seats) AS seats
@@ -2390,6 +2396,7 @@ async function buildCommunityResponse(env, district, articleLimit, options = {})
     county: district.county || null,
     district: district.district_number,
     label: district.district_label,
+    countiesRepresented: splitCommunityList(district.counties_represented),
     townsRepresented: splitCommunityList(
       district.communities_represented || district.towns_represented
     ),
@@ -2430,7 +2437,8 @@ async function getSenatorsForHouseDistrict(env, district) {
       NULL AS county_name,
       dm.district,
       dm.district_label,
-      dm.communities_represented
+      dm.communities_represented,
+      dm.counties_represented
     FROM d1_district_mapping dm
     WHERE dm.body = 'S'
     ORDER BY dm.district
@@ -2705,13 +2713,14 @@ async function handleCandidates(request, env) {
         OR c.slug LIKE ?
         OR c.office LIKE ?
         OR c.county LIKE ?
+        OR COALESCE(c.counties_represented, '') LIKE ?
         OR COALESCE(c.communities_represented, '') LIKE ?
         OR COALESCE(c.towns_represented, '') LIKE ?
         OR COALESCE(c.district_label, '') LIKE ?
         OR COALESCE(c.name_aliases, '') LIKE ?
       )
     `);
-    binds.push(search, search, search, search, search, search, search, search, search, search);
+    binds.push(search, search, search, search, search, search, search, search, search, search, search);
   }
 
   if (officeType) {
@@ -2725,8 +2734,11 @@ async function handleCandidates(request, env) {
   }
 
   if (county) {
-    where.push(`LOWER(c.county) = LOWER(?)`);
-    binds.push(county);
+    where.push(`(
+      LOWER(c.county) = LOWER(?)
+      OR LOWER(COALESCE(c.counties_represented, '')) LIKE '%' || LOWER(?) || '%'
+    )`);
+    binds.push(county, county);
   }
 
   if (district) {
@@ -3108,6 +3120,7 @@ function candidateBaseCte() {
         cc.source_county_id AS source_county_id,
         COALESCE(dm.district_label, '') AS district_label,
         COALESCE(dm.communities_represented, '') AS communities_represented,
+        COALESCE(dm.counties_represented, '') AS counties_represented,
         COALESCE(dm.communities_represented, '') AS towns_represented,
         dm.seats AS seats
       FROM d1_people p
@@ -3184,6 +3197,7 @@ function candidateBaseSelectColumns(tableAlias = "c") {
     "source_county_id",
     "district_label",
     "communities_represented",
+    "counties_represented",
     "towns_represented",
     "seats",
   ]
@@ -3217,6 +3231,7 @@ function candidateSelectColumns(tableAlias = "") {
     isTpActionAlignedSelectExpression(`${prefix}is_tpaction_aligned_2026`),
     "district_label",
     "communities_represented",
+    "counties_represented",
     "towns_represented",
   ]
     .map((column) =>
@@ -3269,6 +3284,8 @@ function formatCandidate(candidate) {
     district_label: candidate.district_label,
     communitiesRepresented: candidate.communities_represented,
     communities_represented: candidate.communities_represented,
+    countiesRepresented: candidate.counties_represented,
+    counties_represented: candidate.counties_represented,
     townsRepresented: candidate.towns_represented,
     towns_represented: candidate.towns_represented,
     seats: candidate.seats,
@@ -3291,6 +3308,8 @@ function formatCandidateRole(candidate) {
     district_label: candidate.district_label,
     communitiesRepresented: candidate.communities_represented,
     communities_represented: candidate.communities_represented,
+    countiesRepresented: candidate.counties_represented,
+    counties_represented: candidate.counties_represented,
     townsRepresented: candidate.towns_represented,
     towns_represented: candidate.towns_represented,
     seats: candidate.seats,
@@ -3384,6 +3403,7 @@ async function handleTownSearch(request, env) {
       COALESCE(dm.district_label, r.district) AS district,
       r.district AS raw_district,
       r.countycode,
+      COALESCE(dm.counties_represented, '') AS counties_represented,
       COALESCE(dm.communities_represented, r.city, '') AS location_text,
       r.emailaddress AS email,
       '' AS phone,
@@ -3463,10 +3483,11 @@ async function handleReps(request, env) {
     where.push(`(
       LOWER(r.firstname || ' ' || r.lastname) LIKE LOWER(?)
       OR LOWER(r.lastname) LIKE LOWER(?)
+      OR LOWER(COALESCE(dm.counties_represented, '')) LIKE LOWER(?)
       OR LOWER(COALESCE(dm.communities_represented, r.city, '')) LIKE LOWER(?)
       OR LOWER(COALESCE(people.name_aliases, '')) LIKE LOWER(?)
     )`);
-    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
   }
 
   if (county) {
@@ -3474,8 +3495,9 @@ async function handleReps(request, env) {
       LOWER(r.countycode) = LOWER(?)
       OR LOWER(COALESCE(cc.name, '')) = LOWER(?)
       OR LOWER(COALESCE(cc.code, '')) = LOWER(?)
+      OR LOWER(COALESCE(dm.counties_represented, '')) LIKE '%' || LOWER(?) || '%'
     )`);
-    params.push(county, county, county);
+    params.push(county, county, county, county);
   }
 
   if (district) {
@@ -3542,6 +3564,7 @@ async function handleReps(request, env) {
       r.district AS raw_district,
       r.countycode,
       COALESCE(cc.name, '') AS county,
+      COALESCE(dm.counties_represented, cc.name, '') AS counties_represented,
       COALESCE(dm.communities_represented, r.city, '') AS location_text,
       r.address,
       r.address2,
@@ -4046,6 +4069,7 @@ async function handleBillRollCall(request, env) {
       END AS chamber,
       COALESCE(dm.district_label, l.district, '') AS district,
       COALESCE(l.district, '') AS raw_district,
+      COALESCE(dm.counties_represented, cc.name, '') AS counties_represented,
       COALESCE(cc.name, '') AS county,
       COALESCE(dm.communities_represented, l.city, '') AS location_text,
       COALESCE(dm.communities_represented, l.city, '') AS towns_represented,
@@ -4553,6 +4577,7 @@ async function findDistrictMapping(env, body, county, district) {
       district,
       district_label,
       communities_represented,
+      counties_represented,
       seats,
       COALESCE(is_floterial_district, 0) AS is_floterial_district,
       COALESCE(is_floterial_district, 0) AS floterial
@@ -4646,6 +4671,7 @@ async function findDistrictsFromPlace(env, place, ward) {
         district,
         district_label,
         communities_represented,
+        counties_represented,
         COALESCE(is_floterial_district, 0) AS is_floterial_district,
         COALESCE(is_floterial_district, 0) AS floterial
       FROM d1_district_mapping
@@ -4683,6 +4709,7 @@ async function findDistrictsFromPlace(env, place, ward) {
         district,
         district_label,
         communities_represented,
+        counties_represented,
         COALESCE(is_floterial_district, 0) AS is_floterial_district,
         COALESCE(is_floterial_district, 0) AS floterial
       FROM d1_district_mapping
@@ -4746,6 +4773,7 @@ async function findHouseRepsFromDistrictMappings(env, districts) {
         COALESCE(dm.district_label, l.district) AS district,
         l.district AS raw_district,
         l.countycode,
+        COALESCE(dm.counties_represented, '') AS counties_represented,
         COALESCE(dm.communities_represented, l.city, '') AS location_text,
         l.emailaddress AS email,
         '' AS phone,
@@ -4795,6 +4823,7 @@ async function findSenators(env, senate) {
       COALESCE(dm.district_label, l.district) AS district,
       l.district AS raw_district,
       l.countycode,
+      COALESCE(dm.counties_represented, '') AS counties_represented,
       COALESCE(dm.communities_represented, l.city, '') AS location_text,
       l.emailaddress AS email,
       '' AS phone,

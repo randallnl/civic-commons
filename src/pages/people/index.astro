@@ -114,6 +114,8 @@ function matchesCounty(rep = {}, query = "") {
     rep.county,
     rep.countyName,
     rep.county_name,
+    rep.countiesRepresented,
+    rep.counties_represented,
     countyNameForCode(rep.countycode),
     locationText(rep),
   ].filter(Boolean).join(" ");
