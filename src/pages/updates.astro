@@ -41,7 +41,9 @@ const COUNTY_NAMES = [
 
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const platform = Astro.url.searchParams.get("platform")?.trim() || "";
+const countyFilter = Astro.url.searchParams.get("county")?.trim() || "";
 const sort = Astro.url.searchParams.get("sort")?.trim() || "updated:desc";
+const activeFilterCount = [q, platform, countyFilter, sort !== "updated:desc" ? sort : ""].filter(Boolean).length;
 const TITLE_PREVIEW_LENGTH = 114;
 const DESCRIPTION_PREVIEW_LENGTH = 114;
 const NOTE_PREVIEW_LENGTH = 114;
@@ -843,45 +845,55 @@ function textPreview(value = "", maxLength = 170) {
             </p>
           </section>
 
-      <FilterBar action="/updates" submitLabel="Filter updates" clearHref="/updates" columns="wide" live={true}>
-        <input
-          type="hidden"
-          name="county"
-          value={Astro.url.searchParams.get("county")?.trim() || ""}
-          data-fuzzy-filter-field
-          data-fuzzy-field="county"
-          data-fuzzy-match="includes"
-          data-fuzzy-label="County"
-        />
-        <label for="q">
-          <span>Search</span>
+      <details class="filter-disclosure" open={activeFilterCount > 0}>
+        <summary>
+          <span>
+            <strong>Filter updates</strong>
+            <small>{activeFilterCount ? `${activeFilterCount} active` : "Search, platform, and sort"}</small>
+          </span>
+          <span class="filter-toggle" aria-hidden="true">Open</span>
+        </summary>
+
+        <FilterBar action="/updates" submitLabel="Filter updates" clearHref="/updates" columns="wide" live={true}>
           <input
-            id="q"
-            name="q"
-            type="search"
-            value={q}
-            placeholder="Legislator, town, district, platform, or keyword"
-            data-fuzzy-search
+            type="hidden"
+            name="county"
+            value={countyFilter}
+            data-fuzzy-filter-field
+            data-fuzzy-field="county"
+            data-fuzzy-match="includes"
+            data-fuzzy-label="County"
           />
-        </label>
-        <label for="platform">
-          <span>Platform</span>
-          <select id="platform" name="platform" data-fuzzy-filter-field data-fuzzy-field="platform" data-fuzzy-match="exact">
-            {platformOptions.map(([value, label]) => (
-              <option value={value} selected={platform === value}>{label}</option>
-            ))}
-          </select>
-        </label>
-        <label for="sort">
-          <span>Sort</span>
-          <select id="sort" name="sort" data-fuzzy-sort>
-            <option value="updated:desc" selected={sort === "updated:desc"}>Newest first</option>
-            <option value="updated:asc" selected={sort === "updated:asc"}>Oldest first</option>
-            <option value="name:asc" selected={sort === "name:asc"}>Title A-Z</option>
-            <option value="platform:asc" selected={sort === "platform:asc"}>Platform A-Z</option>
-          </select>
-        </label>
-      </FilterBar>
+          <label for="q">
+            <span>Search</span>
+            <input
+              id="q"
+              name="q"
+              type="search"
+              value={q}
+              placeholder="Legislator, town, district, platform, or keyword"
+              data-fuzzy-search
+            />
+          </label>
+          <label for="platform">
+            <span>Platform</span>
+            <select id="platform" name="platform" data-fuzzy-filter-field data-fuzzy-field="platform" data-fuzzy-match="exact">
+              {platformOptions.map(([value, label]) => (
+                <option value={value} selected={platform === value}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <label for="sort">
+            <span>Sort</span>
+            <select id="sort" name="sort" data-fuzzy-sort>
+              <option value="updated:desc" selected={sort === "updated:desc"}>Newest first</option>
+              <option value="updated:asc" selected={sort === "updated:asc"}>Oldest first</option>
+              <option value="name:asc" selected={sort === "name:asc"}>Title A-Z</option>
+              <option value="platform:asc" selected={sort === "platform:asc"}>Platform A-Z</option>
+            </select>
+          </label>
+        </FilterBar>
+      </details>
       <div class="filter-chips" data-fuzzy-chips hidden></div>
 
       {error ? (
@@ -1147,6 +1159,81 @@ function textPreview(value = "", maxLength = 170) {
   .media-panel {
     display: grid;
     gap: 18px;
+  }
+
+  .filter-disclosure {
+    background: #ffffff;
+    border: 1px solid var(--nhdb-line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .filter-disclosure summary {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 14px;
+    justify-content: space-between;
+    list-style: none;
+    padding: 14px 16px;
+  }
+
+  .filter-disclosure summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .filter-disclosure summary span:first-child {
+    display: grid;
+    gap: 2px;
+  }
+
+  .filter-disclosure summary strong {
+    color: #1f2933;
+    font-size: 0.95rem;
+    line-height: 1.1;
+  }
+
+  .filter-disclosure summary small {
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 850;
+  }
+
+  .filter-toggle {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1d4ed8;
+    flex: 0 0 auto;
+    font-size: 0.78rem;
+    font-weight: 950;
+    padding: 6px 10px;
+  }
+
+  .filter-disclosure[open] .filter-toggle {
+    background: #1f2933;
+    border-color: #111827;
+    color: #fffaf1;
+  }
+
+  .filter-disclosure[open] .filter-toggle::before {
+    content: "Close";
+  }
+
+  .filter-disclosure[open] .filter-toggle {
+    font-size: 0;
+  }
+
+  .filter-disclosure[open] .filter-toggle::before {
+    font-size: 0.78rem;
+  }
+
+  .filter-disclosure :global(.nhdb-filter-bar) {
+    border-inline: 0;
+    border-bottom: 0;
+    border-radius: 0;
+    border-top: 1px solid var(--nhdb-line);
+    margin: 0;
   }
 
   .results-heading {
