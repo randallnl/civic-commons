@@ -163,8 +163,45 @@ export async function getOrganizations({ includeUnapproved = false } = {}) {
 }
 
 export async function getOrganization(slug, options = {}) {
-  const organizations = await getOrganizations(options);
-  return organizations.find((organization) => organization.slug === slug);
+  const db = organizationsDb();
+  if (!db) return null;
+
+  await ensureOrganizationTables(db);
+
+  const organization = await db
+    .prepare(
+      `SELECT *
+       FROM organizations
+       WHERE slug = ?
+         AND (approved = 1 OR ? = 1)
+       LIMIT 1`,
+    )
+    .bind(slug, options.includeUnapproved ? 1 : 0)
+    .first();
+
+  if (!organization) return null;
+
+  const normalized = normalizeOrganizationRow(organization);
+  const [comments, endorsements] = await Promise.all([
+    getOrganizationComments(db, normalized.slug),
+    getOrganizationEndorsements(db, normalized.slug),
+  ]);
+
+  return {
+    ...normalized,
+    comments,
+    endorsements,
+    issueAreas: uniqueList([
+      normalized.issueArea,
+      ...comments.flatMap((comment) => comment.issueAreas || []),
+    ]),
+    towns: uniqueList([
+      normalized.city,
+      normalized.town,
+      ...splitList(normalized.serviceArea),
+      ...comments.flatMap((comment) => comment.towns || []),
+    ]),
+  };
 }
 
 export async function getRecentOrganizationComments({ limit = 50 } = {}) {
@@ -544,28 +581,40 @@ export async function moderateOrganizationEndorsement(id, action, {
   };
 }
 
-async function getOrganizationComments(db) {
-  const result = await db
-    .prepare(
-      `SELECT *
-       FROM organization_comments
-       WHERE status = 'published'
-       ORDER BY date DESC, id DESC`,
-    )
-    .all();
+async function getOrganizationComments(db, organizationSlug = "") {
+  const where = ["status = 'published'"];
+  const binds = [];
+  if (organizationSlug) {
+    where.push("organization_slug = ?");
+    binds.push(organizationSlug);
+  }
+
+  const query = db.prepare(
+    `SELECT *
+     FROM organization_comments
+     WHERE ${where.join(" AND ")}
+     ORDER BY date DESC, id DESC`,
+  );
+  const result = await (binds.length ? query.bind(...binds) : query).all();
 
   return (result.results || []).map(normalizeCommentRow);
 }
 
-async function getOrganizationEndorsements(db) {
-  const result = await db
-    .prepare(
-      `SELECT *
-       FROM organization_endorsements
-       WHERE status = 'published'
-       ORDER BY date DESC, id DESC`,
-    )
-    .all();
+async function getOrganizationEndorsements(db, organizationSlug = "") {
+  const where = ["status = 'published'"];
+  const binds = [];
+  if (organizationSlug) {
+    where.push("organization_slug = ?");
+    binds.push(organizationSlug);
+  }
+
+  const query = db.prepare(
+    `SELECT *
+     FROM organization_endorsements
+     WHERE ${where.join(" AND ")}
+     ORDER BY date DESC, id DESC`,
+  );
+  const result = await (binds.length ? query.bind(...binds) : query).all();
 
   return (result.results || []).map(normalizeEndorsementRow);
 }
