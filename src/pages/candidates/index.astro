@@ -87,12 +87,39 @@ try {
 
     lookupData = data;
     const lookupPlace = data.civic?.place?.name || data.normalizedInput?.city || "";
+    const isTownOnlyLookup = lookupPlace && !String(data.normalizedInput?.line1 || "").trim();
     const lookupWardOptions = wardOptionsFor(lookupPlace);
-    const lookupWard = lookupWardOptions.length
+    const lookupWard = !isTownOnlyLookup && lookupWardOptions.length
       ? selectedWard || normalizeWardNumber(data.civic?.ward?.number || "")
       : "";
+    const lookupCandidates = candidatesFromLookup(data, {
+      ward: lookupWard,
+      warded: !isTownOnlyLookup && lookupWardOptions.length > 0,
+    });
 
-    candidates = candidatesFromLookup(data, { ward: lookupWard, warded: lookupWardOptions.length > 0 });
+    if (isTownOnlyLookup) {
+      const [townResult, directoryResult] = await Promise.allSettled([
+        getTownCommunity(lookupPlace, { articleLimit: 1 }),
+        getDirectoryCandidates({
+          q: name || lookupPlace,
+          county,
+          district,
+          office: selectedOffice,
+          electionYear,
+          limit: 500,
+        }),
+      ]);
+      const townData = townResult.status === "fulfilled" ? townResult.value : {};
+      const directoryData = directoryResult.status === "fulfilled" ? directoryResult.value : {};
+      candidates = uniqueCandidates([
+        ...lookupCandidates,
+        ...candidatesFromCommunity(townData),
+        ...(directoryData.candidates || []),
+      ]);
+    } else {
+      candidates = lookupCandidates;
+    }
+
     meta = data.meta || {};
     resultContext = formatAddress(data.normalizedInput) || data.address || address;
   } else if (town) {
