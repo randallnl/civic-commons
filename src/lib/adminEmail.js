@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { bindingValue } from "./adminAuth";
 
 const DEFAULT_FROM = "admin@nhdeservesbetter.com";
+const MODERATION_CC = "randall@nhdeservesbetter.com";
 
 export async function sendMagicLinkEmail({ to, link, expiresAt }) {
   const sender = emailSender();
@@ -60,6 +61,7 @@ export async function sendSubmissionReceivedEmail({
 
   await sender.send({
     to,
+    cc: moderationCcFor(to),
     from: { email: from, name: "NH Deserves Better" },
     subject,
     html,
@@ -108,6 +110,7 @@ export async function sendSubmissionResponseEmail({
 
   await sender.send({
     to,
+    cc: moderationCcFor(to),
     from: { email: from, name: "NH Deserves Better" },
     subject,
     html,
@@ -129,6 +132,14 @@ async function senderAddress() {
     import.meta.env.ADMIN_EMAIL_FROM ||
     DEFAULT_FROM
   );
+}
+
+function moderationCcFor(to = "") {
+  const recipients = Array.isArray(to) ? to : [to];
+  const hasRandall = recipients.some(
+    (recipient) => String(recipient || "").trim().toLowerCase() === MODERATION_CC,
+  );
+  return hasRandall ? [] : [MODERATION_CC];
 }
 
 function escapeHtml(value = "") {
