@@ -83,6 +83,7 @@ export function isVotingAction(vote = {}) {
       vote.description ||
       "",
   ).trim();
+  if (isExcludedAlignmentMotion(action)) return false;
   const voteCode = String(vote.vote_code ?? vote.voteCode ?? "").trim();
   const numericVoteCode = Number(voteCode);
   const voteText = String(vote.vote || vote.vote_label || vote.voteLabel || "")
@@ -96,6 +97,11 @@ export function isVotingAction(vote = {}) {
     );
 
   return Boolean(sequence && action && (hasVoteCode || hasVoteText));
+}
+
+export function isExcludedAlignmentMotion(value = "") {
+  const motion = cleanText(value).toLowerCase();
+  return motion.includes("adopt amendment") || motion.includes("special order");
 }
 
 export function isKnownVote(vote = {}) {

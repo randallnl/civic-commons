@@ -5208,6 +5208,18 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
         NULLIF(TRIM(rs.title1), ''),
         NULLIF(TRIM(rs.title2), '')
       ) IS NOT NULL
+      AND UPPER(COALESCE(
+        NULLIF(TRIM(rs.question_motion), ''),
+        NULLIF(TRIM(rs.title1), ''),
+        NULLIF(TRIM(rs.title2), ''),
+        ''
+      )) NOT LIKE '%ADOPT AMENDMENT%'
+      AND UPPER(COALESCE(
+        NULLIF(TRIM(rs.question_motion), ''),
+        NULLIF(TRIM(rs.title1), ''),
+        NULLIF(TRIM(rs.title2), ''),
+        ''
+      )) NOT LIKE '%SPECIAL ORDER%'
     ORDER BY h.sessionyear DESC, h.votesequencenumber DESC
     LIMIT ?
   `)

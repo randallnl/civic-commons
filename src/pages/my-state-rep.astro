@@ -13,6 +13,7 @@ import { getRepresentative, getRepresentatives, repName } from "../lib/repsApi";
 import {
   normalizeBillCode,
   getTrackedBills,
+  isExcludedAlignmentMotion,
 } from "../lib/trackedBills";
 
 const API_BASE = civicApiBase();
@@ -557,6 +558,7 @@ function isVotingAction(vote = {}) {
     .join(" ")
     .toLowerCase();
 
+  if (isExcludedAlignmentMotion(text)) return false;
   if (!text) return true;
   return (
     /\b(ought|pass|adopt|table|refer|re-refer|inexpedient|itl|amend|conference|veto)\b/.test(text) ||
