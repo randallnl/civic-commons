@@ -181,11 +181,27 @@ const candidateOfficeGroups = groupCandidatesByOfficeDistrict(filteredCandidates
 const candidateSeatTotal = totalSeats(candidateOfficeGroups);
 const senateDistrict =
   civic.senate?.districtLabel || civic.senate?.district || "";
-const houseDistricts = matchedDistricts
+const matchedHouseDistricts = matchedDistricts
   .filter((district) => district.body === "H")
-  .filter((district) => !isWardedCommunity || !selectedWard || representsWard(district, selectedWard))
+  .filter((district) => !isWardedCommunity || !selectedWard || representsWard(district, selectedWard));
+const regularHouseDistricts = matchedHouseDistricts
+  .filter((district) => !isFloterialDistrict(district))
   .map((district) => district.district_label)
   .filter(Boolean);
+const floterialHouseDistricts = matchedHouseDistricts
+  .filter(isFloterialDistrict)
+  .map((district) => district.district_label)
+  .filter(Boolean);
+const houseDistricts = [...regularHouseDistricts, ...floterialHouseDistricts];
+const divisionSummaryText = address
+  ? districtDivisionSummary({
+      place,
+      ward,
+      senateDistrict,
+      houseDistricts: regularHouseDistricts,
+      floterialDistricts: floterialHouseDistricts,
+    })
+  : "";
 
 if (lookupData) {
   [senateReps, houseReps] = await Promise.all([
@@ -349,6 +365,34 @@ function seatsForCandidateOffice(candidate = {}) {
 function totalSeats(groups = []) {
   const total = groups.reduce((sum, group) => sum + (Number(group.seats) || 0), 0);
   return total > 0 ? total : 0;
+}
+
+function isFloterialDistrict(district = {}) {
+  return ["1", "true", "yes", "y"].includes(
+    String(district.floterial ?? district.is_floterial_district ?? "").trim().toLowerCase(),
+  );
+}
+
+function districtDivisionSummary({
+  place = "",
+  ward = "",
+  senateDistrict = "",
+  houseDistricts = [],
+  floterialDistricts = [],
+} = {}) {
+  const parts = [];
+  if (place) parts.push(ward ? `${place} ${ward}` : place);
+  if (senateDistrict) parts.push(`State Senate District ${senateDistrict}`);
+  if (houseDistricts.length) {
+    parts.push(`${houseDistricts.length === 1 ? "State House District" : "State House Districts"} ${houseDistricts.join(", ")}`);
+  }
+  if (floterialDistricts.length) {
+    parts.push(`${floterialDistricts.length === 1 ? "floterial House District" : "floterial House Districts"} ${floterialDistricts.join(", ")}`);
+  }
+
+  return parts.length
+    ? `This address maps to ${parts.join("; ")}.`
+    : "";
 }
 
 function candidateOfficePriority(value = "") {
@@ -825,6 +869,23 @@ function isVotingAction(vote = {}) {
                   </div>
                 )}
               </div>
+
+              {(divisionSummaryText || floterialHouseDistricts.length > 0) && (
+                <section class="address-division-summary" aria-label="District division summary">
+                  {divisionSummaryText && <p>{divisionSummaryText}</p>}
+                  {floterialHouseDistricts.length > 0 && (
+                    <div class="floterial-callout">
+                      <strong>Floterial district</strong>
+                      <span>
+                        {floterialHouseDistricts.join(", ")} is an additional
+                        House district layered over multiple local House
+                        districts, so it is listed separately from your base
+                        House district.
+                      </span>
+                    </div>
+                  )}
+                </section>
+              )}
             </div>
           </section>
 
@@ -1316,6 +1377,47 @@ function isVotingAction(vote = {}) {
     gap: 12px;
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
     padding: 18px 20px;
+  }
+
+  .address-division-summary {
+    background: #ffffff;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    display: grid;
+    gap: 12px;
+    padding: 16px 18px;
+  }
+
+  .address-division-summary p {
+    color: #334155;
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .floterial-callout {
+    background: #fff7ed;
+    border: 1px solid #fb923c;
+    border-radius: 12px;
+    display: grid;
+    gap: 5px;
+    padding: 12px 14px;
+  }
+
+  .floterial-callout strong {
+    color: #9a3412;
+    font-size: 0.78rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .floterial-callout span {
+    color: #431407;
+    font-size: 0.95rem;
+    font-weight: 750;
+    line-height: 1.45;
   }
 
   .ward-filter {
