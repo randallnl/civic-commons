@@ -35,6 +35,28 @@ const hasTikTokEmbeds = updateCards.some((card) => card.social?.type === "tiktok
 const hasFacebookEmbeds = updateCards.some((card) => card.social?.type === "facebook" && card.social.embedUrl);
 const isReport = entityType === "report";
 const Wrapper = embedded ? "div" : "section";
+
+function socialPreviewText(update = {}) {
+  return cleanText(previewDescription(update.linkPreview, update.linkUrl));
+}
+
+function clippedSocialPreviewText(update = {}, limit = 180) {
+  const text = socialPreviewText(update);
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit).replace(/\s+\S*$/, "").trim()}...`;
+}
+
+function hasLongSocialPreviewText(update = {}, limit = 180) {
+  return socialPreviewText(update).length > clippedSocialPreviewText(update, limit).length;
+}
+
+function socialLinkHost(update = {}) {
+  try {
+    return new URL(update.social?.permalink || update.linkUrl || "").hostname.replace(/^www\./, "");
+  } catch {
+    return "facebook.com";
+  }
+}
 ---
 
 <Wrapper class:list={[!embedded && "panel", "community-updates-panel", embedded && "community-updates-panel-embedded", variant === "narrow" && "community-updates-panel-narrow"]}>
@@ -167,9 +189,20 @@ const Wrapper = embedded ? "div" : "section";
                       {update.linkPreview?.imageUrl && <img src={update.linkPreview.imageUrl} alt="" loading="lazy" />}
                       <span>
                         <strong>{previewTitle(update.linkPreview, update.linkUrl)}</strong>
-                        <small>{previewDescription(update.linkPreview, update.linkUrl)}</small>
+                        <small>{socialLinkHost(update)}</small>
                       </span>
                     </a>
+                    {socialPreviewText(update) && (
+                      <div class="social-post-text-preview facebook-post-text-preview">
+                        <p>{clippedSocialPreviewText(update)}</p>
+                        {hasLongSocialPreviewText(update) && (
+                          <details>
+                            <summary>Show more</summary>
+                            <p>{socialPreviewText(update)}</p>
+                          </details>
+                        )}
+                      </div>
+                    )}
                     {!update.linkPreview?.imageUrl && update.social.embedUrl && (
                       <iframe
                         class="facebook-embed facebook-media-embed"
@@ -1088,6 +1121,42 @@ const Wrapper = embedded ? "div" : "section";
 
   .substack-icon {
     background: linear-gradient(135deg, #ff6719, #f97316);
+  }
+
+  .social-post-text-preview {
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 0 0 12px 12px;
+    border-top: 0;
+    color: #334155;
+    margin-top: -12px;
+    padding: 12px 14px 14px;
+  }
+
+  .social-post-text-preview p {
+    color: #334155;
+    font-size: 0.9rem;
+    font-weight: 750;
+    line-height: 1.45;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .social-post-text-preview details {
+    margin-top: 8px;
+  }
+
+  .social-post-text-preview summary {
+    color: #1d4ed8;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 950;
+  }
+
+  .social-post-text-preview details p {
+    border-top: 1px solid #dbeafe;
+    margin-top: 8px;
+    padding-top: 8px;
   }
 
   .instagram-preview-card strong,
