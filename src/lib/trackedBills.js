@@ -190,7 +190,16 @@ export function gradeFromAlignmentPercent(value) {
 }
 
 export function representativeGradeFor(rep = {}, trackedBills = new Map(), billSummaries = new Map()) {
-  return representativeOnlineTestimonyGrade(rep.voteHistory || [], billSummaries) || unknownGrade();
+  return (
+    representativeOnlineTestimonyGrade(rep.voteHistory || [], billSummaries) ||
+    gradeFromAlignmentPercent(
+      rep.alignment_percent ??
+        rep.alignmentPercent ??
+        rep.preferred_vote_alignment_pct ??
+        rep.preferredVoteAlignmentPct,
+    ) ||
+    unknownGrade()
+  );
 }
 
 export function representativeOnlineTestimonyGrade(votes = [], billSummaries = new Map()) {

@@ -15,6 +15,12 @@ import {
 } from "../lib/alignmentTags";
 import { countyForCommunity, countyImageUrl } from "../lib/communityImages";
 import { communityPath } from "../lib/communitiesApi";
+import { getRecentApprovedCommunityUpdates, communityUpdateDate } from "../lib/communityUpdates";
+import {
+  getCommunityUpdateCards,
+  previewDescription,
+  previewTitle,
+} from "../lib/communityUpdateCards";
 import { profilePhotoUrl } from "../lib/photos";
 import { getRepresentative, repName, repSlug } from "../lib/repsApi";
 import { cleanText, joinClean } from "../lib/text";
@@ -59,6 +65,16 @@ function representativesFor() {
 
 function articlesFor() {
   return community?.relatedArticles || community?.articles || [];
+}
+
+function communityUpdatesFor() {
+  return (
+    community?.communityUpdates ||
+    community?.community_updates ||
+    community?.relatedUpdates ||
+    community?.updates ||
+    []
+  );
 }
 
 function districtsFor() {
@@ -162,6 +178,119 @@ function articleTitle(article = {}) {
 
 function articlePublisher(article = {}) {
   return articleSourceName(article);
+}
+
+function communityContextTokens() {
+  return uniqueLabels([
+    community?.name,
+    community?.label,
+    community?.slug,
+    community?.county,
+    community?.countyName,
+    community?.county_name,
+    communityDistrict() && `District ${communityDistrict()}`,
+    communityDistrict() && `${bodyLabel()} District ${communityDistrict()}`,
+    ...townsFor(),
+    ...districtsFor().flatMap((district) => [
+      district.name,
+      district.label,
+      district.districtLabel,
+      district.district_label,
+      district.county,
+      district.countyName,
+    ]),
+  ]);
+}
+
+function updateMatchesCommunity(update = {}, tokens = []) {
+  if (!tokens.length) return false;
+  const haystack = [
+    update.entityName,
+    update.entityKey,
+    update.pageUrl,
+    update.comment,
+    update.linkUrl,
+    ...(update.mentions || []).flatMap((mention) => [
+      mention.name,
+      mention.county,
+      mention.district,
+      mention.profileDistrict,
+      mention.roleLabel,
+      mention.path,
+    ]),
+  ]
+    .map((value) => cleanText(value).toLowerCase())
+    .join(" ");
+
+  return tokens.some((token) => {
+    const normalized = cleanText(token).toLowerCase();
+    return normalized && haystack.includes(normalized);
+  });
+}
+
+async function communityUpdatesForProfile({ limit = 8 } = {}) {
+  const explicitUpdates = communityUpdatesFor();
+  if (explicitUpdates.length) {
+    return getCommunityUpdateCards(explicitUpdates.slice(0, limit));
+  }
+
+  try {
+    const tokens = communityContextTokens();
+    const updates = await getRecentApprovedCommunityUpdates({ limit: 120 });
+    return getCommunityUpdateCards(
+      updates.filter((update) => updateMatchesCommunity(update, tokens)).slice(0, limit),
+    );
+  } catch (error) {
+    console.error(error?.message || "Unable to load community updates for profile.");
+    return [];
+  }
+}
+
+function updateTitle(update = {}) {
+  return previewTitle(update.linkPreview) || cleanText(update.entityName) || "Community update";
+}
+
+function updateSummary(update = {}) {
+  return cleanText(
+    update.comment ||
+      previewDescription(update.linkPreview, update.linkUrl) ||
+      "Community-submitted context.",
+  );
+}
+
+function updateImage(update = {}) {
+  return update.linkPreview?.imageUrl || update.photoUrl || update.photoUrls?.[0] || "";
+}
+
+function coverageDateValue(item = {}) {
+  const value = item.dateValue || item.createdAt || item.article?.created_at || item.article?.createdAt || "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function combinedCoverageItems(articleItems = [], updateItems = []) {
+  return [
+    ...articleItems.map((article) => ({
+      type: "article",
+      title: articleTitle(article),
+      href: article.url,
+      imageUrl: article.preview?.imageUrl || "",
+      source: articlePublisher(article),
+      dateText: articlePublishDate(article),
+      dateValue: article.publishedAt || article.published_at || article.createdAt || article.created_at || "",
+      description: cleanText(article.preview?.description || article.summary || ""),
+    })),
+    ...updateItems.map((update) => ({
+      type: "update",
+      title: updateTitle(update),
+      href: update.linkUrl || update.pageUrl || "/updates",
+      imageUrl: updateImage(update),
+      source: cleanText(update.displayName || "Community member"),
+      dateText: communityUpdateDate(update.createdAt),
+      dateValue: update.createdAt,
+      description: updateSummary(update),
+    })),
+  ].sort((a, b) => coverageDateValue(b) - coverageDateValue(a));
 }
 
 async function hydrateRepresentativePreview(reps = []) {
@@ -283,6 +412,8 @@ function candidateDirectoryHref() {
 const towns = townsFor();
 const representatives = representativesFor();
 const articles = await enrichArticlesWithPreviews(articlesFor(), { limit: 10 });
+const communityUpdates = await communityUpdatesForProfile({ limit: 8 });
+const coverageItems = combinedCoverageItems(articles, communityUpdates);
 const districts = districtsFor();
 const visibleDistricts = districts.slice(0, DISTRICT_PREVIEW_LIMIT);
 const hiddenDistricts = districts.slice(DISTRICT_PREVIEW_LIMIT);
@@ -610,30 +741,46 @@ try {
 
               <section class="panel side-panel">
                 <div class="section-heading">
-                  <p class="eyebrow">Articles</p>
-                  <h2>Related Coverage</h2>
+                  <p class="eyebrow">Community context</p>
+                  <h2>Related Coverage and Updates</h2>
                 </div>
 
-                {articles.length ? (
+                {coverageItems.length ? (
                   <div class="article-list">
-                    {articles.map((article) => (
+                    {coverageItems.map((item) => (
                       <article>
-                        {article.preview?.imageUrl && <img src={article.preview.imageUrl} alt="" loading="lazy" />}
-                        <h3><a href={article.url}>{articleTitle(article)}</a></h3>
-                        <div class="article-meta-inline">
-                          {articlePublisher(article) && <span>Source: {articlePublisher(article)}</span>}
-                          {articlePublishDate(article) && <span>Published: {articlePublishDate(article)}</span>}
+                        {item.imageUrl && <img src={item.imageUrl} alt="" loading="lazy" />}
+                        <div class="coverage-type-row">
+                          <span class:list={["coverage-type", item.type === "update" && "coverage-update"]}>
+                            {item.type === "update" ? "Community update" : "Article"}
+                          </span>
                         </div>
-                        {article.preview?.description && <p>{cleanText(article.preview.description)}</p>}
+                        <h3>
+                          <a
+                            href={item.href}
+                            target={item.type === "article" || item.href?.startsWith("http") ? "_blank" : undefined}
+                            rel={item.type === "article" || item.href?.startsWith("http") ? "noopener noreferrer" : undefined}
+                          >
+                            {item.title}
+                          </a>
+                        </h3>
+                        <div class="article-meta-inline">
+                          {item.source && <span>{item.type === "update" ? "By" : "Source"}: {item.source}</span>}
+                          {item.dateText && <span>{item.type === "update" ? "Updated" : "Published"}: {item.dateText}</span>}
+                        </div>
+                        {item.description && <p>{item.description}</p>}
                       </article>
                     ))}
                   </div>
                 ) : (
-                  <p class="empty">No related articles returned.</p>
+                  <p class="empty">No related coverage or community updates returned.</p>
                 )}
 
-                {meta.articleLimit && (
-                  <small>Showing up to {meta.articleLimit} articles.</small>
+                {(meta.articleLimit || communityUpdates.length) && (
+                  <small>
+                    Showing related articles
+                    {communityUpdates.length ? " and approved community updates" : ""}.
+                  </small>
                 )}
               </section>
             </aside>
@@ -873,6 +1020,35 @@ try {
     width: 100%;
   }
 
+  .article-list article:has(.coverage-update) > img {
+    background: white;
+    object-fit: contain;
+  }
+
+  .coverage-type-row {
+    display: flex;
+    margin-bottom: 8px;
+  }
+
+  .coverage-type {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1e3a8a;
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    padding: 5px 8px;
+    text-transform: uppercase;
+  }
+
+  .coverage-type.coverage-update {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #9a3412;
+  }
+
   .article-meta-inline {
     display: flex;
     flex-wrap: wrap;
@@ -892,9 +1068,15 @@ try {
 
   .profile-preview-list article {
     align-items: start;
+    align-self: start;
     display: grid;
     gap: 12px;
     grid-template-columns: 64px 1fr;
+    padding-block: 12px;
+  }
+
+  .profile-preview-list {
+    align-items: start;
   }
 
   .profile-preview-heading {

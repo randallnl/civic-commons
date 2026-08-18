@@ -699,9 +699,32 @@ function countyCodeFromName(value = "") {
   return countyMap[cleanDisplay(value)] || "";
 }
 
+function countyNameForCode(code = "") {
+  const counties = {
+    "01": "Belknap",
+    "02": "Carroll",
+    "03": "Cheshire",
+    "04": "Coos",
+    "05": "Grafton",
+    "06": "Hillsborough",
+    "07": "Merrimack",
+    "08": "Rockingham",
+    "09": "Strafford",
+    "10": "Sullivan",
+  };
+  return counties[String(code || "").padStart(2, "0")] || "";
+}
+
 function countyFromMatchedDistricts(districts = []) {
-  const district = districts.find((item) => cleanDisplay(item.county)) || {};
-  return cleanDisplay(district.county);
+  const district =
+    districts.find((item) =>
+      cleanDisplay(item.county || item.countyName || item.county_name) ||
+      countyNameForCode(item.countyNumber || item.county_number || item.county),
+    ) || {};
+  return (
+    cleanDisplay(district.county || district.countyName || district.county_name) ||
+    countyNameForCode(district.countyNumber || district.county_number || district.county)
+  );
 }
 
 function districtDivisionSummary({
@@ -1054,20 +1077,9 @@ function uniqueOptions(values = []) {
                     </div>
                   </section>
 
-                  {(divisionSummaryText || floterialHouseDistricts.length > 0) && (
+                  {divisionSummaryText && (
                     <section class="address-division-summary" aria-label="District division summary">
-                      {divisionSummaryText && <p>{divisionSummaryText}</p>}
-                      {floterialHouseDistricts.length > 0 && (
-                        <div class="floterial-callout">
-                          <strong>Floterial district</strong>
-                          <span>
-                            {floterialHouseDistricts.join(", ")} is an
-                            additional House district layered over multiple
-                            local House districts, so it is listed separately
-                            from your base House district.
-                          </span>
-                        </div>
-                      )}
+                      <p>{divisionSummaryText}</p>
                     </section>
                   )}
 
@@ -1554,30 +1566,6 @@ function uniqueOptions(values = []) {
     font-weight: 800;
     line-height: 1.5;
     margin: 0;
-  }
-
-  .floterial-callout {
-    background: #fff7ed;
-    border: 1px solid #fb923c;
-    border-radius: 12px;
-    display: grid;
-    gap: 5px;
-    padding: 12px 14px;
-  }
-
-  .floterial-callout strong {
-    color: #9a3412;
-    font-size: 0.78rem;
-    font-weight: 950;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .floterial-callout span {
-    color: #431407;
-    font-size: 0.95rem;
-    font-weight: 750;
-    line-height: 1.45;
   }
 
   .district-strip-heading {

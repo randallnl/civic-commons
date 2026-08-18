@@ -206,7 +206,33 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
 
     <div class="rep-main">
       <div class="rep-heading">
-        <h3><a href={profileHref}>{name}</a></h3>
+        <div class="rep-title-block">
+          <h3><a href={profileHref}>{name}</a></h3>
+          <div class="rep-meta">
+            <span>{cleanText(rep.chamber || "Legislator")}</span>
+            <span>{formatParty(rep.party)}</span>
+            {isFreeStater(rep) && (
+              <a
+                class="free-stater-pill"
+                href="/free-staters"
+                title={FREE_STATE_ALIGNED_TOOLTIP}
+                aria-label={FREE_STATE_ALIGNED_TOOLTIP}
+              >
+                Free State Aligned
+              </a>
+            )}
+            {isTpActionAligned(rep) && (
+              <a
+                class="tpaction-pill"
+                href="/tpaction-aligned"
+                title={TPACTION_ALIGNED_TOOLTIP}
+                aria-label={TPACTION_ALIGNED_TOOLTIP}
+              >
+                TPAction Aligned
+              </a>
+            )}
+          </div>
+        </div>
         <a
           class:list={["rep-grade", grade.className]}
           href="/vote-grades"
@@ -216,31 +242,6 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
           <span>{grade.letter}</span>
           <small>Grade</small>
         </a>
-      </div>
-
-      <div class="rep-meta">
-        <span>{cleanText(rep.chamber || "Legislator")}</span>
-        <span>{formatParty(rep.party)}</span>
-        {isFreeStater(rep) && (
-          <a
-            class="free-stater-pill"
-            href="/free-staters"
-            title={FREE_STATE_ALIGNED_TOOLTIP}
-            aria-label={FREE_STATE_ALIGNED_TOOLTIP}
-          >
-            Free State Aligned
-          </a>
-        )}
-        {isTpActionAligned(rep) && (
-          <a
-            class="tpaction-pill"
-            href="/tpaction-aligned"
-            title={TPACTION_ALIGNED_TOOLTIP}
-            aria-label={TPACTION_ALIGNED_TOOLTIP}
-          >
-            TPAction Aligned
-          </a>
-        )}
       </div>
 
       <div class="district-line">
@@ -398,6 +399,12 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
     justify-content: space-between;
   }
 
+  .rep-title-block {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+  }
+
   .rep-grade,
   .rep-card a.rep-grade {
     border: 1px solid rgba(31, 41, 51, 0.32);
@@ -458,7 +465,7 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 8px;
+    margin-top: 0;
   }
 
   .rep-meta span,
