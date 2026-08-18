@@ -308,8 +308,25 @@ function countyNameForCode(code = "") {
     "08": "Rockingham",
     "09": "Strafford",
     "10": "Sullivan",
+    "001": "Belknap",
+    "003": "Carroll",
+    "005": "Cheshire",
+    "007": "Coos",
+    "009": "Grafton",
+    "011": "Hillsborough",
+    "013": "Merrimack",
+    "015": "Rockingham",
+    "017": "Strafford",
+    "019": "Sullivan",
   };
-  return counties[String(code || "").padStart(2, "0")] || "";
+  const value = String(code || "").trim();
+  return counties[value.padStart(2, "0")] || counties[value.padStart(3, "0")] || "";
+}
+
+function countyDisplayName(value = "") {
+  const display = cleanDisplay(value);
+  if (!display || /^\d+$/.test(display)) return "";
+  return display;
 }
 
 function isSenateCandidate(candidate = {}) {
@@ -409,15 +426,19 @@ function countyCodeFromName(value = "") {
   return countyMap[cleanDisplay(value)] || "";
 }
 
+function countyCodeValue(item = {}) {
+  return item.countyNumber || item.county_number || item.countyCode || item.county_code || item.county;
+}
+
 function countyFromMatchedDistricts(districts = []) {
   const district =
     districts.find((item) =>
-      cleanDisplay(item.county || item.countyName || item.county_name) ||
-      countyNameForCode(item.countyNumber || item.county_number || item.county),
+      countyDisplayName(item.county || item.countyName || item.county_name) ||
+      countyNameForCode(countyCodeValue(item)),
     ) || {};
   return (
-    cleanDisplay(district.county || district.countyName || district.county_name) ||
-    countyNameForCode(district.countyNumber || district.county_number || district.county)
+    countyDisplayName(district.county || district.countyName || district.county_name) ||
+    countyNameForCode(countyCodeValue(district))
   );
 }
 

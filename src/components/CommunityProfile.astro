@@ -262,6 +262,13 @@ function updateImage(update = {}) {
   return update.linkPreview?.imageUrl || update.photoUrl || update.photoUrls?.[0] || "";
 }
 
+function textPreview(value = "", limit = 180) {
+  const text = cleanText(value).replace(/\s+/g, " ").trim();
+  if (text.length <= limit) return text;
+  const clipped = text.slice(0, limit).replace(/\s+\S*$/, "").trim();
+  return `${clipped}...`;
+}
+
 function coverageDateValue(item = {}) {
   const value = item.dateValue || item.createdAt || item.article?.created_at || item.article?.createdAt || "";
   const date = new Date(value);
@@ -280,16 +287,22 @@ function combinedCoverageItems(articleItems = [], updateItems = []) {
       dateValue: article.publishedAt || article.published_at || article.createdAt || article.created_at || "",
       description: cleanText(article.preview?.description || article.summary || ""),
     })),
-    ...updateItems.map((update) => ({
-      type: "update",
-      title: updateTitle(update),
-      href: update.linkUrl || update.pageUrl || "/updates",
-      imageUrl: updateImage(update),
-      source: cleanText(update.displayName || "Community member"),
-      dateText: communityUpdateDate(update.createdAt),
-      dateValue: update.createdAt,
-      description: updateSummary(update),
-    })),
+    ...updateItems.map((update) => {
+      const description = updateSummary(update);
+      const previewDescription = textPreview(description);
+      return {
+        type: "update",
+        title: updateTitle(update),
+        href: update.linkUrl || update.pageUrl || "/updates",
+        imageUrl: updateImage(update),
+        source: cleanText(update.displayName || "Community member"),
+        dateText: communityUpdateDate(update.createdAt),
+        dateValue: update.createdAt,
+        description,
+        previewDescription,
+        hasMoreDescription: description.length > previewDescription.length,
+      };
+    }),
   ].sort((a, b) => coverageDateValue(b) - coverageDateValue(a));
 }
 
@@ -768,7 +781,17 @@ try {
                           {item.source && <span>{item.type === "update" ? "By" : "Source"}: {item.source}</span>}
                           {item.dateText && <span>{item.type === "update" ? "Updated" : "Published"}: {item.dateText}</span>}
                         </div>
-                        {item.description && <p>{item.description}</p>}
+                        {item.description && item.type === "update" && item.hasMoreDescription ? (
+                          <>
+                            <p>{item.previewDescription}</p>
+                            <details class="coverage-more">
+                              <summary>Show more</summary>
+                              <p>{item.description}</p>
+                            </details>
+                          </>
+                        ) : (
+                          item.description && <p>{item.description}</p>
+                        )}
                       </article>
                     ))}
                   </div>
@@ -886,6 +909,7 @@ try {
   }
 
   .content-grid {
+    align-items: start;
     display: grid;
     gap: 20px;
     grid-template-columns: minmax(0, 1fr) minmax(300px, 0.42fr);
@@ -895,8 +919,15 @@ try {
   .side-stack,
   .rep-list,
   .article-list {
+    align-content: start;
     display: grid;
     gap: 14px;
+  }
+
+  .stack,
+  .side-stack,
+  .panel {
+    align-self: start;
   }
 
   .panel,
@@ -1066,6 +1097,23 @@ try {
     padding: 4px 7px;
   }
 
+  .coverage-more {
+    margin-top: 8px;
+  }
+
+  .coverage-more summary {
+    color: #174ea6;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 950;
+  }
+
+  .coverage-more p {
+    border-top: 1px solid #dbe7f5;
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+
   .profile-preview-list article {
     align-items: start;
     align-self: start;
@@ -1076,6 +1124,7 @@ try {
   }
 
   .profile-preview-list {
+    align-content: start;
     align-items: start;
   }
 
