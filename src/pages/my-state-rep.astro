@@ -558,7 +558,8 @@ function isVotingAction(vote = {}) {
     .join(" ")
     .toLowerCase();
 
-  if (isExcludedAlignmentMotion(text)) return false;
+  if (vote.include_in_display === 0) return false;
+  if (vote.include_in_display === undefined && isExcludedAlignmentMotion(text)) return false;
   if (!text) return true;
   return (
     /\b(ought|pass|adopt|table|refer|re-refer|inexpedient|itl|amend|conference|veto)\b/.test(text) ||

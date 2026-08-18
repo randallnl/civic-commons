@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { cleanText } from "./text";
+import { effectiveVoteVisibility, isProceduralAlignmentMotion } from "./voteVisibility";
 
 const DEFAULT_TRACKED_BILLS_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vTHKkGGONM78RXb63Igvi2BXipOA4pV4X5CBY6yHaVAizO-l0q_WtU8uyXI-vhxxbKEib9nFlL1nIBz/pub?gid=1337871563&single=true&output=csv";
@@ -83,7 +84,8 @@ export function isVotingAction(vote = {}) {
       vote.description ||
       "",
   ).trim();
-  if (isExcludedAlignmentMotion(action)) return false;
+  if (!effectiveVoteVisibility(vote).includeInDisplay) return false;
+  if (isExcludedAlignmentMotion(action) && vote.include_in_display === undefined) return false;
   const voteCode = String(vote.vote_code ?? vote.voteCode ?? "").trim();
   const numericVoteCode = Number(voteCode);
   const voteText = String(vote.vote || vote.vote_label || vote.voteLabel || "")
@@ -100,8 +102,11 @@ export function isVotingAction(vote = {}) {
 }
 
 export function isExcludedAlignmentMotion(value = "") {
-  const motion = cleanText(value).toLowerCase();
-  return motion.includes("adopt amendment") || motion.includes("special order");
+  return isProceduralAlignmentMotion(value);
+}
+
+export function isVoteIncludedInGrade(vote = {}) {
+  return Boolean(effectiveVoteVisibility(vote).includeInGrades);
 }
 
 export function isKnownVote(vote = {}) {
@@ -194,7 +199,7 @@ export function representativeGradeFor(rep = {}, trackedBills = new Map(), billS
 
 export function representativeOnlineTestimonyGrade(votes = [], billSummaries = new Map()) {
   const scoredVotes = votes
-    .filter((vote) => isVotingAction(vote) && isKnownVote(vote))
+    .filter((vote) => isVotingAction(vote) && isKnownVote(vote) && isVoteIncludedInGrade(vote))
     .map((vote) => representativeOnlineTestimonyAnalysis(vote, billSummaryForVote(billSummaries, vote)))
     .filter((analysis) => Number.isFinite(analysis?.score));
 
@@ -220,7 +225,7 @@ export function representativeOnlineTestimonyGrade(votes = [], billSummaries = n
 export function representativeGrade(votes = [], trackedBills = new Map(), billSummaries = new Map()) {
   const scoredVotes = votes
     .map((vote) => {
-      if (!isVotingAction(vote)) return null;
+      if (!isVotingAction(vote) || !isVoteIncludedInGrade(vote)) return null;
       const trackedBill = trackedBillForVote(trackedBills, vote);
       if (!trackedBill) return null;
       const billSummary = billSummaryForVote(billSummaries, vote);
@@ -260,7 +265,7 @@ export function representativeOnlineTestimonyVotePreviews(
   const nameKey = rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim();
   return (rep.voteHistory || [])
     .map((vote) => {
-      if (!isVotingAction(vote) || !isKnownVote(vote)) return null;
+      if (!isVotingAction(vote) || !isKnownVote(vote) || !isVoteIncludedInGrade(vote)) return null;
       const billSummary = billSummaryForVote(billSummaries, vote);
       const analysis = representativeOnlineTestimonyAnalysis(vote, billSummary);
       if (!Number.isFinite(analysis.score) || !billSummary) return null;

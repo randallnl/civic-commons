@@ -474,6 +474,7 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
               {userCanModerateContent && <a class:list={[adminArea === "moderation" && "active"]} href="/admin/moderation">Moderation</a>}
               {userCanManageReviewers && <a class:list={[adminArea === "reviewers" && "active"]} href="/admin/reviewers">Reviewers</a>}
               {userCanUseDataArea && <a class:list={[adminArea === "data" && "active"]} href="/admin/data">Data tools</a>}
+              {userCanUseSourceDataTools && <a href="/admin/votes">Vote review</a>}
             </nav>
           </section>
 

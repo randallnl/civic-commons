@@ -1,6 +1,7 @@
 // Vendored from randallnl/nh-civics-api so the site can run API queries directly
 // against its bound D1/R2 resources without calling a separate Worker.
 import { ensureArticlePreviewColumns } from "./articlePreviews";
+import { voteVisibilityCaseExpression } from "./voteVisibility";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +12,7 @@ const corsHeaders = {
 
 const DEFAULT_BILL_TRACKER_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vTHKkGGONM78RXb63Igvi2BXipOA4pV4X5CBY6yHaVAizO-l0q_WtU8uyXI-vhxxbKEib9nFlL1nIBz/pub?gid=1337871563&single=true&output=csv";
+let voteVisibilityOverridesTableEnsured = false;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -3769,6 +3771,37 @@ async function ensureBillOverridesTable(db) {
   `).run();
 }
 
+async function ensureVoteVisibilityOverridesTable(db) {
+  if (voteVisibilityOverridesTableEnsured) return;
+
+  await db.prepare(`
+    CREATE TABLE IF NOT EXISTS d1_vote_visibility_overrides (
+      sessionyear INTEGER NOT NULL,
+      legislativebody TEXT NOT NULL,
+      votesequencenumber INTEGER NOT NULL,
+      condensedbillno TEXT NOT NULL,
+      include_in_display INTEGER NOT NULL DEFAULT 1,
+      include_in_grades INTEGER NOT NULL DEFAULT 1,
+      notes TEXT,
+      updated_by TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (
+        sessionyear,
+        legislativebody,
+        votesequencenumber,
+        condensedbillno
+      )
+    )
+  `).run();
+
+  await db.prepare(`
+    CREATE INDEX IF NOT EXISTS idx_vote_visibility_bill
+    ON d1_vote_visibility_overrides(sessionyear, condensedbillno)
+  `).run();
+
+  voteVisibilityOverridesTableEnsured = true;
+}
+
 async function handleBills(request, env) {
   const url = new URL(request.url);
   await ensureBillOverridesTable(env.DB);
@@ -5113,6 +5146,13 @@ async function handleArticleDetail(request, env) {
 
 
 async function getVoteHistoryForRep(env, employeeno, limit = 50) {
+  await ensureVoteVisibilityOverridesTable(env.DB);
+  const actionSql = `COALESCE(
+        NULLIF(TRIM(rs.question_motion), ''),
+        NULLIF(TRIM(rs.title1), ''),
+        NULLIF(TRIM(rs.title2), '')
+      )`;
+  const defaultVisibilitySql = voteVisibilityCaseExpression(actionSql);
   const result = await env.DB.prepare(`
     SELECT
       h.sessionyear,
@@ -5147,6 +5187,9 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
         NULLIF(TRIM(rs.title1), ''),
         NULLIF(TRIM(rs.title2), '')
       ) AS action_text,
+      COALESCE(vvo.include_in_display, ${defaultVisibilitySql}) AS include_in_display,
+      COALESCE(vvo.include_in_grades, ${defaultVisibilitySql}) AS include_in_grades,
+      vvo.notes AS visibility_notes,
 
       CASE
         WHEN CAST(h.vote AS INTEGER) = 1
@@ -5200,6 +5243,11 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
       ON b.sessionyear = h.sessionyear
       AND b.condensedbillno = h.condensedbillno
       AND b.legislativebody = h.legislativebody
+    LEFT JOIN d1_vote_visibility_overrides vvo
+      ON vvo.sessionyear = h.sessionyear
+      AND vvo.legislativebody = h.legislativebody
+      AND vvo.votesequencenumber = h.votesequencenumber
+      AND UPPER(vvo.condensedbillno) = UPPER(h.condensedbillno)
     WHERE h.employeenumber = ?
       AND rs.votesequencenumber IS NOT NULL
       AND TRIM(CAST(h.vote AS TEXT)) IN ('0', '1', '2', '3', '4', '5', '6', '7')
@@ -5208,18 +5256,7 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
         NULLIF(TRIM(rs.title1), ''),
         NULLIF(TRIM(rs.title2), '')
       ) IS NOT NULL
-      AND UPPER(COALESCE(
-        NULLIF(TRIM(rs.question_motion), ''),
-        NULLIF(TRIM(rs.title1), ''),
-        NULLIF(TRIM(rs.title2), ''),
-        ''
-      )) NOT LIKE '%ADOPT AMENDMENT%'
-      AND UPPER(COALESCE(
-        NULLIF(TRIM(rs.question_motion), ''),
-        NULLIF(TRIM(rs.title1), ''),
-        NULLIF(TRIM(rs.title2), ''),
-        ''
-      )) NOT LIKE '%SPECIAL ORDER%'
+      AND COALESCE(vvo.include_in_display, ${defaultVisibilitySql}) = 1
     ORDER BY h.sessionyear DESC, h.votesequencenumber DESC
     LIMIT ?
   `)
