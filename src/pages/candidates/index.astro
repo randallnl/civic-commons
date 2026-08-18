@@ -220,13 +220,12 @@ const addressSenateDistricts = matchedSenateDistricts.length
 const addressHouseDistricts = regularHouseDistricts.length || floterialHouseDistricts.length
   ? [...regularHouseDistricts, ...floterialHouseDistricts].join(", ")
   : districtSummaryFor(addressOfficeGroups, "house");
+const addressCountyName = countyFromMatchedDistricts(matchedDistricts) || cleanDisplay(county);
 const divisionSummaryText = address
   ? districtDivisionSummary({
       place,
       ward,
-      senateDistrict: addressSenateDistricts,
-      houseDistricts: regularHouseDistricts,
-      floterialDistricts: floterialHouseDistricts,
+      county: addressCountyName,
     })
   : "";
 
@@ -663,25 +662,60 @@ function isFloterialDistrict(district = {}) {
   );
 }
 
+function isFloterialOfficeGroup(group = {}, floterialDistricts = []) {
+  if (!floterialDistricts.length) return false;
+  const groupTokens = [
+    group.label,
+    group.districtLabel,
+    [countyCodeFromName(group.county), group.district].filter(Boolean).join(" "),
+  ].map(normalizeDistrictToken);
+  const floterialTokens = floterialDistricts.map(normalizeDistrictToken);
+
+  return groupTokens.some((token) => token && floterialTokens.includes(token));
+}
+
+function normalizeDistrictToken(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\b(state|house|district|representative|rep|nh)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function countyCodeFromName(value = "") {
+  const countyMap = {
+    Belknap: "BEL",
+    Carroll: "CAR",
+    Cheshire: "CHE",
+    Coos: "COO",
+    Grafton: "GRA",
+    Hillsborough: "HIL",
+    Merrimack: "MER",
+    Rockingham: "ROC",
+    Strafford: "STR",
+    Sullivan: "SUL",
+  };
+  return countyMap[cleanDisplay(value)] || "";
+}
+
+function countyFromMatchedDistricts(districts = []) {
+  const district = districts.find((item) => cleanDisplay(item.county)) || {};
+  return cleanDisplay(district.county);
+}
+
 function districtDivisionSummary({
   place = "",
   ward = "",
-  senateDistrict = "",
-  houseDistricts = [],
-  floterialDistricts = [],
+  county = "",
 } = {}) {
   const parts = [];
-  if (place) parts.push(ward ? `${place} ${ward}` : place);
-  if (senateDistrict) parts.push(`State Senate District ${senateDistrict}`);
-  if (houseDistricts.length) {
-    parts.push(`${houseDistricts.length === 1 ? "State House District" : "State House Districts"} ${houseDistricts.join(", ")}`);
-  }
-  if (floterialDistricts.length) {
-    parts.push(`${floterialDistricts.length === 1 ? "floterial House District" : "floterial House Districts"} ${floterialDistricts.join(", ")}`);
-  }
+  if (ward) parts.push(ward);
+  if (place) parts.push(place);
+  if (county) parts.push(`${county} County`);
 
   return parts.length
-    ? `This address maps to ${parts.join("; ")}.`
+    ? `Divisions: ${parts.join("; ")}.`
     : "";
 }
 
@@ -1004,10 +1038,17 @@ function uniqueOptions(values = []) {
                           <strong>{addressSenateDistricts}</strong>
                         </span>
                       )}
-                      {addressHouseDistricts && (
+                      {(regularHouseDistricts.length > 0 || (!floterialHouseDistricts.length && addressHouseDistricts)) && (
                         <span class="district-chip house-chip">
                           <small>State House</small>
-                          <strong>{addressHouseDistricts}</strong>
+                          <strong>{regularHouseDistricts.join(", ") || addressHouseDistricts}</strong>
+                        </span>
+                      )}
+                      {floterialHouseDistricts.length > 0 && (
+                        <span class="district-chip floterial-chip">
+                          <small>State House</small>
+                          <strong>{floterialHouseDistricts.join(", ")}</strong>
+                          <em>Floterial</em>
                         </span>
                       )}
                     </div>
@@ -1035,7 +1076,12 @@ function uniqueOptions(values = []) {
                       <div class="office-result-heading">
                         <div>
                           <p class="eyebrow">Office up for election</p>
-                          <h3 id={`office-group-${group.label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}>{group.officeLabel || group.label}</h3>
+                          <div class="group-title-row">
+                            <h3 id={`office-group-${group.label.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}>{group.officeLabel || group.label}</h3>
+                            {isFloterialOfficeGroup(group, floterialHouseDistricts) && (
+                              <span class="floterial-tag">Floterial</span>
+                            )}
+                          </div>
                           <p>{group.districtLabel}</p>
                         </div>
                         <div class="office-metrics" aria-label={`${group.label} summary`}>
@@ -1589,6 +1635,18 @@ function uniqueOptions(values = []) {
     font-weight: 950;
   }
 
+  .district-chip em {
+    background: #9a3412;
+    border-radius: 999px;
+    color: #fff7ed;
+    font-size: 0.68rem;
+    font-style: normal;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    padding: 5px 7px;
+    text-transform: uppercase;
+  }
+
   .senate-chip {
     background: #eff6ff;
     border-color: #93c5fd;
@@ -1597,6 +1655,11 @@ function uniqueOptions(values = []) {
   .house-chip {
     background: #fff7ed;
     border-color: #fed7aa;
+  }
+
+  .floterial-chip {
+    background: #fff1e6;
+    border-color: #fb923c;
   }
 
   .office-result-group {
@@ -1615,6 +1678,27 @@ function uniqueOptions(values = []) {
     gap: 14px;
     justify-content: space-between;
     padding-bottom: 12px;
+  }
+
+  .group-title-row {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .floterial-tag {
+    background: #9a3412;
+    border: 1px solid #fb923c;
+    border-radius: 999px;
+    color: #fff7ed;
+    display: inline-flex;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    padding: 7px 9px;
+    text-transform: uppercase;
   }
 
   .office-result-heading .eyebrow {
