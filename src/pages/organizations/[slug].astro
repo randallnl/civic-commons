@@ -19,6 +19,7 @@ import {
 } from "../../lib/organizationsApi";
 import { profilePhotoUrl } from "../../lib/photos";
 import { ensureUnifiedPeopleTables } from "../../lib/unifiedPeople";
+import { endorsementPillClass as presentationPillClass } from "../../lib/endorsementPresentation";
 
 const { slug = "" } = Astro.params;
 
@@ -70,22 +71,7 @@ function positionClass(position = "") {
 }
 
 function endorsementPillClass(endorsement = {}) {
-  const text = [
-    endorsement.position,
-    organization?.name,
-    endorsement.statement,
-  ].filter(Boolean).join(" ").toLowerCase();
-
-  if (
-    text.includes("tpaction") ||
-    text.includes("tp action") ||
-    text.includes("turning point action") ||
-    text.includes("free state")
-  ) {
-    return "warning";
-  }
-
-  return "endorse";
+  return presentationPillClass(endorsement, organization?.name);
 }
 
 function endorsedCandidateName(endorsement = {}) {

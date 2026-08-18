@@ -1,7 +1,7 @@
 ---
 import { positionCounts } from "../lib/billsApi";
 
-const { bill, compact = false } = Astro.props;
+const { bill, compact = false, sentimentOnly = false } = Astro.props;
 const counts = positionCounts(bill);
 
 function testimonySentiment() {
@@ -46,10 +46,14 @@ const opposeCount = Math.max(0, Number(counts.oppose || 0));
   {sentiment ? (
     <>
       <span class="summary-title">Public Testimony</span>
-      <div class="summary-pills">
+      <div class:list={["summary-pills", sentimentOnly && "sentiment-only"]}>
         <span class:list={["sentiment-pill", sentiment.className]}>{sentiment.label}</span>
-        <span class="count-pill support-count">{supportCount} Support</span>
-        <span class="count-pill oppose-count">{opposeCount} Oppose</span>
+        {!sentimentOnly && (
+          <>
+            <span class="count-pill support-count">{supportCount} Support</span>
+            <span class="count-pill oppose-count">{opposeCount} Oppose</span>
+          </>
+        )}
       </div>
     </>
   ) : (
@@ -73,6 +77,14 @@ const opposeCount = Math.max(0, Number(counts.oppose || 0));
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .summary-pills.sentiment-only {
+    display: block;
+  }
+
+  .summary-pills.sentiment-only .sentiment-pill {
+    width: 100%;
   }
 
   .sentiment-pill {

@@ -879,7 +879,13 @@ export function endorsementsForCandidate(organizations = [], candidate = {}, slu
       slug,
       candidate.slug,
       candidate.filerEntityNumber,
+      candidate.filer_entity_number,
+      candidate.personid,
+      candidate.id,
       candidate.name,
+      candidate.displayName,
+      candidate.display_name,
+      candidate.full_name,
       [candidate.filerEntityNumber, candidate.name].filter(Boolean).join("-"),
     ]
       .filter(Boolean)
@@ -888,7 +894,16 @@ export function endorsementsForCandidate(organizations = [], candidate = {}, slu
 
   return organizations.flatMap((organization) =>
     (organization.endorsements || [])
-      .filter((endorsement) => candidateKeys.has(endorsement.candidateSlugKey))
+      .filter((endorsement) =>
+        [
+          endorsement.candidateSlugKey,
+          endorsement.candidateSlug,
+          endorsement.candidateName,
+        ]
+          .filter(Boolean)
+          .map(slugify)
+          .some((key) => candidateKeys.has(key)),
+      )
       .map((endorsement) => ({ ...endorsement, organization })),
   );
 }
