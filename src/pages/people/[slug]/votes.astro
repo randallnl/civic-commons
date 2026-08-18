@@ -76,6 +76,7 @@ votes = await Promise.all(
     }
   }),
 );
+const voteDataSummary = buildVoteDataSummary(votes, trackedVoteCount);
 
 function normalizeVote(vote = {}, bills = new Map(), summaries = new Map()) {
   const billNumber = vote.condensedbillno || vote.bill_number || "";
@@ -243,6 +244,54 @@ function voteImpactFor(vote = {}) {
   return representativeVoteImpact(vote, vote.trackedBill);
 }
 
+function buildVoteDataSummary(votes = [], trackedCount = 0) {
+  const summary = {
+    total: votes.length,
+    tracked: trackedCount,
+    aligned: 0,
+    misaligned: 0,
+    neutral: 0,
+    nonVotes: 0,
+    withPublicTestimony: 0,
+  };
+
+  for (const vote of votes) {
+    const stance = voteStanceFor(vote);
+    const rawVote = String(vote.vote || vote.vote_code || vote.vote_label || "").trim().toLowerCase();
+    const documentedNonVote = [
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "absent",
+      "present",
+      "other_not_voting",
+      "other_present_not_voting",
+      "not voting",
+      "present not voting",
+      "not counted",
+    ].includes(rawVote);
+
+    if (documentedNonVote) summary.nonVotes += 1;
+    if (testimonyPositionForBill(vote.billSummary || {})) summary.withPublicTestimony += 1;
+
+    if (stance.className === "legislator-support") {
+      summary.aligned += 1;
+    } else if (stance.className === "legislator-oppose") {
+      summary.misaligned += 1;
+    } else {
+      summary.neutral += 1;
+    }
+  }
+
+  summary.alignmentRate = summary.aligned + summary.misaligned
+    ? Math.round((summary.aligned / (summary.aligned + summary.misaligned)) * 100)
+    : null;
+
+  return summary;
+}
+
 function formatDate(value) {
   if (!value) return "";
 
@@ -377,6 +426,52 @@ function listText(value = "") {
                 Votes connected to the bill tracker include tracker summaries,
                 interpretations, and public testimony summary data where available.
               </p>
+            </div>
+          </section>
+
+          <section class="vote-data-summary" aria-label="Vote data summary">
+            <div class="summary-intro">
+              <p class="eyebrow">Vote Data Summary</p>
+              <h2>
+                {voteDataSummary.alignmentRate === null
+                  ? "No clear alignment rate yet"
+                  : `${voteDataSummary.alignmentRate}% aligned with online testimony`}
+              </h2>
+              <p>
+                Summary is based on the roll-call votes currently shown on this
+                page. Procedural votes hidden by admin review are not included.
+              </p>
+            </div>
+
+            <div class="summary-stats">
+              <span>
+                <strong>{voteDataSummary.total}</strong>
+                Votes shown
+              </span>
+              <span>
+                <strong>{voteDataSummary.tracked}</strong>
+                Tracked bills
+              </span>
+              <span class="summary-good">
+                <strong>{voteDataSummary.aligned}</strong>
+                Aligned
+              </span>
+              <span class="summary-bad">
+                <strong>{voteDataSummary.misaligned}</strong>
+                Not aligned
+              </span>
+              <span>
+                <strong>{voteDataSummary.neutral}</strong>
+                Neutral/no clear position
+              </span>
+              <span>
+                <strong>{voteDataSummary.nonVotes}</strong>
+                Documented non-votes
+              </span>
+              <span>
+                <strong>{voteDataSummary.withPublicTestimony}</strong>
+                With public testimony
+              </span>
             </div>
           </section>
 
@@ -610,6 +705,68 @@ function listText(value = "") {
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   }
 
+  .vote-data-summary {
+    align-items: stretch;
+    background:
+      radial-gradient(circle at 10% 15%, rgba(37, 99, 235, 0.1), transparent 34%),
+      linear-gradient(135deg, #ffffff, #f7fbff);
+    border: 1px solid #bfdbfe;
+    border-radius: 16px;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
+    margin: 0 0 18px;
+    padding: clamp(16px, 3vw, 22px);
+  }
+
+  .summary-intro h2 {
+    color: #1f2933;
+    font-size: clamp(1.5rem, 3vw, 2.35rem);
+    line-height: 1;
+    margin: 0 0 10px;
+  }
+
+  .summary-intro p {
+    color: #4b5563;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .summary-stats {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .summary-stats span {
+    background: rgba(255, 255, 255, 0.86);
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    color: #596579;
+    display: grid;
+    font-size: 0.78rem;
+    font-weight: 900;
+    gap: 5px;
+    line-height: 1.15;
+    padding: 12px;
+  }
+
+  .summary-stats strong {
+    color: #1f2933;
+    font-size: clamp(1.45rem, 3vw, 2rem);
+    line-height: 0.95;
+  }
+
+  .summary-stats .summary-good {
+    border-color: rgba(47, 125, 79, 0.35);
+    background: #f1faef;
+  }
+
+  .summary-stats .summary-bad {
+    border-color: rgba(180, 35, 24, 0.32);
+    background: #fff1ee;
+  }
+
   .vote-color-legend {
     align-items: center;
     background: #ffffff;
@@ -793,6 +950,11 @@ function listText(value = "") {
 
     .vote-color-legend {
       align-items: start;
+      grid-template-columns: 1fr;
+    }
+
+    .vote-data-summary,
+    .summary-stats {
       grid-template-columns: 1fr;
     }
 
