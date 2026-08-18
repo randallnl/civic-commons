@@ -50,6 +50,7 @@ import {
   isVotingAction,
   normalizeBillCode,
   representativeGradeFor,
+  representativeOnlineTestimonyVoteStance,
   representativeVoteAttendance,
   representativeVoteImpact,
   representativeVoteStance,
@@ -128,9 +129,10 @@ try {
 
 const voteHistory = representative ? apiData?.voteHistory || [] : [];
 const voteAttendance = representativeVoteAttendance(voteHistory);
-let trackedVotes = voteHistory
+const normalizedVoteHistory = voteHistory
   .map((vote) => normalizeVote(vote, trackedBills, billSummaries))
-  .filter((vote) => vote.trackedBill && isVotingAction(vote));
+  .filter((vote) => isVotingAction(vote));
+let trackedVotes = normalizedVoteHistory.filter((vote) => vote.trackedBill);
 const voteGrade = representativeGradeFor(
   { ...representative, voteHistory },
   trackedBills,
@@ -152,7 +154,9 @@ trackedVotes = await Promise.all(
     }
   }),
 );
-const trackedVotePreviews = trackedVotes.slice(0, 3);
+const trackedVotePreviews = votePreviewSelection(trackedVotes, normalizedVoteHistory, {
+  limit: 5,
+});
 
 const officeLabel = apiTerm.title || "Civic profile";
 const bodyLabel = apiTerm.body || "New Hampshire";
@@ -401,6 +405,62 @@ function formatVotePreviewHeading(code = "", title = "") {
   const cleanTitle = billTitle.replace(duplicatePrefix, "").trim();
 
   return cleanTitle ? `${billCode}: ${cleanTitle}` : billCode;
+}
+
+function votePreviewSelection(primaryVotes = [], allVotes = [], { limit = 5 } = {}) {
+  const selected = [];
+  const seen = new Set();
+
+  for (const vote of primaryVotes) {
+    if (selected.length >= limit) break;
+    const key = votePreviewKey(vote);
+    if (!key || seen.has(key)) continue;
+    selected.push({ ...vote, previewSource: "tracked" });
+    seen.add(key);
+  }
+
+  if (selected.length >= limit) return selected;
+
+  const backfill = allVotes
+    .filter((vote) => {
+      const key = votePreviewKey(vote);
+      return key && !seen.has(key) && vote.billSummary && testimonyTotal(vote.billSummary) > 0;
+    })
+    .sort((a, b) => {
+      const testimonyDelta = testimonyTotal(b.billSummary) - testimonyTotal(a.billSummary);
+      if (testimonyDelta) return testimonyDelta;
+      return voteDateValue(b) - voteDateValue(a);
+    });
+
+  for (const vote of backfill) {
+    if (selected.length >= limit) break;
+    const key = votePreviewKey(vote);
+    selected.push({ ...vote, previewSource: "high-testimony" });
+    seen.add(key);
+  }
+
+  return selected;
+}
+
+function votePreviewKey(vote = {}) {
+  return [
+    normalizeBillCode(vote.bill_number || vote.condensedbillno || vote.billSummary?.condensedbillno || ""),
+    vote.votesequencenumber || vote.vote_sequence || vote.sequence || vote.motion || "",
+    vote.sessionyear || vote.billSummary?.sessionyear || "",
+  ].join(":");
+}
+
+function testimonyTotal(bill = {}) {
+  return (
+    Number(bill.testimony_count || bill.testimonyCount || 0) ||
+    Number(bill.support_count || bill.supportCount || bill.testimonySupport || bill.support || 0) +
+      Number(bill.oppose_count || bill.opposeCount || bill.testimonyOppose || bill.oppose || bill.against || 0)
+  );
+}
+
+function voteDateValue(vote = {}) {
+  const date = new Date(vote.vote_date || vote.statusdate || vote.statusDate || "");
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
 function externalProfileUrl(entity = {}, names = []) {
@@ -1597,7 +1657,7 @@ function uniqueTowns(towns = []) {
               </div>
             </div>
 
-            {trackedVotes.length ? (
+            {trackedVotePreviews.length ? (
               <>
                 <section class="vote-color-legend" aria-label="Representative vote color legend">
                   <div>
@@ -1614,15 +1674,30 @@ function uniqueTowns(towns = []) {
 
                 <div class="vote-list">
                   {trackedVotePreviews.map((vote) => {
-                    const stance = representativeVoteStance(vote, vote.trackedBill);
-                    const voteImpact = representativeVoteImpact(vote, vote.trackedBill);
+                    const billCode =
+                      vote.trackedBill?.code ||
+                      vote.bill_number ||
+                      vote.billSummary?.condensedbillno ||
+                      "";
+                    const stance = vote.trackedBill
+                      ? representativeVoteStance(vote, {
+                          ...vote.billSummary,
+                          ...vote.trackedBill,
+                        })
+                      : representativeOnlineTestimonyVoteStance(vote, vote.billSummary);
+                    const voteImpact = vote.trackedBill
+                      ? representativeVoteImpact(vote, {
+                          ...vote.billSummary,
+                          ...vote.trackedBill,
+                        })
+                      : "";
                     const billTitle =
                       vote.billSummary?.name ||
                       vote.billSummary?.title ||
-                      vote.trackedBill.name ||
+                      vote.trackedBill?.name ||
                       vote.title;
                     const billHeading = formatVotePreviewHeading(
-                      vote.trackedBill.code,
+                      billCode,
                       billTitle,
                     );
 
@@ -1633,7 +1708,7 @@ function uniqueTowns(towns = []) {
                             <h3>
                               <a
                                 href={billDetailPath(
-                                  vote.trackedBill.code,
+                                  billCode,
                                   vote.billSummary?.sessionyear || vote.sessionyear,
                                 )}
                               >
@@ -1675,7 +1750,7 @@ function uniqueTowns(towns = []) {
               </>
             ) : (
               <p class="empty">
-                No recorded votes currently match the bill tracker.
+                No recorded voting-action previews are available yet.
               </p>
             )}
           </section>
