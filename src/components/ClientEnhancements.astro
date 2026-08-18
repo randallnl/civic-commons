@@ -7,6 +7,53 @@
     window.htmx = htmx;
   }
 
+  function enhanceExternalLinks(root = document) {
+    root.querySelectorAll?.("a[href]").forEach((link) => {
+      if (!(link instanceof HTMLAnchorElement)) return;
+      if (link.hasAttribute("target")) return;
+
+      let url;
+      try {
+        url = new URL(link.href, window.location.href);
+      } catch {
+        return;
+      }
+
+      if (!["http:", "https:"].includes(url.protocol)) return;
+      if (url.origin === window.location.origin) return;
+
+      link.target = "_blank";
+      const relTokens = new Set(
+        String(link.rel || "")
+          .split(/\s+/)
+          .map((token) => token.trim())
+          .filter(Boolean),
+      );
+      relTokens.add("noopener");
+      relTokens.add("noreferrer");
+      link.rel = Array.from(relTokens).join(" ");
+    });
+  }
+
+  enhanceExternalLinks();
+
+  const externalLinkObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (!(node instanceof Element)) return;
+        if (node.matches("a[href]")) {
+          enhanceExternalLinks({ querySelectorAll: () => [node] });
+        }
+        enhanceExternalLinks(node);
+      });
+    });
+  });
+
+  externalLinkObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+
   function normalize(value) {
     return String(value || "")
       .replace(/â€™|â€˜/g, "'")
