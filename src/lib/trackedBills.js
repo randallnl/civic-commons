@@ -595,6 +595,9 @@ export function inferredBillPositionForVote(vote = {}) {
   const motionOpposesBill =
     /\bitl\b/.test(motionText) ||
     motionText.includes("inexpedient to legislate") ||
+    /\btable\b/.test(motionText) ||
+    motionText.includes("laid on the table") ||
+    motionText.includes("lay on the table") ||
     motionText.includes("indefinitely postpone") ||
     motionText.includes("postpone indefinitely");
 

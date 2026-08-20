@@ -192,6 +192,9 @@ function inferredBillPosition(vote = {}, motion = "") {
   const motionOpposesBill =
     /\bitl\b/.test(motionText) ||
     motionText.includes("inexpedient to legislate") ||
+    /\btable\b/.test(motionText) ||
+    motionText.includes("laid on the table") ||
+    motionText.includes("lay on the table") ||
     motionText.includes("indefinitely postpone") ||
     motionText.includes("postpone indefinitely");
 
@@ -490,7 +493,69 @@ function listText(value = "") {
                 <a href="/vote-interpretations">How vote labels work</a>
               </section>
 
-              <section class="vote-grid">
+              <section class="vote-filter-panel" aria-label="Filter and sort votes">
+                <div class="vote-filter-heading">
+                  <p class="eyebrow">Find Votes</p>
+                  <h2>Filter bill actions</h2>
+                </div>
+
+                <label class="vote-search-field">
+                  <span>Search bills</span>
+                  <input
+                    type="search"
+                    placeholder="Search bill number, title, motion, issue..."
+                    data-vote-search
+                  />
+                </label>
+
+                <div class="vote-filter-fields">
+                  <label>
+                    <span>Vote alignment</span>
+                    <select data-vote-filter="alignment">
+                      <option value="">All vote alignments</option>
+                      <option value="aligned">Aligned with testimony</option>
+                      <option value="not-aligned">Not aligned with testimony</option>
+                      <option value="neutral">Neutral/no clear position</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>Bill type</span>
+                    <select data-vote-filter="tracked">
+                      <option value="">Tracked and untracked</option>
+                      <option value="tracked">Tracked bills</option>
+                      <option value="untracked">Untracked bills</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>Public testimony</span>
+                    <select data-vote-filter="testimony">
+                      <option value="">All testimony statuses</option>
+                      <option value="has-testimony">Has testimony summary</option>
+                      <option value="no-testimony">No testimony summary</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>Sort</span>
+                    <select data-vote-sort>
+                      <option value="newest">Newest first</option>
+                      <option value="oldest">Oldest first</option>
+                      <option value="bill-az">Bill A-Z</option>
+                      <option value="tracked-first">Tracked first</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="vote-filter-status" aria-live="polite">
+                  <strong data-vote-result-count>{votes.length}</strong>
+                  <span>votes shown</span>
+                  <button type="button" data-vote-clear>Clear filters</button>
+                </div>
+              </section>
+
+              <section class="vote-grid" data-vote-grid>
                 {votes.map((vote) => {
                   const stance = voteStanceFor(vote);
                   const voteImpact = voteImpactFor(vote);
@@ -501,9 +566,37 @@ function listText(value = "") {
                     "";
                   const billCode = billCodeFor(vote);
                   const action = voteActionFor(vote);
+                  const stanceKey = stance.className === "legislator-support"
+                    ? "aligned"
+                    : stance.className === "legislator-oppose"
+                      ? "not-aligned"
+                      : "neutral";
+                  const testimonyKey = vote.billSummary ? "has-testimony" : "no-testimony";
+                  const trackedKey = vote.trackedBill ? "tracked" : "untracked";
+                  const voteTimestamp = vote.vote_date ? new Date(vote.vote_date).getTime() : 0;
+                  const searchableText = cleanText([
+                    billCode,
+                    billTitleFor(vote),
+                    summary,
+                    action,
+                    stance.label,
+                    voteImpact,
+                    vote.trackedBill?.issueArea,
+                    billYear,
+                    vote.votesequencenumber ? `roll call ${vote.votesequencenumber}` : "",
+                  ].filter(Boolean).join(" "));
 
                   return (
-                    <article class="vote-bill-card">
+                    <article
+                      class="vote-bill-card"
+                      data-vote-card
+                      data-search={searchableText}
+                      data-alignment={stanceKey}
+                      data-tracked={trackedKey}
+                      data-testimony={testimonyKey}
+                      data-date={voteTimestamp}
+                      data-bill={billCode}
+                    >
                       <div class="bill-topline">
                         <strong>
                           <a href={billDetailPath(billCode, billYear)}>
@@ -575,6 +668,90 @@ function listText(value = "") {
       )}
     </main>
     <SiteFooter />
+    <script is:inline>
+      (() => {
+        const grid = document.querySelector("[data-vote-grid]");
+        if (!grid) return;
+
+        const cards = Array.from(grid.querySelectorAll("[data-vote-card]"));
+        const searchInput = document.querySelector("[data-vote-search]");
+        const filterControls = Array.from(document.querySelectorAll("[data-vote-filter]"));
+        const sortControl = document.querySelector("[data-vote-sort]");
+        const countEl = document.querySelector("[data-vote-result-count]");
+        const clearButton = document.querySelector("[data-vote-clear]");
+
+        const normalize = (value = "") =>
+          String(value)
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[’‘`]/g, "'")
+            .replace(/â€™|â€˜/g, "'")
+            .replace(/â€œ|â€�/g, '"')
+            .replace(/Â/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9#]+/g, " ")
+            .trim();
+
+        const getFilters = () => {
+          const filters = {};
+          for (const control of filterControls) {
+            filters[control.dataset.voteFilter] = control.value;
+          }
+          return filters;
+        };
+
+        const sortCards = (visibleCards) => {
+          const sort = sortControl?.value || "newest";
+          const sorted = [...visibleCards].sort((a, b) => {
+            if (sort === "oldest") return Number(a.dataset.date || 0) - Number(b.dataset.date || 0);
+            if (sort === "bill-az") return String(a.dataset.bill || "").localeCompare(String(b.dataset.bill || ""));
+            if (sort === "tracked-first") {
+              const trackedCompare = Number(b.dataset.tracked === "tracked") - Number(a.dataset.tracked === "tracked");
+              if (trackedCompare) return trackedCompare;
+              return Number(b.dataset.date || 0) - Number(a.dataset.date || 0);
+            }
+            return Number(b.dataset.date || 0) - Number(a.dataset.date || 0);
+          });
+
+          for (const card of sorted) grid.appendChild(card);
+        };
+
+        const applyFilters = () => {
+          const query = normalize(searchInput?.value || "");
+          const filters = getFilters();
+          const visible = [];
+
+          for (const card of cards) {
+            const matchesSearch = !query || normalize(card.dataset.search || "").includes(query);
+            const matchesAlignment = !filters.alignment || card.dataset.alignment === filters.alignment;
+            const matchesTracked = !filters.tracked || card.dataset.tracked === filters.tracked;
+            const matchesTestimony = !filters.testimony || card.dataset.testimony === filters.testimony;
+            const show = matchesSearch && matchesAlignment && matchesTracked && matchesTestimony;
+
+            card.hidden = !show;
+            if (show) visible.push(card);
+          }
+
+          sortCards(visible);
+          if (countEl) countEl.textContent = String(visible.length);
+        };
+
+        searchInput?.addEventListener("input", applyFilters);
+        sortControl?.addEventListener("change", applyFilters);
+        for (const control of filterControls) {
+          control.addEventListener("change", applyFilters);
+        }
+        clearButton?.addEventListener("click", () => {
+          if (searchInput) searchInput.value = "";
+          for (const control of filterControls) control.value = "";
+          if (sortControl) sortControl.value = "newest";
+          applyFilters();
+          searchInput?.focus();
+        });
+
+        applyFilters();
+      })();
+    </script>
   </body>
 </html>
 
@@ -703,6 +880,104 @@ function listText(value = "") {
     display: grid;
     gap: 18px;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+
+  .vote-filter-panel {
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 14px;
+    display: grid;
+    gap: 14px;
+    margin: 0 0 18px;
+    padding: clamp(14px, 2.5vw, 20px);
+  }
+
+  .vote-filter-heading {
+    display: grid;
+    gap: 4px;
+  }
+
+  .vote-filter-heading h2 {
+    color: #1f2933;
+    font-size: 1.25rem;
+    line-height: 1.1;
+    margin: 0;
+  }
+
+  .vote-search-field,
+  .vote-filter-fields label {
+    display: grid;
+    gap: 6px;
+  }
+
+  .vote-search-field span,
+  .vote-filter-fields span {
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .vote-search-field input,
+  .vote-filter-fields select {
+    appearance: none;
+    background: #f8fbff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1f2933;
+    font: inherit;
+    font-weight: 850;
+    min-height: 44px;
+    padding: 10px 14px;
+    width: 100%;
+  }
+
+  .vote-search-field input:focus,
+  .vote-filter-fields select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    outline: none;
+  }
+
+  .vote-filter-fields {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .vote-filter-status {
+    align-items: center;
+    color: #475569;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-weight: 850;
+  }
+
+  .vote-filter-status strong {
+    background: #dbeafe;
+    border: 1px solid #60a5fa;
+    border-radius: 999px;
+    color: #1d4ed8;
+    padding: 6px 10px;
+  }
+
+  .vote-filter-status button {
+    background: #1f2933;
+    border: 1px solid #1f2933;
+    border-radius: 999px;
+    color: #ffffff;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 900;
+    margin-left: auto;
+    padding: 8px 12px;
+  }
+
+  .vote-bill-card[hidden] {
+    display: none;
   }
 
   .vote-data-summary {
@@ -954,8 +1229,13 @@ function listText(value = "") {
     }
 
     .vote-data-summary,
-    .summary-stats {
+    .summary-stats,
+    .vote-filter-fields {
       grid-template-columns: 1fr;
+    }
+
+    .vote-filter-status button {
+      margin-left: 0;
     }
 
     .vote-grid {

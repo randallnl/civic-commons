@@ -196,6 +196,25 @@ const linkedCandidateForEndorsements = currentCandidateProfile?.candidate || nul
 const linkedCandidateOfficeLine = candidateOfficeLine(linkedCandidateForEndorsements);
 const linkedCandidateOfficeContext = await candidateOfficeContext(linkedCandidateForEndorsements);
 const linkedCandidateTowns = candidateTownsRepresented(linkedCandidateForEndorsements, representative);
+const showCandidateRoleInHero = hasLegislatorProfile && Boolean(linkedCandidateForEndorsements);
+const heroEyebrow = showCandidateRoleInHero
+  ? "2026 Candidate Role"
+  : hasLegislatorProfile
+    ? officeLabel
+    : "Candidate Profile";
+const heroDetailsTitle = showCandidateRoleInHero
+  ? "Candidate Details"
+  : hasLegislatorProfile
+    ? "Official Role"
+    : "Candidate Details";
+const heroPartyLabel = showCandidateRoleInHero
+  ? formatCandidateParty(linkedCandidateForEndorsements?.politicalParty || linkedCandidateForEndorsements?.party)
+  : hasLegislatorProfile
+    ? formatParty(person.party)
+    : formatCandidateParty(person.party);
+const heroPartyValue = showCandidateRoleInHero
+  ? linkedCandidateForEndorsements?.politicalParty || linkedCandidateForEndorsements?.party || person.party
+  : person.party;
 const recentlyViewedProfile = {
   kind: hasLegislatorProfile ? "legislator" : "candidate",
   name: person.full_name,
@@ -817,7 +836,7 @@ function uniqueTowns(towns = []) {
         </div>
 
         <div class="hero-copy">
-          <p class="eyebrow">{hasLegislatorProfile ? officeLabel : "Candidate Profile"}</p>
+          <p class="eyebrow">{heroEyebrow}</p>
           <h1>{person.full_name}</h1>
 
           {hasLegislatorProfile && (
@@ -836,8 +855,8 @@ function uniqueTowns(towns = []) {
           )}
 
           <div class="hero-meta">
-            <span class:list={["meta-pill", "party-pill", partyClass(person.party)]}>
-              {hasLegislatorProfile ? formatParty(person.party) : formatCandidateParty(person.party)}
+            <span class:list={["meta-pill", "party-pill", partyClass(heroPartyValue)]}>
+              {heroPartyLabel}
             </span>
             {(isFreeStater(representative) || isFreeStater(profileCandidate)) && (
               <a
@@ -872,11 +891,37 @@ function uniqueTowns(towns = []) {
           <aside class="hero-details" aria-label="Profile details">
             <div class="hero-details-heading">
               <p class="eyebrow">Details</p>
-              <h2>{hasLegislatorProfile ? "Official Role" : "Candidate Details"}</h2>
+              <h2>{heroDetailsTitle}</h2>
             </div>
 
             <dl class="detail-list profile-detail-list">
-              {hasLegislatorProfile ? (
+              {showCandidateRoleInHero ? (
+                <>
+                  <div class="hero-office-sought">
+                    <dt>Office sought</dt>
+                    <dd>
+                      {linkedCandidateOfficeContext?.href ? (
+                        <a class="candidate-office-link" href={linkedCandidateOfficeContext.href}>
+                          <strong>{linkedCandidateOfficeContext.label || "Office not listed"}</strong>
+                          <small>{linkedCandidateOfficeContext.metaLabel}</small>
+                        </a>
+                      ) : (
+                        <strong>{linkedCandidateOfficeLine || "Office not listed"}</strong>
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Election year</dt>
+                    <dd>{linkedCandidateForEndorsements?.electionYear || "2026"}</dd>
+                  </div>
+                  {linkedCandidateTowns && (
+                    <div class="hero-towns-served">
+                      <dt>Towns represented</dt>
+                      <dd>{linkedCandidateTowns}</dd>
+                    </div>
+                  )}
+                </>
+              ) : hasLegislatorProfile ? (
                 <>
                   <div>
                     <dt>Office</dt>
