@@ -29,9 +29,10 @@ import SiteFooter from "../components/SiteFooter.astro";
           <p class="eyebrow">Civic Glossary</p>
           <h1>What Does TPAction Aligned Mean?</h1>
           <p class="lede">
-            On NH Deserves Better, <strong>TPAction Aligned</strong> means a
-            current state legislator scored above our alignment threshold on a
-            2026 Turning Point Action/New Hampshire legislative scorecard.
+            On NH Deserves Better, <strong>TPAction Aligned</strong> means
+            <strong>Turning Point Action aligned</strong>: a current state
+            legislator scored above our alignment threshold on a 2026 Turning
+            Point Action/New Hampshire legislative scorecard.
           </p>
         </div>
         <div class="hero-mark" aria-hidden="true">
@@ -54,6 +55,32 @@ import SiteFooter from "../components/SiteFooter.astro";
             Better, substantially aligned with that scorecard’s preferred
             positions.
           </p>
+        </section>
+
+        <section>
+          <h2>What Is Turning Point Action?</h2>
+          <p>
+            Turning Point Action is the political advocacy arm associated with
+            the Turning Point network founded by Charlie Kirk. Turning Point USA
+            describes its mission as organizing people in defense of freedom,
+            free markets, and limited government, while opposing what it calls
+            the radical left.
+          </p>
+          <p>
+            The organization publishes scorecards and political materials, and
+            its network has worked to become involved in elections, campaigns,
+            and legislative politics. In New Hampshire, some local elected
+            officials and activists have publicly posted about working with
+            Turning Point organizers to engage in state elections.
+          </p>
+          <div class="source-links" aria-label="Turning Point source links">
+            <a href="https://www.tpaction.com/scorecard" target="_blank" rel="noopener noreferrer">
+              Turning Point Action scorecard
+            </a>
+            <a href="https://tpusa.com/" target="_blank" rel="noopener noreferrer">
+              Turning Point USA beliefs and organizing
+            </a>
+          </div>
         </section>
 
         <section>
@@ -90,6 +117,14 @@ import SiteFooter from "../components/SiteFooter.astro";
             bills, pressuring lawmakers, and signaling which votes matter to
             their agenda. A scorecard label helps voters see when an elected
             official’s record closely tracks one of those agendas.
+          </p>
+          <p>
+            That context matters because many voters have heard the abbreviation
+            “TPAction” without knowing that it refers to Turning Point Action or
+            understanding the organization’s broader national project. The tag
+            is meant to make that connection visible so voters can investigate
+            the scorecard, the organization, and the person’s voting record for
+            themselves.
           </p>
           <p>
             The label is one piece of context. Voters should still review the
@@ -248,6 +283,26 @@ import SiteFooter from "../components/SiteFooter.astro";
   .source-note {
     background: #eff6ff;
     border: 1px solid #bfdbfe;
+  }
+
+  .source-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .source-links a {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 999px;
+    color: #7c2d12;
+    padding: 9px 12px;
+    text-decoration: none;
+  }
+
+  .source-links a:hover {
+    background: #ffedd5;
   }
 
   .guide-links {
