@@ -3,6 +3,7 @@ import { bindingValue } from "./adminAuth";
 
 const DEFAULT_FROM = "admin@nhdeservesbetter.com";
 const MODERATION_CC = "randall@nhdeservesbetter.com";
+const DEFAULT_REPLY_TO = "randall@nhdeservesbetter.com";
 
 export async function sendMagicLinkEmail({ to, link, expiresAt }) {
   const sender = emailSender();
@@ -27,6 +28,7 @@ export async function sendMagicLinkEmail({ to, link, expiresAt }) {
   await sender.send({
     to,
     from: { email: from, name: "NH Deserves Better" },
+    replyTo: DEFAULT_REPLY_TO,
     subject,
     html,
     text,
@@ -63,6 +65,7 @@ export async function sendSubmissionReceivedEmail({
     to,
     cc: moderationCcFor(to),
     from: { email: from, name: "NH Deserves Better" },
+    replyTo: DEFAULT_REPLY_TO,
     subject,
     html,
     text,
@@ -112,6 +115,7 @@ export async function sendSubmissionResponseEmail({
     to,
     cc: moderationCcFor(to),
     from: { email: from, name: "NH Deserves Better" },
+    replyTo: DEFAULT_REPLY_TO,
     subject,
     html,
     text,

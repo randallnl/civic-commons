@@ -212,8 +212,8 @@ export function gradeFromCachedOnlineTestimony(rep = {}) {
   const partial = numberOrNull(rep.online_testimony_partial_votes ?? rep.onlineTestimonyPartialVotes);
   const partialText = partial ? `, ${partial} missed or not voting` : "";
   const voteText = total
-    ? ` across ${total} scored votes${aligned === null ? "" : ` (${aligned} aligned${partialText})`}`
-    : "";
+    ? `Based on ${total} scored vote${total === 1 ? "" : "s"}${aligned === null ? "." : `; ${aligned} aligned with online testimony${partialText}.`}`
+    : "Based on available scored votes.";
 
   return {
     letter: grade,
@@ -221,7 +221,7 @@ export function gradeFromCachedOnlineTestimony(rep = {}) {
     aligned,
     total,
     className: `grade-${grade.toLowerCase()}`,
-    label: `${Math.round(percent * 100)} weighted online testimony score${voteText}`,
+    label: voteText,
     updatedAt: rep.grade_updated_at || rep.gradeUpdatedAt || "",
   };
 }
@@ -265,7 +265,7 @@ export function representativeOnlineTestimonyGrade(votes = [], billSummaries = n
     totalWeight,
     netScore,
     className: `grade-${letter.toLowerCase()}`,
-    label: `${Math.round(percent * 100)} weighted online testimony score across ${scoredVotes.length} scored votes (${aligned} aligned${missedText})`,
+    label: `Based on ${scoredVotes.length} scored vote${scoredVotes.length === 1 ? "" : "s"}; ${aligned} aligned with online testimony${missedText}.`,
   };
 }
 

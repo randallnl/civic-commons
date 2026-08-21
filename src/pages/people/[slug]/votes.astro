@@ -251,6 +251,36 @@ function voteImpactFor(vote = {}) {
   return representativeVoteImpact(vote, vote.trackedBill);
 }
 
+function voteGradeContributionFor(vote = {}) {
+  const analysis = representativeOnlineTestimonyAnalysis(vote, vote.billSummary || {});
+  const score = Number(analysis.score);
+
+  if (!Number.isFinite(score)) {
+    return {
+      label: "Not included in grade",
+      className: "grade-impact-neutral",
+      tooltip:
+        "This vote does not change the grade because the bill does not have a clear online testimony position or enough testimony data.",
+    };
+  }
+
+  const formattedScore = formatSignedScore(score);
+  const strength = analysis.testimonyStrength ? ` Online testimony was ${analysis.testimonyStrength.toLowerCase()}.` : "";
+  const action =
+    analysis.alignment === "aligned"
+      ? "This vote increases the grade because it aligned with online testimony."
+      : analysis.alignment === "partial"
+        ? "This nonvote lowers the grade by a smaller accountability penalty."
+        : "This vote lowers the grade because it did not align with online testimony.";
+
+  return {
+    label: `Grade impact: ${formattedScore}`,
+    className:
+      score > 0 ? "grade-impact-positive" : score < 0 ? "grade-impact-negative" : "grade-impact-neutral",
+    tooltip: `${action}${strength}`,
+  };
+}
+
 function buildVoteDataSummary(votes = [], trackedCount = 0) {
   const grade = representativeOnlineTestimonyGrade(votes, {
     get: (code) => votes.find((vote) => normalizeBillCode(vote.bill_number) === code)?.billSummary || null,
@@ -315,8 +345,8 @@ function buildVoteDataSummary(votes = [], trackedCount = 0) {
     ? Math.round((summary.aligned / (summary.aligned + summary.misaligned)) * 100)
     : null;
   summary.weightedScoreLabel = summary.weightedAverageScore === null
-    ? "No weighted score yet"
-    : `${Math.round(summary.weightedAverageScore * 100)} weighted testimony score`;
+    ? "No vote grade yet"
+    : `${summary.gradeLetter} vote grade`;
 
   return summary;
 }
@@ -325,6 +355,12 @@ function formatScore(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return "N/A";
   return number.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function formatSignedScore(value) {
+  const score = formatScore(value);
+  if (score === "N/A") return score;
+  return Number(value) > 0 ? `+${score}` : score;
 }
 
 function formatDate(value) {
@@ -471,9 +507,9 @@ function listText(value = "") {
                 {voteDataSummary.weightedScoreLabel}
               </h2>
               <p>
-                This score uses the same weighted online testimony model as the
-                profile grade. Nonvotes count as a smaller negative value, and
-                bills with stronger testimony signals carry more weight.
+                This grade compares voting records with online public testimony.
+                Votes that match public testimony help the score, votes that do
+                not match lower it, and nonvotes count as a smaller penalty.
               </p>
             </div>
 
@@ -482,17 +518,11 @@ function listText(value = "") {
                 <strong>{voteDataSummary.gradeLetter}</strong>
                 Grade
               </span>
-              <span>
-                <strong>{formatScore(voteDataSummary.weightedAverageScore)}</strong>
-                Weighted average
-              </span>
-              <span>
+              <span
+                title="Net score adds this legislator's scored votes after testimony strength is applied. Positive votes matched online testimony, negative votes did not, and nonvotes count as a smaller penalty."
+              >
                 <strong>{formatScore(voteDataSummary.weightedNetScore)}</strong>
                 Net score
-              </span>
-              <span>
-                <strong>{formatScore(voteDataSummary.totalTestimonyWeight)}</strong>
-                Testimony weight
               </span>
               <span>
                 <strong>{voteDataSummary.total}</strong>
@@ -602,6 +632,7 @@ function listText(value = "") {
                 {votes.map((vote) => {
                   const stance = voteStanceFor(vote);
                   const voteImpact = voteImpactFor(vote);
+                  const gradeContribution = voteGradeContributionFor(vote);
                   const billYear = vote.billSummary?.sessionyear || vote.sessionyear;
                   const summary =
                     vote.billSummary?.summary ||
@@ -679,6 +710,13 @@ function listText(value = "") {
                         >
                           {stance.label}
                         </a>
+                        <span
+                          class:list={["vote-grade-impact", gradeContribution.className]}
+                          title={gradeContribution.tooltip}
+                          aria-label={gradeContribution.tooltip}
+                        >
+                          {gradeContribution.label}
+                        </span>
                         {voteImpact && <p class="vote-impact">{cleanText(voteImpact)}</p>}
                       </div>
 
@@ -1269,6 +1307,36 @@ function listText(value = "") {
   .legislator-neutral {
     background: #dbeafe;
     border-color: #2563eb;
+  }
+
+  .vote-grade-impact {
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.76rem;
+    font-weight: 950;
+    justify-content: center;
+    line-height: 1.15;
+    padding: 6px 9px;
+    width: fit-content;
+  }
+
+  .grade-impact-positive {
+    background: #ecfdf3;
+    border-color: rgba(47, 125, 79, 0.5);
+    color: #166534;
+  }
+
+  .grade-impact-negative {
+    background: #fff1ee;
+    border-color: rgba(180, 35, 24, 0.45);
+    color: #9f1239;
+  }
+
+  .grade-impact-neutral {
+    background: #eff6ff;
+    border-color: rgba(37, 99, 235, 0.35);
+    color: #1d4ed8;
   }
 
   .vote-impact {
