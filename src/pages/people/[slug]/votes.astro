@@ -10,6 +10,7 @@ import { profilePhotoUrl } from "../../../lib/photos";
 import { getRepresentative, repName } from "../../../lib/repsApi";
 import { cleanText } from "../../../lib/text";
 import {
+  gradeFromCachedOnlineTestimony,
   getTrackedBills,
   isKnownVote,
   isVotingAction,
@@ -79,7 +80,7 @@ votes = await Promise.all(
     }
   }),
 );
-const voteDataSummary = buildVoteDataSummary(votes, trackedVoteCount);
+const voteDataSummary = buildVoteDataSummary(votes, trackedVoteCount, representative);
 
 function normalizeVote(vote = {}, bills = new Map(), summaries = new Map()) {
   const billNumber = vote.condensedbillno || vote.bill_number || "";
@@ -281,10 +282,12 @@ function voteGradeContributionFor(vote = {}) {
   };
 }
 
-function buildVoteDataSummary(votes = [], trackedCount = 0) {
-  const grade = representativeOnlineTestimonyGrade(votes, {
+function buildVoteDataSummary(votes = [], trackedCount = 0, rep = {}) {
+  const cachedGrade = gradeFromCachedOnlineTestimony(rep);
+  const computedGrade = representativeOnlineTestimonyGrade(votes, {
     get: (code) => votes.find((vote) => normalizeBillCode(vote.bill_number) === code)?.billSummary || null,
   });
+  const grade = cachedGrade || computedGrade;
   const summary = {
     total: votes.length,
     tracked: trackedCount,
@@ -339,6 +342,13 @@ function buildVoteDataSummary(votes = [], trackedCount = 0) {
     } else {
       summary.neutral += 1;
     }
+  }
+
+  if (cachedGrade) {
+    summary.scoredVotes = cachedGrade.total ?? summary.scoredVotes;
+    summary.scoreAligned = cachedGrade.aligned ?? summary.scoreAligned;
+    summary.scoreMisaligned = cachedGrade.misaligned ?? summary.scoreMisaligned;
+    summary.scoreNonVotes = cachedGrade.partial ?? summary.scoreNonVotes;
   }
 
   summary.alignmentRate = summary.aligned + summary.misaligned

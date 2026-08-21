@@ -210,6 +210,7 @@ export function gradeFromCachedOnlineTestimony(rep = {}) {
   const total = numberOrNull(rep.online_testimony_scored_votes ?? rep.onlineTestimonyScoredVotes);
   const aligned = numberOrNull(rep.online_testimony_aligned_votes ?? rep.onlineTestimonyAlignedVotes);
   const partial = numberOrNull(rep.online_testimony_partial_votes ?? rep.onlineTestimonyPartialVotes);
+  const misaligned = numberOrNull(rep.online_testimony_misaligned_votes ?? rep.onlineTestimonyMisalignedVotes);
   const partialText = partial ? `, ${partial} missed or not voting` : "";
   const voteText = total
     ? `Based on ${total} scored vote${total === 1 ? "" : "s"}${aligned === null ? "." : `; ${aligned} aligned with online testimony${partialText}.`}`
@@ -219,6 +220,8 @@ export function gradeFromCachedOnlineTestimony(rep = {}) {
     letter: grade,
     percent,
     aligned,
+    misaligned,
+    partial,
     total,
     className: `grade-${grade.toLowerCase()}`,
     label: voteText,
