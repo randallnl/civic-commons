@@ -1,3 +1,7 @@
+---
+import { Eye } from "@lucide/astro";
+---
+
 <style is:global>
   :root {
     --nhdb-page-rail: min(1280px, calc(100% - clamp(28px, 4vw, 64px)));
@@ -142,7 +146,9 @@
   aria-controls="partyBlindPanel"
   data-party-blind-launcher
 >
-  <span aria-hidden="true">?</span>
+  <span aria-hidden="true">
+    <Eye size={17} stroke-width={2.6} />
+  </span>
   <strong>Party Blind</strong>
 </button>
 
