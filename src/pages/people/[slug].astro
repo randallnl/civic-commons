@@ -855,7 +855,7 @@ function uniqueTowns(towns = []) {
           )}
 
           <div class="hero-meta">
-            <span class:list={["meta-pill", "party-pill", partyClass(heroPartyValue)]}>
+            <span class:list={["meta-pill", "party-pill", partyClass(heroPartyValue)]} data-party-affiliation>
               {heroPartyLabel}
             </span>
             {(isFreeStater(representative) || isFreeStater(profileCandidate)) && (
@@ -957,7 +957,7 @@ function uniqueTowns(towns = []) {
                   </dd>
                 </div>
               )}
-              <div>
+              <div data-party-row>
                 <dt>Party</dt>
                 <dd>{hasLegislatorProfile ? formatParty(person.party) : formatCandidateParty(person.party)}</dd>
               </div>
@@ -1120,7 +1120,7 @@ function uniqueTowns(towns = []) {
                       <strong>{countiesRepresented}</strong>
                     </article>
                   )}
-                  <article>
+                  <article data-party-row>
                     <span>Party</span>
                     <strong>{formatParty(person.party)}</strong>
                   </article>
@@ -1171,7 +1171,7 @@ function uniqueTowns(towns = []) {
                       <strong>{linkedCandidateOfficeLine || "Office not listed"}</strong>
                     )}
                   </article>
-                  <article>
+                  <article data-party-row>
                     <span>Party</span>
                     <strong>{formatCandidateParty(linkedCandidateForEndorsements.politicalParty)}</strong>
                   </article>
@@ -1201,7 +1201,7 @@ function uniqueTowns(towns = []) {
                   <strong>{linkedCandidateOfficeLine || "Office not listed"}</strong>
                 )}
               </article>
-              <article>
+              <article data-party-row>
                 <span>Party</span>
                 <strong>{formatCandidateParty(linkedCandidateForEndorsements.politicalParty)}</strong>
               </article>

@@ -210,7 +210,7 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
           <h3><a href={profileHref}>{name}</a></h3>
           <div class="rep-meta">
             <span>{cleanText(rep.chamber || "Legislator")}</span>
-            <span>{formatParty(rep.party)}</span>
+            <span data-party-affiliation>{formatParty(rep.party)}</span>
             {isFreeStater(rep) && (
               <a
                 class="free-stater-pill"

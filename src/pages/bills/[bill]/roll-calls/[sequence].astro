@@ -433,7 +433,7 @@ function slugify(value = "") {
                     </div>
 
                     <div class="card-meta">
-                      <span class:list={["party", partyClass(vote.party)]}>
+                      <span class:list={["party", partyClass(vote.party)]} data-party-affiliation>
                         {partyLabel(vote.party)}
                       </span>
                       {vote.chamber && <span>{cleanText(vote.chamber)}</span>}

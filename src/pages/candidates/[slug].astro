@@ -510,7 +510,7 @@ function uniqueArticles(articles = []) {
           )}
 
           <div class="hero-meta">
-            <span class:list={["meta-pill", partyClassName(candidate.politicalParty)]}>
+            <span class:list={["meta-pill", partyClassName(candidate.politicalParty)]} data-party-affiliation>
               {formatCandidateParty(candidate.politicalParty)}
             </span>
             {hasFreeStaterTag && (
@@ -561,7 +561,7 @@ function uniqueArticles(articles = []) {
                 <strong>{officeTypeLabel}</strong>
               </div>
             )}
-            <div>
+            <div data-party-row>
               <span>Party</span>
               <strong>{formatCandidateParty(candidate.politicalParty)}</strong>
             </div>
@@ -615,7 +615,7 @@ function uniqueArticles(articles = []) {
                   <span>Office</span>
                   <strong>{roleOfficeLine(role) || "Not listed"}</strong>
                 </div>
-                <div>
+                <div data-party-row>
                   <span>Party</span>
                   <strong>{formatCandidateParty(role.politicalParty || candidate.politicalParty)}</strong>
                 </div>

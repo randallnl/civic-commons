@@ -222,7 +222,7 @@ function uniqueTowns(towns = []) {
     </h3>
 
     <div class="pill-row">
-      <span class:list={["party-pill", partyClassName(candidate.politicalParty)]}>
+      <span class:list={["party-pill", partyClassName(candidate.politicalParty)]} data-party-affiliation>
         {formatCandidateParty(candidate.politicalParty)}
       </span>
       {isFreeStater(candidate) && (

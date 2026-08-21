@@ -134,3 +134,248 @@
     }
   }
 </style>
+
+<button
+  class="party-blind-launcher"
+  type="button"
+  aria-expanded="false"
+  aria-controls="partyBlindPanel"
+  data-party-blind-launcher
+>
+  <span aria-hidden="true">?</span>
+  <strong>Party Blind</strong>
+</button>
+
+<section
+  class="party-blind-panel"
+  id="partyBlindPanel"
+  aria-label="Party blind mode"
+  hidden
+  data-party-blind-panel
+>
+  <div>
+    <p class="eyebrow">Site Tool</p>
+    <h2>Party Blind</h2>
+    <p>
+      Hide Democrat and Republican labels while you browse candidates,
+      legislators, articles, bills, and updates.
+    </p>
+  </div>
+  <label class="party-blind-toggle">
+    <input type="checkbox" data-party-blind-toggle />
+    <span>Hide party affiliation</span>
+  </label>
+  <button class="party-blind-close" type="button" data-party-blind-close>
+    Close
+  </button>
+</section>
+
+<style is:global>
+  .party-blind-launcher {
+    align-items: center;
+    background: #1f2933;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    bottom: 20px;
+    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.22);
+    color: #fffaf1;
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-weight: 900;
+    gap: 8px;
+    padding: 10px 14px 10px 10px;
+    position: fixed;
+    right: 20px;
+    z-index: 1200;
+  }
+
+  .party-blind-launcher span {
+    align-items: center;
+    background: #dc4d09;
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.8rem;
+    height: 28px;
+    justify-content: center;
+    width: 28px;
+  }
+
+  .party-blind-launcher[aria-pressed="true"] span {
+    background: #2563eb;
+  }
+
+  .party-blind-panel {
+    background:
+      radial-gradient(circle at top right, rgba(220, 77, 9, 0.14), transparent 38%),
+      #ffffff;
+    border: 1px solid rgba(37, 99, 235, 0.28);
+    border-radius: 14px;
+    bottom: 78px;
+    box-shadow: 0 22px 60px rgba(15, 23, 42, 0.22);
+    box-sizing: border-box;
+    color: var(--nhdb-ink);
+    display: grid;
+    gap: 16px;
+    max-width: min(360px, calc(100vw - 32px));
+    padding: 20px;
+    position: fixed;
+    right: 20px;
+    z-index: 1201;
+  }
+
+  .party-blind-panel[hidden] {
+    display: none;
+  }
+
+  .party-blind-panel h2 {
+    font-size: 1.45rem;
+    line-height: 1.05;
+    margin: 4px 0 8px;
+  }
+
+  .party-blind-panel p {
+    color: var(--nhdb-muted);
+    font-weight: 750;
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  .party-blind-toggle {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    cursor: pointer;
+    display: flex;
+    font-weight: 900;
+    gap: 10px;
+    justify-content: space-between;
+    padding: 12px 14px;
+  }
+
+  .party-blind-toggle input {
+    accent-color: #dc4d09;
+    height: 20px;
+    width: 20px;
+  }
+
+  .party-blind-close {
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    color: var(--nhdb-ink);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+    padding: 10px 14px;
+  }
+
+  html[data-party-blind="true"] [data-party-affiliation],
+  html[data-party-blind="true"] .party-pill,
+  html[data-party-blind="true"] .party-democrat,
+  html[data-party-blind="true"] .party-republican,
+  html[data-party-blind="true"] .party.democrat,
+  html[data-party-blind="true"] .party.republican {
+    background: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+    color: transparent !important;
+    position: relative;
+  }
+
+  html[data-party-blind="true"] [data-party-affiliation] *,
+  html[data-party-blind="true"] .party-pill *,
+  html[data-party-blind="true"] .party-democrat *,
+  html[data-party-blind="true"] .party-republican * {
+    color: transparent !important;
+  }
+
+  html[data-party-blind="true"] [data-party-affiliation]::after,
+  html[data-party-blind="true"] .party-pill::after,
+  html[data-party-blind="true"] .party-democrat::after,
+  html[data-party-blind="true"] .party-republican::after,
+  html[data-party-blind="true"] .party.democrat::after,
+  html[data-party-blind="true"] .party.republican::after {
+    color: #334155;
+    content: "Party hidden";
+    inset: 50% auto auto 50%;
+    position: absolute;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+  }
+
+  html[data-party-blind="true"] [data-party-row] {
+    display: none !important;
+  }
+
+  @media (max-width: 620px) {
+    .party-blind-launcher {
+      bottom: 14px;
+      right: 14px;
+    }
+
+    .party-blind-launcher strong {
+      display: none;
+    }
+
+    .party-blind-launcher {
+      padding: 9px;
+    }
+
+    .party-blind-panel {
+      bottom: 68px;
+      right: 14px;
+    }
+  }
+</style>
+
+<script>
+  const STORAGE_KEY = "nhdb-party-blind";
+
+  function setPartyBlind(enabled) {
+    document.documentElement.dataset.partyBlind = enabled ? "true" : "false";
+    document.querySelectorAll("[data-party-blind-toggle]").forEach((control) => {
+      if (control instanceof HTMLInputElement) control.checked = enabled;
+    });
+    document.querySelectorAll("[data-party-blind-launcher]").forEach((button) => {
+      button.setAttribute("aria-pressed", enabled ? "true" : "false");
+    });
+    try {
+      window.localStorage.setItem(STORAGE_KEY, enabled ? "true" : "false");
+    } catch {
+      // Ignore private-mode storage failures; the current page state still updates.
+    }
+  }
+
+  function initialPartyBlindState() {
+    try {
+      return window.localStorage.getItem(STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  setPartyBlind(initialPartyBlindState());
+
+  document.addEventListener("click", (event) => {
+    const launcher = event.target?.closest?.("[data-party-blind-launcher]");
+    if (launcher) {
+      const panel = document.querySelector("[data-party-blind-panel]");
+      const isOpen = panel && !panel.hasAttribute("hidden");
+      panel?.toggleAttribute("hidden", isOpen);
+      launcher.setAttribute("aria-expanded", isOpen ? "false" : "true");
+      return;
+    }
+
+    const close = event.target?.closest?.("[data-party-blind-close]");
+    if (close) {
+      document.querySelector("[data-party-blind-panel]")?.setAttribute("hidden", "");
+      document.querySelector("[data-party-blind-launcher]")?.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  document.addEventListener("change", (event) => {
+    const toggle = event.target?.closest?.("[data-party-blind-toggle]");
+    if (!(toggle instanceof HTMLInputElement)) return;
+    setPartyBlind(toggle.checked);
+  });
+</script>
