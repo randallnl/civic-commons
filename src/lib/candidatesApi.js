@@ -159,11 +159,18 @@ export function candidatePath(candidate = {}) {
 export function formatCandidateParty(party = "") {
   const value = cleanText(party).trim();
   if (!value) return "Party not listed";
+  if (value.toUpperCase() === "R") return "Republican";
+  if (value.toUpperCase() === "D") return "Democratic";
+  if (value.toUpperCase() === "I") return "Independent";
   return value.replace(/\s+Party$/i, "");
 }
 
 export function partyClassName(party = "") {
   const value = String(party).toLowerCase();
+  const code = String(party).trim().toUpperCase();
+  if (code === "R") return "party-republican";
+  if (code === "D") return "party-democrat";
+  if (code === "I") return "party-independent";
   if (value.includes("republican")) return "party-republican";
   if (value.includes("democratic") || value.includes("democrat")) {
     return "party-democrat";

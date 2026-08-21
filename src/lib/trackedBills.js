@@ -189,8 +189,46 @@ export function gradeFromAlignmentPercent(value) {
   };
 }
 
+export function gradeFromCachedOnlineTestimony(rep = {}) {
+  const percentValue =
+    rep.online_testimony_alignment_pct ??
+    rep.onlineTestimonyAlignmentPct ??
+    rep.cached_alignment_percent ??
+    rep.cachedAlignmentPercent;
+  const grade = String(
+    rep.online_testimony_grade ||
+      rep.onlineTestimonyGrade ||
+      rep.cached_grade ||
+      rep.cachedGrade ||
+      "",
+  ).trim().toUpperCase();
+  const percentNumber = Number(percentValue);
+  const percent = percentNumber > 1 ? percentNumber / 100 : percentNumber;
+
+  if (!grade || !Number.isFinite(percent)) return null;
+
+  const total = numberOrNull(rep.online_testimony_scored_votes ?? rep.onlineTestimonyScoredVotes);
+  const aligned = numberOrNull(rep.online_testimony_aligned_votes ?? rep.onlineTestimonyAlignedVotes);
+  const partial = numberOrNull(rep.online_testimony_partial_votes ?? rep.onlineTestimonyPartialVotes);
+  const partialText = partial ? `, ${partial} missed or not voting` : "";
+  const voteText = total
+    ? ` across ${total} scored votes${aligned === null ? "" : ` (${aligned} aligned${partialText})`}`
+    : "";
+
+  return {
+    letter: grade,
+    percent,
+    aligned,
+    total,
+    className: `grade-${grade.toLowerCase()}`,
+    label: `${Math.round(percent * 100)}% aligned with online testimony${voteText}`,
+    updatedAt: rep.grade_updated_at || rep.gradeUpdatedAt || "",
+  };
+}
+
 export function representativeGradeFor(rep = {}, trackedBills = new Map(), billSummaries = new Map()) {
   return (
+    gradeFromCachedOnlineTestimony(rep) ||
     representativeOnlineTestimonyGrade(rep.voteHistory || [], billSummaries) ||
     gradeFromAlignmentPercent(
       rep.alignment_percent ??
@@ -657,6 +695,11 @@ function stablePreviewSortKey(value = "") {
     hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
   }
   return hash;
+}
+
+function numberOrNull(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 function titleCase(value = "") {

@@ -44,6 +44,13 @@ export async function ensureUnifiedPeopleTables(db = adminDb()) {
   await ensureColumn(db, "d1_people", "bluesky_url", "TEXT");
   await ensureColumn(db, "d1_people", "is_free_state_aligned_2026", "INTEGER NOT NULL DEFAULT 0");
   await ensureColumn(db, "d1_people", "is_tpaction_aligned_2026", "INTEGER NOT NULL DEFAULT 0");
+  await ensureColumn(db, "d1_people", "online_testimony_alignment_pct", "REAL");
+  await ensureColumn(db, "d1_people", "online_testimony_grade", "TEXT");
+  await ensureColumn(db, "d1_people", "online_testimony_scored_votes", "INTEGER");
+  await ensureColumn(db, "d1_people", "online_testimony_aligned_votes", "INTEGER");
+  await ensureColumn(db, "d1_people", "online_testimony_partial_votes", "INTEGER");
+  await ensureColumn(db, "d1_people", "online_testimony_misaligned_votes", "INTEGER");
+  await ensureColumn(db, "d1_people", "grade_updated_at", "TEXT");
 
   await db
     .prepare(

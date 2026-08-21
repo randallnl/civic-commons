@@ -563,7 +563,7 @@ function uniqueArticles(articles = []) {
             )}
             <div>
               <span>Party</span>
-              <strong>{candidate.politicalParty || "Not listed"}</strong>
+              <strong>{formatCandidateParty(candidate.politicalParty)}</strong>
             </div>
             <div>
               <span>Election Year</span>
@@ -617,7 +617,7 @@ function uniqueArticles(articles = []) {
                 </div>
                 <div>
                   <span>Party</span>
-                  <strong>{role.politicalParty || candidate.politicalParty || "Not listed"}</strong>
+                  <strong>{formatCandidateParty(role.politicalParty || candidate.politicalParty)}</strong>
                 </div>
                 <div>
                   <span>Election Year</span>

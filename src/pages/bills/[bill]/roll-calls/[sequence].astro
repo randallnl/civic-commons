@@ -99,7 +99,7 @@ function partyLabel(party = "") {
   const value = String(party || "").trim();
   const lower = value.toLowerCase();
   if (value === "R" || lower.includes("republican")) return "Republican";
-  if (value === "D" || lower.includes("democrat")) return "Democrat";
+  if (value === "D" || lower.includes("democrat")) return "Democratic";
   if (value === "I" || lower.includes("independent")) return "Independent";
   return value || "Party not listed";
 }

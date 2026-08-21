@@ -112,6 +112,18 @@ export const RepresentativeSchema = z
     is_free_stater: z.unknown().optional(),
     alignmentPercent: numberish,
     alignment_percent: numberish,
+    onlineTestimonyAlignmentPct: numberish,
+    online_testimony_alignment_pct: numberish,
+    onlineTestimonyGrade: optionalStringish,
+    online_testimony_grade: optionalStringish,
+    onlineTestimonyScoredVotes: numberish,
+    online_testimony_scored_votes: numberish,
+    onlineTestimonyAlignedVotes: numberish,
+    online_testimony_aligned_votes: numberish,
+    onlineTestimonyPartialVotes: numberish,
+    online_testimony_partial_votes: numberish,
+    gradeUpdatedAt: optionalStringish,
+    grade_updated_at: optionalStringish,
     voteHistory: z.array(z.unknown()).default([]),
   })
   .passthrough();

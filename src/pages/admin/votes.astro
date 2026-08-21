@@ -278,6 +278,29 @@ async function getVoteSummary(db, year) {
             <span><strong>{summary.overridden}</strong> Manually set</span>
           </section>
 
+          <section class="panel grade-cache-panel">
+            <div>
+              <p class="eyebrow">Grade Cache</p>
+              <h2>Refresh stored legislator grades</h2>
+              <p>
+                Rebuild cached online-testimony grades after vote imports,
+                testimony updates, or methodology changes.
+              </p>
+            </div>
+            <form
+              action="/api/admin/grades"
+              method="post"
+              hx-post="/api/admin/grades"
+              hx-target="find .grade-cache-status"
+              hx-swap="innerHTML"
+            >
+              <input type="hidden" name="scope" value="all" />
+              <input type="hidden" name="limit" value="500" />
+              <button type="submit">Rebuild all grades</button>
+              <span class="grade-cache-status" aria-live="polite"></span>
+            </form>
+          </section>
+
           <section class="panel filter-panel">
             <form class="vote-filter-form" method="get">
               <label>
@@ -480,6 +503,43 @@ async function getVoteSummary(db, year) {
     margin: 18px 0;
   }
 
+  .grade-cache-panel {
+    align-items: center;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin-bottom: 18px;
+    padding: 18px;
+  }
+
+  .grade-cache-panel h2 {
+    margin: 0 0 8px;
+  }
+
+  .grade-cache-panel p:not(.eyebrow) {
+    color: #4d5a70;
+    margin: 0;
+  }
+
+  .grade-cache-panel form {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .grade-cache-panel button {
+    background: #1f2933;
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+    padding: 11px 16px;
+  }
+
   .summary-grid span {
     border: 1px solid rgba(57, 102, 163, 0.18);
     border-radius: 16px;
@@ -649,9 +709,14 @@ async function getVoteSummary(db, year) {
 
   @media (max-width: 820px) {
     .vote-hero,
-    .vote-row {
+    .vote-row,
+    .grade-cache-panel {
       grid-template-columns: 1fr;
       display: grid;
+    }
+
+    .grade-cache-panel form {
+      justify-content: flex-start;
     }
 
     .vote-filter-form,

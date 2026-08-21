@@ -700,7 +700,7 @@ function countyCodeFromName(value = "") {
 }
 
 function countyNameForCode(code = "") {
-  const counties = {
+  const sourceCountyIds = {
     "01": "Belknap",
     "02": "Carroll",
     "03": "Cheshire",
@@ -711,6 +711,8 @@ function countyNameForCode(code = "") {
     "08": "Rockingham",
     "09": "Strafford",
     "10": "Sullivan",
+  };
+  const fipsCountyIds = {
     "001": "Belknap",
     "003": "Carroll",
     "005": "Cheshire",
@@ -723,7 +725,9 @@ function countyNameForCode(code = "") {
     "019": "Sullivan",
   };
   const value = String(code || "").trim();
-  return counties[value.padStart(2, "0")] || counties[value.padStart(3, "0")] || "";
+  if (!value) return "";
+  if (/^\d{3}$/.test(value)) return fipsCountyIds[value] || "";
+  return sourceCountyIds[value.padStart(2, "0")] || "";
 }
 
 function countyDisplayName(value = "") {

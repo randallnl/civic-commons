@@ -75,7 +75,9 @@ function renderPersonOption(person = {}) {
 
 function partyLabel(value = "") {
   const party = String(value || "").trim().toUpperCase();
-  if (["D", "R", "I"].includes(party)) return party;
+  if (party === "R") return "Republican";
+  if (party === "D") return "Democratic";
+  if (party === "I") return "Independent";
   return cleanText(value);
 }
 

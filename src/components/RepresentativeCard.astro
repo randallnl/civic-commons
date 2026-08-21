@@ -23,7 +23,7 @@ const { rep, trackedBills = new Map(), billSummaries = new Map() } = Astro.props
 function formatParty(party) {
   if (!party) return "Party not listed";
   if (party === "R") return "Republican";
-  if (party === "D") return "Democrat";
+  if (party === "D") return "Democratic";
   if (party === "I") return "Independent";
   return cleanText(party);
 }

@@ -1,6 +1,7 @@
 // Vendored from randallnl/nh-civics-api so the site can run API queries directly
 // against its bound D1/R2 resources without calling a separate Worker.
 import { ensureArticlePreviewColumns } from "./articlePreviews";
+import { ensureGradeCacheColumns } from "./gradeCache";
 import { voteVisibilityCaseExpression } from "./voteVisibility";
 
 const corsHeaders = {
@@ -13,6 +14,7 @@ const corsHeaders = {
 const DEFAULT_BILL_TRACKER_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vTHKkGGONM78RXb63Igvi2BXipOA4pV4X5CBY6yHaVAizO-l0q_WtU8uyXI-vhxxbKEib9nFlL1nIBz/pub?gid=1337871563&single=true&output=csv";
 let voteVisibilityOverridesTableEnsured = false;
+let peopleGradeCacheColumnsEnsured = false;
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -1456,6 +1458,7 @@ async function handleRepProfile(request, env) {
   const parts = url.pathname.split("/");
   const identifier = parts[2];
   const voteLimit = Number(url.searchParams.get("voteLimit") || 100);
+  await ensurePeopleGradeCacheColumns(env.DB);
 
   if (!identifier) {
     return json({ error: "Representative identifier is required." }, 400);
@@ -1482,6 +1485,13 @@ async function handleRepProfile(request, env) {
       l.party,
       ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "l.is_free_stater"))},
       ${isTpActionAlignedSelectExpression("people.is_tpaction_aligned_2026")},
+      people.online_testimony_alignment_pct,
+      people.online_testimony_grade,
+      people.online_testimony_scored_votes,
+      people.online_testimony_aligned_votes,
+      people.online_testimony_partial_votes,
+      people.online_testimony_misaligned_votes,
+      people.grade_updated_at,
       COALESCE(dm.district_label, l.district) AS district,
       l.district AS raw_district,
       l.countycode,
@@ -1851,6 +1861,7 @@ async function handleCommunityCounty(request, env) {
 
 async function handleCommunityTown(request, env) {
   const url = new URL(request.url);
+  await ensurePeopleGradeCacheColumns(env.DB);
   const parts = url.pathname.split("/").filter(Boolean);
   const townSlug = decodeURIComponent(parts[2] || "");
   const articleLimit = boundedNumber(
@@ -2458,6 +2469,7 @@ async function getSenatorsForHouseDistrict(env, district) {
 
 async function getRepresentativesForDistrict(env, district) {
   if (!district.body || !district.district_number) return [];
+  await ensurePeopleGradeCacheColumns(env.DB);
 
   let sql = `
     SELECT
@@ -2475,6 +2487,13 @@ async function getRepresentativesForDistrict(env, district) {
       l.party,
       ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "l.is_free_stater"))},
       ${isTpActionAlignedSelectExpression("people.is_tpaction_aligned_2026")},
+      people.online_testimony_alignment_pct,
+      people.online_testimony_grade,
+      people.online_testimony_scored_votes,
+      people.online_testimony_aligned_votes,
+      people.online_testimony_partial_votes,
+      people.online_testimony_misaligned_votes,
+      people.grade_updated_at,
       COALESCE(NULLIF(people.photo_url, ''), p.photo_url, '') AS photo,
       l.emailaddress AS email,
       l.district AS raw_district,
@@ -3382,6 +3401,7 @@ async function handleTownSearch(request, env) {
   const url = new URL(request.url);
   const town = url.searchParams.get("town");
   const voteLimit = Number(url.searchParams.get("voteLimit") || 50);
+  await ensurePeopleGradeCacheColumns(env.DB);
 
   if (!town) {
     return json({ error: "Town is required." }, 400);
@@ -3402,6 +3422,13 @@ async function handleTownSearch(request, env) {
       r.party,
       ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "r.is_free_stater"))},
       ${isTpActionAlignedSelectExpression("people.is_tpaction_aligned_2026")},
+      people.online_testimony_alignment_pct,
+      people.online_testimony_grade,
+      people.online_testimony_scored_votes,
+      people.online_testimony_aligned_votes,
+      people.online_testimony_partial_votes,
+      people.online_testimony_misaligned_votes,
+      people.grade_updated_at,
       COALESCE(dm.district_label, r.district) AS district,
       r.district AS raw_district,
       r.countycode,
@@ -3455,6 +3482,7 @@ async function handleTownSearch(request, env) {
 
 async function handleReps(request, env) {
   const url = new URL(request.url);
+  await ensurePeopleGradeCacheColumns(env.DB);
   const limit = boundedNumber(url.searchParams.get("limit"), 400, 1, 500);
   const offset = boundedNumber(url.searchParams.get("offset"), 0, 0, 10000);
   const body = String(url.searchParams.get("body") || "").trim().toLowerCase();
@@ -3561,7 +3589,14 @@ async function handleReps(request, env) {
       r.party,
       ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "r.is_free_stater"))},
       ${isTpActionAlignedSelectExpression("people.is_tpaction_aligned_2026")},
-      r.preferred_vote_alignment_pct AS alignment_percent,
+      COALESCE(people.online_testimony_alignment_pct, r.preferred_vote_alignment_pct) AS alignment_percent,
+      people.online_testimony_alignment_pct,
+      people.online_testimony_grade,
+      people.online_testimony_scored_votes,
+      people.online_testimony_aligned_votes,
+      people.online_testimony_partial_votes,
+      people.online_testimony_misaligned_votes,
+      people.grade_updated_at,
       COALESCE(dm.district_label, r.district) AS district,
       r.district AS raw_district,
       r.countycode,
@@ -3644,6 +3679,7 @@ async function handleAddressLookup(request, env) {
     }
 
     const body = await request.json();
+    await ensurePeopleGradeCacheColumns(env.DB);
     const address = String(body.address || "").trim();
     const url = new URL(request.url);
     const voteLimit = Number(url.searchParams.get("voteLimit") || 50);
@@ -3800,6 +3836,12 @@ async function ensureVoteVisibilityOverridesTable(db) {
   `).run();
 
   voteVisibilityOverridesTableEnsured = true;
+}
+
+async function ensurePeopleGradeCacheColumns(db) {
+  if (peopleGradeCacheColumnsEnsured) return;
+  await ensureGradeCacheColumns(db);
+  peopleGradeCacheColumnsEnsured = true;
 }
 
 async function handleBills(request, env) {
@@ -4803,6 +4845,13 @@ async function findHouseRepsFromDistrictMappings(env, districts) {
         l.party,
         ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "l.is_free_stater"))},
         ${isTpActionAlignedSelectExpression("people.is_tpaction_aligned_2026")},
+        people.online_testimony_alignment_pct,
+        people.online_testimony_grade,
+        people.online_testimony_scored_votes,
+        people.online_testimony_aligned_votes,
+        people.online_testimony_partial_votes,
+        people.online_testimony_misaligned_votes,
+        people.grade_updated_at,
         COALESCE(dm.district_label, l.district) AS district,
         l.district AS raw_district,
         l.countycode,
@@ -4853,6 +4902,13 @@ async function findSenators(env, senate) {
       l.party,
       ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "l.is_free_stater"))},
       ${isTpActionAlignedSelectExpression("people.is_tpaction_aligned_2026")},
+      people.online_testimony_alignment_pct,
+      people.online_testimony_grade,
+      people.online_testimony_scored_votes,
+      people.online_testimony_aligned_votes,
+      people.online_testimony_partial_votes,
+      people.online_testimony_misaligned_votes,
+      people.grade_updated_at,
       COALESCE(dm.district_label, l.district) AS district,
       l.district AS raw_district,
       l.countycode,

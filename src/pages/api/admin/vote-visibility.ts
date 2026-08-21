@@ -6,6 +6,7 @@ import {
   forbiddenAdminResponse,
   requireAdmin,
 } from "../../../lib/adminAuth";
+import { rebuildGradeCacheForVoteKey } from "../../../lib/gradeCache";
 import { ensureVoteVisibilityTable } from "../../../lib/voteVisibility";
 
 export async function POST({ request }) {
@@ -59,11 +60,12 @@ export async function POST({ request }) {
       )
       .run();
 
+    const rebuild = await rebuildGradeCacheForVoteKey(db, key);
     const message = includeInDisplay
       ? includeInGrades
-        ? "Shown and used for grades"
-        : "Shown, excluded from grades"
-      : "Hidden and excluded from grades";
+        ? `Shown and used for grades. Rebuilt ${rebuild.rebuilt} affected grades.`
+        : `Shown, excluded from grades. Rebuilt ${rebuild.rebuilt} affected grades.`
+      : `Hidden and excluded from grades. Rebuilt ${rebuild.rebuilt} affected grades.`;
 
     if (wantsHtml) return htmlStatus(message, "success");
     return redirectWithMessage(request, "Vote visibility updated.");

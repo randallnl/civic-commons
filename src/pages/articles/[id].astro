@@ -103,7 +103,11 @@ function candidateMeta(candidate = {}) {
 }
 
 function candidateParty(candidate = {}) {
-  return cleanText(candidate.politicalParty || candidate.political_party || "");
+  const value = cleanText(candidate.politicalParty || candidate.political_party || "").trim();
+  if (value.toUpperCase() === "R") return "Republican";
+  if (value.toUpperCase() === "D") return "Democratic";
+  if (value.toUpperCase() === "I") return "Independent";
+  return value.replace(/\s+Party$/i, "");
 }
 
 function candidatePhoto(candidate = {}) {
