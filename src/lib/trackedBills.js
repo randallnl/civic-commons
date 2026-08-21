@@ -221,7 +221,7 @@ export function gradeFromCachedOnlineTestimony(rep = {}) {
     aligned,
     total,
     className: `grade-${grade.toLowerCase()}`,
-    label: `${Math.round(percent * 100)}% aligned with online testimony${voteText}`,
+    label: `${Math.round(percent * 100)} weighted online testimony score${voteText}`,
     updatedAt: rep.grade_updated_at || rep.gradeUpdatedAt || "",
   };
 }
@@ -250,8 +250,10 @@ export function representativeOnlineTestimonyGrade(votes = [], billSummaries = n
 
   const aligned = scoredVotes.filter((analysis) => analysis.alignment === "aligned").length;
   const missed = scoredVotes.filter((analysis) => analysis.alignment === "partial").length;
-  const percent =
-    scoredVotes.reduce((total, analysis) => total + analysis.score, 0) / scoredVotes.length;
+  const totalWeight = scoredVotes.reduce((total, analysis) => total + analysis.testimonyWeight, 0);
+  const netScore = scoredVotes.reduce((total, analysis) => total + analysis.score, 0);
+  const percent = totalWeight ? netScore / totalWeight : null;
+  if (!Number.isFinite(percent)) return null;
   const letter = letterGradeForAccountabilityPercent(percent);
   const missedText = missed ? `, ${missed} missed or not voting` : "";
 
@@ -260,8 +262,10 @@ export function representativeOnlineTestimonyGrade(votes = [], billSummaries = n
     percent,
     aligned,
     total: scoredVotes.length,
+    totalWeight,
+    netScore,
     className: `grade-${letter.toLowerCase()}`,
-    label: `${Math.round(percent * 100)}% aligned with online testimony across ${scoredVotes.length} scored votes (${aligned} aligned${missedText})`,
+    label: `${Math.round(percent * 100)} weighted online testimony score across ${scoredVotes.length} scored votes (${aligned} aligned${missedText})`,
   };
 }
 
@@ -328,6 +332,13 @@ export function representativeOnlineTestimonyVoteStance(vote = {}, bill = {}) {
   const analysis = representativeOnlineTestimonyAnalysis(vote, bill);
   const rawVote = displayVoteLabel(vote) || titleCase(String(vote.vote || vote.vote_code || ""));
 
+  if (analysis.alignment === "partial" && analysis.testimonyPosition) {
+    return {
+      label: `Voted: ${rawVote}: documented nonvote - accountability penalty`,
+      className: "legislator-neutral",
+    };
+  }
+
   if (!analysis.billPosition || !analysis.testimonyPosition) {
     return {
       label: `Voted: ${rawVote || "Not listed"}: no clear online testimony position`,
@@ -356,6 +367,8 @@ export function representativeOnlineTestimonyVoteStance(vote = {}, bill = {}) {
 
 export function representativeOnlineTestimonyAnalysis(vote = {}, bill = {}) {
   const testimonyPosition = publicTestimonyPositionForBill(bill);
+  const testimonyStrength = publicTestimonyStrengthForBill(bill);
+  const testimonyWeight = testimonyStrength.weight;
   const billPosition = inferredBillPositionForVote(vote);
   const isNonVote = !billPosition && isDocumentedNonVote(vote);
   const alignment =
@@ -368,21 +381,34 @@ export function representativeOnlineTestimonyAnalysis(vote = {}, bill = {}) {
           : billPosition === testimonyPosition
             ? "aligned"
             : "misaligned";
-  const score =
+  const alignmentValue =
     !testimonyPosition || testimonyPosition === "neutral"
       ? null
       : isNonVote
-        ? 0.6
+        ? -0.3
         : !billPosition
           ? null
           : billPosition === testimonyPosition
             ? 1
-            : 0;
+            : -1;
+  const score =
+    !testimonyPosition || testimonyPosition === "neutral" || !testimonyWeight
+      ? null
+      : isNonVote
+        ? -0.3 * testimonyWeight
+        : !billPosition
+          ? null
+          : billPosition === testimonyPosition
+            ? testimonyWeight
+            : -testimonyWeight;
 
   return {
     billPosition,
     testimonyPosition,
+    testimonyStrength: testimonyStrength.label,
+    testimonyWeight,
     alignment,
+    alignmentValue,
     score,
   };
 }
@@ -417,12 +443,12 @@ function representativeVoteAnalysis(vote = {}, trackedBill = {}) {
     !preferredStance || preferredStance === "neutral"
       ? null
       : isNonVote
-        ? 0.6
+        ? -0.3
         : !voteStance
           ? null
           : voteStance === preferredStance
             ? 1
-            : 0;
+            : -1;
 
   return {
     voteStance,
@@ -534,6 +560,10 @@ function publicTestimonyPreferredStance(bill = {}) {
 }
 
 export function publicTestimonyPositionForBill(bill = {}) {
+  return publicTestimonyStrengthForBill(bill).position;
+}
+
+export function publicTestimonyStrengthForBill(bill = {}) {
   const support = numericBillValue(bill, [
     "support_count",
     "supportCount",
@@ -551,15 +581,34 @@ export function publicTestimonyPositionForBill(bill = {}) {
   ]);
   const total = support + oppose;
 
-  if (!total || support === oppose) return "";
+  if (!total || support === oppose) {
+    return { position: "", label: total ? "Neutral" : "No testimony", weight: 0, support, oppose, total };
+  }
 
   const margin = Math.abs(support - oppose) / total;
 
   // Divided online testimony should not move a legislator's alignment score.
-  if (total < 50 && margin <= 0.25) return "neutral";
-  if (margin <= 0.1) return "neutral";
+  if (total < 50 && margin <= 0.25) {
+    return { position: "neutral", label: "Neutral", weight: 0, support, oppose, total, margin };
+  }
+  if (margin <= 0.1) {
+    return { position: "neutral", label: "Divided", weight: 0, support, oppose, total, margin };
+  }
 
-  return support > oppose ? "support" : "oppose";
+  const position = support > oppose ? "support" : "oppose";
+  const direction = position === "support" ? "Support" : "Oppose";
+  const weight = margin >= 0.5 ? 1 : margin >= 0.25 ? 0.7 : 0.35;
+  const intensity = margin >= 0.5 ? "Overwhelmingly" : margin >= 0.25 ? "Mostly" : "Slightly";
+
+  return {
+    position,
+    label: `${intensity} ${direction}`,
+    weight,
+    support,
+    oppose,
+    total,
+    margin,
+  };
 }
 
 function numericBillValue(bill = {}, keys = []) {
@@ -671,10 +720,10 @@ function normalizedVoteDisplayValue(vote = {}) {
 }
 
 function letterGradeForAccountabilityPercent(percent) {
-  if (percent >= 0.85) return "A";
-  if (percent >= 0.7) return "B";
-  if (percent >= 0.5) return "C";
-  if (percent >= 0.35) return "D";
+  if (percent >= 0.55) return "A";
+  if (percent >= 0.25) return "B";
+  if (percent >= -0.42) return "C";
+  if (percent >= -0.6) return "D";
   return "F";
 }
 

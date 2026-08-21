@@ -14,6 +14,9 @@ import {
   isKnownVote,
   isVotingAction,
   normalizeBillCode,
+  representativeOnlineTestimonyAnalysis,
+  representativeOnlineTestimonyGrade,
+  representativeOnlineTestimonyVoteStance,
   representativeVoteImpact,
   representativeVoteStance,
   trackedBillForVote,
@@ -232,6 +235,7 @@ function testimonyVoteStanceFor(vote = {}) {
 }
 
 function voteStanceFor(vote = {}) {
+  if (vote.billSummary) return representativeOnlineTestimonyVoteStance(vote, vote.billSummary);
   const testimonyStance = testimonyVoteStanceFor(vote);
   if (testimonyStance) return testimonyStance;
   if (vote.trackedBill) return representativeVoteStance(vote, vote.trackedBill);
@@ -248,6 +252,9 @@ function voteImpactFor(vote = {}) {
 }
 
 function buildVoteDataSummary(votes = [], trackedCount = 0) {
+  const grade = representativeOnlineTestimonyGrade(votes, {
+    get: (code) => votes.find((vote) => normalizeBillCode(vote.bill_number) === code)?.billSummary || null,
+  });
   const summary = {
     total: votes.length,
     tracked: trackedCount,
@@ -255,6 +262,14 @@ function buildVoteDataSummary(votes = [], trackedCount = 0) {
     misaligned: 0,
     neutral: 0,
     nonVotes: 0,
+    scoredVotes: 0,
+    scoreAligned: 0,
+    scoreMisaligned: 0,
+    scoreNonVotes: 0,
+    totalTestimonyWeight: grade?.totalWeight || 0,
+    weightedNetScore: grade?.netScore || 0,
+    weightedAverageScore: grade?.percent ?? null,
+    gradeLetter: grade?.letter || "N/A",
     withPublicTestimony: 0,
   };
 
@@ -279,6 +294,14 @@ function buildVoteDataSummary(votes = [], trackedCount = 0) {
     if (documentedNonVote) summary.nonVotes += 1;
     if (testimonyPositionForBill(vote.billSummary || {})) summary.withPublicTestimony += 1;
 
+    const analysis = representativeOnlineTestimonyAnalysis(vote, vote.billSummary || {});
+    if (Number.isFinite(analysis.score)) {
+      summary.scoredVotes += 1;
+      if (analysis.alignment === "aligned") summary.scoreAligned += 1;
+      if (analysis.alignment === "misaligned") summary.scoreMisaligned += 1;
+      if (analysis.alignment === "partial") summary.scoreNonVotes += 1;
+    }
+
     if (stance.className === "legislator-support") {
       summary.aligned += 1;
     } else if (stance.className === "legislator-oppose") {
@@ -291,8 +314,17 @@ function buildVoteDataSummary(votes = [], trackedCount = 0) {
   summary.alignmentRate = summary.aligned + summary.misaligned
     ? Math.round((summary.aligned / (summary.aligned + summary.misaligned)) * 100)
     : null;
+  summary.weightedScoreLabel = summary.weightedAverageScore === null
+    ? "No weighted score yet"
+    : `${Math.round(summary.weightedAverageScore * 100)} weighted testimony score`;
 
   return summary;
+}
+
+function formatScore(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "N/A";
+  return number.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
 }
 
 function formatDate(value) {
@@ -436,17 +468,32 @@ function listText(value = "") {
             <div class="summary-intro">
               <p class="eyebrow">Vote Data Summary</p>
               <h2>
-                {voteDataSummary.alignmentRate === null
-                  ? "No clear alignment rate yet"
-                  : `${voteDataSummary.alignmentRate}% aligned with online testimony`}
+                {voteDataSummary.weightedScoreLabel}
               </h2>
               <p>
-                Summary is based on the roll-call votes currently shown on this
-                page. Procedural votes hidden by admin review are not included.
+                This score uses the same weighted online testimony model as the
+                profile grade. Nonvotes count as a smaller negative value, and
+                bills with stronger testimony signals carry more weight.
               </p>
             </div>
 
             <div class="summary-stats">
+              <span class:list={["summary-grade", `grade-${voteDataSummary.gradeLetter.toLowerCase()}`]}>
+                <strong>{voteDataSummary.gradeLetter}</strong>
+                Grade
+              </span>
+              <span>
+                <strong>{formatScore(voteDataSummary.weightedAverageScore)}</strong>
+                Weighted average
+              </span>
+              <span>
+                <strong>{formatScore(voteDataSummary.weightedNetScore)}</strong>
+                Net score
+              </span>
+              <span>
+                <strong>{formatScore(voteDataSummary.totalTestimonyWeight)}</strong>
+                Testimony weight
+              </span>
               <span>
                 <strong>{voteDataSummary.total}</strong>
                 Votes shown
@@ -456,20 +503,16 @@ function listText(value = "") {
                 Tracked bills
               </span>
               <span class="summary-good">
-                <strong>{voteDataSummary.aligned}</strong>
-                Aligned
+                <strong>{voteDataSummary.scoreAligned}</strong>
+                Scored aligned
               </span>
               <span class="summary-bad">
-                <strong>{voteDataSummary.misaligned}</strong>
-                Not aligned
+                <strong>{voteDataSummary.scoreMisaligned}</strong>
+                Scored not aligned
               </span>
-              <span>
-                <strong>{voteDataSummary.neutral}</strong>
-                Neutral/no clear position
-              </span>
-              <span>
-                <strong>{voteDataSummary.nonVotes}</strong>
-                Documented non-votes
+              <span class="summary-bad">
+                <strong>{voteDataSummary.scoreNonVotes}</strong>
+                Nonvote penalties
               </span>
               <span>
                 <strong>{voteDataSummary.withPublicTestimony}</strong>
@@ -1040,6 +1083,40 @@ function listText(value = "") {
   .summary-stats .summary-bad {
     border-color: rgba(180, 35, 24, 0.32);
     background: #fff1ee;
+  }
+
+  .summary-stats .summary-grade {
+    color: #fff7ed;
+  }
+
+  .summary-stats .summary-grade strong {
+    color: #fff7ed;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  }
+
+  .summary-stats .summary-grade.grade-a {
+    background: #166534;
+    border-color: #14532d;
+  }
+
+  .summary-stats .summary-grade.grade-b {
+    background: #65a30d;
+    border-color: #4d7c0f;
+  }
+
+  .summary-stats .summary-grade.grade-c {
+    background: #ca8a04;
+    border-color: #a16207;
+  }
+
+  .summary-stats .summary-grade.grade-d {
+    background: #ea580c;
+    border-color: #c2410c;
+  }
+
+  .summary-stats .summary-grade.grade-f {
+    background: #b42318;
+    border-color: #991b1b;
   }
 
   .vote-color-legend {

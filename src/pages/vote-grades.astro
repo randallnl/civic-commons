@@ -3,34 +3,41 @@ import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 
 const gradeScale = [
-  { letter: "A", range: "85-100%", label: "Strong alignment", className: "grade-a" },
-  { letter: "B", range: "70-84%", label: "Often aligned", className: "grade-b" },
-  { letter: "C", range: "50-69%", label: "Mixed record", className: "grade-c" },
-  { letter: "D", range: "35-49%", label: "Often misaligned", className: "grade-d" },
-  { letter: "F", range: "0-34%", label: "Low alignment", className: "grade-f" },
+  { letter: "A", range: "0.55 to 1.00", label: "Strong positive alignment", className: "grade-a" },
+  { letter: "B", range: "0.25 to 0.549", label: "Positive alignment", className: "grade-b" },
+  { letter: "C", range: "-0.42 to 0.249", label: "Mixed or close to neutral", className: "grade-c" },
+  { letter: "D", range: "-0.60 to -0.421", label: "Negative alignment", className: "grade-d" },
+  { letter: "F", range: "Below -0.60", label: "Strong negative alignment", className: "grade-f" },
 ];
 
 const workflowSteps = [
   {
     step: "1",
     title: "Start with online testimony",
-    text: "For each bill, we compare Support and Oppose testimony submitted online. If the testimony is too close or too small to infer a direction, that bill is not scored for the grade.",
+    text: "For each bill, we compare online Support and Oppose testimony. Bills with neutral, divided, missing, or too-close testimony do not move the grade.",
   },
   {
     step: "2",
-    title: "Interpret the vote",
-    text: "A yea or nay vote is translated into support or opposition to the bill. Motions like ITL are handled differently because voting yea on ITL means voting to kill the bill.",
+    title: "Weight the testimony signal",
+    text: "A slightly leaning testimony record receives a lighter weight than a mostly or overwhelmingly one-sided testimony record.",
   },
   {
     step: "3",
-    title: "Score alignment",
-    text: "Aligned votes receive full credit. Misaligned votes receive no credit. Documented non-votes, such as absent or present-not-voting, receive partial accountability credit.",
+    title: "Interpret the vote",
+    text: "A yea or nay vote is translated into support or opposition to the bill. ITL, table, and postpone motions are handled differently because they are motions against the bill.",
   },
   {
     step: "4",
-    title: "Convert to a letter",
-    text: "The average score becomes a percentage, and that percentage is converted to a letter grade so patterns are easier to scan.",
+    title: "Score the record",
+    text: "Aligned votes are positive, misaligned votes are negative, and nonvotes are always a smaller negative accountability score. The weighted average becomes the letter grade.",
   },
+];
+
+const testimonyWeights = [
+  { label: "Slightly support / oppose", weight: "0.35", text: "The public testimony signal leans one way, but not strongly." },
+  { label: "Mostly support / oppose", weight: "0.70", text: "The testimony signal is clearly one-sided." },
+  { label: "Overwhelmingly support / oppose", weight: "1.00", text: "The testimony signal is very strongly one-sided." },
+  { label: "Neutral / divided", weight: "0", text: "The bill is not scored because testimony does not give a clear position." },
 ];
 
 const referenceLinks = [
@@ -69,8 +76,8 @@ const referenceLinks = [
         <p>
           Vote grades are meant to be a plain-language accountability signal,
           not the whole story. They help visitors quickly understand how often a
-          legislator's recorded votes line up with the position inferred from
-          online public testimony.
+          legislator's voting record lines up with the position inferred from
+          online public testimony, while also accounting for missed votes.
         </p>
         <div class="hero-actions">
           <a href="/people">See legislator grades</a>
@@ -89,11 +96,11 @@ const referenceLinks = [
           </p>
         </div>
         <div class="formula" aria-label="Vote grade formula">
-          <span>Online testimony</span>
+          <span>Testimony strength</span>
           <strong>+</strong>
-          <span>Voting action</span>
+          <span>Vote interpretation</span>
           <strong>=</strong>
-          <span>Alignment score</span>
+          <span>Weighted score</span>
         </div>
       </section>
 
@@ -113,15 +120,15 @@ const referenceLinks = [
           <h2>How each vote moves the score</h2>
           <div class="score-row aligned">
             <strong>Aligned vote</strong>
-            <span>1.0 point</span>
+            <span>+1.0 x weight</span>
           </div>
           <div class="score-row partial">
-            <strong>Documented non-vote</strong>
-            <span>0.6 points</span>
+            <strong>Documented nonvote</strong>
+            <span>-0.3 x weight</span>
           </div>
           <div class="score-row misaligned">
             <strong>Misaligned vote</strong>
-            <span>0 points</span>
+            <span>-1.0 x weight</span>
           </div>
           <p>
             Votes are only scored when we have both a voting action and a clear
@@ -146,6 +153,79 @@ const referenceLinks = [
         </article>
       </section>
 
+      <section class="panel methodology-panel">
+        <div class="section-heading">
+          <p class="eyebrow">The Formula</p>
+          <h2>The grade uses a weighted average from -1 to +1.</h2>
+          <p>
+            Each scored vote receives a positive or negative value, then that
+            value is multiplied by the strength of the online testimony signal.
+            The final score is the weighted net score divided by the total
+            testimony weight.
+          </p>
+        </div>
+
+        <div class="formula-large">
+          <span>Weighted average</span>
+          <strong>=</strong>
+          <span>sum of weighted vote scores</span>
+          <strong>/</strong>
+          <span>sum of testimony weights</span>
+        </div>
+
+        <div class="method-grid">
+          <article>
+            <h3>Vote values</h3>
+            <p>
+              A recorded vote that aligns with testimony is positive. A recorded
+              vote that goes against testimony is negative. Any documented
+              nonvote, including absent, present, or present-not-voting, is
+              scored as a smaller negative value because the legislator did not
+              cast a vote on the motion.
+            </p>
+          </article>
+          <article>
+            <h3>Motion context</h3>
+            <p>
+              Normal motions treat yea as support and nay as opposition. On
+              motions that work against a bill, such as ITL, table, or
+              indefinitely postpone, the meaning flips: yea opposes the bill and
+              nay supports the bill.
+            </p>
+          </article>
+          <article>
+            <h3>Nonvotes</h3>
+            <p>
+              Nonvotes are always negative in the grade model. They are weighted
+              at -0.3 instead of -1.0, so missing a vote matters but is not
+              treated the same as casting a recorded vote against the testimony
+              position.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel testimony-panel">
+        <div class="section-heading">
+          <p class="eyebrow">Testimony Weights</p>
+          <h2>Stronger public testimony signals count more.</h2>
+          <p>
+            The same vote matters more when online testimony is overwhelmingly
+            one-sided, and less when the testimony signal is only slightly
+            tilted. Neutral and divided testimony does not affect the grade.
+          </p>
+        </div>
+        <div class="weight-grid">
+          {testimonyWeights.map((item) => (
+            <article>
+              <strong>{item.weight}</strong>
+              <h3>{item.label}</h3>
+              <p>{item.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section class="panel example-panel">
         <div>
           <p class="eyebrow">Example</p>
@@ -156,6 +236,12 @@ const referenceLinks = [
             a yea vote supports killing the bill, while a nay vote supports
             keeping the bill alive. That is why vote cards may say something
             like: <em>Voted: Nay: Support - aligned with online testimony.</em>
+          </p>
+          <p>
+            If online testimony overwhelmingly supports the bill, that aligned
+            vote contributes <strong>+1.0</strong>. If the legislator is absent
+            on a scored vote with overwhelming testimony, the nonvote contributes
+            <strong>-0.3</strong>.
           </p>
         </div>
         <a href="/vote-interpretations">Read the vote interpretation guide</a>
@@ -382,11 +468,11 @@ const referenceLinks = [
   }
 
   .score-row.partial {
-    background: #fef9c3;
+    background: #fff7ed;
   }
 
   .score-row.partial span {
-    background: #ca8a04;
+    background: #ea580c;
   }
 
   .score-row.misaligned {
@@ -400,6 +486,79 @@ const referenceLinks = [
   .grade-scale {
     display: grid;
     gap: 10px;
+  }
+
+  .methodology-panel,
+  .testimony-panel {
+    display: grid;
+    gap: 18px;
+    margin-top: 16px;
+  }
+
+  .formula-large {
+    align-items: center;
+    background: #eef6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .formula-large span {
+    background: white;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    color: #1e3a8a;
+    font-weight: 950;
+    padding: 9px 12px;
+  }
+
+  .formula-large strong {
+    color: #b42318;
+    font-size: 1.25rem;
+  }
+
+  .method-grid,
+  .weight-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .weight-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .method-grid article,
+  .weight-grid article {
+    background: #f8fbff;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+  }
+
+  .method-grid h3,
+  .weight-grid h3 {
+    color: #1f2933;
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  .weight-grid strong {
+    align-items: center;
+    background: #1e3a8a;
+    border-radius: 999px;
+    color: white;
+    display: inline-flex;
+    font-weight: 950;
+    justify-content: center;
+    justify-self: start;
+    min-width: 56px;
+    padding: 7px 10px;
   }
 
   .grade-row {
@@ -466,6 +625,10 @@ const referenceLinks = [
     color: #1f2933;
   }
 
+  .example-panel p + p {
+    margin-top: 10px;
+  }
+
   .references {
     margin-top: 16px;
   }
@@ -516,7 +679,9 @@ const referenceLinks = [
     }
 
     .workflow,
-    .reference-grid {
+    .reference-grid,
+    .method-grid,
+    .weight-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
@@ -527,7 +692,9 @@ const referenceLinks = [
     }
 
     .workflow,
-    .reference-grid {
+    .reference-grid,
+    .method-grid,
+    .weight-grid {
       grid-template-columns: 1fr;
     }
 
