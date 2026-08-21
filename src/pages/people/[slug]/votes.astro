@@ -288,6 +288,8 @@ function buildVoteDataSummary(votes = [], trackedCount = 0, rep = {}) {
     get: (code) => votes.find((vote) => normalizeBillCode(vote.bill_number) === code)?.billSummary || null,
   });
   const grade = cachedGrade || computedGrade;
+  const weightedNetScore = computedGrade?.netScore ?? cachedGrade?.netScore ?? 0;
+  const totalTestimonyWeight = computedGrade?.totalWeight ?? cachedGrade?.totalWeight ?? 0;
   const summary = {
     total: votes.length,
     tracked: trackedCount,
@@ -299,8 +301,8 @@ function buildVoteDataSummary(votes = [], trackedCount = 0, rep = {}) {
     scoreAligned: 0,
     scoreMisaligned: 0,
     scoreNonVotes: 0,
-    totalTestimonyWeight: grade?.totalWeight || 0,
-    weightedNetScore: grade?.netScore || 0,
+    totalTestimonyWeight,
+    weightedNetScore,
     weightedAverageScore: grade?.percent ?? null,
     gradeLetter: grade?.letter || "N/A",
     withPublicTestimony: 0,
@@ -720,13 +722,6 @@ function listText(value = "") {
                         >
                           {stance.label}
                         </a>
-                        <span
-                          class:list={["vote-grade-impact", gradeContribution.className]}
-                          title={gradeContribution.tooltip}
-                          aria-label={gradeContribution.tooltip}
-                        >
-                          {gradeContribution.label}
-                        </span>
                         {voteImpact && <p class="vote-impact">{cleanText(voteImpact)}</p>}
                       </div>
 
@@ -746,6 +741,16 @@ function listText(value = "") {
                         {vote.trackedBill?.issueArea && (
                           <span>{cleanText(vote.trackedBill.issueArea)}</span>
                         )}
+                      </div>
+
+                      <div class="vote-card-footer">
+                        <span
+                          class:list={["vote-grade-impact", gradeContribution.className]}
+                          title={gradeContribution.tooltip}
+                          aria-label={gradeContribution.tooltip}
+                        >
+                          {gradeContribution.label}
+                        </span>
                       </div>
                     </article>
                   );
@@ -1225,6 +1230,11 @@ function listText(value = "") {
     padding: 18px;
   }
 
+  .vote-bill-card {
+    display: flex;
+    flex-direction: column;
+  }
+
   .bill-topline {
     justify-content: space-between;
   }
@@ -1329,6 +1339,13 @@ function listText(value = "") {
     line-height: 1.15;
     padding: 6px 9px;
     width: fit-content;
+  }
+
+  .vote-card-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: auto;
+    padding-top: 14px;
   }
 
   .grade-impact-positive {
