@@ -73,13 +73,14 @@ export async function getBillDetail(code, {
   apiBase = billApiBase(),
   year = "",
   runtimeEnv,
+  civicCacheTtl = false,
 } = {}) {
   const params = new URLSearchParams();
   if (year) params.set("year", year);
 
   const response = await civicApiFetch(
     `${apiBase}/bills/${encodeURIComponent(normalizeBillCodeForUrl(code))}?${params}`,
-    { runtimeEnv },
+    { runtimeEnv, civicCacheTtl },
   );
 
   if (!response.ok) {
