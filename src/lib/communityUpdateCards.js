@@ -8,15 +8,22 @@ export async function getCommunityUpdateCards(updates = []) {
 
 export async function updateViewModel(update = {}) {
   const social = socialPreview(update.linkUrl);
-  const linkPreview = update.linkUrl
+  const fetchedLinkPreview = update.linkUrl
     ? await getArticlePreview(update.linkUrl)
     : null;
+  const uploadedPhotoUrl = update.photoUrls?.[0] || update.photoUrl || "";
+  const linkPreview = fetchedLinkPreview || genericLinkPreview(update.linkUrl, social);
   const mentions = uniqueMentions(update.mentions || []);
 
   return {
     ...update,
     social,
-    linkPreview: linkPreview || genericLinkPreview(update.linkUrl, social),
+    linkPreview: linkPreview && uploadedPhotoUrl
+      ? { ...linkPreview, imageUrl: uploadedPhotoUrl }
+      : linkPreview,
+    galleryPhotoUrls: update.linkUrl && uploadedPhotoUrl
+      ? (update.photoUrls || []).slice(1)
+      : update.photoUrls || [],
     mentions,
     people: mentions.map(personPreview),
   };

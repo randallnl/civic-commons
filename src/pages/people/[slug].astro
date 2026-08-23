@@ -100,7 +100,10 @@ const person = {
   party: representative?.party || profileCandidate?.politicalParty || profileCandidate?.party || "",
   email: representative?.email || profileCandidate?.candidateEmail || "",
   phone: representative?.phone || "",
-  website_url: representative?.sourceUrls?.generalCourt || profileCandidate?.candidateWebsite || "",
+  website_url: representative?.websiteUrl || representative?.website_url || representative?.sourceUrls?.generalCourt || profileCandidate?.candidateWebsite || "",
+  ballotpedia_url: representative?.ballotpediaUrl || representative?.ballotpedia_url || profileCandidate?.ballotpediaUrl || profileCandidate?.ballotpedia_url || "",
+  citizens_count_url: representative?.citizensCountUrl || representative?.citizens_count_url || profileCandidate?.citizensCountUrl || profileCandidate?.citizens_count_url || "",
+  state_house_profile_url: representative?.stateHouseProfileUrl || representative?.state_house_profile_url || profileCandidate?.stateHouseProfileUrl || profileCandidate?.state_house_profile_url || "",
   substack_url: socialField(representative, profileCandidate, "substack"),
   instagram_url: socialField(representative, profileCandidate, "instagram"),
   facebook_url: socialField(representative, profileCandidate, "facebook"),
@@ -505,6 +508,10 @@ const citizensCountProfileUrl = externalProfileUrl(profileLinkEntity, [
   "citizens_count_url",
   "citizenscount_url",
 ]);
+const stateHouseProfileUrl = externalProfileUrl(profileLinkEntity, [
+  "stateHouseProfileUrl",
+  "state_house_profile_url",
+]);
 const profileResourceLinks = [
   person.email && {
     href: contactHref("email", person.email),
@@ -545,6 +552,11 @@ const profileResourceLinks = [
     href: citizensCountProfileUrl,
     label: "Citizens Count",
     icon: ExternalLink,
+  },
+  stateHouseProfileUrl && stateHouseProfileUrl !== person.website_url && {
+    href: stateHouseProfileUrl,
+    label: "State House Profile",
+    icon: Landmark,
   },
   person.substack_url && {
     href: socialProfileUrl(person.substack_url, "substack"),
@@ -1031,6 +1043,22 @@ function uniqueTowns(towns = []) {
 
             <div class="form-grid">
               <label>
+                Ballotpedia
+                <input name="ballotpediaUrl" type="url" placeholder="https://ballotpedia.org/Name" />
+              </label>
+              <label>
+                Citizens Count
+                <input name="citizensCountUrl" type="url" placeholder="https://www.citizenscount.org/candidate/name" />
+              </label>
+            </div>
+
+            <label>
+              State House Profile
+              <input name="stateHouseProfileUrl" type="url" placeholder="https://gc.nh.gov/house/members/member.aspx?..." />
+            </label>
+
+            <div class="form-grid">
+              <label>
                 Instagram
                 <input name="instagramUrl" placeholder="https://instagram.com/name or @handle" />
               </label>
@@ -1264,6 +1292,22 @@ function uniqueTowns(towns = []) {
 
                 <div class="form-grid">
                   <label>
+                    Ballotpedia
+                    <input name="ballotpediaUrl" type="url" placeholder="https://ballotpedia.org/Name" />
+                  </label>
+                  <label>
+                    Citizens Count
+                    <input name="citizensCountUrl" type="url" placeholder="https://www.citizenscount.org/candidate/name" />
+                  </label>
+                </div>
+
+                <label>
+                  State House Profile
+                  <input name="stateHouseProfileUrl" type="url" placeholder="https://gc.nh.gov/house/members/member.aspx?..." />
+                </label>
+
+                <div class="form-grid">
+                  <label>
                     Instagram
                     <input name="instagramUrl" placeholder="https://instagram.com/name or @handle" />
                   </label>
@@ -1343,6 +1387,9 @@ function uniqueTowns(towns = []) {
             <input type="hidden" name="clearFields" value="tiktokUrl" />
             <input type="hidden" name="clearFields" value="xUrl" />
             <input type="hidden" name="clearFields" value="blueskyUrl" />
+            <input type="hidden" name="clearFields" value="ballotpediaUrl" />
+            <input type="hidden" name="clearFields" value="citizensCountUrl" />
+            <input type="hidden" name="clearFields" value="stateHouseProfileUrl" />
 
             <label>
               Name
@@ -1401,6 +1448,22 @@ function uniqueTowns(towns = []) {
                 <input name="photoUrl" type="url" value={person.photo_url || ""} />
               </label>
             </div>
+
+            <div class="form-grid">
+              <label>
+                Ballotpedia
+                <input name="ballotpediaUrl" type="url" value={person.ballotpedia_url || ""} placeholder="https://ballotpedia.org/Name" />
+              </label>
+              <label>
+                Citizens Count
+                <input name="citizensCountUrl" type="url" value={person.citizens_count_url || ""} placeholder="https://www.citizenscount.org/candidate/name" />
+              </label>
+            </div>
+
+            <label>
+              State House Profile
+              <input name="stateHouseProfileUrl" type="url" value={person.state_house_profile_url || ""} placeholder="https://gc.nh.gov/house/members/member.aspx?..." />
+            </label>
 
             <div class="form-grid">
               <label>

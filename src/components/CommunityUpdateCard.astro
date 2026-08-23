@@ -17,11 +17,11 @@ const {
 } = Astro.props;
 ---
 
-<article class:list={["community-update-card", update.photoUrls?.length && "has-photo", variant && `community-update-card-${variant}`]}>
-  {update.photoUrls?.length > 0 && (
+<article class:list={["community-update-card", update.galleryPhotoUrls?.length && "has-photo", variant && `community-update-card-${variant}`]}>
+  {update.galleryPhotoUrls?.length > 0 && (
     <div class="community-update-media">
       <div class="community-photo-grid">
-        {update.photoUrls.map((photoUrl) => (
+        {update.galleryPhotoUrls.map((photoUrl) => (
           <a
             class="community-photo-link"
             href={photoUrl}
@@ -33,7 +33,7 @@ const {
           </a>
         ))}
       </div>
-      <span>{update.photoUrls.length === 1 ? "Photo update" : `${update.photoUrls.length} photo updates`}</span>
+      <span>{update.galleryPhotoUrls.length === 1 ? "Additional photo" : `${update.galleryPhotoUrls.length} additional photos`}</span>
     </div>
   )}
 

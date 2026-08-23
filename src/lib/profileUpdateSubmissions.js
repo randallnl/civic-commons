@@ -11,6 +11,9 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS profile_update_submissions (
   submitter_name TEXT,
   submitter_email TEXT,
   website_url TEXT,
+  ballotpedia_url TEXT,
+  citizens_count_url TEXT,
+  state_house_profile_url TEXT,
   substack_url TEXT,
   instagram_url TEXT,
   facebook_url TEXT,
@@ -33,6 +36,9 @@ export function profileUpdateDb() {
 export async function ensureProfileUpdateSubmissionTable(db = profileUpdateDb()) {
   if (!db) throw new Error("D1 database binding is not configured.");
   await db.prepare(TABLE_SQL).run();
+  await ensureColumn(db, "profile_update_submissions", "ballotpedia_url", "TEXT");
+  await ensureColumn(db, "profile_update_submissions", "citizens_count_url", "TEXT");
+  await ensureColumn(db, "profile_update_submissions", "state_house_profile_url", "TEXT");
   await ensureColumn(db, "profile_update_submissions", "x_url", "TEXT");
   await ensureColumn(db, "profile_update_submissions", "bluesky_url", "TEXT");
   await db
@@ -63,10 +69,11 @@ export async function createProfileUpdateSubmission(data = {}, db = profileUpdat
     .prepare(
       `INSERT INTO profile_update_submissions (
         person_key, person_name, page_url, submitter_name, submitter_email,
-        website_url, substack_url, instagram_url, facebook_url, tiktok_url, x_url, bluesky_url,
+        website_url, ballotpedia_url, citizens_count_url, state_house_profile_url,
+        substack_url, instagram_url, facebook_url, tiktok_url, x_url, bluesky_url,
         photo_url, photo_key, notes, status, created_at
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)`,
     )
     .bind(
       normalized.personKey,
@@ -75,6 +82,9 @@ export async function createProfileUpdateSubmission(data = {}, db = profileUpdat
       normalized.submitterName,
       normalized.submitterEmail,
       normalized.websiteUrl,
+      normalized.ballotpediaUrl,
+      normalized.citizensCountUrl,
+      normalized.stateHouseProfileUrl,
       normalized.substackUrl,
       normalized.instagramUrl,
       normalized.facebookUrl,
@@ -194,6 +204,9 @@ async function applyProfileUpdateSubmission(submission = {}, db = profileUpdateD
   const normalized = normalizeSubmissionRow(submission);
   const data = {
     websiteUrl: normalized.websiteUrl,
+    ballotpediaUrl: normalized.ballotpediaUrl,
+    citizensCountUrl: normalized.citizensCountUrl,
+    stateHouseProfileUrl: normalized.stateHouseProfileUrl,
     substackUrl: normalized.substackUrl,
     instagramUrl: normalized.instagramUrl,
     facebookUrl: normalized.facebookUrl,
@@ -207,6 +220,9 @@ async function applyProfileUpdateSubmission(submission = {}, db = profileUpdateD
 
   for (const [field, column] of [
     ["websiteUrl", "website_url"],
+    ["ballotpediaUrl", "ballotpedia_url"],
+    ["citizensCountUrl", "citizens_count_url"],
+    ["stateHouseProfileUrl", "state_house_profile_url"],
     ["substackUrl", "substack_url"],
     ["instagramUrl", "instagram_url"],
     ["facebookUrl", "facebook_url"],
@@ -249,6 +265,9 @@ function normalizeSubmissionData(data = {}) {
     submitterName: cleanText(data.submitterName || data.submitter_name || "Community member"),
     submitterEmail: String(data.submitterEmail || data.submitter_email || "").trim(),
     websiteUrl: normalizeUrl(data.websiteUrl || data.website_url || ""),
+    ballotpediaUrl: normalizeUrl(data.ballotpediaUrl || data.ballotpedia_url || ""),
+    citizensCountUrl: normalizeUrl(data.citizensCountUrl || data.citizens_count_url || ""),
+    stateHouseProfileUrl: normalizeUrl(data.stateHouseProfileUrl || data.state_house_profile_url || ""),
     substackUrl: normalizeSocialUrl(data.substackUrl || data.substack_url || "", "substack"),
     instagramUrl: normalizeSocialUrl(data.instagramUrl || data.instagram_url || "", "instagram"),
     facebookUrl: normalizeSocialUrl(data.facebookUrl || data.facebook_url || "", "facebook"),
@@ -270,6 +289,9 @@ function normalizeSubmissionRow(row = {}) {
     submitterName: cleanText(row.submitter_name || row.submitterName || "Community member"),
     submitterEmail: row.submitter_email || row.submitterEmail || "",
     websiteUrl: row.website_url || row.websiteUrl || "",
+    ballotpediaUrl: row.ballotpedia_url || row.ballotpediaUrl || "",
+    citizensCountUrl: row.citizens_count_url || row.citizensCountUrl || "",
+    stateHouseProfileUrl: row.state_house_profile_url || row.stateHouseProfileUrl || "",
     substackUrl: row.substack_url || row.substackUrl || "",
     instagramUrl: row.instagram_url || row.instagramUrl || "",
     facebookUrl: row.facebook_url || row.facebookUrl || "",
@@ -289,6 +311,9 @@ function normalizeSubmissionRow(row = {}) {
 function hasSuggestedUpdate(data = {}) {
   return Boolean(
     data.websiteUrl ||
+    data.ballotpediaUrl ||
+    data.citizensCountUrl ||
+    data.stateHouseProfileUrl ||
     data.substackUrl ||
     data.instagramUrl ||
     data.facebookUrl ||

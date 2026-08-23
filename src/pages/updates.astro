@@ -115,7 +115,7 @@ function mediaFeedItem(update = {}) {
     displayName: cleanText(update.displayName || "Community member"),
     entityName: cleanText(update.entityName || ""),
     href: update.pageUrl || update.linkUrl || "/updates",
-    imageUrl: preview?.imageUrl || fallbackImageUrl,
+    imageUrl: fallbackImageUrl || preview?.imageUrl || "",
     linkUrl: update.linkUrl || "",
     people,
     platform,

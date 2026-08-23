@@ -214,6 +214,35 @@ export async function saveCommunityUpdatePhotos(updateId, photoUrls = [], db = c
   return urls;
 }
 
+export async function replaceCommunityUpdatePhotos(updateId, photoUrls = [], db = communityUpdatesDb()) {
+  if (!db || !updateId) return [];
+
+  const urls = [...new Set(
+    photoUrls.map((url) => String(url || "").trim()).filter(Boolean),
+  )];
+
+  await ensureCommunityUpdatesTable(db);
+  const statements = [
+    db
+      .prepare("UPDATE community_updates SET photo_url = ? WHERE id = ?")
+      .bind(urls[0] || "", updateId),
+    db
+      .prepare("DELETE FROM community_update_photos WHERE update_id = ?")
+      .bind(updateId),
+    ...urls.map((url, index) =>
+      db
+        .prepare(
+          `INSERT INTO community_update_photos (update_id, photo_url, sort_order)
+           VALUES (?, ?, ?)`,
+        )
+        .bind(updateId, url, index),
+    ),
+  ];
+
+  await db.batch(statements);
+  return urls;
+}
+
 export async function saveCommunityUpdateMentions(updateId, comment = "", db = communityUpdatesDb()) {
   if (!db || !updateId || !comment) return [];
 

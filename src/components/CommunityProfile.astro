@@ -259,7 +259,7 @@ function updateSummary(update = {}) {
 }
 
 function updateImage(update = {}) {
-  return update.linkPreview?.imageUrl || update.photoUrl || update.photoUrls?.[0] || "";
+  return update.photoUrl || update.photoUrls?.[0] || update.linkPreview?.imageUrl || "";
 }
 
 function textPreview(value = "", limit = 180) {

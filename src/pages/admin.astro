@@ -1006,6 +1006,20 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
                         <input name="photos" type="file" accept="image/*" multiple />
                         <small>Optional. Uploaded photos are attached when you save or approve.</small>
                       </label>
+                      {update.photoUrls?.length > 0 && (
+                        <fieldset class="moderation-photo-removal">
+                          <legend>Remove photos</legend>
+                          <div>
+                            {update.photoUrls.map((photoUrl, photoIndex) => (
+                              <label>
+                                <input name="removePhotos" type="checkbox" value={photoUrl} />
+                                <img src={photoUrl} alt="" loading="lazy" />
+                                <span>Remove photo {photoIndex + 1}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </fieldset>
+                      )}
                       {update.email && (
                         <div class="submitter-response-box">
                           <label>
@@ -1163,6 +1177,9 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
                 {pendingProfileUpdateSubmissions.map((submission) => {
                   const proposedLinks = [
                     ["Website", submission.websiteUrl],
+                    ["Ballotpedia", submission.ballotpediaUrl],
+                    ["Citizens Count", submission.citizensCountUrl],
+                    ["State House Profile", submission.stateHouseProfileUrl],
                     ["Substack", submission.substackUrl],
                     ["Instagram", submission.instagramUrl],
                     ["Facebook", submission.facebookUrl],
@@ -3396,6 +3413,51 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
     font-size: 0.78rem;
     font-weight: 800;
     margin-top: 4px;
+  }
+
+  .moderation-photo-removal {
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 10px;
+  }
+
+  .moderation-photo-removal legend {
+    color: #991b1b;
+    font-size: 0.8rem;
+    font-weight: 900;
+    padding: 0 5px;
+  }
+
+  .moderation-photo-removal > div {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .moderation-photo-removal label {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: auto 56px minmax(0, 1fr);
+    padding: 7px;
+  }
+
+  .moderation-photo-removal input {
+    margin: 0;
+    width: auto;
+  }
+
+  .moderation-photo-removal img {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    object-fit: cover;
+    width: 56px;
   }
 
   .moderation-inline-status {

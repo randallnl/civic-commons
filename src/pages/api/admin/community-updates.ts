@@ -11,7 +11,7 @@ import { sendSubmissionResponseEmail } from "../../../lib/adminEmail";
 import {
   ensureCommunityUpdatesTable,
   communityUpdatesDb,
-  saveCommunityUpdatePhotos,
+  replaceCommunityUpdatePhotos,
   saveCommunityUpdateMentions,
 } from "../../../lib/communityUpdates";
 import { cleanText } from "../../../lib/text";
@@ -36,6 +36,13 @@ export async function POST({ request }) {
       .getAll("photos")
       .concat(form.getAll("photo"))
       .filter((file) => file && typeof file !== "string" && file.size);
+    const requestedPhotoRemovals = new Set(
+      form
+        .getAll("removePhotos")
+        .map((value) => String(value || "").trim())
+        .filter(Boolean),
+    );
+    const refreshAfterPhotoChange = Boolean(files.length || requestedPhotoRemovals.size);
     redirectTo = safeRedirectPath(form.get("redirectTo")) || "/admin";
 
     if (!id) throw new Error("Community update id is required.");
@@ -76,6 +83,23 @@ export async function POST({ request }) {
         .first();
       if (!existing) throw new Error("No matching community update was found.");
 
+      const existingPhotoRows = await db
+        .prepare(
+          `SELECT photo_url
+           FROM community_update_photos
+           WHERE update_id = ?
+           ORDER BY sort_order, id`,
+        )
+        .bind(id)
+        .all();
+      const existingPhotoUrls = [...new Set([
+        ...(existingPhotoRows.results || []).map((row) => String(row.photo_url || "").trim()),
+        String(existing.photo_url || "").trim(),
+      ].filter(Boolean))];
+      const retainedPhotoUrls = existingPhotoUrls.filter(
+        (url) => !requestedPhotoRemovals.has(url),
+      );
+
       const photoUrls = files.length
         ? await Promise.all(
             files.slice(0, 8).map((file, index) =>
@@ -88,6 +112,7 @@ export async function POST({ request }) {
             ),
           )
         : [];
+      const finalPhotoUrls = [...new Set([...retainedPhotoUrls, ...photoUrls])];
 
       await db
         .prepare(
@@ -95,14 +120,15 @@ export async function POST({ request }) {
            SET display_name = ?,
                comment = ?,
                link_url = ?,
-               photo_url = COALESCE(NULLIF(photo_url, ''), ?),
                response_status = COALESCE(NULLIF(?, ''), response_status),
                response_note = COALESCE(NULLIF(?, ''), response_note),
                response_sent_at = CASE WHEN ? != '' THEN CURRENT_TIMESTAMP ELSE response_sent_at END
            WHERE id = ?`,
         )
-        .bind(displayName, comment, linkUrl, photoUrls[0] || "", responseStatus, responseNote, responseNote, id)
+        .bind(displayName, comment, linkUrl, responseStatus, responseNote, responseNote, id)
         .run();
+
+      await replaceCommunityUpdatePhotos(id, finalPhotoUrls, db);
 
       await db
         .prepare("DELETE FROM community_update_mentions WHERE update_id = ?")
@@ -113,9 +139,6 @@ export async function POST({ request }) {
         await saveCommunityUpdateMentions(id, comment, db);
       }
 
-      if (photoUrls.length) {
-        await saveCommunityUpdatePhotos(id, photoUrls, db);
-      }
     }
 
     if (action === "save") {
@@ -134,11 +157,11 @@ export async function POST({ request }) {
           });
         } catch (emailError) {
           console.error(emailError?.message || "Unable to send community update response email.");
-          if (wantsHtml) return htmlMessage("Community update edits saved, but the response email could not be sent.", "error");
+          if (wantsHtml) return htmlMessage("Community update edits saved, but the response email could not be sent.", "error", 200, refreshAfterPhotoChange);
           return redirectWithMessage(request, redirectTo, "Community update edits saved, but the response email could not be sent.");
         }
       }
-      if (wantsHtml) return htmlMessage("Community update edits saved.", "success");
+      if (wantsHtml) return htmlMessage("Community update edits saved.", "success", 200, refreshAfterPhotoChange);
       return redirectWithMessage(request, redirectTo, "Community update edits saved.");
     }
 
@@ -175,12 +198,12 @@ export async function POST({ request }) {
         });
       } catch (emailError) {
         console.error(emailError?.message || "Unable to send community update response email.");
-        if (wantsHtml) return htmlMessage(`Community update ${status}, but the response email could not be sent.`, "error");
+        if (wantsHtml) return htmlMessage(`Community update ${status}, but the response email could not be sent.`, "error", 200, refreshAfterPhotoChange);
         return redirectWithMessage(request, redirectTo, `Community update ${status}, but the response email could not be sent.`);
       }
     }
 
-    if (wantsHtml) return htmlMessage(`Community update ${status}.`, "success");
+    if (wantsHtml) return htmlMessage(`Community update ${status}.`, "success", 200, refreshAfterPhotoChange);
     return redirectWithMessage(request, redirectTo, `Community update ${status}.`);
   } catch (error) {
     if (wantsHtml) {
@@ -279,15 +302,18 @@ function redirectWithError(request, path, message) {
   return Response.redirect(url, 303);
 }
 
-function htmlMessage(message, status = "success", responseStatus = 200) {
+function htmlMessage(message, status = "success", responseStatus = 200, refresh = false) {
+  const headers = new Headers({
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
+  if (refresh) headers.set("HX-Refresh", "true");
+
   return new Response(
     `<span class="inline-status ${status}">${escapeHtml(message)}</span>`,
     {
       status: responseStatus,
-      headers: {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-store",
-      },
+      headers,
     },
   );
 }

@@ -209,6 +209,11 @@ const sourceLinks = [
     label: "Citizens Count",
     icon: ExternalLink,
   },
+  externalProfileUrl(candidate, ["stateHouseProfileUrl", "state_house_profile_url"]) && {
+    href: externalProfileUrl(candidate, ["stateHouseProfileUrl", "state_house_profile_url"]),
+    label: "State House Profile",
+    icon: ExternalLink,
+  },
   socialField(candidate, "substack") && {
     href: socialProfileUrl(socialField(candidate, "substack"), "substack"),
     label: "Substack",
@@ -806,6 +811,9 @@ function uniqueArticles(articles = []) {
             <input type="hidden" name="clearFields" value="tiktokUrl" />
             <input type="hidden" name="clearFields" value="xUrl" />
             <input type="hidden" name="clearFields" value="blueskyUrl" />
+            <input type="hidden" name="clearFields" value="ballotpediaUrl" />
+            <input type="hidden" name="clearFields" value="citizensCountUrl" />
+            <input type="hidden" name="clearFields" value="stateHouseProfileUrl" />
 
             <label>
               Name
@@ -905,6 +913,22 @@ function uniqueArticles(articles = []) {
             <label>
               Photo URL
               <input name="photoUrl" type="url" value={candidate.photoUrl || ""} />
+            </label>
+
+            <div class="form-grid">
+              <label>
+                Ballotpedia
+                <input name="ballotpediaUrl" type="url" value={candidate.ballotpediaUrl || candidate.ballotpedia_url || ""} placeholder="https://ballotpedia.org/Name" />
+              </label>
+              <label>
+                Citizens Count
+                <input name="citizensCountUrl" type="url" value={candidate.citizensCountUrl || candidate.citizens_count_url || ""} placeholder="https://www.citizenscount.org/candidate/name" />
+              </label>
+            </div>
+
+            <label>
+              State House Profile
+              <input name="stateHouseProfileUrl" type="url" value={candidate.stateHouseProfileUrl || candidate.state_house_profile_url || ""} placeholder="https://gc.nh.gov/house/members/member.aspx?..." />
             </label>
 
             <div class="form-grid">

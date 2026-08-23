@@ -21,6 +21,9 @@ export async function ensureUnifiedPeopleTables(db = adminDb()) {
         email TEXT,
         phone TEXT,
         website_url TEXT,
+        ballotpedia_url TEXT,
+        citizens_count_url TEXT,
+        state_house_profile_url TEXT,
         photo_url TEXT,
         is_current_legislator INTEGER NOT NULL DEFAULT 0,
         is_2026_legislator INTEGER NOT NULL DEFAULT 0,
@@ -36,6 +39,9 @@ export async function ensureUnifiedPeopleTables(db = adminDb()) {
     .run();
 
   await ensureColumn(db, "d1_people", "name_aliases", "TEXT");
+  await ensureColumn(db, "d1_people", "ballotpedia_url", "TEXT");
+  await ensureColumn(db, "d1_people", "citizens_count_url", "TEXT");
+  await ensureColumn(db, "d1_people", "state_house_profile_url", "TEXT");
   await ensureColumn(db, "d1_people", "substack_url", "TEXT");
   await ensureColumn(db, "d1_people", "instagram_url", "TEXT");
   await ensureColumn(db, "d1_people", "facebook_url", "TEXT");

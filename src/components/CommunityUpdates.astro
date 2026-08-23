@@ -273,10 +273,10 @@ function socialLinkHost(update = {}) {
                   </a>
                 )
               )}
-              {update.photoUrls?.length > 0 && (
+              {update.galleryPhotoUrls?.length > 0 && (
                 <>
                   <div class="community-photo-grid">
-                    {update.photoUrls.map((photoUrl) => (
+                    {update.galleryPhotoUrls.map((photoUrl) => (
                       <button
                         class="community-photo-button"
                         type="button"
@@ -287,7 +287,7 @@ function socialLinkHost(update = {}) {
                       </button>
                     ))}
                   </div>
-                  <span>{update.photoUrls.length === 1 ? "Photo update" : `${update.photoUrls.length} photo updates`}</span>
+                  <span>{update.galleryPhotoUrls.length === 1 ? "Additional photo" : `${update.galleryPhotoUrls.length} additional photos`}</span>
                 </>
               )}
             </div>
@@ -373,6 +373,20 @@ function socialLinkHost(update = {}) {
                     <input name="photos" type="file" accept="image/*" multiple />
                     <small>New photos are added to this update when you save.</small>
                   </label>
+                  {update.photoUrls?.length > 0 && (
+                    <fieldset class="community-update-admin-photo-removal">
+                      <legend>Remove photos</legend>
+                      <div>
+                        {update.photoUrls.map((photoUrl, index) => (
+                          <label>
+                            <input name="removePhotos" type="checkbox" value={photoUrl} />
+                            <img src={photoUrl} alt="" loading="lazy" />
+                            <span>Remove photo {index + 1}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                  )}
                   <div class="community-update-admin-actions">
                     <button type="submit" name="action" value="save">Save edits</button>
                     <button
@@ -818,6 +832,51 @@ function socialLinkHost(update = {}) {
     font-size: 0.74rem;
     font-weight: 800;
     text-transform: none;
+  }
+
+  .community-update-admin-photo-removal {
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 10px;
+  }
+
+  .community-update-admin-photo-removal legend {
+    color: #991b1b;
+    font-size: 0.76rem;
+    font-weight: 950;
+    padding: 0 5px;
+    text-transform: uppercase;
+  }
+
+  .community-update-admin-photo-removal > div {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+
+  .community-update-admin-photo-removal label {
+    align-items: center;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    display: grid;
+    gap: 6px;
+    grid-template-columns: auto 48px minmax(0, 1fr);
+    padding: 6px;
+  }
+
+  .community-update-admin-photo-removal input {
+    width: auto;
+  }
+
+  .community-update-admin-photo-removal img {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    object-fit: cover;
+    width: 48px;
   }
 
   .community-update-admin-actions {
