@@ -1,8 +1,12 @@
 export const prerender = false;
 
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 import { adminR2Bucket } from "../../lib/adminAuth";
 import { sendSubmissionReceivedEmail } from "../../lib/adminEmail";
+import {
+  captureCommunityUpdateScreenshot,
+  markCommunityUpdateArchivePending,
+} from "../../lib/communityUpdateArchives";
 import {
   ensureCommunityUpdatesTable,
   communityUpdatesDb,
@@ -74,6 +78,10 @@ export async function POST({ request }) {
     }
     if (updateId && photoUrls.length) {
       await saveCommunityUpdatePhotos(updateId, photoUrls, db);
+    }
+    if (updateId && linkUrl) {
+      await markCommunityUpdateArchivePending(updateId, linkUrl, db);
+      waitUntil(captureCommunityUpdateScreenshot({ updateId, sourceUrl: linkUrl, db }));
     }
 
     if (email) {

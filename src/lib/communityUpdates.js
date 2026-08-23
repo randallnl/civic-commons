@@ -19,6 +19,11 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_updates (
   response_status TEXT,
   response_note TEXT,
   response_sent_at TEXT,
+  archive_source_url TEXT,
+  archive_screenshot_url TEXT,
+  archive_status TEXT,
+  archive_error TEXT,
+  archived_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`;
 
@@ -59,6 +64,11 @@ export async function ensureCommunityUpdatesTable(db = communityUpdatesDb()) {
   await addColumnIfMissing(db, "community_updates", "response_status", "TEXT");
   await addColumnIfMissing(db, "community_updates", "response_note", "TEXT");
   await addColumnIfMissing(db, "community_updates", "response_sent_at", "TEXT");
+  await addColumnIfMissing(db, "community_updates", "archive_source_url", "TEXT");
+  await addColumnIfMissing(db, "community_updates", "archive_screenshot_url", "TEXT");
+  await addColumnIfMissing(db, "community_updates", "archive_status", "TEXT");
+  await addColumnIfMissing(db, "community_updates", "archive_error", "TEXT");
+  await addColumnIfMissing(db, "community_updates", "archived_at", "TEXT");
   await addColumnIfMissing(db, "community_update_mentions", "person_id", "INTEGER");
   await addColumnIfMissing(db, "community_update_mentions", "filer_entity_number", "TEXT");
   await addColumnIfMissing(db, "community_update_mentions", "path", "TEXT");
@@ -93,7 +103,9 @@ export async function getApprovedCommunityUpdates(entityType, entityKey, { limit
   const result = await db
     .prepare(
       `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
-              comment, link_url, photo_url, created_at
+              comment, link_url, photo_url, archive_source_url,
+              archive_screenshot_url, archive_status, archive_error, archived_at,
+              created_at
        FROM community_updates
        WHERE entity_type = ?
          AND entity_key = ?
@@ -116,7 +128,9 @@ export async function getRecentApprovedCommunityUpdates({ limit = 6 } = {}) {
   const result = await db
     .prepare(
       `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
-              comment, link_url, photo_url, created_at
+              comment, link_url, photo_url, archive_source_url,
+              archive_screenshot_url, archive_status, archive_error, archived_at,
+              created_at
        FROM community_updates
        WHERE status = 'approved'
        ORDER BY created_at DESC
@@ -139,7 +153,9 @@ export async function getPendingCommunityUpdates({ limit = 25 } = {}) {
       `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
               email, comment, link_url, photo_url, status, workflow_status,
               assigned_to, moderator_note, workflow_updated_at, response_status,
-              response_note, response_sent_at, created_at
+              response_note, response_sent_at, archive_source_url,
+              archive_screenshot_url, archive_status, archive_error, archived_at,
+              created_at
        FROM community_updates
        WHERE status = 'pending'
        ORDER BY created_at ASC
@@ -191,6 +207,11 @@ export function normalizeUpdate(update = {}) {
     responseStatus: update.response_status || update.responseStatus || "",
     responseNote: cleanText(update.response_note || update.responseNote || ""),
     responseSentAt: update.response_sent_at || update.responseSentAt || "",
+    archiveSourceUrl: update.archive_source_url || update.archiveSourceUrl || "",
+    archiveScreenshotUrl: update.archive_screenshot_url || update.archiveScreenshotUrl || "",
+    archiveStatus: update.archive_status || update.archiveStatus || "",
+    archiveError: cleanText(update.archive_error || update.archiveError || ""),
+    archivedAt: update.archived_at || update.archivedAt || "",
     createdAt: update.created_at || update.createdAt || "",
     ...normalizeWorkflowFields(update),
   };

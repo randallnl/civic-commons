@@ -9,6 +9,9 @@
 		"directory": "./dist",
 		"binding": "ASSETS"
 	},
+	"browser": {
+		"binding": "BROWSER"
+	},
 	"routes": [
 		{
 			"pattern": "nhciviccommons.com",

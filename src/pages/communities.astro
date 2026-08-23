@@ -461,9 +461,15 @@ const updateTypeOptions = [
                       data-fuzzy-sort-county={countyText}
                     >
                       {photoUrls[0] && (
-                        <a class="update-photo" href={updateHref(update)} tabindex="-1" aria-hidden="true">
+                        <button
+                          class="update-photo"
+                          type="button"
+                          data-community-index-photo={photoUrls[0]}
+                          data-community-index-photos={JSON.stringify(photoUrls)}
+                          aria-label="Open uploaded community update photo"
+                        >
                           <img src={photoUrls[0]} alt="" loading="lazy" />
-                        </a>
+                        </button>
                       )}
                       <div class="update-copy">
                         <div class="update-topline">
@@ -488,6 +494,11 @@ const updateTypeOptions = [
                         )}
                         <div class="update-meta">
                           <span>Submitted by {cleanText(update.displayName || "Community member")}</span>
+                          {update.archiveScreenshotUrl && (
+                            <a href={update.archiveScreenshotUrl} target="_blank" rel="noopener noreferrer">
+                              View archived copy
+                            </a>
+                          )}
                         </div>
                         {mentions.length > 0 && (
                           <div class="mention-list" aria-label="Mentioned people">
@@ -620,8 +631,95 @@ const updateTypeOptions = [
           </aside>
         </div>
       </section>
+      <dialog class="community-index-photo-dialog" aria-label="Community update photo">
+        <div class="community-index-photo-toolbar">
+          <button type="button" data-community-index-photo-prev aria-label="Previous photo">Previous</button>
+          <span data-community-index-photo-count></span>
+          <button type="button" data-community-index-photo-next aria-label="Next photo">Next</button>
+          <form method="dialog">
+            <button type="submit" aria-label="Close photo preview">Close</button>
+          </form>
+        </div>
+        <img src="" alt="" />
+      </dialog>
     </main>
     <SiteFooter />
+    <script>
+      function setupCommunityIndexPhotoDialog() {
+        const dialog = document.querySelector(".community-index-photo-dialog");
+        const preview = dialog?.querySelector("img");
+        const previousButton = dialog?.querySelector("[data-community-index-photo-prev]");
+        const nextButton = dialog?.querySelector("[data-community-index-photo-next]");
+        const counter = dialog?.querySelector("[data-community-index-photo-count]");
+        if (
+          !(dialog instanceof HTMLDialogElement) ||
+          !(preview instanceof HTMLImageElement) ||
+          !(previousButton instanceof HTMLButtonElement) ||
+          !(nextButton instanceof HTMLButtonElement) ||
+          !(counter instanceof HTMLElement)
+        ) return;
+
+        let activePhotos = [];
+        let activeIndex = 0;
+
+        function renderPhoto() {
+          const photoUrl = activePhotos[activeIndex];
+          if (!photoUrl) return;
+          preview.src = photoUrl;
+          const hasMultiplePhotos = activePhotos.length > 1;
+          previousButton.hidden = !hasMultiplePhotos;
+          nextButton.hidden = !hasMultiplePhotos;
+          counter.hidden = !hasMultiplePhotos;
+          counter.textContent = hasMultiplePhotos
+            ? `${activeIndex + 1} of ${activePhotos.length}`
+            : "";
+        }
+
+        function movePhoto(direction) {
+          if (activePhotos.length <= 1) return;
+          activeIndex = (activeIndex + direction + activePhotos.length) % activePhotos.length;
+          renderPhoto();
+        }
+
+        document.querySelectorAll("[data-community-index-photo]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const photoUrl = button.getAttribute("data-community-index-photo");
+            if (!photoUrl) return;
+            try {
+              const parsedPhotos = JSON.parse(button.getAttribute("data-community-index-photos") || "[]");
+              activePhotos = Array.isArray(parsedPhotos) ? parsedPhotos.filter(Boolean) : [];
+            } catch {
+              activePhotos = [];
+            }
+            if (!activePhotos.length) activePhotos = [photoUrl];
+            activeIndex = Math.max(0, activePhotos.indexOf(photoUrl));
+            renderPhoto();
+            dialog.showModal();
+          });
+        });
+
+        previousButton.addEventListener("click", () => movePhoto(-1));
+        nextButton.addEventListener("click", () => movePhoto(1));
+        dialog.addEventListener("keydown", (event) => {
+          if (event.key === "ArrowLeft") movePhoto(-1);
+          if (event.key === "ArrowRight") movePhoto(1);
+        });
+        dialog.addEventListener("click", (event) => {
+          if (event.target === dialog) dialog.close();
+        });
+        dialog.addEventListener("close", () => {
+          activePhotos = [];
+          activeIndex = 0;
+          preview.removeAttribute("src");
+        });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", setupCommunityIndexPhotoDialog, { once: true });
+      } else {
+        setupCommunityIndexPhotoDialog();
+      }
+    </script>
   </body>
 </html>
 
@@ -757,18 +855,73 @@ const updateTypeOptions = [
   }
 
   .update-photo {
+    appearance: none;
     align-self: start;
     aspect-ratio: 4 / 3;
     background: #eff6ff;
+    border: 0;
     border-radius: 8px;
+    cursor: zoom-in;
     display: block;
     overflow: hidden;
+    padding: 0;
+    width: 100%;
   }
 
   .update-photo img {
     height: 100%;
     object-fit: contain;
     width: 100%;
+  }
+
+  .community-index-photo-dialog {
+    background: #111827;
+    border: 0;
+    border-radius: 14px;
+    box-sizing: border-box;
+    color: #ffffff;
+    max-height: 92vh;
+    max-width: min(94vw, 1100px);
+    padding: 12px;
+  }
+
+  .community-index-photo-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.82);
+  }
+
+  .community-index-photo-toolbar {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+
+  .community-index-photo-toolbar form {
+    margin: 0;
+  }
+
+  .community-index-photo-toolbar button {
+    background: #ffffff;
+    border: 0;
+    border-radius: 999px;
+    color: #111827;
+    cursor: pointer;
+    font-weight: 900;
+    padding: 8px 12px;
+  }
+
+  .community-index-photo-toolbar span {
+    font-weight: 900;
+    min-width: 58px;
+    text-align: center;
+  }
+
+  .community-index-photo-dialog > img {
+    display: block;
+    max-height: calc(92vh - 70px);
+    max-width: calc(94vw - 24px);
+    object-fit: contain;
   }
 
   .update-copy {

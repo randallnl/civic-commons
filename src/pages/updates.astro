@@ -101,8 +101,13 @@ function mediaFeedItem(update = {}) {
   const titlePreview = textPreview(title, TITLE_PREVIEW_LENGTH);
   const description = mediaDescription(preview, update.linkUrl, social);
   const isPortrait = social.type === "tiktok" || isInstagramVideo(social) || isFacebookVideo(social);
-  const fallbackImageUrl = update.photoUrls?.[0] || update.photoUrl || "";
-  const platform = social.type || (fallbackImageUrl ? "photo" : update.linkUrl ? "link" : "update");
+  const uploadedPhotoUrl = update.photoUrls?.[0] || update.photoUrl || "";
+  const photoUrls = update.photoUrls?.length
+    ? update.photoUrls
+    : uploadedPhotoUrl
+      ? [uploadedPhotoUrl]
+      : [];
+  const platform = social.type || (uploadedPhotoUrl ? "photo" : update.linkUrl ? "link" : "update");
 
   return {
     id: update.id,
@@ -115,8 +120,11 @@ function mediaFeedItem(update = {}) {
     displayName: cleanText(update.displayName || "Community member"),
     entityName: cleanText(update.entityName || ""),
     href: update.pageUrl || update.linkUrl || "/updates",
-    imageUrl: fallbackImageUrl || preview?.imageUrl || "",
+    imageUrl: uploadedPhotoUrl || preview?.imageUrl || "",
+    uploadedPhotoUrl,
+    photoUrls,
     linkUrl: update.linkUrl || "",
+    archiveScreenshotUrl: update.archiveScreenshotUrl || "",
     people,
     platform,
     platformLabel: platformLabel(social, platform),
@@ -924,39 +932,52 @@ function textPreview(value = "", maxLength = 170) {
                   data-fuzzy-sort-updated={item.sortDate}
                   data-fuzzy-sort-platform={item.platformLabel}
                 >
-                  <a
-                    class="media-frame"
-                    href={item.linkUrl || item.href}
-                    target={item.linkUrl ? "_blank" : undefined}
-                    rel={item.linkUrl ? "noopener noreferrer" : undefined}
-                  >
-                    <span class="platform-badge">{item.platformLabel}</span>
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt="" loading="lazy" />
-                    ) : item.platform === "facebook" && item.embedUrl ? (
-                      <iframe
-                        class="media-embed facebook-media-embed"
-                        src={item.embedUrl}
-                        width="500"
-                        height="520"
-                        style="border:none;overflow:hidden"
-                        scrolling="no"
-                        frameborder="0"
-                        allowfullscreen="true"
-                        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                        loading="lazy"
-                        title="Facebook post preview"
-                      ></iframe>
-                    ) : item.platform === "substack" ? (
-                      <span class="media-fallback substack-media-fallback">
-                        <span>{item.fallbackLabel.mark}</span>
-                        <small>{item.fallbackLabel.kicker}</small>
-                        <strong>{item.fallbackLabel.title}</strong>
-                      </span>
-                    ) : (
-                      <span class="media-fallback">{item.platformLabel}</span>
-                    )}
-                  </a>
+                  {item.uploadedPhotoUrl ? (
+                    <button
+                      class="media-frame media-photo-button"
+                      type="button"
+                      data-update-photo={item.uploadedPhotoUrl}
+                      data-update-photos={JSON.stringify(item.photoUrls)}
+                      aria-label="Open uploaded community update photo"
+                    >
+                      <span class="platform-badge">{item.platformLabel}</span>
+                      <img src={item.uploadedPhotoUrl} alt="" loading="lazy" />
+                    </button>
+                  ) : (
+                    <a
+                      class="media-frame"
+                      href={item.linkUrl || item.href}
+                      target={item.linkUrl ? "_blank" : undefined}
+                      rel={item.linkUrl ? "noopener noreferrer" : undefined}
+                    >
+                      <span class="platform-badge">{item.platformLabel}</span>
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt="" loading="lazy" />
+                      ) : item.platform === "facebook" && item.embedUrl ? (
+                        <iframe
+                          class="media-embed facebook-media-embed"
+                          src={item.embedUrl}
+                          width="500"
+                          height="520"
+                          style="border:none;overflow:hidden"
+                          scrolling="no"
+                          frameborder="0"
+                          allowfullscreen="true"
+                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                          loading="lazy"
+                          title="Facebook post preview"
+                        ></iframe>
+                      ) : item.platform === "substack" ? (
+                        <span class="media-fallback substack-media-fallback">
+                          <span>{item.fallbackLabel.mark}</span>
+                          <small>{item.fallbackLabel.kicker}</small>
+                          <strong>{item.fallbackLabel.title}</strong>
+                        </span>
+                      ) : (
+                        <span class="media-fallback">{item.platformLabel}</span>
+                      )}
+                    </a>
+                  )}
 
                   <div class="media-copy">
                     <div class="media-meta">
@@ -1035,6 +1056,11 @@ function textPreview(value = "", maxLength = 170) {
                           Open post
                         </a>
                       )}
+                      {item.archiveScreenshotUrl && (
+                        <a href={item.archiveScreenshotUrl} target="_blank" rel="noopener noreferrer">
+                          View archived copy
+                        </a>
+                      )}
                     </div>
                   </div>
                 </article>
@@ -1051,6 +1077,17 @@ function textPreview(value = "", maxLength = 170) {
           <div class="scroll-load-sentinel" data-scroll-load-sentinel aria-hidden="true"></div>
         </section>
       )}
+        <dialog class="update-photo-dialog" aria-label="Community update photo">
+          <div class="update-photo-dialog-toolbar">
+            <button type="button" data-update-photo-prev aria-label="Previous photo">Previous</button>
+            <span data-update-photo-count></span>
+            <button type="button" data-update-photo-next aria-label="Next photo">Next</button>
+            <form method="dialog">
+              <button type="submit" aria-label="Close photo preview">Close</button>
+            </form>
+          </div>
+          <img src="" alt="" />
+        </dialog>
         </div>
       </div>
     </main>
@@ -1080,10 +1117,83 @@ function textPreview(value = "", maxLength = 170) {
         maybeLoadMore();
       }
 
+      function setupUpdatePhotoDialog() {
+        const dialog = document.querySelector(".update-photo-dialog");
+        const preview = dialog?.querySelector("img");
+        const previousButton = dialog?.querySelector("[data-update-photo-prev]");
+        const nextButton = dialog?.querySelector("[data-update-photo-next]");
+        const counter = dialog?.querySelector("[data-update-photo-count]");
+        if (
+          !(dialog instanceof HTMLDialogElement) ||
+          !(preview instanceof HTMLImageElement) ||
+          !(previousButton instanceof HTMLButtonElement) ||
+          !(nextButton instanceof HTMLButtonElement) ||
+          !(counter instanceof HTMLElement)
+        ) return;
+
+        let activePhotos = [];
+        let activeIndex = 0;
+
+        function renderPhoto() {
+          const photoUrl = activePhotos[activeIndex];
+          if (!photoUrl) return;
+          preview.src = photoUrl;
+          const hasMultiplePhotos = activePhotos.length > 1;
+          previousButton.hidden = !hasMultiplePhotos;
+          nextButton.hidden = !hasMultiplePhotos;
+          counter.hidden = !hasMultiplePhotos;
+          counter.textContent = hasMultiplePhotos
+            ? `${activeIndex + 1} of ${activePhotos.length}`
+            : "";
+        }
+
+        function movePhoto(direction) {
+          if (activePhotos.length <= 1) return;
+          activeIndex = (activeIndex + direction + activePhotos.length) % activePhotos.length;
+          renderPhoto();
+        }
+
+        document.querySelectorAll("[data-update-photo]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const photoUrl = button.getAttribute("data-update-photo");
+            if (!photoUrl) return;
+            try {
+              const parsedPhotos = JSON.parse(button.getAttribute("data-update-photos") || "[]");
+              activePhotos = Array.isArray(parsedPhotos) ? parsedPhotos.filter(Boolean) : [];
+            } catch {
+              activePhotos = [];
+            }
+            if (!activePhotos.length) activePhotos = [photoUrl];
+            activeIndex = Math.max(0, activePhotos.indexOf(photoUrl));
+            renderPhoto();
+            dialog.showModal();
+          });
+        });
+
+        previousButton.addEventListener("click", () => movePhoto(-1));
+        nextButton.addEventListener("click", () => movePhoto(1));
+        dialog.addEventListener("keydown", (event) => {
+          if (event.key === "ArrowLeft") movePhoto(-1);
+          if (event.key === "ArrowRight") movePhoto(1);
+        });
+        dialog.addEventListener("click", (event) => {
+          if (event.target === dialog) dialog.close();
+        });
+        dialog.addEventListener("close", () => {
+          activePhotos = [];
+          activeIndex = 0;
+          preview.removeAttribute("src");
+        });
+      }
+
       if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", setupUpdateAutoLoad, { once: true });
+        document.addEventListener("DOMContentLoaded", () => {
+          setupUpdateAutoLoad();
+          setupUpdatePhotoDialog();
+        }, { once: true });
       } else {
         setupUpdateAutoLoad();
+        setupUpdatePhotoDialog();
       }
     </script>
   </body>
@@ -1588,6 +1698,64 @@ function textPreview(value = "", maxLength = 170) {
     overflow: hidden;
     position: relative;
     text-decoration: none;
+  }
+
+  .media-photo-button {
+    appearance: none;
+    cursor: zoom-in;
+    font: inherit;
+    padding: 0;
+    text-align: inherit;
+  }
+
+  .update-photo-dialog {
+    background: #111827;
+    border: 0;
+    border-radius: 14px;
+    box-sizing: border-box;
+    color: #ffffff;
+    max-height: 92vh;
+    max-width: min(94vw, 1100px);
+    padding: 12px;
+  }
+
+  .update-photo-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.82);
+  }
+
+  .update-photo-dialog-toolbar {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+
+  .update-photo-dialog-toolbar form {
+    margin: 0;
+  }
+
+  .update-photo-dialog-toolbar button {
+    background: #ffffff;
+    border: 0;
+    border-radius: 999px;
+    color: #111827;
+    cursor: pointer;
+    font-weight: 900;
+    padding: 8px 12px;
+  }
+
+  .update-photo-dialog-toolbar span {
+    font-weight: 900;
+    min-width: 58px;
+    text-align: center;
+  }
+
+  .update-photo-dialog > img {
+    display: block;
+    max-height: calc(92vh - 70px);
+    max-width: calc(94vw - 24px);
+    object-fit: contain;
   }
 
   .portrait-media .media-frame {

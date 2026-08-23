@@ -19,11 +19,9 @@ export async function updateViewModel(update = {}) {
     ...update,
     social,
     linkPreview: linkPreview && uploadedPhotoUrl
-      ? { ...linkPreview, imageUrl: uploadedPhotoUrl }
+      ? { ...linkPreview, imageUrl: "" }
       : linkPreview,
-    galleryPhotoUrls: update.linkUrl && uploadedPhotoUrl
-      ? (update.photoUrls || []).slice(1)
-      : update.photoUrls || [],
+    galleryPhotoUrls: update.photoUrls || (uploadedPhotoUrl ? [uploadedPhotoUrl] : []),
     mentions,
     people: mentions.map(personPreview),
   };

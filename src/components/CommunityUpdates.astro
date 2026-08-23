@@ -287,7 +287,7 @@ function socialLinkHost(update = {}) {
                       </button>
                     ))}
                   </div>
-                  <span>{update.galleryPhotoUrls.length === 1 ? "Additional photo" : `${update.galleryPhotoUrls.length} additional photos`}</span>
+                  <span>{update.galleryPhotoUrls.length === 1 ? "Uploaded photo" : `${update.galleryPhotoUrls.length} uploaded photos`}</span>
                 </>
               )}
             </div>
@@ -295,9 +295,17 @@ function socialLinkHost(update = {}) {
           <div class="community-update-copy">
             <div class="community-update-meta">
               <strong>{cleanText(update.displayName || "Community member")}</strong>
-              {communityUpdateDate(update.createdAt) && (
-                <span>{communityUpdateDate(update.createdAt)}</span>
-              )}
+              <span>
+                {communityUpdateDate(update.createdAt)}
+                {update.archiveScreenshotUrl && (
+                  <a
+                    class="archive-copy-link"
+                    href={update.archiveScreenshotUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >View archived copy</a>
+                )}
+              </span>
             </div>
             {update.comment && (
               <p>
@@ -983,9 +991,19 @@ function socialLinkHost(update = {}) {
   }
 
   .community-update-meta span {
+    align-items: center;
     color: #64748b;
+    display: inline-flex;
+    flex-wrap: wrap;
     font-size: 0.8rem;
     font-weight: 900;
+    gap: 8px;
+  }
+
+  .community-update-meta .archive-copy-link {
+    color: #1d4ed8;
+    font-size: 0.72rem;
+    text-decoration: underline;
   }
 
   .community-update-list p,
