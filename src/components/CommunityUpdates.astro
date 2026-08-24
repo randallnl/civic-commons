@@ -32,23 +32,8 @@ const adminSession = await currentAdminSession(Astro.request);
 const canModerateUpdates = canModerateContent(adminSession);
 const hasInstagramEmbeds = updateCards.some((card) => card.social?.type === "instagram");
 const hasTikTokEmbeds = updateCards.some((card) => card.social?.type === "tiktok" && card.social.videoId);
-const hasFacebookEmbeds = updateCards.some((card) => card.social?.type === "facebook" && card.social.embedUrl);
 const isReport = entityType === "report";
 const Wrapper = embedded ? "div" : "section";
-
-function socialPreviewText(update = {}) {
-  return cleanText(previewDescription(update.linkPreview, update.linkUrl));
-}
-
-function clippedSocialPreviewText(update = {}, limit = 180) {
-  const text = socialPreviewText(update);
-  if (text.length <= limit) return text;
-  return `${text.slice(0, limit).replace(/\s+\S*$/, "").trim()}...`;
-}
-
-function hasLongSocialPreviewText(update = {}, limit = 180) {
-  return socialPreviewText(update).length > clippedSocialPreviewText(update, limit).length;
-}
 
 function socialLinkHost(update = {}) {
   try {
@@ -209,32 +194,6 @@ function socialLinkHost(update = {}) {
                         <small>{socialLinkHost(update)}</small>
                       </span>
                     </a>
-                    {socialPreviewText(update) && (
-                      <div class="social-post-text-preview facebook-post-text-preview">
-                        <p>{clippedSocialPreviewText(update)}</p>
-                        {hasLongSocialPreviewText(update) && (
-                          <details>
-                            <summary>Show more</summary>
-                            <p>{socialPreviewText(update)}</p>
-                          </details>
-                        )}
-                      </div>
-                    )}
-                    {!update.linkPreview?.imageUrl && update.social.embedUrl && (
-                      <iframe
-                        class="facebook-embed facebook-media-embed"
-                        src={update.social.embedUrl}
-                        width="500"
-                        height="520"
-                        style="border:none;overflow:hidden"
-                        scrolling="no"
-                        frameborder="0"
-                        allowfullscreen="true"
-                        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                        loading="lazy"
-                        title="Facebook post preview"
-                      ></iframe>
-                    )}
                   </div>
                 ) : update.social?.type === "instagram" ? (
                   <div class="instagram-embed-wrap">
@@ -434,9 +393,6 @@ function socialLinkHost(update = {}) {
 
 {hasInstagramEmbeds && <script async src="https://www.instagram.com/embed.js"></script>}
 {hasTikTokEmbeds && <script async src="https://www.tiktok.com/embed.js"></script>}
-{hasFacebookEmbeds && (
-  <div id="fb-root"></div>
-)}
 
 <script>
   document.querySelectorAll(".community-updates-panel").forEach((panel) => {
@@ -1200,42 +1156,6 @@ function socialLinkHost(update = {}) {
     background: linear-gradient(135deg, #ff6719, #f97316);
   }
 
-  .social-post-text-preview {
-    background: #ffffff;
-    border: 1px solid #dbeafe;
-    border-radius: 0 0 12px 12px;
-    border-top: 0;
-    color: #334155;
-    margin-top: -12px;
-    padding: 12px 14px 14px;
-  }
-
-  .social-post-text-preview p {
-    color: #334155;
-    font-size: 0.9rem;
-    font-weight: 750;
-    line-height: 1.45;
-    margin: 0;
-    overflow-wrap: anywhere;
-  }
-
-  .social-post-text-preview details {
-    margin-top: 8px;
-  }
-
-  .social-post-text-preview summary {
-    color: #1d4ed8;
-    cursor: pointer;
-    font-size: 0.82rem;
-    font-weight: 950;
-  }
-
-  .social-post-text-preview details p {
-    border-top: 1px solid #dbeafe;
-    margin-top: 8px;
-    padding-top: 8px;
-  }
-
   .instagram-preview-card strong,
   .instagram-preview-card small,
   .social-preview-card strong,
@@ -1387,18 +1307,6 @@ function socialLinkHost(update = {}) {
     margin: 0;
     max-width: 540px;
     min-width: 0;
-    overflow: hidden;
-    width: 100%;
-  }
-
-  .facebook-embed {
-    background: #ffffff;
-    border: 0;
-    border-radius: 12px;
-    box-shadow: 0 0 1px rgba(0, 0, 0, 0.35), 0 4px 18px rgba(17, 24, 39, 0.12);
-    box-sizing: border-box;
-    max-width: 100%;
-    min-height: 260px;
     overflow: hidden;
     width: 100%;
   }
