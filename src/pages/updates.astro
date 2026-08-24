@@ -922,6 +922,7 @@ function textPreview(value = "", maxLength = 170) {
                   class:list={[
                     "media-card",
                     item.isPortrait ? "portrait-media" : "landscape-media",
+                    item.uploadedPhotoUrl && "uploaded-photo-card",
                     `platform-${item.platform}`,
                   ]}
                   data-fuzzy-item
@@ -1713,6 +1714,10 @@ function textPreview(value = "", maxLength = 170) {
     gap: 0;
     overflow: hidden;
     width: 100%;
+  }
+
+  .media-card.uploaded-photo-card {
+    border-radius: 2px;
   }
 
   .media-frame {
