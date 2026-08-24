@@ -942,6 +942,9 @@ function textPreview(value = "", maxLength = 170) {
                     >
                       <span class="platform-badge">{item.platformLabel}</span>
                       <img src={item.uploadedPhotoUrl} alt="" loading="lazy" />
+                      <span class="media-fallback media-image-error" data-media-image-error hidden>
+                        Photo unavailable
+                      </span>
                     </button>
                   ) : (
                     <a
@@ -952,7 +955,12 @@ function textPreview(value = "", maxLength = 170) {
                     >
                       <span class="platform-badge">{item.platformLabel}</span>
                       {item.imageUrl ? (
-                        <img src={item.imageUrl} alt="" loading="lazy" />
+                        <>
+                          <img src={item.imageUrl} alt="" loading="lazy" />
+                          <span class="media-fallback media-image-error" data-media-image-error hidden>
+                            Preview unavailable
+                          </span>
+                        </>
                       ) : item.platform === "facebook" && item.embedUrl ? (
                         <iframe
                           class="media-embed facebook-media-embed"
@@ -1186,14 +1194,34 @@ function textPreview(value = "", maxLength = 170) {
         });
       }
 
+      function setupMediaImageFallbacks() {
+        document.querySelectorAll(".media-frame img").forEach((image) => {
+          if (!(image instanceof HTMLImageElement)) return;
+
+          function showFallback() {
+            const frame = image.closest(".media-frame");
+            const fallback = frame?.querySelector("[data-media-image-error]");
+            image.hidden = true;
+            frame?.classList.add("has-image-error");
+            if (fallback instanceof HTMLElement) fallback.hidden = false;
+            if (frame instanceof HTMLButtonElement) frame.disabled = true;
+          }
+
+          image.addEventListener("error", showFallback, { once: true });
+          if (image.complete && image.naturalWidth === 0) showFallback();
+        });
+      }
+
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", () => {
           setupUpdateAutoLoad();
           setupUpdatePhotoDialog();
+          setupMediaImageFallbacks();
         }, { once: true });
       } else {
         setupUpdateAutoLoad();
         setupUpdatePhotoDialog();
+        setupMediaImageFallbacks();
       }
     </script>
   </body>
@@ -1680,7 +1708,7 @@ function textPreview(value = "", maxLength = 170) {
   .media-card {
     background: #ffffff;
     border: 1px solid var(--nhdb-line);
-    border-radius: 14px;
+    border-radius: 8px;
     display: grid;
     gap: 0;
     overflow: hidden;
@@ -1706,6 +1734,18 @@ function textPreview(value = "", maxLength = 170) {
     font: inherit;
     padding: 0;
     text-align: inherit;
+  }
+
+  .media-photo-button:disabled {
+    cursor: default;
+  }
+
+  .media-image-error {
+    align-self: center;
+    color: #64748b;
+    font-size: clamp(1rem, 3vw, 1.5rem);
+    grid-area: 1 / 1;
+    justify-self: center;
   }
 
   .update-photo-dialog {
@@ -1777,6 +1817,11 @@ function textPreview(value = "", maxLength = 170) {
     height: 100%;
     object-fit: contain;
     width: 100%;
+  }
+
+  .media-frame img[hidden],
+  .media-image-error[hidden] {
+    display: none;
   }
 
   .media-embed {

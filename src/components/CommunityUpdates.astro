@@ -145,6 +145,23 @@ function socialLinkHost(update = {}) {
         <article class:list={["community-update-card", (update.photoUrls?.length || update.linkUrl) && "has-media"]}>
           {(update.linkUrl || update.photoUrls?.length > 0) && (
             <div class="community-update-media">
+              {update.galleryPhotoUrls?.length > 0 && (
+                <>
+                  <div class="community-photo-grid">
+                    {update.galleryPhotoUrls.map((photoUrl) => (
+                      <button
+                        class="community-photo-button"
+                        type="button"
+                        data-community-photo={photoUrl}
+                        aria-label="Open community update photo"
+                      >
+                        <img src={photoUrl} alt="" loading="lazy" />
+                      </button>
+                    ))}
+                  </div>
+                  <span>{update.galleryPhotoUrls.length === 1 ? "Uploaded photo" : `${update.galleryPhotoUrls.length} uploaded photos`}</span>
+                </>
+              )}
               {update.linkUrl && (
                 update.social?.type === "tiktok" ? (
                   <div class="social-embed-wrap tiktok-embed-wrap">
@@ -272,23 +289,6 @@ function socialLinkHost(update = {}) {
                     </span>
                   </a>
                 )
-              )}
-              {update.galleryPhotoUrls?.length > 0 && (
-                <>
-                  <div class="community-photo-grid">
-                    {update.galleryPhotoUrls.map((photoUrl) => (
-                      <button
-                        class="community-photo-button"
-                        type="button"
-                        data-community-photo={photoUrl}
-                        aria-label="Open community update photo"
-                      >
-                        <img src={photoUrl} alt="" loading="lazy" />
-                      </button>
-                    ))}
-                  </div>
-                  <span>{update.galleryPhotoUrls.length === 1 ? "Uploaded photo" : `${update.galleryPhotoUrls.length} uploaded photos`}</span>
-                </>
               )}
             </div>
           )}
