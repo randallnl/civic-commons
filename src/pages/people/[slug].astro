@@ -1222,7 +1222,15 @@ function uniqueTowns(towns = []) {
                   <div class="current-role-election-history" id="election-history">
                     <div class="current-role-election-heading">
                       <p class="eyebrow">Election history</p>
-                      <h3>Previous election results</h3>
+                      <h3>
+                        <a
+                          href="https://www.sos.nh.gov/2024-general-election-results"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Previous election results <span aria-hidden="true">↗</span>
+                        </a>
+                      </h3>
                       <p>
                         Official general-election results for this legislator’s winning candidacies.
                       </p>
@@ -2759,6 +2767,17 @@ function uniqueTowns(towns = []) {
     font-size: 1.25rem;
     line-height: 1.15;
     margin-bottom: 8px;
+  }
+
+  .current-role-election-heading h3 a {
+    color: #1d4ed8;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+
+  .current-role-election-heading h3 a:hover {
+    color: #1e3a8a;
   }
 
   .current-role-election-heading > p:last-child {
