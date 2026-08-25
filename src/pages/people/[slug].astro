@@ -23,7 +23,6 @@ import { currentAdminSession } from "../../lib/adminAuth";
 import {
   FREE_STATE_ALIGNED_TOOLTIP,
   TPACTION_ALIGNED_TOOLTIP,
-  VOTE_GRADE_TOOLTIP,
 } from "../../lib/alignmentTags";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
 import { representativePersonIdForCandidate } from "../../lib/candidateLegislatorLinks";
@@ -142,6 +141,23 @@ const voteGrade = representativeGradeFor(
   trackedBills,
   billSummaries,
 );
+const voteTestimonyAlignmentPercent = (() => {
+  const aligned = Number(voteGrade?.aligned);
+  const total = Number(voteGrade?.total);
+
+  if (Number.isFinite(aligned) && Number.isFinite(total) && total > 0) {
+    return Math.round((aligned / total) * 100);
+  }
+
+  const fallbackValue = voteGrade?.percent;
+  if (fallbackValue === null || fallbackValue === undefined || fallbackValue === "") return null;
+
+  const fallback = Number(fallbackValue);
+  if (!Number.isFinite(fallback)) return null;
+
+  const normalized = fallback > 1 ? fallback / 100 : fallback;
+  return Math.round(Math.max(0, Math.min(1, normalized)) * 100);
+})();
 
 trackedVotes = await Promise.all(
   trackedVotes.map(async (vote) => {
@@ -894,13 +910,13 @@ function uniqueTowns(towns = []) {
           {hasLegislatorProfile && (
           <div class="profile-grade-row">
             <a
-              class:list={["profile-grade", voteGrade.className]}
+              class="profile-grade testimony-alignment"
               href="/vote-grades"
-              title={VOTE_GRADE_TOOLTIP}
-              aria-label={`${VOTE_GRADE_TOOLTIP} ${voteGrade.label}`}
+              title={`Testimony alignment. ${voteGrade.label}`}
+              aria-label={`${voteTestimonyAlignmentPercent === null ? "No" : `${voteTestimonyAlignmentPercent}%`} testimony alignment. ${voteGrade.label}`}
             >
-              <span>{voteGrade.letter}</span>
-              <small>Vote Grade</small>
+              <span>{voteTestimonyAlignmentPercent === null ? "N/A" : `${voteTestimonyAlignmentPercent}%`}</span>
+              <small>Testimony aligned</small>
             </a>
             <p>{voteGrade.label}</p>
           </div>
@@ -2979,12 +2995,13 @@ function uniqueTowns(towns = []) {
   }
 
   .profile-grade {
+    background: #1e3a5f;
     border: 1px solid #e2e8f0;
     border-radius: 14px;
     box-shadow: none;
     color: #fefce8;
     display: grid;
-    min-width: 82px;
+    min-width: 142px;
     padding: 10px 12px;
     text-align: center;
     text-decoration: none;
@@ -3006,6 +3023,7 @@ function uniqueTowns(towns = []) {
     margin-top: 4px;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
     text-transform: uppercase;
+    white-space: nowrap;
   }
 
   .attendance-card {
