@@ -193,13 +193,19 @@ async function hydratePendingSubmissionScan(db, row = {}) {
   };
 }
 
-export async function moderateArticleSubmission(id, action, reviewer = "", manualLinks = {}) {
+export async function moderateArticleSubmission(
+  id,
+  action,
+  reviewer = "",
+  manualLinks = {},
+  articleDetails = {},
+) {
   const db = articleSubmissionsDb();
   if (!db) throw new Error("D1 database binding is not configured.");
 
   await ensureArticleSubmissionsTable(db);
 
-  const submission = normalizeArticleSubmission(
+  let submission = normalizeArticleSubmission(
     await db
       .prepare(`SELECT * FROM article_submissions WHERE id = ? LIMIT 1`)
       .bind(Number(id))
@@ -219,6 +225,12 @@ export async function moderateArticleSubmission(id, action, reviewer = "", manua
       .run();
     return;
   }
+
+  if (action === "update" || action === "approve") {
+    submission = await updatePendingArticleSubmissionDetails(db, submission, articleDetails);
+  }
+
+  if (action === "update") return;
 
   if (action !== "approve") {
     throw new Error("Unsupported moderation action.");
@@ -293,6 +305,65 @@ export async function moderateArticleSubmission(id, action, reviewer = "", manua
     )
     .bind(articleId, JSON.stringify(previewWithBody), JSON.stringify(scan), reviewer, submission.id)
     .run();
+}
+
+async function updatePendingArticleSubmissionDetails(db, submission, articleDetails = {}) {
+  const articleUrl = normalizeUrl(articleDetails.url || submission.url);
+  if (!articleUrl) throw new Error("A valid article URL is required.");
+
+  const urlChanged = articleUrl !== submission.url;
+  const preview = urlChanged
+    ? await getArticlePreview(articleUrl)
+    : submission.preview || (await getArticlePreview(articleUrl));
+  const bodyText = urlChanged
+    ? await getArticleBodyText(articleUrl)
+    : preview?.bodyText || (await getArticleBodyText(articleUrl));
+  const title = cleanText(articleDetails.title);
+  const summary = cleanText(articleDetails.summary);
+  const publisher = cleanText(articleDetails.publisher);
+  const previewWithBody = {
+    ...(preview || {}),
+    title: title || preview?.title || "",
+    description: summary || preview?.description || "",
+    bodyText,
+  };
+  const scan = await scanArticleMentions(db, {
+    url: articleUrl,
+    title,
+    summary,
+    publisher,
+    note: submission.note,
+    bodyText,
+  });
+
+  const result = await db
+    .prepare(
+      `UPDATE article_submissions
+       SET url = ?, title = ?, summary = ?, publisher = ?, preview_json = ?, scan_json = ?
+       WHERE id = ? AND status = 'pending'`,
+    )
+    .bind(
+      articleUrl,
+      title,
+      summary,
+      publisher,
+      JSON.stringify(previewWithBody),
+      JSON.stringify(scan),
+      submission.id,
+    )
+    .run();
+
+  if (!result.meta?.changes) throw new Error("Pending article submission not found.");
+
+  return normalizeArticleSubmission({
+    ...submission,
+    url: articleUrl,
+    title,
+    summary,
+    publisher,
+    preview_json: JSON.stringify(previewWithBody),
+    scan_json: JSON.stringify(scan),
+  });
 }
 
 export async function addManualArticleLinks(articleId, manualLinks = {}) {

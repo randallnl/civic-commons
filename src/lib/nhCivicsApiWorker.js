@@ -1554,23 +1554,18 @@ async function handleRepProfile(request, env) {
     return json({ error: "Representative not found." }, 404);
   }
 
-  const voteHistory = await getVoteHistoryForRep(
-    env,
-    legislator.employeeno,
-    voteLimit
-  );
+  const personId = await unifiedPersonIdForLegislator(env, legislator);
 
-  const relatedArticles = await getArticlesForLegislator(
-    env,
-    legislator.personid,
-    legislator.employeeno,
-    10
-  );
+  const [voteHistory, relatedArticles, electionHistory] = await Promise.all([
+    getVoteHistoryForRep(env, legislator.employeeno, voteLimit),
+    getArticlesForLegislator(env, legislator.personid, legislator.employeeno, 10),
+    getElectionHistoryForPerson(env, personId),
+  ]);
 
   return json({
     representative: {
       ...legislator,
-      personId: await unifiedPersonIdForLegislator(env, legislator),
+      personId,
       sourceUrls: {
         generalCourt: buildGeneralCourtUrl(legislator),
         photo: legislator.photo || null,
@@ -1578,7 +1573,54 @@ async function handleRepProfile(request, env) {
     },
     voteHistory,
     relatedArticles,
+    electionHistory,
   });
+}
+
+async function getElectionHistoryForPerson(env, personId) {
+  if (!personId) return [];
+
+  const result = await env.DB.prepare(`
+    SELECT
+      filer_entity_number,
+      office,
+      county,
+      district,
+      political_party,
+      election_year,
+      election_cycle,
+      status,
+      votes_received,
+      total_contest_votes,
+      winning_margin_votes,
+      seats_available,
+      election_result_source,
+      source
+    FROM d1_person_candidate_roles
+    WHERE person_id = ?
+      AND status = 'elected'
+      AND votes_received IS NOT NULL
+    ORDER BY election_year DESC, id DESC
+  `)
+    .bind(personId)
+    .all();
+
+  return (result.results || []).map((role) => ({
+    filerEntityNumber: role.filer_entity_number,
+    office: role.office,
+    county: role.county,
+    district: role.district,
+    politicalParty: role.political_party,
+    electionYear: role.election_year,
+    electionCycle: role.election_cycle,
+    status: role.status,
+    votesReceived: role.votes_received,
+    totalContestVotes: role.total_contest_votes,
+    winningMarginVotes: role.winning_margin_votes,
+    seatsAvailable: role.seats_available,
+    electionResultSource: role.election_result_source,
+    source: role.source,
+  }));
 }
 
 function buildGeneralCourtUrl(rep) {

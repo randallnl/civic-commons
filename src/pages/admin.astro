@@ -1353,6 +1353,24 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
                     >
                         <input type="hidden" name="id" value={submission.id} />
                         <input type="hidden" name="redirectTo" value="/admin" />
+                        <div class="article-detail-fields">
+                          <label>
+                            Article URL
+                            <input name="url" type="url" value={submission.url} required />
+                          </label>
+                          <label>
+                            Publisher
+                            <input name="publisher" value={cleanText(submission.publisher)} />
+                          </label>
+                          <label class="article-detail-field-wide">
+                            Title
+                            <input name="title" value={cleanText(submission.title)} />
+                          </label>
+                          <label class="article-detail-field-wide">
+                            Summary
+                            <textarea name="summary" rows="4">{cleanText(submission.summary)}</textarea>
+                          </label>
+                        </div>
                         <div class="manual-link-fields">
                           <label>
                             Bills
@@ -1364,8 +1382,9 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
                           </label>
                         </div>
                         <div class="moderation-actions">
+                          <button class="secondary" type="submit" name="action" value="update" @click="lastAction = 'update'" :disabled="busy">Save details</button>
                           <button type="submit" name="action" value="approve" @click="lastAction = 'approve'" :disabled="busy">Approve</button>
-                          <button class="secondary danger" type="submit" name="action" value="reject" @click="lastAction = 'reject'" :disabled="busy">Reject</button>
+                          <button class="secondary danger" type="submit" name="action" value="reject" formnovalidate @click="lastAction = 'reject'" :disabled="busy">Reject</button>
                           <span class="moderation-inline-status" aria-live="polite"></span>
                         </div>
                     </form>
@@ -3550,6 +3569,16 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
     width: 100%;
   }
 
+  .article-detail-fields {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .article-detail-field-wide {
+    grid-column: 1 / -1;
+  }
+
   .detected-relations {
     display: grid;
     gap: 8px;
@@ -3681,6 +3710,14 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
 
     .manual-link-fields {
       grid-template-columns: 1fr;
+    }
+
+    .article-detail-fields {
+      grid-template-columns: 1fr;
+    }
+
+    .article-detail-field-wide {
+      grid-column: auto;
     }
 
     .profile-update-preview {

@@ -21,15 +21,23 @@ export async function POST({ request }) {
       legislators: String(form.get("legislators") || ""),
       candidates: String(form.get("candidates") || ""),
     };
+    const articleDetails = {
+      url: String(form.get("url") || ""),
+      title: String(form.get("title") || ""),
+      publisher: String(form.get("publisher") || ""),
+      summary: String(form.get("summary") || ""),
+    };
 
     if (!id) throw new Error("Article submission ID is required.");
 
-    await moderateArticleSubmission(id, action, auth.session.email, manualLinks);
+    await moderateArticleSubmission(id, action, auth.session.email, manualLinks, articleDetails);
 
     const message =
       action === "approve"
         ? "Article approved and added to the article database."
-        : "Article submission rejected.";
+        : action === "update"
+          ? "Article submission details updated."
+          : "Article submission rejected.";
 
     if (wantsHtml) return htmlMessage(message, "success");
 

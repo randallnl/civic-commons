@@ -117,6 +117,7 @@ const trackedVotesHref = `/people/${slug}/votes`;
 const apiTerm = representative
   ? representativeToTerm(representative)
   : candidateToTerm(profileCandidate);
+const previousElectionResults = (apiData?.electionHistory || []).map(formatElectionResult);
 
 let trackedBills = new Map();
 let billSummaries = new Map();
@@ -300,6 +301,45 @@ function formatParty(party) {
   if (party === "D") return "Democratic";
   if (party === "I") return "Independent";
   return party;
+}
+
+function formatElectionResult(result = {}) {
+  const votesReceived = wholeNumber(result.votesReceived);
+  const totalContestVotes = wholeNumber(result.totalContestVotes);
+  const winningMarginVotes = wholeNumber(result.winningMarginVotes);
+  const marginPercent = totalContestVotes > 0
+    ? (winningMarginVotes / totalContestVotes) * 100
+    : null;
+
+  return {
+    ...result,
+    votesReceived,
+    totalContestVotes,
+    winningMarginVotes,
+    marginPercent,
+    officeLabel: [
+      result.office || "Election",
+      result.county && result.district
+        ? `${result.county} District ${formatDistrictNumber(result.district)}`
+        : result.district
+          ? `District ${formatDistrictNumber(result.district)}`
+          : result.county || "",
+    ].filter(Boolean).join(" · "),
+  };
+}
+
+function wholeNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.round(number) : 0;
+}
+
+function formatElectionNumber(value) {
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value || 0);
+}
+
+function formatElectionPercent(value) {
+  if (!Number.isFinite(value)) return "Not available";
+  return `${value.toFixed(1)}%`;
 }
 
 function partyClass(party) {
@@ -1341,6 +1381,53 @@ function uniqueTowns(towns = []) {
                 <button type="submit">Submit Profile Update</button>
               </form>
             </details>
+          </div>
+        </section>
+      )}
+
+      {hasLegislatorProfile && previousElectionResults.length > 0 && (
+        <section class="panel election-history-panel" id="election-history">
+          <div class="section-heading">
+            <p class="eyebrow">Election history</p>
+            <h2>Previous election results</h2>
+            <p>
+              Official general-election results for this legislator’s winning candidacies.
+            </p>
+          </div>
+
+          <div class="election-result-list">
+            {previousElectionResults.map((result) => (
+              <article class="election-result-card">
+                <div class="election-result-heading">
+                  <div>
+                    <span>{result.electionCycle || `${result.electionYear} Election`}</span>
+                    <strong>{result.officeLabel}</strong>
+                  </div>
+                  <span class="election-result-status">Elected</span>
+                </div>
+
+                <div class="election-result-metrics">
+                  <div>
+                    <span>Votes received</span>
+                    <strong>{formatElectionNumber(result.votesReceived)}</strong>
+                  </div>
+                  <div>
+                    <span>Winning margin</span>
+                    <strong>
+                      {formatElectionNumber(result.winningMarginVotes)} votes
+                      <small>({formatElectionPercent(result.marginPercent)})</small>
+                    </strong>
+                  </div>
+                </div>
+
+                <p class="election-result-note">
+                  Winning margin is measured against the highest non-winning candidate.
+                  {Number(result.seatsAvailable) > 1 && ` This was a ${result.seatsAvailable}-seat contest.`}
+                  The percentage uses all valid contest votes.
+                  {result.source && ` Source: ${result.source}.`}
+                </p>
+              </article>
+            ))}
           </div>
         </section>
       )}
@@ -2661,6 +2748,86 @@ function uniqueTowns(towns = []) {
     grid-column: 1 / -1;
   }
 
+  .election-result-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .election-result-card {
+    background: #f8fafc;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+  }
+
+  .election-result-heading {
+    align-items: start;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+  }
+
+  .election-result-heading > div {
+    display: grid;
+    gap: 4px;
+  }
+
+  .election-result-heading span,
+  .election-result-metrics span {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  .election-result-heading strong {
+    color: #1f2933;
+    font-size: 1.05rem;
+  }
+
+  .election-result-heading .election-result-status {
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    border-radius: 999px;
+    color: #166534;
+    padding: 6px 9px;
+  }
+
+  .election-result-metrics {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .election-result-metrics > div {
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    display: grid;
+    gap: 5px;
+    padding: 12px;
+  }
+
+  .election-result-metrics strong {
+    color: #1f2933;
+    font-size: 1.15rem;
+  }
+
+  .election-result-metrics small {
+    color: #475569;
+    font-size: 0.82rem;
+  }
+
+  .election-result-note {
+    color: #64748b;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    margin: 0;
+  }
+
   .resource-link-bar a {
     align-items: center;
     background: #f8fafc;
@@ -3569,6 +3736,10 @@ function uniqueTowns(towns = []) {
     }
 
     .candidate-role-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .election-result-metrics {
       grid-template-columns: 1fr;
     }
 
