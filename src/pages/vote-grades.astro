@@ -2,49 +2,41 @@
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 
-const gradeScale = [
-  { letter: "A", range: "0.55 to 1.00", label: "Strong positive alignment", className: "grade-a" },
-  { letter: "B", range: "0.25 to 0.549", label: "Positive alignment", className: "grade-b" },
-  { letter: "C", range: "-0.42 to 0.249", label: "Mixed or close to neutral", className: "grade-c" },
-  { letter: "D", range: "-0.60 to -0.421", label: "Negative alignment", className: "grade-d" },
-  { letter: "F", range: "Below -0.60", label: "Strong negative alignment", className: "grade-f" },
-];
-
 const workflowSteps = [
   {
     step: "1",
     title: "Start with online testimony",
-    text: "For each bill, we compare online Support and Oppose testimony. Bills with neutral, divided, missing, or too-close testimony do not move the grade.",
+    text: "For each bill, we compare online Support and Oppose testimony. Neutral, divided, missing, or too-close testimony does not create an alignment result.",
   },
   {
     step: "2",
-    title: "Weight the testimony signal",
-    text: "A slightly leaning testimony record receives a lighter weight than a mostly or overwhelmingly one-sided testimony record.",
+    title: "Interpret the vote",
+    text: "A yea or nay vote is translated into support or opposition to the bill. ITL, table, and postpone motions are interpreted in the opposite direction because they work against the bill.",
   },
   {
     step: "3",
-    title: "Interpret the vote",
-    text: "A yea or nay vote is translated into support or opposition to the bill. ITL, table, and postpone motions are handled differently because they are motions against the bill.",
+    title: "Classify the result",
+    text: "A recorded vote is classified as aligned or misaligned. A documented nonvote is included among scored actions but is not counted as aligned.",
   },
   {
     step: "4",
-    title: "Score the record",
-    text: "Aligned votes are positive, misaligned votes are negative, and nonvotes are always a smaller negative accountability score. The weighted average becomes the letter grade.",
+    title: "Calculate the percentage",
+    text: "Aligned scored votes are divided by all scored voting actions, then multiplied by 100. The result is shown as the legislator's testimony alignment percentage.",
   },
 ];
 
-const testimonyWeights = [
-  { label: "Slightly support / oppose", weight: "0.35", text: "The public testimony signal leans one way, but not strongly." },
-  { label: "Mostly support / oppose", weight: "0.70", text: "The testimony signal is clearly one-sided." },
-  { label: "Overwhelmingly support / oppose", weight: "1.00", text: "The testimony signal is very strongly one-sided." },
-  { label: "Neutral / divided", weight: "0", text: "The bill is not scored because testimony does not give a clear position." },
+const testimonySignals = [
+  { label: "Slightly support / oppose", mark: "Leans", text: "The submitted online testimony has a usable direction, though the difference is limited." },
+  { label: "Mostly support / oppose", mark: "Clear", text: "The online testimony record has a clear majority position." },
+  { label: "Overwhelmingly support / oppose", mark: "Strong", text: "The online testimony record is very strongly one-sided." },
+  { label: "Neutral / divided", mark: "Excluded", text: "No alignment result is calculated because testimony does not provide a clear position." },
 ];
 
 const referenceLinks = [
   { href: "/vote-interpretations", label: "How vote labels work", text: "See how yea, nay, ITL, support, oppose, and testimony alignment labels are interpreted." },
   { href: "/bills", label: "Browse bills", text: "Review bill summaries, online testimony counts, organizational comments, and roll-call links." },
   { href: "/people", label: "Browse legislators", text: "Search current State Representatives and State Senators and compare vote records." },
-  { href: "/my-state-rep", label: "Find your legislators", text: "Look up the legislators who represent your address and preview their grades." },
+  { href: "/my-state-rep", label: "Find your legislators", text: "Look up the legislators who represent your address and preview their testimony alignment." },
   { href: "/communities", label: "Explore communities", text: "Connect towns, districts, legislators, candidates, articles, and local updates." },
 ];
 ---
@@ -60,10 +52,10 @@ const referenceLinks = [
     <meta property="og:image:height" content="1000" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="https://nhdeservesbetter.com/nhdb-seo-image.png" />
-    <title>How Vote Grades Work | NH Deserves Better</title>
+    <title>How Testimony Alignment Works | NH Deserves Better</title>
     <meta
       name="description"
-      content="How NH Deserves Better calculates legislator vote grades from online testimony alignment, voting actions, and documented non-votes."
+      content="How NH Deserves Better calculates legislator testimony alignment percentages from online testimony and scored voting actions."
     />
   </head>
 
@@ -72,15 +64,15 @@ const referenceLinks = [
     <main class="page">
       <section class="hero">
         <p class="eyebrow">Methodology</p>
-        <h1>How Vote Grades Work</h1>
+        <h1>How Testimony Alignment Works</h1>
         <p>
-          Vote grades are meant to be a plain-language accountability signal,
-          not the whole story. They help visitors quickly understand how often a
-          legislator's voting record lines up with the position inferred from
-          online public testimony, while also accounting for missed votes.
+          Testimony alignment is a plain-language percentage showing how often a
+          legislator's scored voting actions matched the position inferred from
+          online public testimony. It is a starting point for understanding a
+          voting record, not the whole story.
         </p>
         <div class="hero-actions">
-          <a href="/people">See legislator grades</a>
+          <a href="/people">See legislator alignment</a>
           <a href="/vote-interpretations">Vote label guide</a>
         </div>
       </section>
@@ -88,23 +80,23 @@ const referenceLinks = [
       <section class="graphic-panel">
         <div>
           <p class="eyebrow">The Basic Idea</p>
-          <h2>Grades compare votes to online testimony.</h2>
+          <h2>The percentage compares votes to online testimony.</h2>
           <p>
             When online testimony clearly leans support or oppose, we treat that
             as the public testimony position for scoring. Then we compare each
             legislator's vote to that position.
           </p>
         </div>
-        <div class="formula" aria-label="Vote grade formula">
-          <span>Testimony strength</span>
-          <strong>+</strong>
-          <span>Vote interpretation</span>
+        <div class="formula" aria-label="Testimony alignment formula">
+          <span>Aligned scored votes</span>
+          <strong>/</strong>
+          <span>All scored voting actions</span>
           <strong>=</strong>
-          <span>Weighted score</span>
+          <span>Testimony alignment</span>
         </div>
       </section>
 
-      <section class="workflow" aria-label="Vote grade workflow">
+      <section class="workflow" aria-label="Testimony alignment workflow">
         {workflowSteps.map((item) => (
           <article class="workflow-card">
             <span>{item.step}</span>
@@ -117,89 +109,79 @@ const referenceLinks = [
       <section class="split">
         <article class="panel score-panel">
           <p class="eyebrow">Scoring</p>
-          <h2>How each vote moves the score</h2>
+          <h2>What counts in the percentage</h2>
           <div class="score-row aligned">
             <strong>Aligned vote</strong>
-            <span>+1.0 x weight</span>
-          </div>
-          <div class="score-row partial">
-            <strong>Documented nonvote</strong>
-            <span>-0.3 x weight</span>
+            <span>Numerator + denominator</span>
           </div>
           <div class="score-row misaligned">
             <strong>Misaligned vote</strong>
-            <span>-1.0 x weight</span>
+            <span>Denominator only</span>
+          </div>
+          <div class="score-row partial">
+            <strong>Documented nonvote</strong>
+            <span>Denominator only</span>
           </div>
           <p>
-            Votes are only scored when we have both a voting action and a clear
-            online testimony position. If testimony is neutral, divided, or
-            missing, that bill can still appear elsewhere, but it does not drive
-            the grade.
+            A voting action is scored only when there is both a documented action
+            and a clear online testimony position. Neutral, divided, or missing
+            testimony is excluded from the percentage.
           </p>
         </article>
 
-        <article class="panel grade-scale">
-          <p class="eyebrow">Scale</p>
-          <h2>Letter Scale</h2>
-          {gradeScale.map((grade) => (
-            <div class="grade-row">
-              <span class:list={["grade-badge", grade.className]}>{grade.letter}</span>
-              <div>
-                <strong>{grade.range}</strong>
-                <small>{grade.label}</small>
-              </div>
-            </div>
-          ))}
+        <article class="panel percentage-example">
+          <p class="eyebrow">Example</p>
+          <h2>12 of 18 scored actions aligned</h2>
+          <strong class="example-percentage">67%</strong>
+          <small>Testimony aligned</small>
+          <p>
+            The other six scored actions may be misaligned votes or documented
+            nonvotes. The percentage is rounded to the nearest whole number.
+          </p>
         </article>
       </section>
 
       <section class="panel methodology-panel">
         <div class="section-heading">
           <p class="eyebrow">The Formula</p>
-          <h2>The grade uses a weighted average from -1 to +1.</h2>
+          <h2>The displayed percentage is aligned actions divided by scored actions.</h2>
           <p>
-            Each scored vote receives a positive or negative value, then that
-            value is multiplied by the strength of the online testimony signal.
-            The final score is the weighted net score divided by the total
-            testimony weight.
+            Every eligible voting action contributes once to the denominator.
+            Only actions classified as aligned contribute to the numerator.
           </p>
         </div>
 
         <div class="formula-large">
-          <span>Weighted average</span>
+          <span>Alignment percentage</span>
           <strong>=</strong>
-          <span>sum of weighted vote scores</span>
+          <span>aligned scored votes</span>
           <strong>/</strong>
-          <span>sum of testimony weights</span>
+          <span>all scored voting actions</span>
+          <strong>×</strong>
+          <span>100</span>
         </div>
 
         <div class="method-grid">
           <article>
-            <h3>Vote values</h3>
+            <h3>Numerator</h3>
             <p>
-              A recorded vote that aligns with testimony is positive. A recorded
-              vote that goes against testimony is negative. Any documented
-              nonvote, including absent, present, or present-not-voting, is
-              scored as a smaller negative value because the legislator did not
-              cast a vote on the motion.
+              The numerator is the number of scored recorded votes whose
+              interpreted bill position matched the online testimony position.
             </p>
           </article>
           <article>
-            <h3>Motion context</h3>
+            <h3>Denominator</h3>
             <p>
-              Normal motions treat yea as support and nay as opposition. On
-              motions that work against a bill, such as ITL, table, or
-              indefinitely postpone, the meaning flips: yea opposes the bill and
-              nay supports the bill.
+              The denominator includes aligned votes, misaligned votes, and
+              documented nonvotes on bills with a clear testimony position.
             </p>
           </article>
           <article>
-            <h3>Nonvotes</h3>
+            <h3>Excluded actions</h3>
             <p>
-              Nonvotes are always negative in the grade model. They are weighted
-              at -0.3 instead of -1.0, so missing a vote matters but is not
-              treated the same as casting a recorded vote against the testimony
-              position.
+              Bills without a clear online testimony position and records without
+              an interpretable voting action do not enter either side of the
+              calculation.
             </p>
           </article>
         </div>
@@ -207,18 +189,18 @@ const referenceLinks = [
 
       <section class="panel testimony-panel">
         <div class="section-heading">
-          <p class="eyebrow">Testimony Weights</p>
-          <h2>Stronger public testimony signals count more.</h2>
+          <p class="eyebrow">Eligible Testimony</p>
+          <h2>A clear testimony direction is required.</h2>
           <p>
-            The same vote matters more when online testimony is overwhelmingly
-            one-sided, and less when the testimony signal is only slightly
-            tilted. Neutral and divided testimony does not affect the grade.
+            We describe how strongly online testimony leans support or oppose,
+            but each eligible voting action counts once in the displayed
+            percentage. Neutral and divided testimony is excluded.
           </p>
         </div>
         <div class="weight-grid">
-          {testimonyWeights.map((item) => (
+          {testimonySignals.map((item) => (
             <article>
-              <strong>{item.weight}</strong>
+              <strong>{item.mark}</strong>
               <h3>{item.label}</h3>
               <p>{item.text}</p>
             </article>
@@ -238,10 +220,10 @@ const referenceLinks = [
             like: <em>Voted: Nay: Support - aligned with online testimony.</em>
           </p>
           <p>
-            If online testimony overwhelmingly supports the bill, that aligned
-            vote contributes <strong>+1.0</strong>. If the legislator is absent
-            on a scored vote with overwhelming testimony, the nonvote contributes
-            <strong>-0.3</strong>.
+            If online testimony supports the bill, the nay vote is counted as
+            aligned. If the legislator is absent on that scored action, the
+            nonvote remains in the denominator but does not enter the aligned
+            numerator.
           </p>
         </div>
         <a href="/vote-interpretations">Read the vote interpretation guide</a>
@@ -265,8 +247,8 @@ const referenceLinks = [
       <section class="panel note">
         <h2>Why This Matters</h2>
         <p>
-          New Hampshire has a very large legislature. A simple grade helps make
-          patterns easier to see, but it should be read alongside the underlying
+          New Hampshire has a very large legislature. A simple percentage helps
+          make patterns easier to see, but it should be read alongside the underlying
           bill summaries, vote explanations, testimony counts, and roll-call
           records. It is a starting point for accountability, not a substitute
           for reading the record.
@@ -483,9 +465,27 @@ const referenceLinks = [
     background: #b42318;
   }
 
-  .grade-scale {
+  .percentage-example {
+    align-content: start;
     display: grid;
     gap: 10px;
+  }
+
+  .example-percentage {
+    color: #1e3a5f;
+    font-size: clamp(3.4rem, 8vw, 5.8rem);
+    font-weight: 950;
+    letter-spacing: -0.05em;
+    line-height: 0.9;
+    margin-top: 8px;
+  }
+
+  .percentage-example > small {
+    color: #4b5563;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
 
   .methodology-panel,
@@ -559,58 +559,6 @@ const referenceLinks = [
     justify-self: start;
     min-width: 56px;
     padding: 7px 10px;
-  }
-
-  .grade-row {
-    align-items: center;
-    display: grid;
-    gap: 12px;
-    grid-template-columns: 58px 1fr;
-  }
-
-  .grade-badge {
-    align-items: center;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    color: #fefce8;
-    display: inline-flex;
-    font-size: 2rem;
-    font-weight: 950;
-    height: 54px;
-    justify-content: center;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-    width: 54px;
-  }
-
-  .grade-row strong,
-  .grade-row small {
-    display: block;
-  }
-
-  .grade-row small {
-    color: #4b5563;
-    font-weight: 800;
-    margin-top: 2px;
-  }
-
-  .grade-a {
-    background: #166534;
-  }
-
-  .grade-b {
-    background: #65a30d;
-  }
-
-  .grade-c {
-    background: #ca8a04;
-  }
-
-  .grade-d {
-    background: #ea580c;
-  }
-
-  .grade-f {
-    background: #b42318;
   }
 
   .example-panel {

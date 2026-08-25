@@ -38,7 +38,7 @@ const sort = Astro.url.searchParams.get("sort")?.trim() || "featured:desc";
         <p class="eyebrow">Civic Guides</p>
         <h1>Plain-language explainers for following New Hampshire politics.</h1>
         <p class="lede">
-          Start with the basics, then go deeper into bills, vote grades,
+          Start with the basics, then go deeper into bills, testimony alignment,
           political context, and the decisions shaping communities across the
           state.
         </p>
@@ -76,7 +76,7 @@ const sort = Astro.url.searchParams.get("sort")?.trim() || "featured:desc";
                 name="q"
                 type="search"
                 value={q}
-                placeholder="Bills, vote grades, state government..."
+                placeholder="Bills, testimony alignment, state government..."
                 data-fuzzy-search
               />
             </label>

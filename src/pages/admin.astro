@@ -39,6 +39,10 @@ import {
   profileUpdateDate,
 } from "../lib/profileUpdateSubmissions";
 import {
+  emptyProfileTraffic,
+  getProfileTraffic,
+} from "../lib/profileAnalytics";
+import {
   countPendingSuggestedUpdates,
   getPendingSuggestedUpdates,
   suggestedUpdateDate,
@@ -118,6 +122,7 @@ let billAdminData = [];
 let workflowStats = { total: 0, byStatus: {}, byQueue: {} };
 let volunteerReviewers = [];
 let volunteerReviewerCounts = { total: 0, pending: 0, approved: 0, disabled: 0, rejected: 0 };
+let profileTraffic = emptyProfileTraffic();
 const userCanReviewProfiles = session ? canReviewProfiles(session) : false;
 const userCanModerateContent = session ? canModerateContent(session) : false;
 const userCanEditOrganizations = session ? canEditOrganizations(session) : false;
@@ -137,6 +142,14 @@ const profileAssignmentReviewers = () =>
     .sort((a, b) => cleanText(a.name || a.email).localeCompare(cleanText(b.name || b.email)));
 
 if (session) {
+  if (showImportantDocsPanel) {
+    try {
+      profileTraffic = await getProfileTraffic({ limit: 20 });
+    } catch (error) {
+      console.error(error?.message || "Unable to load profile traffic.");
+    }
+  }
+
   try {
     workflowStats = await workflowSummary();
   } catch (error) {
@@ -354,6 +367,19 @@ function reviewerDisplayName(email = "") {
 
 const pendingCommunityHasInstagramEmbeds = pendingCommunityUpdateCards.some((card) => card.social?.type === "instagram" && card.social.isEmbeddable);
 const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) => card.social?.type === "tiktok" && card.social.videoId);
+
+function profileTrafficDate(value = "") {
+  if (!value) return "—";
+  const date = new Date(value.endsWith("Z") ? value : `${value.replace(" ", "T")}Z`);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/New_York",
+  });
+}
 ---
 
 <html lang="en">
@@ -511,6 +537,56 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
                 <p>Jump straight to missing photo and website review work.</p>
               </a>
             </div>
+          </section>
+          )}
+
+          {showImportantDocsPanel && (
+          <section id="profile-traffic" class="panel profile-traffic-panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Profile Traffic</p>
+              <h2>Profiles people are visiting</h2>
+              <p>
+                Privacy-conscious counts exclude signed-in admins and common
+                crawlers. Repeat visits from the same browser are counted at
+                most once every 30 minutes.
+              </p>
+            </div>
+
+            <div class="traffic-summary" aria-label="Profile traffic summary">
+              <div><strong>{profileTraffic.summary.viewsToday}</strong><span>Today</span></div>
+              <div><strong>{profileTraffic.summary.views7d}</strong><span>Last 7 days</span></div>
+              <div><strong>{profileTraffic.summary.views30d}</strong><span>Last 30 days</span></div>
+              <div><strong>{profileTraffic.summary.unique30d}</strong><span>Daily unique visits, 30 days</span></div>
+            </div>
+
+            {profileTraffic.profiles.length ? (
+              <div class="traffic-table-wrap">
+                <table class="traffic-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Profile</th>
+                      <th scope="col">7 days</th>
+                      <th scope="col">30 days</th>
+                      <th scope="col">Daily unique</th>
+                      <th scope="col">Last visit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {profileTraffic.profiles.map((profile) => (
+                      <tr>
+                        <th scope="row"><a href={`/people/${profile.slug}`}>{profile.name}</a></th>
+                        <td>{profile.views7d}</td>
+                        <td>{profile.views30d}</td>
+                        <td>{profile.unique30d}</td>
+                        <td>{profileTrafficDate(profile.lastViewedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p class="empty">Profile visits will appear here after tracking begins.</p>
+            )}
           </section>
           )}
 
@@ -2753,6 +2829,72 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .traffic-summary {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 18px;
+  }
+
+  .traffic-summary div {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    display: grid;
+    gap: 5px;
+    padding: 12px;
+  }
+
+  .traffic-summary strong {
+    font-size: clamp(1.6rem, 3vw, 2.25rem);
+    line-height: 1;
+  }
+
+  .traffic-summary span {
+    color: #4b5563;
+    font-size: 0.7rem;
+    font-weight: 950;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .traffic-table-wrap {
+    overflow-x: auto;
+  }
+
+  .traffic-table {
+    border-collapse: collapse;
+    min-width: 650px;
+    width: 100%;
+  }
+
+  .traffic-table th,
+  .traffic-table td {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 11px 10px;
+    text-align: left;
+  }
+
+  .traffic-table thead th {
+    color: #4b5563;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .traffic-table tbody th {
+    font-weight: 900;
+  }
+
+  .traffic-table tbody a {
+    color: #1f2933;
+  }
+
+  .traffic-table tbody td {
+    color: #4b5563;
+    font-weight: 800;
+  }
+
   .docs-grid a {
     background: #f8fafc;
     border: 1px solid #dbeafe;
@@ -3756,6 +3898,7 @@ const pendingCommunityHasTikTokEmbeds = pendingCommunityUpdateCards.some((card) 
     .form-grid.two,
     .form-grid.three,
     .docs-grid,
+    .traffic-summary,
     .organization-toolbar,
     .bill-tagging {
       grid-template-columns: 1fr;

@@ -4,6 +4,7 @@ export const prerender = false;
 import ArticleList from "../../components/ArticleList.astro";
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
+import ProfileViewTracker from "../../components/ProfileViewTracker.astro";
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import profileIcon from "../../assets/profile icon.png";
@@ -2139,6 +2140,7 @@ function uniqueTowns(towns = []) {
         </aside>
       </section>
     </main>
+    <ProfileViewTracker slug={slug} />
     <script define:vars={{ recentlyViewedProfile }}>
       const storageKey = "nhdb:recently-viewed-profiles";
       const maxItems = 6;
@@ -3777,7 +3779,7 @@ function uniqueTowns(towns = []) {
     }
 
     .portrait-card {
-      max-width: 320px;
+      max-width: 224px;
     }
 
     .attendance-card {

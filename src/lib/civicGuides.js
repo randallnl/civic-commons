@@ -44,11 +44,11 @@ export const civicGuides = [
   },
   {
     href: "/vote-grades",
-    title: "How Vote Grades Are Calculated",
+    title: "How Testimony Alignment Is Calculated",
     kicker: "Data Guide",
     category: "Votes",
     description:
-      "Understand how online testimony alignment is used to produce legislator grades and how nonvotes are handled.",
+      "Understand how scored voting actions produce the testimony alignment percentage shown on legislator profiles.",
     readTime: "4 min read",
     image: organizationAssetUrl("capital dome.png"),
   },

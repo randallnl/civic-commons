@@ -1,0 +1,64 @@
+---
+const { slug = "" } = Astro.props;
+---
+
+<script define:vars={{ slug }}>
+  (() => {
+    if (!slug || navigator.globalPrivacyControl || navigator.doNotTrack === "1") return;
+
+    const visitorKey = "nhdb:profile-analytics-visitor";
+    const recentKey = `nhdb:profile-analytics:${slug}`;
+    const dedupeWindowMs = 30 * 60 * 1000;
+
+    function randomVisitorId() {
+      if (typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID().replaceAll("-", "");
+      }
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    }
+
+    function sendView() {
+      try {
+        const now = Date.now();
+        const lastViewedAt = Number(localStorage.getItem(recentKey) || 0);
+        if (now - lastViewedAt < dedupeWindowMs) return;
+
+        let visitorId = localStorage.getItem(visitorKey) || "";
+        if (!visitorId) {
+          visitorId = randomVisitorId();
+          localStorage.setItem(visitorKey, visitorId);
+        }
+
+        const body = JSON.stringify({ slug, visitorId });
+        localStorage.setItem(recentKey, String(now));
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(
+            "/api/profile-view",
+            new Blob([body], { type: "application/json" }),
+          );
+          return;
+        }
+
+        void fetch("/api/profile-view", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body,
+          keepalive: true,
+        });
+      } catch {
+        // Analytics must never interfere with viewing a profile.
+      }
+    }
+
+    if (document.visibilityState === "visible") {
+      window.setTimeout(sendView, 800);
+    } else {
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") sendView();
+      }, { once: true });
+    }
+  })();
+</script>
