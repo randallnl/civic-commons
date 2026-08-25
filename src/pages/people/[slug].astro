@@ -2770,14 +2770,26 @@ function uniqueTowns(towns = []) {
   }
 
   .current-role-election-heading h3 a {
-    color: #1d4ed8;
-    text-decoration: underline;
-    text-decoration-thickness: 2px;
-    text-underline-offset: 3px;
+    color: inherit;
+    text-decoration: none;
   }
 
   .current-role-election-heading h3 a:hover {
-    color: #1e3a8a;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  .current-role-election-heading h3 a:focus-visible {
+    border-radius: 3px;
+    outline: 2px solid #2563eb;
+    outline-offset: 3px;
+  }
+
+  .current-role-election-heading h3 a span {
+    color: #94a3b8;
+    font-size: 0.72em;
+    margin-left: 2px;
   }
 
   .current-role-election-heading > p:last-child {
