@@ -24,6 +24,7 @@ const {
   pageUrl = Astro.url.pathname,
   variant = "",
   embedded = false,
+  showPeoplePreview = true,
 } = Astro.props;
 
 const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
@@ -290,7 +291,7 @@ function socialLinkHost(update = {}) {
                 ))}
               </div>
             )}
-            {update.people?.length > 0 && (
+            {showPeoplePreview && update.people?.length > 0 && (
               <div class="community-people-preview" aria-label="People connected to this update">
                 {update.people.map((person) => (
                   <a class="mini-person-card" href={peopleProfilePath(person)}>
