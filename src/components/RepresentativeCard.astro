@@ -6,7 +6,6 @@ import { isFreeStater, isTpActionAligned } from "../lib/civicTags";
 import {
   FREE_STATE_ALIGNED_TOOLTIP,
   TPACTION_ALIGNED_TOOLTIP,
-  VOTE_GRADE_TOOLTIP,
 } from "../lib/alignmentTags";
 import { profilePhotoUrl } from "../lib/photos";
 import { cleanText } from "../lib/text";
@@ -15,6 +14,7 @@ import {
   representativeGradeFor,
   representativeOnlineTestimonyVotePreviews,
   representativeOnlineTestimonyVoteStance,
+  testimonyAlignmentPercentForGrade,
   trackedBillForVote,
 } from "../lib/trackedBills";
 
@@ -92,6 +92,7 @@ const profileHref = `/people/${rep.slug || rep.personid || rep.id || slugify(nam
 const photoUrl = profilePhotoUrl(rep.photo);
 const voteHistory = representativeOnlineTestimonyVotePreviews(rep, billSummaries, { limit: 3 });
 const grade = representativeGradeFor(rep, trackedBills, billSummaries);
+const testimonyAlignmentPercent = testimonyAlignmentPercentForGrade(grade);
 const aliases = cleanText([rep.nameAliases, rep.name_aliases].filter(Boolean).join(" "));
 const districtLabel = cleanText(
   rep.district
@@ -133,7 +134,7 @@ const searchableBody = /senate/i.test(rep.chamber || "")
   : /house/i.test(rep.chamber || "")
     ? "house"
     : cleanText(rep.chamber || "");
-const gradeSortValue = Number.isFinite(Number(grade.percent)) ? Number(grade.percent) : -1;
+const gradeSortValue = testimonyAlignmentPercent ?? -1;
 const missingInfoCount = [
   photoUrl,
   rep.email,
@@ -234,13 +235,13 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
           </div>
         </div>
         <a
-          class:list={["rep-grade", grade.className]}
+          class="rep-grade testimony-alignment"
           href="/vote-grades"
-          title={VOTE_GRADE_TOOLTIP}
-          aria-label={`${VOTE_GRADE_TOOLTIP} ${grade.label}`}
+          title={`Testimony alignment. ${grade.label}`}
+          aria-label={`${testimonyAlignmentPercent === null ? "No" : `${testimonyAlignmentPercent}%`} testimony alignment. ${grade.label}`}
         >
-          <span>{grade.letter}</span>
-          <small>Grade</small>
+          <span>{testimonyAlignmentPercent === null ? "N/A" : `${testimonyAlignmentPercent}%`}</span>
+          <small>Testimony aligned</small>
         </a>
       </div>
 
@@ -407,13 +408,14 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
 
   .rep-grade,
   .rep-card a.rep-grade {
+    background: #1e3a5f;
     border: 1px solid rgba(31, 41, 51, 0.32);
     border-radius: 10px;
     box-shadow: none;
     color: #fefce8;
     display: grid;
     flex: 0 0 auto;
-    min-width: 58px;
+    min-width: 112px;
     padding: 6px 8px;
     text-align: center;
     text-decoration: none;
@@ -435,6 +437,7 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
     margin-top: 3px;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
     text-transform: uppercase;
+    white-space: nowrap;
   }
 
   .grade-a {

@@ -465,8 +465,8 @@ function uniqueOptions(values = []) {
               <option value="" selected={!sort}>Default</option>
               <option value="name:asc" selected={sort === "name:asc"}>Name A-Z</option>
               <option value="district:asc" selected={sort === "district:asc"}>District</option>
-              <option value="grade:desc" selected={sort === "grade:desc"}>Grade high-low</option>
-              <option value="grade:asc" selected={sort === "grade:asc"}>Grade low-high</option>
+              <option value="grade:desc" selected={sort === "grade:desc"}>Testimony alignment high-low</option>
+              <option value="grade:asc" selected={sort === "grade:asc"}>Testimony alignment low-high</option>
               <option value="updated:desc" selected={sort === "updated:desc"}>Recently updated</option>
             </select>
           </label>
@@ -478,7 +478,7 @@ function uniqueOptions(values = []) {
             <h3>Current Legislators</h3>
             <p>
               Profiles include district information, contact details, vote
-              grades, and recent tracked bill votes where available.
+              testimony alignment, and recent tracked bill votes where available.
             </p>
           </div>
 

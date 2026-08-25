@@ -243,6 +243,24 @@ export function representativeGradeFor(rep = {}, trackedBills = new Map(), billS
   );
 }
 
+export function testimonyAlignmentPercentForGrade(grade = {}) {
+  const aligned = Number(grade?.aligned);
+  const total = Number(grade?.total);
+
+  if (Number.isFinite(aligned) && Number.isFinite(total) && total > 0) {
+    return Math.round((aligned / total) * 100);
+  }
+
+  const fallbackValue = grade?.percent;
+  if (fallbackValue === null || fallbackValue === undefined || fallbackValue === "") return null;
+
+  const fallback = Number(fallbackValue);
+  if (!Number.isFinite(fallback)) return null;
+
+  const normalized = fallback > 1 ? fallback / 100 : fallback;
+  return Math.round(Math.max(0, Math.min(1, normalized)) * 100);
+}
+
 export function representativeOnlineTestimonyGrade(votes = [], billSummaries = new Map()) {
   const scoredVotes = votes
     .filter((vote) => isVotingAction(vote) && isKnownVote(vote) && isVoteIncludedInGrade(vote))

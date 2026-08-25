@@ -22,7 +22,6 @@ import { currentAdminSession } from "../../lib/adminAuth";
 import {
   FREE_STATE_ALIGNED_TOOLTIP,
   TPACTION_ALIGNED_TOOLTIP,
-  VOTE_GRADE_TOOLTIP,
 } from "../../lib/alignmentTags";
 import { getBillSummaries } from "../../lib/billsApi";
 import { representativePersonIdForCandidate } from "../../lib/candidateLegislatorLinks";
@@ -43,7 +42,10 @@ import {
   getOrganizations,
   organizationPath,
 } from "../../lib/organizationsApi";
-import { representativeGradeFor } from "../../lib/trackedBills";
+import {
+  representativeGradeFor,
+  testimonyAlignmentPercentForGrade,
+} from "../../lib/trackedBills";
 
 const { slug } = Astro.params;
 
@@ -118,6 +120,7 @@ const countiesRepresented = candidateCountiesRepresented(candidate, currentLegis
 const candidateRoles = uniqueCandidateRoles(candidate.candidateRoles?.length ? candidate.candidateRoles : [candidate]);
 const hasFreeStaterTag = isFreeStater(candidate) || isFreeStater(currentLegislator);
 const hasTpActionTag = isTpActionAligned(candidate) || isTpActionAligned(currentLegislator);
+const currentLegislatorTestimonyAlignmentPercent = testimonyAlignmentPercentForGrade(currentLegislatorGrade);
 const recentlyViewedProfile = {
   kind: "candidate",
   name,
@@ -126,7 +129,7 @@ const recentlyViewedProfile = {
   party: formatCandidateParty(candidate.politicalParty),
   officeLine: officeParts.join(", ") || "Office not listed",
   towns: townsRepresented,
-  grade: currentLegislatorGrade?.letter || "",
+  testimonyAlignmentPercent: currentLegislatorTestimonyAlignmentPercent,
   tags: [
     hasFreeStaterTag ? "Free State Aligned" : "",
     hasTpActionTag ? "TPAction Aligned" : "",
@@ -502,13 +505,13 @@ function uniqueArticles(articles = []) {
           {currentLegislatorGrade && (
             <div class="profile-grade-row">
               <a
-                class:list={["legislator-grade-pill", currentLegislatorGrade.className]}
+                class="legislator-grade-pill testimony-alignment"
                 href="/vote-grades"
-                title={VOTE_GRADE_TOOLTIP}
-                aria-label={`${VOTE_GRADE_TOOLTIP} ${currentLegislatorGrade.label}`}
+                title={`Testimony alignment. ${currentLegislatorGrade.label}`}
+                aria-label={`${currentLegislatorTestimonyAlignmentPercent === null ? "No" : `${currentLegislatorTestimonyAlignmentPercent}%`} testimony alignment. ${currentLegislatorGrade.label}`}
               >
-                <strong>{currentLegislatorGrade.letter}</strong>
-                <span>Legislator Grade</span>
+                <strong>{currentLegislatorTestimonyAlignmentPercent === null ? "N/A" : `${currentLegislatorTestimonyAlignmentPercent}%`}</strong>
+                <span>Testimony aligned</span>
               </a>
               <p>{currentLegislatorGrade.label}</p>
             </div>
@@ -663,9 +666,9 @@ function uniqueArticles(articles = []) {
           >
             <div class="section-heading">
               <div>
-                <p class="eyebrow">Endorsements</p>
+                <p class="eyebrow">Organizations</p>
                 <h2>
-                  Organizational Endorsements
+                  Endorsements and Ratings
                   {endorsements.length > 0 && (
                     <span class="inline-count">(<span data-fuzzy-count>{endorsements.length}</span>)</span>
                   )}
@@ -762,12 +765,12 @@ function uniqueArticles(articles = []) {
                 </div>
 
                 <div class="status-message empty-state" data-fuzzy-empty hidden>
-                  <strong>No endorsements match those filters.</strong>
+                  <strong>No endorsements or ratings match those filters.</strong>
                   <span>Try searching by organization name, position, or note.</span>
                 </div>
               </>
             ) : (
-              <p class="empty">No organizational endorsements have been published yet.</p>
+              <p class="empty">No endorsements or ratings have been published yet.</p>
             )}
           </section>
 
@@ -1213,13 +1216,15 @@ function uniqueArticles(articles = []) {
   }
 
   .legislator-grade-pill {
+    background: #1e3a5f;
     align-items: center;
     border: 1px solid rgba(31, 41, 51, 0.32);
     border-radius: 12px;
     color: #fefce8;
-    display: inline-flex;
-    gap: 8px;
+    display: inline-grid;
+    min-width: 142px;
     padding: 6px 10px;
+    text-align: center;
     text-decoration: none;
   }
 
@@ -1244,6 +1249,7 @@ function uniqueArticles(articles = []) {
     font-weight: 950;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    white-space: nowrap;
   }
 
   .grade-a {

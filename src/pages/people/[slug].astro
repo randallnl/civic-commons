@@ -53,6 +53,7 @@ import {
   representativeVoteAttendance,
   representativeVoteImpact,
   representativeVoteStance,
+  testimonyAlignmentPercentForGrade,
   trackedBillForVote,
 } from "../../lib/trackedBills";
 
@@ -141,23 +142,7 @@ const voteGrade = representativeGradeFor(
   trackedBills,
   billSummaries,
 );
-const voteTestimonyAlignmentPercent = (() => {
-  const aligned = Number(voteGrade?.aligned);
-  const total = Number(voteGrade?.total);
-
-  if (Number.isFinite(aligned) && Number.isFinite(total) && total > 0) {
-    return Math.round((aligned / total) * 100);
-  }
-
-  const fallbackValue = voteGrade?.percent;
-  if (fallbackValue === null || fallbackValue === undefined || fallbackValue === "") return null;
-
-  const fallback = Number(fallbackValue);
-  if (!Number.isFinite(fallback)) return null;
-
-  const normalized = fallback > 1 ? fallback / 100 : fallback;
-  return Math.round(Math.max(0, Math.min(1, normalized)) * 100);
-})();
+const voteTestimonyAlignmentPercent = testimonyAlignmentPercentForGrade(voteGrade);
 
 trackedVotes = await Promise.all(
   trackedVotes.map(async (vote) => {
@@ -243,7 +228,7 @@ const recentlyViewedProfile = {
   party: hasLegislatorProfile ? formatParty(person.party) : formatCandidateParty(person.party),
   officeLine: [officeLabel, districtLabel].filter(Boolean).join(", "),
   towns: townServiceAreas.flatMap((area) => area.towns).join(", "),
-  grade: voteGrade?.letter || "",
+  testimonyAlignmentPercent: voteTestimonyAlignmentPercent,
   tags: [
     isFreeStater(representative) ? "Free State Aligned" : "",
     isTpActionAligned(representative) ? "TPAction Aligned" : "",
@@ -2083,9 +2068,9 @@ function uniqueTowns(towns = []) {
           <section class="panel compact-panel endorsements-panel">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">Endorsements</p>
+                <p class="eyebrow">Organizations</p>
                 <h2>
-                  Organizational Endorsements
+                  Endorsements and Ratings
                   {endorsements.length > 0 && (
                     <span class="inline-count">({endorsements.length})</span>
                   )}
@@ -2146,7 +2131,7 @@ function uniqueTowns(towns = []) {
               </>
             ) : (
               <p class="empty">
-                No organizational endorsements have been published yet.
+                No endorsements or ratings have been published yet.
               </p>
             )}
           </section>

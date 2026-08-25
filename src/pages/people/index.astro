@@ -227,7 +227,7 @@ function repDataTotal(allReps = [], filteredReps = []) {
         backLabel="Back to My Legislator"
         eyebrow="Representative Directory"
         title="Browse New Hampshire state legislators."
-        lede="Search by name, town, or county to preview representative profiles, vote grades, and recent tracked bill votes."
+        lede="Search by name, town, or county to preview representative profiles, testimony alignment, and recent tracked bill votes."
       >
         <FilterBar
           action="/people"
@@ -299,8 +299,8 @@ function repDataTotal(allReps = [], filteredReps = []) {
               <option value="" selected={!sort}>Default</option>
               <option value="name:asc" selected={sort === "name:asc"}>Name A-Z</option>
               <option value="district:asc" selected={sort === "district:asc"}>District</option>
-              <option value="grade:desc" selected={sort === "grade:desc"}>Grade high-low</option>
-              <option value="grade:asc" selected={sort === "grade:asc"}>Grade low-high</option>
+              <option value="grade:desc" selected={sort === "grade:desc"}>Testimony alignment high-low</option>
+              <option value="grade:asc" selected={sort === "grade:asc"}>Testimony alignment low-high</option>
               <option value="updated:desc" selected={sort === "updated:desc"}>Recently updated</option>
               <option value="missing:desc" selected={sort === "missing:desc"}>Missing photo/email/website</option>
             </select>

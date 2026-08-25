@@ -108,6 +108,10 @@ function mediaFeedItem(update = {}) {
       ? [uploadedPhotoUrl]
       : [];
   const platform = social.type || (uploadedPhotoUrl ? "photo" : update.linkUrl ? "link" : "update");
+  const imageUrl = uploadedPhotoUrl || preview?.imageUrl || "";
+  const hasMediaVisual = Boolean(
+    imageUrl || (social.type === "facebook" && social.embedUrl),
+  );
 
   return {
     id: update.id,
@@ -120,7 +124,8 @@ function mediaFeedItem(update = {}) {
     displayName: cleanText(update.displayName || "Community member"),
     entityName: cleanText(update.entityName || ""),
     href: update.pageUrl || update.linkUrl || "/updates",
-    imageUrl: uploadedPhotoUrl || preview?.imageUrl || "",
+    imageUrl,
+    hasMediaVisual,
     uploadedPhotoUrl,
     photoUrls,
     linkUrl: update.linkUrl || "",
@@ -158,14 +163,14 @@ function endorsementFeedItem(endorsement = {}, organization = {}, endorsementPeo
   const candidateName = cleanText(endorsement.candidateName || "Candidate");
   const canonicalPerson = endorsementPeople.get(endorsementPersonKey(endorsement)) || {};
   const organizationName = cleanText(organization.name || endorsement.organization || "Organization");
+  const organizationHref = organization.slug ? organizationPath(organization) : "/organizations";
   const position = cleanText(endorsement.position || "Endorsed");
   const statement = cleanText(endorsement.statement || "");
+  const imageUrl = endorsement.photoUrl || organization.logoUrl || "";
   const title = `${organizationName}: ${position} ${candidateName}`;
   const titlePreview = textPreview(title, TITLE_PREVIEW_LENGTH);
-  const candidatePath =
-    canonicalPerson.path ||
-    (candidateSlug ? `/people/${encodeURIComponent(candidateSlug)}` : "/people");
-  const organizationHref = organization.slug ? organizationPath(organization) : "/organizations";
+  const candidatePath = canonicalPerson.path || "";
+  const itemHref = candidatePath || organizationHref;
   const office = canonicalPerson.office || endorsement.office || "";
   const district = canonicalPerson.profileDistrict || endorsement.district || "";
   const officeLine = [office, district ? `District ${district}` : ""]
@@ -192,10 +197,11 @@ function endorsementFeedItem(endorsement = {}, organization = {}, endorsementPeo
     dateValue,
     displayName: organizationName,
     entityName: candidateName,
-    href: candidatePath,
-    imageUrl: endorsement.photoUrl || organization.logoUrl || "",
+    href: itemHref,
+    imageUrl,
+    hasMediaVisual: Boolean(imageUrl),
     linkUrl: "",
-    people: [person],
+    people: candidatePath ? [person] : [],
     platform: "endorsement",
     platformLabel: "Organization endorsement",
     fallbackLabel: {
@@ -238,6 +244,7 @@ async function peopleForEndorsements(endorsements = []) {
           p.firstname,
           p.lastname,
           p.display_name,
+          p.name_aliases,
           p.photo_url AS person_photo_url,
           p.is_current_legislator,
           p.is_2026_candidate,
@@ -281,7 +288,8 @@ async function peopleForEndorsements(endorsements = []) {
       slug: row.slug || "",
       personSlug: row.slug || "",
       name,
-      path: row.slug ? `/people/${encodeURIComponent(row.slug)}` : `/people/${encodeURIComponent(String(row.id))}`,
+      nameAliases: row.name_aliases || "",
+      path: canonicalPersonPath(row),
       role: cleanText(row.office || (Number(row.is_current_legislator) === 1 ? "Legislator" : "Candidate")),
       county: cleanText(row.county),
       profileDistrict: cleanText(row.profile_district),
@@ -314,8 +322,18 @@ function endorsementPersonKey(endorsement = {}) {
   return personLookupKeys(endorsement)[0] || slugifyLocal(endorsement.candidateName || "");
 }
 
+function canonicalPersonPath(person = {}) {
+  const slug = String(person.slug || "").trim();
+  if (slug && /^[a-z0-9-]+$/i.test(slug)) {
+    return `/people/${encodeURIComponent(slug)}`;
+  }
+
+  const key = person.gc_personid || person.employeeno || person.id;
+  return key ? `/people/${encodeURIComponent(String(key))}` : "";
+}
+
 function personLookupKeys(value = {}) {
-  return [
+  const directKeys = [
     value.personId,
     value.personid,
     value.filerEntityNumber,
@@ -330,9 +348,13 @@ function personLookupKeys(value = {}) {
     value.displayName,
     value.candidateName,
     value.name,
-  ]
+  ];
+  const aliasKeys = [value.nameAliases, value.name_aliases]
+    .flatMap((aliases) => String(aliases || "").split(/[\n,;]/));
+
+  return [...new Set([...directKeys, ...aliasKeys]
     .map((key) => slugifyLocal(key || ""))
-    .filter(Boolean);
+    .filter(Boolean))];
 }
 
 function formatDate(value = "") {
@@ -923,6 +945,7 @@ function textPreview(value = "", maxLength = 170) {
                     "media-card",
                     item.isPortrait ? "portrait-media" : "landscape-media",
                     item.uploadedPhotoUrl && "uploaded-photo-card",
+                    !item.hasMediaVisual && "no-media",
                     `platform-${item.platform}`,
                   ]}
                   data-fuzzy-item
@@ -947,7 +970,7 @@ function textPreview(value = "", maxLength = 170) {
                         Photo unavailable
                       </span>
                     </button>
-                  ) : (
+                  ) : item.hasMediaVisual ? (
                     <a
                       class="media-frame"
                       href={item.linkUrl || item.href}
@@ -976,17 +999,9 @@ function textPreview(value = "", maxLength = 170) {
                           loading="lazy"
                           title="Facebook post preview"
                         ></iframe>
-                      ) : item.platform === "substack" ? (
-                        <span class="media-fallback substack-media-fallback">
-                          <span>{item.fallbackLabel.mark}</span>
-                          <small>{item.fallbackLabel.kicker}</small>
-                          <strong>{item.fallbackLabel.title}</strong>
-                        </span>
-                      ) : (
-                        <span class="media-fallback">{item.platformLabel}</span>
-                      )}
+                      ) : null}
                     </a>
-                  )}
+                  ) : null}
 
                   <div class="media-copy">
                     <div class="media-meta">
@@ -1966,6 +1981,10 @@ function textPreview(value = "", maxLength = 170) {
     padding: 18px;
     position: relative;
     z-index: 1;
+  }
+
+  .media-card.no-media .media-copy {
+    border-top: 0;
   }
 
   .media-meta {

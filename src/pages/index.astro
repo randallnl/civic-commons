@@ -3,7 +3,6 @@ export const prerender = false;
 
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-import { VOTE_GRADE_TOOLTIP } from "../lib/alignmentTags";
 import { articleDetailPath, articlePublishDate, getArticles } from "../lib/articlesApi";
 import { cleanText } from "../lib/text";
 import { enrichArticlesWithPreviews } from "../lib/articlePreviews";
@@ -167,7 +166,9 @@ function organizationAssetUrl(filename = "") {
         <a href="/suggest-update">Suggest an update</a>
       </section>
     </main>
-    <script define:vars={{ voteGradeTooltip: VOTE_GRADE_TOOLTIP }}>
+    <script>
+      const testimonyAlignmentTooltip =
+        "Percentage of scored voting actions that aligned with online public testimony.";
       const lookupForm = document.querySelector("[data-hero-lookup]");
       const lookupHelp = lookupForm?.querySelector("[data-lookup-help]");
       const lookupTabs = lookupForm?.querySelectorAll("[data-lookup-target]");
@@ -317,13 +318,19 @@ function organizationAssetUrl(filename = "") {
             copy.append(towns);
           }
 
-          if (profile.grade) {
+          const hasTestimonyAlignment =
+            profile.testimonyAlignmentPercent !== null &&
+            profile.testimonyAlignmentPercent !== undefined &&
+            profile.testimonyAlignmentPercent !== "" &&
+            Number.isFinite(Number(profile.testimonyAlignmentPercent));
+          if (hasTestimonyAlignment) {
             const grade = document.createElement("span");
-            grade.className = `recent-profile-grade grade-${String(profile.grade).trim().charAt(0).toLowerCase()}`;
-            grade.title = voteGradeTooltip;
-            grade.setAttribute("aria-label", voteGradeTooltip);
-            appendText(grade, "strong", profile.grade);
-            appendText(grade, "small", "Grade");
+            const alignmentPercent = Math.round(Number(profile.testimonyAlignmentPercent));
+            grade.className = "recent-profile-grade testimony-alignment";
+            grade.title = testimonyAlignmentTooltip;
+            grade.setAttribute("aria-label", `${alignmentPercent}% testimony alignment`);
+            appendText(grade, "strong", `${alignmentPercent}%`);
+            appendText(grade, "small", "Testimony aligned");
             card.append(grade);
           }
 
@@ -723,12 +730,13 @@ function organizationAssetUrl(filename = "") {
 
   .recent-profile-grade {
     align-self: start;
+    background: #1e3a5f;
     border-radius: 12px;
     color: #fefce8;
     display: grid;
     grid-column: 3;
     grid-row: 1;
-    min-width: 66px;
+    min-width: 112px;
     padding: 9px 10px;
     text-align: center;
   }
@@ -751,6 +759,7 @@ function organizationAssetUrl(filename = "") {
     font-weight: 950;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    white-space: nowrap;
   }
 
   .recent-profile-grade.grade-a {
@@ -2124,12 +2133,13 @@ function organizationAssetUrl(filename = "") {
 
   .recent-profile-grade {
     align-self: start;
+    background: #1e3a5f;
     border-radius: 12px;
     color: #fefce8;
     display: grid;
     grid-column: 3;
     grid-row: 1;
-    min-width: 66px;
+    min-width: 112px;
     padding: 9px 10px;
     text-align: center;
   }
@@ -2148,6 +2158,7 @@ function organizationAssetUrl(filename = "") {
     font-weight: 950;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    white-space: nowrap;
   }
 
   .recent-profile-grade.grade-a {
