@@ -1217,6 +1217,53 @@ function uniqueTowns(towns = []) {
                     </article>
                   ) : null}
                 </div>
+
+                {previousElectionResults.length > 0 && (
+                  <div class="current-role-election-history" id="election-history">
+                    <div class="current-role-election-heading">
+                      <p class="eyebrow">Election history</p>
+                      <h3>Previous election results</h3>
+                      <p>
+                        Official general-election results for this legislator’s winning candidacies.
+                      </p>
+                    </div>
+
+                    <div class="election-result-list">
+                      {previousElectionResults.map((result) => (
+                        <article class="election-result-card">
+                          <div class="election-result-heading">
+                            <div>
+                              <span>{result.electionCycle || `${result.electionYear} Election`}</span>
+                              <strong>{result.officeLabel}</strong>
+                            </div>
+                            <span class="election-result-status">Elected</span>
+                          </div>
+
+                          <div class="election-result-metrics">
+                            <div>
+                              <span>Votes received</span>
+                              <strong>{formatElectionNumber(result.votesReceived)}</strong>
+                            </div>
+                            <div>
+                              <span>Winning margin</span>
+                              <strong>
+                                {formatElectionNumber(result.winningMarginVotes)} votes
+                                <small>({formatElectionPercent(result.marginPercent)})</small>
+                              </strong>
+                            </div>
+                          </div>
+
+                          <p class="election-result-note">
+                            Winning margin is measured against the highest non-winning candidate.
+                            {Number(result.seatsAvailable) > 1 && ` This was a ${result.seatsAvailable}-seat contest.`}
+                            The percentage uses all valid contest votes.
+                            {result.source && ` Source: ${result.source}.`}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div
@@ -1381,53 +1428,6 @@ function uniqueTowns(towns = []) {
                 <button type="submit">Submit Profile Update</button>
               </form>
             </details>
-          </div>
-        </section>
-      )}
-
-      {hasLegislatorProfile && previousElectionResults.length > 0 && (
-        <section class="panel election-history-panel" id="election-history">
-          <div class="section-heading">
-            <p class="eyebrow">Election history</p>
-            <h2>Previous election results</h2>
-            <p>
-              Official general-election results for this legislator’s winning candidacies.
-            </p>
-          </div>
-
-          <div class="election-result-list">
-            {previousElectionResults.map((result) => (
-              <article class="election-result-card">
-                <div class="election-result-heading">
-                  <div>
-                    <span>{result.electionCycle || `${result.electionYear} Election`}</span>
-                    <strong>{result.officeLabel}</strong>
-                  </div>
-                  <span class="election-result-status">Elected</span>
-                </div>
-
-                <div class="election-result-metrics">
-                  <div>
-                    <span>Votes received</span>
-                    <strong>{formatElectionNumber(result.votesReceived)}</strong>
-                  </div>
-                  <div>
-                    <span>Winning margin</span>
-                    <strong>
-                      {formatElectionNumber(result.winningMarginVotes)} votes
-                      <small>({formatElectionPercent(result.marginPercent)})</small>
-                    </strong>
-                  </div>
-                </div>
-
-                <p class="election-result-note">
-                  Winning margin is measured against the highest non-winning candidate.
-                  {Number(result.seatsAvailable) > 1 && ` This was a ${result.seatsAvailable}-seat contest.`}
-                  The percentage uses all valid contest votes.
-                  {result.source && ` Source: ${result.source}.`}
-                </p>
-              </article>
-            ))}
           </div>
         </section>
       )}
@@ -2746,6 +2746,25 @@ function uniqueTowns(towns = []) {
 
   .candidate-role-wide {
     grid-column: 1 / -1;
+  }
+
+  .current-role-election-history {
+    border-top: 1px solid #dbeafe;
+    margin-top: 20px;
+    padding-top: 20px;
+  }
+
+  .current-role-election-heading h3 {
+    color: #1f2933;
+    font-size: 1.25rem;
+    line-height: 1.15;
+    margin-bottom: 8px;
+  }
+
+  .current-role-election-heading > p:last-child {
+    color: #64748b;
+    line-height: 1.5;
+    margin-bottom: 16px;
   }
 
   .election-result-list {
