@@ -37,6 +37,9 @@ const WARD_COMMUNITY_COUNTS = new Map([
 ]);
 
 const address = Astro.url.searchParams.get("address")?.trim() || "";
+const isEmbed = ["1", "true", "yes"].includes(
+  String(Astro.url.searchParams.get("embed") || "").trim().toLowerCase(),
+);
 const selectedWard = normalizeWardNumber(Astro.url.searchParams.get("ward") || "");
 const filters = {
   body: Astro.url.searchParams.get("body")?.trim() || "",
@@ -696,8 +699,8 @@ function isVotingAction(vote = {}) {
     />
   </head>
 
-  <body>
-    <TopNav />
+  <body class={isEmbed ? "embed-mode" : ""}>
+    {!isEmbed && <TopNav />}
     <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.rep-card[data-fuzzy-item]', idleLimit: 12 })">
       <section class="hero">
         <div class="hero-copy">
@@ -711,6 +714,7 @@ function isVotingAction(vote = {}) {
         </div>
 
         <form class="address-lookup" action="/my-state-rep#rep-results" method="get" data-results-form>
+          {isEmbed && <input type="hidden" name="embed" value="1" />}
           <label for="address">Find your current State Representatives and State Senator</label>
 
           <div class="address-row">
@@ -735,7 +739,7 @@ function isVotingAction(vote = {}) {
         </p>
       </section>
 
-      <section class="legislator-filter-panel" aria-label="Legislator filters">
+      {!isEmbed && <section class="legislator-filter-panel" aria-label="Legislator filters">
         <FilterBar
           action="/my-state-rep#rep-results"
           submitLabel="Filter current legislators"
@@ -816,7 +820,7 @@ function isVotingAction(vote = {}) {
           </label>
         </FilterBar>
         <div class="filter-chips" data-fuzzy-chips hidden></div>
-      </section>
+      </section>}
 
       <div id="rep-results" data-results-region>
       {lookupError && (
@@ -831,7 +835,7 @@ function isVotingAction(vote = {}) {
         </div>
       )}
 
-      {!address && (
+      {!isEmbed && !address && (
         <section class="filtered-directory">
           <div class="results-heading">
             <div>
@@ -1091,6 +1095,10 @@ function isVotingAction(vote = {}) {
           if (text && text.toLowerCase() !== "all") params.set(key, text);
         }
 
+        if (new URL(window.location.href).searchParams.get("embed") === "1") {
+          params.set("embed", "1");
+        }
+
         return `/my-state-rep${params.toString() ? `?${params}` : ""}`;
       }
 
@@ -1163,11 +1171,49 @@ function isVotingAction(vote = {}) {
         }, 120);
       });
     </script>
-    <SiteFooter />
+    {isEmbed && (
+      <script>
+        const notifyEmbedHeight = () => {
+          const height = Math.ceil(Math.max(
+            document.documentElement.scrollHeight || 0,
+            document.body?.scrollHeight || 0,
+          ));
+          window.parent?.postMessage({ type: "nhcc:my-state-rep:height", height }, "*");
+        };
+
+        if ("ResizeObserver" in window) {
+          new ResizeObserver(notifyEmbedHeight).observe(document.body);
+        }
+        window.addEventListener("load", notifyEmbedHeight);
+        window.addEventListener("resize", notifyEmbedHeight);
+        setTimeout(notifyEmbedHeight, 250);
+      </script>
+    )}
+    {!isEmbed && <SiteFooter />}
   </body>
 </html>
 
 <style>
+  :global(body.embed-mode) {
+    background: transparent;
+  }
+
+  :global(body.embed-mode) .page {
+    margin: 0;
+    max-width: none;
+    padding: 0;
+  }
+
+  :global(body.embed-mode) .hero {
+    margin: 0;
+    min-height: 0;
+    padding: clamp(20px, 4vw, 38px);
+  }
+
+  :global(body.embed-mode) .help-text {
+    display: none;
+  }
+
   .hero {
     align-items: center;
     background:
