@@ -3826,11 +3826,12 @@ async function handleAddressLookup(request, env) {
       return json({ error: "Address is required." }, 400);
     }
 
-    if (!env.CIVIC_API_KEY) {
+    const civicApiKey = await secretValue(env.CIVIC_API_KEY);
+    if (!civicApiKey) {
       return json({ error: "Missing CIVIC_API_KEY secret." }, 500);
     }
 
-    const civicData = await getCivicData(address, env.CIVIC_API_KEY);
+    const civicData = await getCivicData(address, civicApiKey);
     const parsed = parseCivicDivisions(civicData.divisions || {});
     if (!parsed.place?.name && civicData.normalizedInput?.city) {
       parsed.place = {
@@ -3903,6 +3904,12 @@ async function handleAddressLookup(request, env) {
       500
     );
   }
+}
+
+async function secretValue(value) {
+  if (typeof value === "string") return value;
+  if (value && typeof value.get === "function") return String((await value.get()) || "");
+  return "";
 }
 function normalizeBillNumber(value) {
   return String(value || "").trim().toUpperCase();
