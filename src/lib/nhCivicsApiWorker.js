@@ -13,6 +13,7 @@ const corsHeaders = {
 
 const DEFAULT_BILL_TRACKER_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vTHKkGGONM78RXb63Igvi2BXipOA4pV4X5CBY6yHaVAizO-l0q_WtU8uyXI-vhxxbKEib9nFlL1nIBz/pub?gid=1337871563&single=true&output=csv";
+const SHARED_WIDGET_ORIGINS = new Set(["https://queerlective.com"]);
 let voteVisibilityOverridesTableEnsured = false;
 let peopleGradeCacheColumnsEnsured = false;
 
@@ -1222,7 +1223,7 @@ function isAllowedPartnerUrl(value, partner) {
 
   try {
     const origin = new URL(value).origin.toLowerCase();
-    return partner.allowedOrigins.includes(origin);
+    return SHARED_WIDGET_ORIGINS.has(origin) || partner.allowedOrigins.includes(origin);
   } catch {
     return false;
   }
