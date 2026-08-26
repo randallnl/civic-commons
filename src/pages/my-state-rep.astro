@@ -42,6 +42,7 @@ const isEmbed = ["1", "true", "yes"].includes(
   String(Astro.url.searchParams.get("embed") || "").trim().toLowerCase(),
 );
 const embedPartnerKey = Astro.url.searchParams.get("partner")?.trim().toLowerCase() || "";
+const embedOpenRep = Astro.url.searchParams.get("open")?.trim() || "";
 const selectedWard = normalizeWardNumber(Astro.url.searchParams.get("ward") || "");
 const filters = {
   body: Astro.url.searchParams.get("body")?.trim() || "",
@@ -906,6 +907,7 @@ function isVotingAction(vote = {}) {
                     showTestimonyAlignment={!isEmbed || embedFeatures.testimonyAlignment}
                     showFreeStateAligned={!isEmbed || embedFeatures.freeStateAligned}
                     showTpactionAligned={!isEmbed || embedFeatures.tpactionAligned}
+                    openRep={embedOpenRep}
                   />
                 ))}
               </div>
@@ -1050,6 +1052,7 @@ function isVotingAction(vote = {}) {
                       showTestimonyAlignment={!isEmbed || embedFeatures.testimonyAlignment}
                       showFreeStateAligned={!isEmbed || embedFeatures.freeStateAligned}
                       showTpactionAligned={!isEmbed || embedFeatures.tpactionAligned}
+                      openRep={embedOpenRep}
                     />
                   ))}
                 </div>
@@ -1082,6 +1085,7 @@ function isVotingAction(vote = {}) {
                       showTestimonyAlignment={!isEmbed || embedFeatures.testimonyAlignment}
                       showFreeStateAligned={!isEmbed || embedFeatures.freeStateAligned}
                       showTpactionAligned={!isEmbed || embedFeatures.tpactionAligned}
+                      openRep={embedOpenRep}
                     />
                   ))}
                 </div>
@@ -1273,12 +1277,45 @@ function isVotingAction(vote = {}) {
           if (event.target === billDialog) billDialog.close();
         });
 
+        document.addEventListener("click", (event) => {
+          const toggle = event.target.closest?.("[data-embed-rep-toggle]");
+          if (!toggle || event.target.closest("a, button")) return;
+          toggleEmbedRepresentative(toggle);
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          const toggle = event.target.closest?.("[data-embed-rep-toggle]");
+          if (!toggle) return;
+          event.preventDefault();
+          toggleEmbedRepresentative(toggle);
+        });
+
         const notifyEmbedHeight = () => {
           const height = Math.ceil(Math.max(
             document.documentElement.scrollHeight || 0,
             document.body?.scrollHeight || 0,
           ));
           window.parent?.postMessage({ type: "nhcc:my-state-rep:height", height }, "*");
+        };
+
+        const toggleEmbedRepresentative = (toggle) => {
+          const card = toggle.closest("[data-embed-rep]");
+          const expanded = card?.querySelector("[data-embed-rep-expanded]");
+          if (!card || !expanded) return;
+          const willOpen = expanded.hidden;
+          expanded.hidden = !willOpen;
+          toggle.setAttribute("aria-expanded", String(willOpen));
+          const url = new URL(window.location.href);
+          if (willOpen) url.searchParams.set("open", card.dataset.embedRep || "");
+          else url.searchParams.delete("open");
+          window.history.pushState({}, "", url);
+          window.parent?.postMessage({
+            type: "nhcc:my-state-rep:url",
+            url: url.toString(),
+            open: willOpen ? card.dataset.embedRep || "" : "",
+          }, "*");
+          setTimeout(notifyEmbedHeight, 0);
         };
 
         if ("ResizeObserver" in window) {

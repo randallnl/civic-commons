@@ -28,6 +28,7 @@ const {
   showTestimonyAlignment = true,
   showFreeStateAligned = true,
   showTpactionAligned = true,
+  openRep = "",
 } = Astro.props;
 
 function formatParty(party) {
@@ -100,6 +101,8 @@ const name = cleanText(
 );
 const profileHref = `/people/${rep.slug || rep.personid || rep.id || slugify(name)}`;
 const photoUrl = profilePhotoUrl(rep.photo);
+const embedRepKey = String(rep.slug || rep.personid || rep.id || slugify(name));
+const isEmbedOpen = embed && openRep === embedRepKey;
 const voteHistory = embed
   ? (rep.voteHistory || [])
       .map((vote) => ({ vote, trackedBill: trackedBillForVote(trackedBills, vote) }))
@@ -108,6 +111,18 @@ const voteHistory = embed
   : representativeOnlineTestimonyVotePreviews(rep, billSummaries, { limit: 3 });
 const grade = representativeGradeFor(rep, trackedBills, billSummaries);
 const testimonyAlignmentPercent = testimonyAlignmentPercentForGrade(grade);
+const trackerVoteStats = voteHistory.reduce(
+  (stats, preview) => {
+    const stance = representativeVoteStance(preview.vote, preview.trackedBill || trackedBillFor(preview.vote));
+    if (stance.className === "legislator-support") stats.aligned += 1;
+    if (["legislator-support", "legislator-oppose"].includes(stance.className)) stats.total += 1;
+    return stats;
+  },
+  { aligned: 0, total: 0 },
+);
+const trackerAlignmentPercent = trackerVoteStats.total
+  ? Math.round((trackerVoteStats.aligned / trackerVoteStats.total) * 100)
+  : null;
 const aliases = cleanText([rep.nameAliases, rep.name_aliases].filter(Boolean).join(" "));
 const districtLabel = cleanText(
   rep.district
@@ -183,7 +198,8 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
 ---
 
 <article
-  class="rep-card"
+  class:list={["rep-card", embed && "rep-card--embed"]}
+  data-embed-rep={embed ? embedRepKey : undefined}
   data-fuzzy-item
   data-fuzzy-name={name}
   data-fuzzy-aliases={aliases}
@@ -201,7 +217,13 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
   data-fuzzy-sort-missing={missingInfoCount}
   data-fuzzy-text={searchableText}
 >
-  <div class="rep-card-top">
+  <div
+    class="rep-card-top"
+    data-embed-rep-toggle={embed ? "" : undefined}
+    role={embed ? "button" : undefined}
+    tabindex={embed ? "0" : undefined}
+    aria-expanded={embed ? String(isEmbedOpen) : undefined}
+  >
     <a class="photo-wrap" href={profileHref}>
       {photoUrl ? (
         <img
@@ -258,6 +280,12 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
           <span>{testimonyAlignmentPercent === null ? "N/A" : `${testimonyAlignmentPercent}%`}</span>
           <small>Testimony aligned</small>
         </a>}
+        {embed && (
+          <span class:list={["tracker-alignment", trackerAlignmentPercent === null && "tracker-alignment--empty"]}>
+            <strong>{trackerAlignmentPercent === null ? "—" : `${trackerAlignmentPercent}%`}</strong>
+            <small>tracker aligned</small>
+          </span>
+        )}
       </div>
 
       <div class="district-line">
@@ -278,6 +306,7 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
     </div>
   </div>
 
+  <div data-embed-rep-expanded={embed ? "" : undefined} hidden={embed && !isEmbedOpen}>
   <div class="rep-contact">
     <div>
       <span>Email</span>
@@ -312,6 +341,26 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
             : representativeOnlineTestimonyVoteStance(vote, billSummary);
           const voteImpact = "";
           const billTitle = billPreviewTitle(billSummary, bill);
+
+          if (embed) {
+            return (
+              <div class="vote-item vote-item--embed">
+                <button
+                  type="button"
+                  class:list={["tracker-vote-pill", stance.className]}
+                  data-embed-bill
+                  data-bill-code={bill?.code || vote.condensedbillno || "Bill"}
+                  data-bill-preferred={bill?.preferredStance || ""}
+                  data-bill-summary={billSummary?.summary || bill?.summary || ""}
+                  data-bill-yea={bill?.yeaImpact || bill?.yeaInterpretation || ""}
+                  data-bill-nay={bill?.nayImpact || bill?.nayInterpretation || ""}
+                >
+                  <strong>{bill?.code || vote.condensedbillno || "Bill"} · {stance.label}</strong>
+                  {billTitle && <span>{billTitle}</span>}
+                </button>
+              </div>
+            );
+          }
 
           return (
             <div class="vote-item">
@@ -365,6 +414,7 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
       <p>No scored online testimony vote previews returned.</p>
     )}
   </div>
+  </div>
 </article>
 
 <style>
@@ -376,6 +426,20 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
     color: inherit;
     overflow: hidden;
     padding: 18px;
+  }
+
+  .rep-card--embed {
+    background: transparent;
+    padding: 28px;
+  }
+
+  .rep-card--embed .rep-card-top {
+    cursor: pointer;
+  }
+
+  .rep-card--embed .rep-card-top:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 5px;
   }
 
   .rep-card a {
@@ -430,6 +494,22 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
     gap: 12px;
     justify-content: space-between;
   }
+
+  .tracker-alignment {
+    align-items: center;
+    background: #ecfdf3;
+    border: 1px solid #86efac;
+    border-radius: 999px;
+    color: #166534;
+    display: inline-flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    padding: 7px 10px;
+  }
+
+  .tracker-alignment strong { font-size: 1.05rem; line-height: 1; }
+  .tracker-alignment small { font-size: .58rem; font-weight: 900; letter-spacing: .06em; margin-top: 3px; text-transform: uppercase; }
+  .tracker-alignment--empty { background: #f8fafc; border-color: #cbd5e1; color: #64748b; }
 
   .rep-title-block {
     display: grid;
@@ -600,6 +680,31 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
     grid-template-columns: minmax(0, 1fr) minmax(190px, 220px);
     padding: 10px 12px;
   }
+
+  .vote-item--embed {
+    background: transparent;
+    border: 0;
+    display: block;
+    padding: 0;
+  }
+
+  .tracker-vote-pill {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    color: #1f2933;
+    cursor: pointer;
+    display: grid;
+    gap: 3px;
+    padding: 10px 12px;
+    text-align: left;
+    width: 100%;
+  }
+
+  .tracker-vote-pill.legislator-support { background: #ecfdf3; border-color: #86efac; color: #166534; }
+  .tracker-vote-pill.legislator-oppose { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+  .tracker-vote-pill.legislator-neutral { background: #f8fafc; border-color: #cbd5e1; color: #475569; }
+  .tracker-vote-pill span { font-size: .82rem; font-weight: 650; margin: 0; }
 
   .vote-heading {
     display: grid;
