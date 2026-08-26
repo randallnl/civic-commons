@@ -42,9 +42,6 @@ const isEmbed = ["1", "true", "yes"].includes(
   String(Astro.url.searchParams.get("embed") || "").trim().toLowerCase(),
 );
 const embedPartnerKey = Astro.url.searchParams.get("partner")?.trim().toLowerCase() || "";
-const showPublicTestimony = !["0", "false", "no", "off"].includes(
-  String(Astro.url.searchParams.get("testimony") || "1").trim().toLowerCase(),
-);
 const selectedWard = normalizeWardNumber(Astro.url.searchParams.get("ward") || "");
 const filters = {
   body: Astro.url.searchParams.get("body")?.trim() || "",
@@ -79,6 +76,12 @@ let billSummaries = new Map();
 let directoryError = "";
 let embedTrackerUrl = "";
 let embedTrackerError = "";
+let embedFeatures = {
+  testimonyAlignment: false,
+  freeStateAligned: false,
+  tpactionAligned: false,
+  publicTestimony: false,
+};
 
 if (isEmbed) {
   if (!embedPartnerKey) {
@@ -86,12 +89,23 @@ if (isEmbed) {
   } else {
     try {
       const partner = await env.d1_db.prepare(`
-        SELECT tracker_url
+        SELECT
+          tracker_url,
+          show_testimony_alignment,
+          show_free_state_aligned,
+          show_tpaction_aligned,
+          show_public_testimony
         FROM partner_trackers
         WHERE lower(partner_key) = ? AND is_active = 1
         LIMIT 1
       `).bind(embedPartnerKey).first();
       embedTrackerUrl = String(partner?.tracker_url || "").trim();
+      embedFeatures = {
+        testimonyAlignment: Number(partner?.show_testimony_alignment) === 1,
+        freeStateAligned: Number(partner?.show_free_state_aligned) === 1,
+        tpactionAligned: Number(partner?.show_tpaction_aligned) === 1,
+        publicTestimony: Number(partner?.show_public_testimony) === 1,
+      };
       if (!embedTrackerUrl) embedTrackerError = "This partner does not have an active bill tracker.";
     } catch (error) {
       console.error(error?.message || "Unable to load partner tracker.");
@@ -743,7 +757,6 @@ function isVotingAction(vote = {}) {
         <form class="address-lookup" action="/my-state-rep#rep-results" method="get" data-results-form>
           {isEmbed && <input type="hidden" name="embed" value="1" />}
           {isEmbed && <input type="hidden" name="partner" value={embedPartnerKey} />}
-          {isEmbed && <input type="hidden" name="testimony" value={showPublicTestimony ? "1" : "0"} />}
           <label for="address">Find your current State Representatives and State Senator</label>
 
           <div class="address-row">
@@ -889,7 +902,10 @@ function isVotingAction(vote = {}) {
                     trackedBills={trackedBills}
                     billSummaries={billSummaries}
                     embed={isEmbed}
-                    showPublicTestimony={showPublicTestimony}
+                    showPublicTestimony={!isEmbed || embedFeatures.publicTestimony}
+                    showTestimonyAlignment={!isEmbed || embedFeatures.testimonyAlignment}
+                    showFreeStateAligned={!isEmbed || embedFeatures.freeStateAligned}
+                    showTpactionAligned={!isEmbed || embedFeatures.tpactionAligned}
                   />
                 ))}
               </div>
@@ -922,7 +938,6 @@ function isVotingAction(vote = {}) {
                   <input type="hidden" name="address" value={address} />
                   {isEmbed && <input type="hidden" name="embed" value="1" />}
                   {isEmbed && <input type="hidden" name="partner" value={embedPartnerKey} />}
-                  {isEmbed && <input type="hidden" name="testimony" value={showPublicTestimony ? "1" : "0"} />}
                   <div class="ward-filter-copy">
                     <label for="ward">Select your ward</label>
                     <p>
@@ -1031,7 +1046,10 @@ function isVotingAction(vote = {}) {
                       trackedBills={trackedBills}
                       billSummaries={billSummaries}
                       embed={isEmbed}
-                      showPublicTestimony={showPublicTestimony}
+                      showPublicTestimony={!isEmbed || embedFeatures.publicTestimony}
+                      showTestimonyAlignment={!isEmbed || embedFeatures.testimonyAlignment}
+                      showFreeStateAligned={!isEmbed || embedFeatures.freeStateAligned}
+                      showTpactionAligned={!isEmbed || embedFeatures.tpactionAligned}
                     />
                   ))}
                 </div>
@@ -1060,7 +1078,10 @@ function isVotingAction(vote = {}) {
                       trackedBills={trackedBills}
                       billSummaries={billSummaries}
                       embed={isEmbed}
-                      showPublicTestimony={showPublicTestimony}
+                      showPublicTestimony={!isEmbed || embedFeatures.publicTestimony}
+                      showTestimonyAlignment={!isEmbed || embedFeatures.testimonyAlignment}
+                      showFreeStateAligned={!isEmbed || embedFeatures.freeStateAligned}
+                      showTpactionAligned={!isEmbed || embedFeatures.tpactionAligned}
                     />
                   ))}
                 </div>

@@ -25,6 +25,9 @@ const {
   billSummaries = new Map(),
   embed = false,
   showPublicTestimony = true,
+  showTestimonyAlignment = true,
+  showFreeStateAligned = true,
+  showTpactionAligned = true,
 } = Astro.props;
 
 function formatParty(party) {
@@ -224,7 +227,7 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
           <div class="rep-meta">
             <span>{cleanText(rep.chamber || "Legislator")}</span>
             <span data-party-affiliation>{formatParty(rep.party)}</span>
-            {isFreeStater(rep) && (
+            {showFreeStateAligned && isFreeStater(rep) && (
               <a
                 class="free-stater-pill"
                 href="/free-staters"
@@ -234,7 +237,7 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
                 Free State Aligned
               </a>
             )}
-            {isTpActionAligned(rep) && (
+            {showTpactionAligned && isTpActionAligned(rep) && (
               <a
                 class="tpaction-pill"
                 href="/tpaction-aligned"
@@ -246,7 +249,7 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
             )}
           </div>
         </div>
-        <a
+        {showTestimonyAlignment && <a
           class="rep-grade testimony-alignment"
           href="/vote-grades"
           title={`Testimony alignment. ${grade.label}`}
@@ -254,7 +257,7 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
         >
           <span>{testimonyAlignmentPercent === null ? "N/A" : `${testimonyAlignmentPercent}%`}</span>
           <small>Testimony aligned</small>
-        </a>
+        </a>}
       </div>
 
       <div class="district-line">
