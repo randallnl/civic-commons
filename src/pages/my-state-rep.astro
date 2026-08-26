@@ -42,6 +42,9 @@ const isEmbed = ["1", "true", "yes"].includes(
   String(Astro.url.searchParams.get("embed") || "").trim().toLowerCase(),
 );
 const embedPartnerKey = Astro.url.searchParams.get("partner")?.trim().toLowerCase() || "";
+const showPublicTestimony = !["0", "false", "no", "off"].includes(
+  String(Astro.url.searchParams.get("testimony") || "1").trim().toLowerCase(),
+);
 const selectedWard = normalizeWardNumber(Astro.url.searchParams.get("ward") || "");
 const filters = {
   body: Astro.url.searchParams.get("body")?.trim() || "",
@@ -740,6 +743,7 @@ function isVotingAction(vote = {}) {
         <form class="address-lookup" action="/my-state-rep#rep-results" method="get" data-results-form>
           {isEmbed && <input type="hidden" name="embed" value="1" />}
           {isEmbed && <input type="hidden" name="partner" value={embedPartnerKey} />}
+          {isEmbed && <input type="hidden" name="testimony" value={showPublicTestimony ? "1" : "0"} />}
           <label for="address">Find your current State Representatives and State Senator</label>
 
           <div class="address-row">
@@ -885,6 +889,7 @@ function isVotingAction(vote = {}) {
                     trackedBills={trackedBills}
                     billSummaries={billSummaries}
                     embed={isEmbed}
+                    showPublicTestimony={showPublicTestimony}
                   />
                 ))}
               </div>
@@ -915,6 +920,9 @@ function isVotingAction(vote = {}) {
               {isWardedCommunity && (
                 <form class:list={["ward-filter", !wardNumber && "needs-ward"]} action="/my-state-rep#rep-results" method="get" data-results-form>
                   <input type="hidden" name="address" value={address} />
+                  {isEmbed && <input type="hidden" name="embed" value="1" />}
+                  {isEmbed && <input type="hidden" name="partner" value={embedPartnerKey} />}
+                  {isEmbed && <input type="hidden" name="testimony" value={showPublicTestimony ? "1" : "0"} />}
                   <div class="ward-filter-copy">
                     <label for="ward">Select your ward</label>
                     <p>
@@ -1023,6 +1031,7 @@ function isVotingAction(vote = {}) {
                       trackedBills={trackedBills}
                       billSummaries={billSummaries}
                       embed={isEmbed}
+                      showPublicTestimony={showPublicTestimony}
                     />
                   ))}
                 </div>
@@ -1051,6 +1060,7 @@ function isVotingAction(vote = {}) {
                       trackedBills={trackedBills}
                       billSummaries={billSummaries}
                       embed={isEmbed}
+                      showPublicTestimony={showPublicTestimony}
                     />
                   ))}
                 </div>

@@ -19,7 +19,13 @@ import {
   trackedBillForVote,
 } from "../lib/trackedBills";
 
-const { rep, trackedBills = new Map(), billSummaries = new Map(), embed = false } = Astro.props;
+const {
+  rep,
+  trackedBills = new Map(),
+  billSummaries = new Map(),
+  embed = false,
+  showPublicTestimony = true,
+} = Astro.props;
 
 function formatParty(party) {
   if (!party) return "Party not listed";
@@ -341,11 +347,13 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
                   {voteImpact && <p class="vote-impact">{cleanText(voteImpact)}</p>}
                 </div>
               </div>
-              <div class="vote-pill-stack">
-                {billSummary && (
+              {showPublicTestimony && (
+                <div class="vote-pill-stack">
+                  {billSummary && (
                   <BillPositionSummary bill={billSummary} compact={true} />
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
