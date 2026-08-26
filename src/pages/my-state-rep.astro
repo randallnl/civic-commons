@@ -1318,7 +1318,7 @@ function validThemeColor(value, fallback) {
 
         document.addEventListener("click", (event) => {
           const toggle = event.target.closest?.("[data-embed-rep-toggle]");
-          if (!toggle || event.target.closest("a, button")) return;
+          if (!toggle || event.target.closest("a[href], button")) return;
           toggleEmbedRepresentative(toggle);
         });
 

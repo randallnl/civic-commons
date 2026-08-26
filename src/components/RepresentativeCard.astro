@@ -236,7 +236,7 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
     tabindex={embed ? "0" : undefined}
     aria-expanded={embed ? String(isEmbedOpen) : undefined}
   >
-    <a class="photo-wrap" href={profileHref}>
+    <a class="photo-wrap" href={embed ? undefined : profileHref}>
       {photoUrl ? (
         <img
           class="rep-photo"
@@ -257,7 +257,7 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
     <div class="rep-main">
       <div class="rep-heading">
         <div class="rep-title-block">
-          <h3><a href={profileHref}>{name}</a></h3>
+          <h3>{embed ? name : <a href={profileHref}>{name}</a>}</h3>
           <div class="rep-meta">
             <span>{cleanText(rep.chamber || "Legislator")}</span>
             <span data-party-affiliation>{formatParty(rep.party)}</span>
