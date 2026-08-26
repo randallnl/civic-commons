@@ -83,6 +83,12 @@ let embedFeatures = {
   tpactionAligned: false,
   publicTestimony: false,
 };
+let embedTheme = {
+  accentColor: "#1d4ed8",
+  accentSoftColor: "#e0e7ff",
+  alignmentLabel: "Tracker aligned",
+  voteIntro: "What this vote means",
+};
 
 if (isEmbed) {
   if (!embedPartnerKey) {
@@ -95,7 +101,11 @@ if (isEmbed) {
           show_testimony_alignment,
           show_free_state_aligned,
           show_tpaction_aligned,
-          show_public_testimony
+          show_public_testimony,
+          embed_accent_color,
+          embed_accent_soft_color,
+          embed_alignment_label,
+          embed_vote_intro
         FROM partner_trackers
         WHERE lower(partner_key) = ? AND is_active = 1
         LIMIT 1
@@ -106,6 +116,12 @@ if (isEmbed) {
         freeStateAligned: Number(partner?.show_free_state_aligned) === 1,
         tpactionAligned: Number(partner?.show_tpaction_aligned) === 1,
         publicTestimony: Number(partner?.show_public_testimony) === 1,
+      };
+      embedTheme = {
+        accentColor: validThemeColor(partner?.embed_accent_color, embedTheme.accentColor),
+        accentSoftColor: validThemeColor(partner?.embed_accent_soft_color, embedTheme.accentSoftColor),
+        alignmentLabel: cleanText(partner?.embed_alignment_label || embedTheme.alignmentLabel),
+        voteIntro: cleanText(partner?.embed_vote_intro || embedTheme.voteIntro),
       };
       if (!embedTrackerUrl) embedTrackerError = "This partner does not have an active bill tracker.";
     } catch (error) {
@@ -721,6 +737,11 @@ function isVotingAction(vote = {}) {
     Boolean(vote.votesequencenumber || vote.vote_sequence || vote.roll_call)
   );
 }
+
+function validThemeColor(value, fallback) {
+  const color = String(value || "").trim();
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
+}
 ---
 
 <html lang="en">
@@ -743,7 +764,11 @@ function isVotingAction(vote = {}) {
 
   <body class={isEmbed ? "embed-mode" : ""}>
     {!isEmbed && <TopNav />}
-    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.rep-card[data-fuzzy-item]', idleLimit: 12 })">
+    <main
+      class="page"
+      style={isEmbed ? `--embed-accent: ${embedTheme.accentColor}; --embed-accent-soft: ${embedTheme.accentSoftColor};` : undefined}
+      x-data="nhdbFuzzyFilter({ itemSelector: '.rep-card[data-fuzzy-item]', idleLimit: 12 })"
+    >
       <section class="hero">
         <div class="hero-copy">
           <p class="eyebrow">My Legislator</p>
@@ -908,6 +933,8 @@ function isVotingAction(vote = {}) {
                     showFreeStateAligned={!isEmbed || embedFeatures.freeStateAligned}
                     showTpactionAligned={!isEmbed || embedFeatures.tpactionAligned}
                     openRep={embedOpenRep}
+                    trackerAlignmentLabel={embedTheme.alignmentLabel}
+                    voteExplanationLabel={embedTheme.voteIntro}
                   />
                 ))}
               </div>
@@ -1053,6 +1080,8 @@ function isVotingAction(vote = {}) {
                       showFreeStateAligned={!isEmbed || embedFeatures.freeStateAligned}
                       showTpactionAligned={!isEmbed || embedFeatures.tpactionAligned}
                       openRep={embedOpenRep}
+                      trackerAlignmentLabel={embedTheme.alignmentLabel}
+                      voteExplanationLabel={embedTheme.voteIntro}
                     />
                   ))}
                 </div>
@@ -1086,6 +1115,8 @@ function isVotingAction(vote = {}) {
                       showFreeStateAligned={!isEmbed || embedFeatures.freeStateAligned}
                       showTpactionAligned={!isEmbed || embedFeatures.tpactionAligned}
                       openRep={embedOpenRep}
+                      trackerAlignmentLabel={embedTheme.alignmentLabel}
+                      voteExplanationLabel={embedTheme.voteIntro}
                     />
                   ))}
                 </div>
@@ -1270,7 +1301,7 @@ function isVotingAction(vote = {}) {
           title.textContent = trigger.dataset.billCode || "Bill details";
           billDialogContent.append(title);
           addBillDetail("Legislator vote", trigger.dataset.billVote);
-          addBillDetail("What this vote means", trigger.dataset.billVoteExplanation);
+          addBillDetail(trigger.dataset.billVoteExplanationLabel || "What this vote means", trigger.dataset.billVoteExplanation);
           addBillDetail("Preferred stance", trigger.dataset.billPreferred);
           addBillDetail("Summary", trigger.dataset.billSummary);
           if (!trigger.dataset.billVoteExplanation) {

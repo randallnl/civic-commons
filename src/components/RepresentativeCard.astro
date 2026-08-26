@@ -29,6 +29,8 @@ const {
   showFreeStateAligned = true,
   showTpactionAligned = true,
   openRep = "",
+  trackerAlignmentLabel = "Tracker aligned",
+  voteExplanationLabel = "What this vote means",
 } = Astro.props;
 
 function formatParty(party) {
@@ -293,7 +295,7 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
         {embed && (
           <span class:list={["tracker-alignment", trackerAlignmentPercent === null && "tracker-alignment--empty"]}>
             <strong>{trackerAlignmentPercent === null ? "—" : `${trackerAlignmentPercent}%`}</strong>
-            <small>tracker aligned</small>
+            <small>{trackerAlignmentLabel}</small>
           </span>
         )}
       </div>
@@ -376,6 +378,7 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
                   data-bill-code={bill?.code || vote.condensedbillno || "Bill"}
                   data-bill-vote={stance.label}
                   data-bill-vote-explanation={voteInterpretation}
+                  data-bill-vote-explanation-label={voteExplanationLabel}
                   data-bill-preferred={bill?.preferredStance || ""}
                   data-bill-summary={billSummary?.summary || bill?.summary || ""}
                   data-bill-yea={bill?.yeaInterpretation || bill?.yeaImpact || ""}
@@ -399,6 +402,7 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
                       data-bill-code={bill?.code || vote.condensedbillno || "Bill"}
                       data-bill-vote={stance.label}
                       data-bill-vote-explanation={voteInterpretation}
+                      data-bill-vote-explanation-label={voteExplanationLabel}
                       data-bill-preferred={bill?.preferredStance || ""}
                       data-bill-summary={billSummary?.summary || bill?.summary || ""}
                       data-bill-yea={bill?.yeaInterpretation || bill?.yeaImpact || ""}
@@ -458,7 +462,10 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
 
   .rep-card--embed {
     background: transparent;
-    padding: 28px;
+    border: 0;
+    border-bottom: 1px solid #dbe4f0;
+    border-radius: 0;
+    padding: 24px 8px;
   }
 
   .rep-card--embed .rep-card-top {
@@ -526,10 +533,10 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
 
   .tracker-alignment {
     align-items: center;
-    background: #ecfdf3;
-    border: 1px solid #86efac;
+    background: var(--embed-accent-soft, #e0e7ff);
+    border: 1px solid var(--embed-accent, #1d4ed8);
     border-radius: 999px;
-    color: #166534;
+    color: var(--embed-accent, #1d4ed8);
     display: inline-flex;
     flex: 0 0 auto;
     flex-direction: column;
@@ -537,7 +544,7 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
   }
 
   .tracker-alignment strong { font-size: 1.05rem; line-height: 1; }
-  .tracker-alignment small { font-size: .58rem; font-weight: 900; letter-spacing: .06em; margin-top: 3px; text-transform: uppercase; }
+  .tracker-alignment small { font-size: .58rem; font-weight: 900; letter-spacing: .04em; line-height: 1.2; margin-top: 3px; max-width: 125px; text-align: center; }
   .tracker-alignment--empty { background: #f8fafc; border-color: #cbd5e1; color: #64748b; }
 
   .rep-card--embed .photo-wrap,
@@ -574,10 +581,10 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
   .embed-vote-preview button {
     align-items: center;
     align-self: end;
-    background: #e0e7ff;
+    background: var(--embed-accent-soft, #e0e7ff);
     border: 0;
     border-radius: 8px;
-    color: #3730a3;
+    color: var(--embed-accent, #1d4ed8);
     display: inline-flex;
     font: inherit;
     font-weight: 900;
