@@ -11,6 +11,7 @@ import { getBillDetail, getBillSummaries } from "../lib/billsApi";
 import { enrichCandidatesWithLegislators } from "../lib/candidateLegislators";
 import { civicApiBase, civicApiFetch } from "../lib/civicApi";
 import { getRepresentative, getRepresentatives, repName } from "../lib/repsApi";
+import { cleanText } from "../lib/text";
 import {
   normalizeBillCode,
   getTrackedBills,
