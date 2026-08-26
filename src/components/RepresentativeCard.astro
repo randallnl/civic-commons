@@ -304,21 +304,19 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
         </div>
       )}
 
-      {embed && (
-        <div class="embed-vote-preview" aria-hidden="true">
-          <span>
-            {trackerVoteStats.total
-              ? `${trackerVoteStats.total} tracked ${trackerVoteStats.total === 1 ? "vote" : "votes"}`
-              : "No tracked votes yet"}
-          </span>
-          <strong>
-            <span class="embed-vote-preview-open">Show votes</span>
-            <span class="embed-vote-preview-close">Hide votes</span>
-            <span aria-hidden="true">⌄</span>
-          </strong>
-        </div>
-      )}
     </div>
+    {embed && (
+      <div class="embed-vote-preview" aria-hidden="true">
+        <span class="embed-vote-preview-label">Tracked vote record</span>
+        <strong>{trackerVoteStats.total || "—"}</strong>
+        <span>{trackerVoteStats.total === 1 ? "vote available" : "votes available"}</span>
+        <button type="button" tabindex="-1">
+          <span class="embed-vote-preview-open">Show votes</span>
+          <span class="embed-vote-preview-close">Hide votes</span>
+          <span aria-hidden="true">⌄</span>
+        </button>
+      </div>
+    )}
   </div>
 
   <div data-embed-rep-expanded={embed ? "" : undefined} hidden={embed && !isEmbedOpen}>
@@ -450,6 +448,7 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
 
   .rep-card--embed .rep-card-top {
     cursor: pointer;
+    grid-template-columns: 76px minmax(0, 1fr) minmax(176px, 220px);
   }
 
   .rep-card--embed .rep-card-top:focus-visible {
@@ -526,23 +525,53 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
   .tracker-alignment small { font-size: .58rem; font-weight: 900; letter-spacing: .06em; margin-top: 3px; text-transform: uppercase; }
   .tracker-alignment--empty { background: #f8fafc; border-color: #cbd5e1; color: #64748b; }
 
-  .embed-vote-preview {
-    align-items: center;
-    border-top: 1px solid #e2e8f0;
-    color: #64748b;
-    display: flex;
-    font-size: .82rem;
-    font-weight: 700;
-    justify-content: space-between;
-    margin-top: 16px;
-    padding-top: 13px;
+  .rep-card--embed .photo-wrap,
+  .rep-card--embed .rep-photo {
+    width: 76px;
   }
 
-  .embed-vote-preview strong {
+  .rep-card--embed .rep-photo { height: 95px; }
+
+  .embed-vote-preview {
     align-items: center;
-    color: #1d4ed8;
+    background: #f8fafc;
+    border: 1px solid #dbe4f0;
+    border-radius: 14px;
+    color: #64748b;
+    display: grid;
+    font-size: .78rem;
+    font-weight: 700;
+    gap: 2px;
+    min-height: 100%;
+    padding: 14px;
+  }
+
+  .embed-vote-preview-label {
+    color: #64748b;
+    font-size: .64rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .embed-vote-preview strong { color: #172554; font-size: 1.55rem; line-height: 1.05; }
+
+  .embed-vote-preview button {
+    align-items: center;
+    align-self: end;
+    background: #e0e7ff;
+    border: 0;
+    border-radius: 8px;
+    color: #3730a3;
     display: inline-flex;
+    font: inherit;
+    font-weight: 900;
     gap: 5px;
+    margin-top: 8px;
+    padding: 8px 9px;
+    pointer-events: none;
+    text-align: left;
+    width: 100%;
   }
 
   .embed-vote-preview-close { display: none; }
@@ -744,6 +773,13 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
   .tracker-vote-pill.legislator-oppose { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
   .tracker-vote-pill.legislator-neutral { background: #f8fafc; border-color: #cbd5e1; color: #475569; }
   .tracker-vote-pill span { font-size: .82rem; font-weight: 650; margin: 0; }
+
+  @media (max-width: 720px) {
+    .rep-card--embed .rep-card-top { grid-template-columns: 76px minmax(0, 1fr); }
+    .embed-vote-preview { grid-column: 1 / -1; grid-template-columns: 1fr auto; min-height: 0; }
+    .embed-vote-preview-label { grid-column: 1 / -1; }
+    .embed-vote-preview button { grid-column: 2; grid-row: 2 / span 2; margin: 0; width: auto; }
+  }
 
   .vote-heading {
     display: grid;

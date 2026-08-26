@@ -896,7 +896,7 @@ function isVotingAction(vote = {}) {
             <p class="status-message">{directoryError}</p>
           ) : directoryReps.length ? (
             <>
-              <div class="rep-grid">
+              <div class:list={["rep-grid", isEmbed && "rep-grid--embed"]}>
                 {directoryReps.map((rep) => (
                   <RepresentativeCard
                     rep={rep}
@@ -1041,7 +1041,7 @@ function isVotingAction(vote = {}) {
                   </p>
                 </div>
 
-                <div class="rep-grid">
+                <div class:list={["rep-grid", isEmbed && "rep-grid--embed"]}>
                   {senateReps.map((rep) => (
                     <RepresentativeCard
                       rep={rep}
@@ -1074,7 +1074,7 @@ function isVotingAction(vote = {}) {
                   </p>
                 </div>
 
-                <div class="rep-grid">
+                <div class:list={["rep-grid", isEmbed && "rep-grid--embed"]}>
                   {houseReps.map((rep) => (
                     <RepresentativeCard
                       rep={rep}
@@ -1239,7 +1239,10 @@ function isVotingAction(vote = {}) {
     </script>
     {isEmbed && (
       <dialog class="embed-bill-dialog" data-embed-bill-dialog>
-        <form method="dialog"><button type="submit" aria-label="Close bill details">×</button></form>
+        <div class="embed-bill-dialog-header">
+          <span>Bill details</span>
+          <form method="dialog"><button type="submit" aria-label="Close bill details">×</button></form>
+        </div>
         <div data-embed-bill-content></div>
       </dialog>
     )}
@@ -1361,34 +1364,42 @@ function isVotingAction(vote = {}) {
   }
 
   .embed-bill-dialog {
-    border: 0;
-    border-radius: 14px;
-    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.35);
-    color: #1f2933;
-    max-width: min(640px, calc(100vw - 32px));
-    padding: 24px;
+    background: #fff;
+    border: 1px solid #dbe4f0;
+    border-radius: 20px;
+    box-shadow: 0 28px 90px rgba(15, 23, 42, 0.38);
+    box-sizing: border-box;
+    color: #1e293b;
+    max-height: min(720px, calc(100vh - 32px));
+    max-width: min(680px, calc(100vw - 32px));
+    overflow: auto;
+    padding: 20px 22px 24px;
+    width: 100%;
   }
 
-  .embed-bill-dialog::backdrop { background: rgba(15, 23, 42, 0.5); }
-  .embed-bill-dialog form { display: flex; justify-content: end; }
+  .embed-bill-dialog::backdrop { background: rgba(15, 23, 42, 0.62); backdrop-filter: blur(3px); }
+  .embed-bill-dialog-header { align-items: center; color: #475569; display: flex; font-size: .72rem; font-weight: 950; justify-content: space-between; letter-spacing: .1em; text-transform: uppercase; }
+  .embed-bill-dialog form { margin: -5px -5px 0 0; }
   .embed-bill-dialog button {
     align-items: center;
-    background: #fff;
-    border: 1px solid #cbd5e1;
+    background: #e2e8f0;
+    border: 0;
     border-radius: 999px;
-    color: #1f2933;
+    color: #0f172a;
     cursor: pointer;
     display: inline-flex;
-    font-size: 1.5rem;
-    height: 34px;
+    font-size: 1.4rem;
+    font-weight: 800;
+    height: 38px;
     justify-content: center;
     line-height: 1;
-    width: 34px;
+    width: 38px;
   }
-  .embed-bill-dialog button:hover { background: #f1f5f9; }
-  .embed-bill-dialog h2 { margin: 0 0 16px; }
-  .embed-bill-dialog section { border-top: 1px solid #e2e8f0; padding: 12px 0; }
-  .embed-bill-dialog p { line-height: 1.5; margin: 6px 0 0; }
+  .embed-bill-dialog button:hover { background: #cbd5e1; }
+  .embed-bill-dialog h2 { color: #0f172a; font-size: clamp(1.5rem, 4vw, 2rem); line-height: 1.1; margin: 12px 0 20px; }
+  .embed-bill-dialog section { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-top: 10px; padding: 14px 16px; }
+  .embed-bill-dialog section strong { color: #334155; font-size: .72rem; letter-spacing: .07em; text-transform: uppercase; }
+  .embed-bill-dialog p { color: #334155; line-height: 1.55; margin: 7px 0 0; }
 
   .hero {
     align-items: center;
@@ -2034,6 +2045,8 @@ function isVotingAction(vote = {}) {
     gap: 18px;
     margin-top: 24px;
   }
+
+  .rep-grid--embed { grid-template-columns: 1fr; gap: 14px; }
 
   .filter-chips {
     display: flex;
