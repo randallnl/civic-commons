@@ -207,6 +207,16 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
   if (isNay) return trackedBill.nayInterpretation || "";
   return "";
 }
+
+function embedVoteActionLabel(vote = {}, fallback = "Vote not listed") {
+  const voteValue = String(vote.vote || vote.vote_label || vote.vote_code || "").trim().toLowerCase();
+  const isYea = ["1", "yea", "yes", "y", "in support", "support"].includes(voteValue) || voteValue.includes("support");
+  const isNay = ["2", "nay", "no", "n", "opposed", "oppose", "against"].includes(voteValue) || voteValue.includes("oppose") || voteValue.includes("against");
+
+  if (isYea) return "In support";
+  if (isNay) return "Opposed";
+  return fallback;
+}
 ---
 
 <article
@@ -367,6 +377,7 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
           const voteImpact = "";
           const billTitle = billPreviewTitle(billSummary, bill);
           const voteInterpretation = voteInterpretationForEmbed(vote, bill);
+          const embedVoteAction = embedVoteActionLabel(vote, stance.label);
 
           if (embed) {
             return (
@@ -376,7 +387,7 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
                   class:list={["tracker-vote-pill", stance.className]}
                   data-embed-bill
                   data-bill-code={bill?.code || vote.condensedbillno || "Bill"}
-                  data-bill-vote={stance.label}
+                  data-bill-vote={embedVoteAction}
                   data-bill-vote-explanation={voteInterpretation}
                   data-bill-vote-explanation-label={voteExplanationLabel}
                   data-bill-preferred={bill?.preferredStance || ""}
@@ -384,7 +395,7 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
                   data-bill-yea={bill?.yeaInterpretation || bill?.yeaImpact || ""}
                   data-bill-nay={bill?.nayInterpretation || bill?.nayImpact || ""}
                 >
-                  <strong>{bill?.code || vote.condensedbillno || "Bill"} · {stance.label}</strong>
+                  <strong>{bill?.code || vote.condensedbillno || "Bill"} · {embedVoteAction}</strong>
                   {billTitle && <span>{billTitle}</span>}
                 </button>
               </div>
@@ -400,7 +411,7 @@ function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
                       type="button"
                       data-embed-bill
                       data-bill-code={bill?.code || vote.condensedbillno || "Bill"}
-                      data-bill-vote={stance.label}
+                      data-bill-vote={embedVoteAction}
                       data-bill-vote-explanation={voteInterpretation}
                       data-bill-vote-explanation-label={voteExplanationLabel}
                       data-bill-preferred={bill?.preferredStance || ""}

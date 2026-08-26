@@ -1306,8 +1306,8 @@ function validThemeColor(value, fallback) {
           addBillDetail("Organization recommendation", trigger.dataset.billPreferred);
           addBillDetail("Summary", trigger.dataset.billSummary);
           if (!trigger.dataset.billVoteExplanation) {
-            addBillDetail("If voting yea", trigger.dataset.billYea);
-            addBillDetail("If voting nay", trigger.dataset.billNay);
+            addBillDetail("If in support", trigger.dataset.billYea);
+            addBillDetail("If opposed", trigger.dataset.billNay);
           }
           billDialog.showModal();
         });
