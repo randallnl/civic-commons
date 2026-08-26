@@ -20,5 +20,12 @@
       "binding": "LEGISLATOR_PHOTOS",
       "bucket_name": "nhdeservesbetter-legislator-photos"
     }
+  ],
+  "secrets_store_secrets": [
+    {
+      "binding": "CIVIC_API_KEY",
+      "store_id": "2b9ec8a0d6d742649ad4d3498815ca54",
+      "secret_name": "SECRET_CIVIC_API_KEY"
+    }
   ]
 }
