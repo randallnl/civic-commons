@@ -303,6 +303,21 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
           {cleanText(rep.location_text)}
         </div>
       )}
+
+      {embed && (
+        <div class="embed-vote-preview" aria-hidden="true">
+          <span>
+            {trackerVoteStats.total
+              ? `${trackerVoteStats.total} tracked ${trackerVoteStats.total === 1 ? "vote" : "votes"}`
+              : "No tracked votes yet"}
+          </span>
+          <strong>
+            <span class="embed-vote-preview-open">Show votes</span>
+            <span class="embed-vote-preview-close">Hide votes</span>
+            <span aria-hidden="true">⌄</span>
+          </strong>
+        </div>
+      )}
     </div>
   </div>
 
@@ -510,6 +525,30 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
   .tracker-alignment strong { font-size: 1.05rem; line-height: 1; }
   .tracker-alignment small { font-size: .58rem; font-weight: 900; letter-spacing: .06em; margin-top: 3px; text-transform: uppercase; }
   .tracker-alignment--empty { background: #f8fafc; border-color: #cbd5e1; color: #64748b; }
+
+  .embed-vote-preview {
+    align-items: center;
+    border-top: 1px solid #e2e8f0;
+    color: #64748b;
+    display: flex;
+    font-size: .82rem;
+    font-weight: 700;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 13px;
+  }
+
+  .embed-vote-preview strong {
+    align-items: center;
+    color: #1d4ed8;
+    display: inline-flex;
+    gap: 5px;
+  }
+
+  .embed-vote-preview-close { display: none; }
+  .rep-card-top[aria-expanded="true"] .embed-vote-preview-open { display: none; }
+  .rep-card-top[aria-expanded="true"] .embed-vote-preview-close { display: inline; }
+  .rep-card-top[aria-expanded="true"] .embed-vote-preview strong > span:last-child { transform: rotate(180deg); }
 
   .rep-title-block {
     display: grid;
