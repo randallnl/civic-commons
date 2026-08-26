@@ -343,7 +343,7 @@ async function handleVotingWidgetPage(request, env) {
   <title>${escapeHtml(title)}</title>
   <style>
     html, body { margin: 0; padding: 0; background: transparent; }
-    html, body { min-height: 1200px; overflow-y: auto; }
+    html, body { min-height: 0; overflow-y: auto; }
     [data-nhcc-voting-widget] { display: block; }
   </style>
 </head>
@@ -354,6 +354,10 @@ async function handleVotingWidgetPage(request, env) {
     data-bill-tracker-url="${escapeHtml(trackerUrl)}"
     data-title="${escapeHtml(title)}"
     data-button-text="${escapeHtml(buttonText)}"
+    data-widget-version="${escapeHtml(partner.widgetVersion)}"
+    data-show-testimony-alignment="${partner.features.testimonyAlignment ? "true" : "false"}"
+    data-show-free-state-aligned="${partner.features.freeStateAligned ? "true" : "false"}"
+    data-show-tpaction-aligned="${partner.features.tpactionAligned ? "true" : "false"}"
   ></div>
   <script src="/widgets/voting-info.js"></script>
   <script>
@@ -406,8 +410,17 @@ function handleVotingWidgetScript(request) {
       partner: node.dataset.partner || currentScript?.dataset.partner || "",
       trackerUrl: node.dataset.billTrackerUrl || currentScript?.dataset.billTrackerUrl || defaultTrackerUrl,
       title: node.dataset.title || currentScript?.dataset.title || "How did my representatives vote?",
-      buttonText: node.dataset.buttonText || currentScript?.dataset.buttonText || "Find my representatives"
+      buttonText: node.dataset.buttonText || currentScript?.dataset.buttonText || "Find my representatives",
+      widgetVersion: node.dataset.widgetVersion || currentScript?.dataset.widgetVersion || "compact",
+      showTestimonyAlignment: flag(node.dataset.showTestimonyAlignment || currentScript?.dataset.showTestimonyAlignment, true),
+      showFreeStateAligned: flag(node.dataset.showFreeStateAligned || currentScript?.dataset.showFreeStateAligned, false),
+      showTpactionAligned: flag(node.dataset.showTpactionAligned || currentScript?.dataset.showTpactionAligned, false)
     };
+  }
+
+  function flag(value, fallback) {
+    if (value === undefined || value === null || value === "") return fallback;
+    return ["1", "true", "yes", "on"].includes(String(value).trim().toLowerCase());
   }
 
   function ensureContainer() {
@@ -416,7 +429,7 @@ function handleVotingWidgetScript(request) {
 
     const node = document.createElement("div");
     node.dataset.nhccVotingWidget = "";
-    for (const key of ["apiBase", "partner", "billTrackerUrl", "title", "buttonText"]) {
+    for (const key of ["apiBase", "partner", "billTrackerUrl", "title", "buttonText", "widgetVersion", "showTestimonyAlignment", "showFreeStateAligned", "showTpactionAligned"]) {
       if (currentScript.dataset[key]) node.dataset[key] = currentScript.dataset[key];
     }
     currentScript.insertAdjacentElement("beforebegin", node);
@@ -431,8 +444,8 @@ function handleVotingWidgetScript(request) {
 
   function normalizeVoteStance(value) {
     const lower = String(value || "").trim().toLowerCase();
-    if (lower === "yea" || lower === "yes" || lower === "y") return "yea";
-    if (lower === "nay" || lower === "no" || lower === "n") return "nay";
+    if (["yea", "yes", "y", "support", "in support", "ought to pass", "otp"].includes(lower)) return "yea";
+    if (["nay", "no", "n", "oppose", "opposed", "against", "itl", "inexpedient"].includes(lower)) return "nay";
     return "";
   }
 
@@ -479,7 +492,11 @@ function handleVotingWidgetScript(request) {
   }
 
   function isFreeStater(rep) {
-    return String(rep.is_free_stater || rep.isFreeStater || "").toLowerCase() === "yes";
+    return ["1", "true", "yes"].includes(String(rep.is_free_stater || rep.isFreeStater || rep.is_free_state_aligned_2026 || rep.isFreeStateAligned2026 || "").toLowerCase());
+  }
+
+  function isTpactionAligned(rep) {
+    return ["1", "true", "yes"].includes(String(rep.is_tpaction_aligned_2026 || rep.isTpActionAligned2026 || "").toLowerCase());
   }
 
   function getBillTitle(bill) {
@@ -596,6 +613,7 @@ function handleVotingWidgetScript(request) {
   }
 
   function renderRepCard(root, repIndex) {
+    const config = root.__nhccConfig || {};
     const data = root.__nhccData || {};
     const reps = data.representatives || [];
     const rep = reps[Number(repIndex)];
@@ -614,8 +632,15 @@ function handleVotingWidgetScript(request) {
     const partyLabel = getPartyLabel(rep.party);
     const partyTone = getPartyTone(rep.party);
     const districtLine = getDistrictLine(rep);
-    const freeStaterTag = isFreeStater(rep)
+    const freeStaterTag = config.showFreeStateAligned && isFreeStater(rep)
       ? \`<span class="nhcc-free-stater-tag" title="Free State Aligned: based on the 2026 NH Liberty Alliance scorecard. NH Deserves Better applies this to current state legislators with a B+ or higher combined grade; it indicates voting alignment, not confirmed membership.">Free State Aligned</span>\`
+      : "";
+    const tpactionTag = config.showTpactionAligned && isTpactionAligned(rep)
+      ? \`<span class="nhcc-tpaction-tag" title="TPAction Aligned: scorecard-based context label, not a statement of membership or endorsement.">TPAction Aligned</span>\`
+      : "";
+    const testimonyPercent = Number(rep.online_testimony_alignment_pct ?? rep.onlineTestimonyAlignmentPct);
+    const testimonyTag = config.showTestimonyAlignment && Number.isFinite(testimonyPercent)
+      ? \`<span class="nhcc-testimony-tag" title="Percentage of scored voting actions aligned with online public testimony.">\${Math.round(testimonyPercent > 1 ? testimonyPercent : testimonyPercent * 100)}% testimony aligned</span>\`
       : "";
 
     card.className = "nhcc-rep-card";
@@ -628,12 +653,14 @@ function handleVotingWidgetScript(request) {
             \${districtLine ? \`<span>\${escapeHtml(districtLine)}</span>\` : ""}
             <span class="nhcc-party-pill nhcc-party-pill--\${escapeHtml(partyTone)}">\${escapeHtml(partyLabel)}</span>
             \${freeStaterTag}
+            \${tpactionTag}
+            \${testimonyTag}
           </div>
           \${rep.email ? \`<p><a href="mailto:\${escapeHtml(rep.email)}">\${escapeHtml(rep.email)}</a></p>\` : ""}
         </div>
       </div>
       <div class="nhcc-grade">
-        <span>Alignment grade\${issue ? " · " + escapeHtml(issue) : ""}</span>
+        <span>Bill tracker alignment\${issue ? " · " + escapeHtml(issue) : ""}</span>
         <strong data-grade="\${escapeHtml(stats.letter)}">\${escapeHtml(stats.letter)}</strong>
         <p>\${stats.counted ? escapeHtml(String(stats.pct)) + "% aligned with preferred stances across " + escapeHtml(String(stats.counted)) + " votes" : "Not enough preferred stance votes for this filter"}</p>
       </div>
@@ -736,11 +763,12 @@ function handleVotingWidgetScript(request) {
     node.__nhccMounted = true;
     const config = attrs(node);
     const root = node.attachShadow ? node.attachShadow({ mode: "open" }) : node;
+    root.__nhccConfig = config;
 
     root.innerHTML = \`
       <style>
         :host, .nhcc-widget { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #18212f; }
-        .nhcc-widget { border: 1px solid rgba(148, 163, 253, .18); border-radius: 18px; padding: 16px; background: #fff; max-width: 900px; box-shadow: 0 8px 24px rgba(15, 23, 42, .06); }
+        .nhcc-widget { border: 1px solid rgba(148, 163, 253, .18); border-radius: 14px; padding: 12px; background: #fff; max-width: 900px; box-shadow: 0 6px 18px rgba(15, 23, 42, .05); }
         .nhcc-widget h2, .nhcc-widget h3 { margin: 0 0 6px; line-height: 1.25; }
         .nhcc-widget h2 { font-size: 1.25rem; }
         .nhcc-widget h3 { font-size: 1.05rem; }
@@ -780,6 +808,9 @@ function handleVotingWidgetScript(request) {
         .nhcc-party-pill--independent { background: #fef9c3; border-color: #fde047; color: #854d0e; }
         .nhcc-party-pill--other { background: #f3f4f6; border-color: #e5e7eb; color: #374151; }
         .nhcc-free-stater-tag { display: inline-flex; align-items: center; border-radius: 999px; border: 1px solid #7f1d1d; padding: 4px 9px; background: #450a0a; color: #fee2e2; font-size: .74rem; font-weight: 900; text-transform: uppercase; box-shadow: 0 0 0 2px #fecaca; }
+        .nhcc-tpaction-tag, .nhcc-testimony-tag { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 8px; font-size: .72rem; font-weight: 800; line-height: 1.2; }
+        .nhcc-tpaction-tag { border: 1px solid #f59e0b; background: #fffbeb; color: #92400e; }
+        .nhcc-testimony-tag { border: 1px solid #c7d2fe; background: #eef2ff; color: #3730a3; }
         .nhcc-grade { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; margin: 10px 0; padding: 10px; border-radius: 12px; border: 1px solid #e1e7ef; background: #f9fafb; }
         .nhcc-grade span { color: #526173; font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
         .nhcc-grade strong { display: inline-grid; place-items: center; min-width: 64px; min-height: 56px; border-radius: 16px; padding: 6px 12px; background: #edf1f6; font-size: 2.35rem; line-height: 1; }
@@ -845,9 +876,8 @@ function handleVotingWidgetScript(request) {
         @media (max-width: 560px) { .nhcc-form { flex-direction: column; } .nhcc-votes li { grid-template-columns: 1fr; } }
         @media (max-width: 560px) { .nhcc-impact-grid { grid-template-columns: 1fr; } }
       </style>
-      <section class="nhcc-widget">
-        <h2>Find your districts and state legislators</h2>
-        <p class="nhcc-intro">Enter your full address to see your New Hampshire State Senator and House Representatives, then jump straight to their voting record.</p>
+      <section class="nhcc-widget" data-version="\${escapeHtml(config.widgetVersion)}">
+        \${config.widgetVersion === "full" ? \`<h2>Find your districts and state legislators</h2><p class="nhcc-intro">Enter your full address to see your New Hampshire State Senator and House Representatives, then jump straight to their voting record.</p>\` : ""}
         <form class="nhcc-form">
           <input name="address" autocomplete="street-address" placeholder="Enter your NH address" required>
           <button type="submit">\${escapeHtml(config.buttonText)}</button>
@@ -856,8 +886,7 @@ function handleVotingWidgetScript(request) {
         <div class="nhcc-summary" data-summary></div>
         <div data-divisions></div>
         <div class="nhcc-rep-tool" data-rep-tool hidden>
-          <h2>\${escapeHtml(config.title)}</h2>
-          <p class="nhcc-intro">Select a legislator to see key votes. Tap any bill card to expand details.</p>
+          \${config.widgetVersion === "full" ? \`<h2>\${escapeHtml(config.title)}</h2><p class="nhcc-intro">Select a legislator to see key votes. Tap any bill card to expand details.</p>\` : ""}
           <div class="nhcc-controls">
             <div class="nhcc-control nhcc-control--highlight">
               <label>Filter by issue</label>
@@ -899,6 +928,10 @@ function handleVotingWidgetScript(request) {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Lookup failed.");
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set("address", address);
+        window.history.replaceState({}, "", currentUrl);
+        window.parent?.postMessage({ type: "nhcc:voting-widget:url", address, url: currentUrl.toString() }, "*");
         status.textContent = "";
         renderResults(root, data);
       } catch (error) {
@@ -939,6 +972,12 @@ function handleVotingWidgetScript(request) {
     root.addEventListener("keydown", (event) => {
       if (event.key === "Escape") closeBillDialog(root);
     });
+
+    const initialAddress = new URL(window.location.href).searchParams.get("address") || "";
+    if (initialAddress) {
+      form.elements.address.value = initialAddress;
+      form.requestSubmit();
+    }
   }
 
   function mountAll() {
@@ -1067,7 +1106,32 @@ async function resolvePartnerConfig(env, value, required = false) {
     throw new Error("Widget partner registry is not configured.");
   }
 
-  const result = await env.CIVIC_COMMONS_DB.prepare(`
+  let result;
+  try {
+    result = await env.CIVIC_COMMONS_DB.prepare(`
+    SELECT
+      partner_id,
+      name,
+      allowed_origins,
+      bill_tracker_url,
+      widget_version,
+      show_testimony_alignment,
+      show_free_state_aligned,
+      show_tpaction_aligned,
+      active
+    FROM partner_trackers
+    WHERE lower(partner_id) = ?
+    LIMIT 1
+  `)
+      .bind(partnerId)
+      .first();
+  } catch {
+    // The registry may not have been migrated yet.
+  }
+
+  if (!result) {
+    // Keep previously provisioned partners working until their registry is migrated.
+    result = await env.CIVIC_COMMONS_DB.prepare(`
     SELECT
       partner_id,
       name,
@@ -1080,6 +1144,7 @@ async function resolvePartnerConfig(env, value, required = false) {
   `)
     .bind(partnerId)
     .first();
+  }
 
   if (!result) {
     throw new Error("Unknown widget partner.");
@@ -1090,7 +1155,9 @@ async function resolvePartnerConfig(env, value, required = false) {
   }
 
   const allowedOrigins = parseJsonStringList(result.allowed_origins);
-  const allowedTrackerUrls = parseJsonStringList(result.allowed_tracker_urls)
+  const allowedTrackerUrls = (result.bill_tracker_url
+    ? [result.bill_tracker_url]
+    : parseJsonStringList(result.allowed_tracker_urls))
     .map((trackerUrl) => validateBillTrackerUrl(trackerUrl));
 
   if (!allowedOrigins.length || !allowedTrackerUrls.length) {
@@ -1102,6 +1169,12 @@ async function resolvePartnerConfig(env, value, required = false) {
     name: result.name,
     allowedOrigins,
     allowedTrackerUrls,
+    widgetVersion: result.widget_version === "full" ? "full" : "compact",
+    features: {
+      testimonyAlignment: Number(result.show_testimony_alignment ?? 1) === 1,
+      freeStateAligned: Number(result.show_free_state_aligned ?? 0) === 1,
+      tpactionAligned: Number(result.show_tpaction_aligned ?? 0) === 1,
+    },
   };
 }
 
@@ -1267,8 +1340,8 @@ function normalizeVoteSequence(value) {
 
 function normalizePreferredStance(value) {
   const text = String(value || "").trim().toLowerCase();
-  if (["yea", "yes", "y"].includes(text)) return "yea";
-  if (["nay", "no", "n"].includes(text)) return "nay";
+  if (["yea", "yes", "y", "support", "in support", "ought to pass", "otp"].includes(text)) return "yea";
+  if (["nay", "no", "n", "oppose", "opposed", "against", "itl", "inexpedient"].includes(text)) return "nay";
   return "";
 }
 
