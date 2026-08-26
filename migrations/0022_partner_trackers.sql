@@ -1,18 +1,20 @@
--- Partner-specific legislative tracker and embeddable-widget configuration.
--- The tracker URL is the published Google Sheet CSV used to calculate vote alignment.
+-- Extend the existing partner tracker registry with embeddable-widget controls.
+-- tracker_url is the published Google Sheet CSV used to calculate vote alignment.
 CREATE TABLE IF NOT EXISTS partner_trackers (
-  partner_id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  allowed_origins TEXT NOT NULL DEFAULT '[]',
-  bill_tracker_url TEXT NOT NULL,
-  widget_version TEXT NOT NULL DEFAULT 'compact' CHECK (widget_version IN ('compact', 'full')),
-  show_testimony_alignment INTEGER NOT NULL DEFAULT 1 CHECK (show_testimony_alignment IN (0, 1)),
-  show_free_state_aligned INTEGER NOT NULL DEFAULT 0 CHECK (show_free_state_aligned IN (0, 1)),
-  show_tpaction_aligned INTEGER NOT NULL DEFAULT 0 CHECK (show_tpaction_aligned IN (0, 1)),
-  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0, 1)),
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  partner_key TEXT NOT NULL UNIQUE,
+  partner_name TEXT NOT NULL,
+  tracker_url TEXT NOT NULL,
+  is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE partner_trackers ADD COLUMN allowed_origins TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE partner_trackers ADD COLUMN widget_version TEXT NOT NULL DEFAULT 'compact';
+ALTER TABLE partner_trackers ADD COLUMN show_testimony_alignment INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE partner_trackers ADD COLUMN show_free_state_aligned INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE partner_trackers ADD COLUMN show_tpaction_aligned INTEGER NOT NULL DEFAULT 0;
+
 CREATE INDEX IF NOT EXISTS idx_partner_trackers_active
-ON partner_trackers(active, partner_id);
+ON partner_trackers(is_active, partner_key);

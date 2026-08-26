@@ -1110,17 +1110,17 @@ async function resolvePartnerConfig(env, value, required = false) {
   try {
     result = await env.CIVIC_COMMONS_DB.prepare(`
     SELECT
-      partner_id,
-      name,
+      partner_key AS partner_id,
+      partner_name AS name,
       allowed_origins,
-      bill_tracker_url,
+      tracker_url AS bill_tracker_url,
       widget_version,
       show_testimony_alignment,
       show_free_state_aligned,
       show_tpaction_aligned,
-      active
+      is_active AS active
     FROM partner_trackers
-    WHERE lower(partner_id) = ?
+    WHERE lower(partner_key) = ?
     LIMIT 1
   `)
       .bind(partnerId)
