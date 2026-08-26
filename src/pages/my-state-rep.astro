@@ -1304,6 +1304,15 @@ function isVotingAction(vote = {}) {
           const expanded = card?.querySelector("[data-embed-rep-expanded]");
           if (!card || !expanded) return;
           const willOpen = expanded.hidden;
+          if (willOpen) {
+            document.querySelectorAll("[data-embed-rep-expanded]").forEach((otherExpanded) => {
+              if (otherExpanded === expanded) return;
+              otherExpanded.hidden = true;
+              otherExpanded.closest("[data-embed-rep]")
+                ?.querySelector("[data-embed-rep-toggle]")
+                ?.setAttribute("aria-expanded", "false");
+            });
+          }
           expanded.hidden = !willOpen;
           toggle.setAttribute("aria-expanded", String(willOpen));
           const url = new URL(window.location.href);
