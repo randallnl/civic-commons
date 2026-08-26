@@ -12,6 +12,7 @@ import { enrichCandidatesWithLegislators } from "../lib/candidateLegislators";
 import { civicApiBase, civicApiFetch } from "../lib/civicApi";
 import { getRepresentative, getRepresentatives, repName } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
+import { profilePhotoUrl } from "../lib/photos";
 import {
   normalizeBillCode,
   getTrackedBills,
@@ -232,6 +233,9 @@ const ward = wardNumber ? `Ward ${wardNumber}` : "";
 let houseReps = isWardedCommunity && selectedWard
   ? houseRepsRaw.filter((rep) => representsWard(rep, selectedWard))
   : houseRepsRaw;
+const embedRepresentativePreviews = isEmbed
+  ? [...senateReps, ...houseReps]
+  : [];
 let filteredHouseCandidates = isWardedCommunity && selectedWard
   ? houseCandidates.filter((candidate) => representsWard(candidate, selectedWard))
   : houseCandidates;
@@ -743,6 +747,19 @@ function validThemeColor(value, fallback) {
   const color = String(value || "").trim();
   return /^#[0-9a-f]{6}$/i.test(color) ? color : fallback;
 }
+
+function embedRepresentativeKey(rep = {}) {
+  const identifier = rep.slug || rep.personid || rep.id;
+  if (identifier) return String(identifier);
+  return repName(rep)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[''`’‘]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 ---
 
 <html lang="en">
@@ -1055,6 +1072,31 @@ function validThemeColor(value, fallback) {
                   <p>{divisionSummaryText}</p>
                 </section>
               )}
+
+              {isEmbed && embedRepresentativePreviews.length > 0 && (
+                <section class="representative-preview" aria-label="Who represents you">
+                  <div>
+                    <p class="eyebrow">Who represents you</p>
+                    <h2>Choose a legislator to see their tracked votes</h2>
+                  </div>
+                  <div class="representative-preview-list">
+                    {embedRepresentativePreviews.map((rep) => {
+                      const photo = profilePhotoUrl(rep.photo);
+                      const chamber = cleanText(rep.chamber || "Legislator");
+                      return (
+                        <button type="button" class="representative-preview-chip" data-embed-rep-jump={embedRepresentativeKey(rep)}>
+                          {photo && <img src={photo} alt="" loading="lazy" />}
+                          <span>
+                            <strong>{repName(rep)}</strong>
+                            <small>{chamber}</small>
+                          </span>
+                          <span aria-hidden="true">→</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
             </div>
           </section>
 
@@ -1328,6 +1370,18 @@ function validThemeColor(value, fallback) {
           if (!toggle) return;
           event.preventDefault();
           toggleEmbedRepresentative(toggle);
+        });
+
+        document.addEventListener("click", (event) => {
+          const jump = event.target.closest?.("[data-embed-rep-jump]");
+          if (!jump) return;
+          const targetKey = jump.dataset.embedRepJump;
+          const card = [...document.querySelectorAll("[data-embed-rep]")]
+            .find((candidate) => candidate.dataset.embedRep === targetKey);
+          const toggle = card?.querySelector("[data-embed-rep-toggle]");
+          if (!card || !toggle) return;
+          if (toggle.getAttribute("aria-expanded") !== "true") toggleEmbedRepresentative(toggle);
+          setTimeout(() => card.scrollIntoView({ behavior: "smooth", block: "start" }), 40);
         });
 
         const notifyEmbedHeight = () => {
@@ -2086,6 +2140,55 @@ function validThemeColor(value, fallback) {
   }
 
   .rep-grid--embed { grid-template-columns: 1fr; gap: 14px; }
+
+  .representative-preview {
+    border-top: 1px solid #dbe4f0;
+    margin-top: 20px;
+    padding-top: 20px;
+  }
+
+  .representative-preview h2 {
+    color: #334155;
+    font-size: 1rem;
+    margin: 4px 0 12px;
+  }
+
+  .representative-preview-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .representative-preview-chip {
+    align-items: center;
+    background: transparent;
+    border: 1px solid #dbe4f0;
+    border-radius: 999px;
+    color: #334155;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 8px;
+    padding: 6px 10px 6px 6px;
+    text-align: left;
+  }
+
+  .representative-preview-chip:hover,
+  .representative-preview-chip:focus-visible {
+    background: var(--embed-accent-soft, #e8f0f7);
+    border-color: var(--embed-accent, #3b5f8c);
+    outline: none;
+  }
+
+  .representative-preview-chip img {
+    border-radius: 50%;
+    height: 32px;
+    object-fit: cover;
+    width: 32px;
+  }
+
+  .representative-preview-chip span { display: grid; gap: 1px; }
+  .representative-preview-chip strong { font-size: .84rem; }
+  .representative-preview-chip small { color: #64748b; font-size: .68rem; }
 
   .filter-chips {
     display: flex;
