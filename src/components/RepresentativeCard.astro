@@ -14,11 +14,12 @@ import {
   representativeGradeFor,
   representativeOnlineTestimonyVotePreviews,
   representativeOnlineTestimonyVoteStance,
+  representativeVoteStance,
   testimonyAlignmentPercentForGrade,
   trackedBillForVote,
 } from "../lib/trackedBills";
 
-const { rep, trackedBills = new Map(), billSummaries = new Map() } = Astro.props;
+const { rep, trackedBills = new Map(), billSummaries = new Map(), embed = false } = Astro.props;
 
 function formatParty(party) {
   if (!party) return "Party not listed";
@@ -90,7 +91,12 @@ const name = cleanText(
 );
 const profileHref = `/people/${rep.slug || rep.personid || rep.id || slugify(name)}`;
 const photoUrl = profilePhotoUrl(rep.photo);
-const voteHistory = representativeOnlineTestimonyVotePreviews(rep, billSummaries, { limit: 3 });
+const voteHistory = embed
+  ? (rep.voteHistory || [])
+      .map((vote) => ({ vote, trackedBill: trackedBillForVote(trackedBills, vote) }))
+      .filter(({ trackedBill }) => Boolean(trackedBill?.preferredStance))
+      .map(({ vote, trackedBill }) => ({ vote, trackedBill, billSummary: billSummaryFor(vote) }))
+  : representativeOnlineTestimonyVotePreviews(rep, billSummaries, { limit: 3 });
 const grade = representativeGradeFor(rep, trackedBills, billSummaries);
 const testimonyAlignmentPercent = testimonyAlignmentPercentForGrade(grade);
 const aliases = cleanText([rep.nameAliases, rep.name_aliases].filter(Boolean).join(" "));
@@ -283,16 +289,18 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
   </div>
 
   <div class="vote-summary">
-    <span>Online Testimony Alignment</span>
+    <span>{embed ? "Partner bill tracker votes" : "Online Testimony Alignment"}</span>
 
     {voteHistory.length ? (
       <div class="vote-list">
         {voteHistory.map((preview) => {
           const vote = preview.vote;
-          const bill = trackedBillFor(vote);
+          const bill = preview.trackedBill || trackedBillFor(vote);
           const billSummary = preview.billSummary || billSummaryFor(vote);
           const billYear = billSummary?.sessionyear || vote.sessionyear;
-          const stance = representativeOnlineTestimonyVoteStance(vote, billSummary);
+          const stance = embed
+            ? representativeVoteStance(vote, bill)
+            : representativeOnlineTestimonyVoteStance(vote, billSummary);
           const voteImpact = "";
           const billTitle = billPreviewTitle(billSummary, bill);
 
@@ -300,9 +308,21 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
             <div class="vote-item">
               <div class="vote-heading">
                 <strong>
-                  <a href={billDetailPath(bill?.code || vote.condensedbillno, billYear)}>
-                    {bill?.code || vote.condensedbillno || "Bill"}
-                  </a>
+                  {embed ? (
+                    <button
+                      type="button"
+                      data-embed-bill
+                      data-bill-code={bill?.code || vote.condensedbillno || "Bill"}
+                      data-bill-preferred={bill?.preferredStance || ""}
+                      data-bill-summary={billSummary?.summary || bill?.summary || ""}
+                      data-bill-yea={bill?.yeaImpact || bill?.yeaInterpretation || ""}
+                      data-bill-nay={bill?.nayImpact || bill?.nayInterpretation || ""}
+                    >{bill?.code || vote.condensedbillno || "Bill"}</button>
+                  ) : (
+                    <a href={billDetailPath(bill?.code || vote.condensedbillno, billYear)}>
+                      {bill?.code || vote.condensedbillno || "Bill"}
+                    </a>
+                  )}
                 </strong>
                 {billTitle && (
                   <span>{billTitle}</span>

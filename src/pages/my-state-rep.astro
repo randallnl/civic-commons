@@ -6,6 +6,7 @@ import FilterBar from "../components/FilterBar.astro";
 import RepresentativeCard from "../components/RepresentativeCard.astro";
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
+import { env } from "cloudflare:workers";
 import { getBillDetail, getBillSummaries } from "../lib/billsApi";
 import { enrichCandidatesWithLegislators } from "../lib/candidateLegislators";
 import { civicApiBase, civicApiFetch } from "../lib/civicApi";
@@ -40,6 +41,7 @@ const address = Astro.url.searchParams.get("address")?.trim() || "";
 const isEmbed = ["1", "true", "yes"].includes(
   String(Astro.url.searchParams.get("embed") || "").trim().toLowerCase(),
 );
+const embedPartnerKey = Astro.url.searchParams.get("partner")?.trim().toLowerCase() || "";
 const selectedWard = normalizeWardNumber(Astro.url.searchParams.get("ward") || "");
 const filters = {
   body: Astro.url.searchParams.get("body")?.trim() || "",
@@ -72,6 +74,28 @@ let allCurrentReps = [];
 let trackedBills = new Map();
 let billSummaries = new Map();
 let directoryError = "";
+let embedTrackerUrl = "";
+let embedTrackerError = "";
+
+if (isEmbed) {
+  if (!embedPartnerKey) {
+    embedTrackerError = "This embedded tool needs a partner identifier.";
+  } else {
+    try {
+      const partner = await env.d1_db.prepare(`
+        SELECT tracker_url
+        FROM partner_trackers
+        WHERE lower(partner_key) = ? AND is_active = 1
+        LIMIT 1
+      `).bind(embedPartnerKey).first();
+      embedTrackerUrl = String(partner?.tracker_url || "").trim();
+      if (!embedTrackerUrl) embedTrackerError = "This partner does not have an active bill tracker.";
+    } catch (error) {
+      console.error(error?.message || "Unable to load partner tracker.");
+      embedTrackerError = "Unable to load this partner's bill tracker.";
+    }
+  }
+}
 
 if (address) {
   try {
@@ -132,9 +156,9 @@ if (!address && !hasDirectoryFilters) {
   directoryReps = allCurrentReps.slice(0, INITIAL_REP_PREVIEW_LIMIT);
 }
 
-if (lookupData || (hasDirectoryFilters && directoryReps.length > 0)) {
+if (!embedTrackerError && (lookupData || (hasDirectoryFilters && directoryReps.length > 0))) {
   try {
-    trackedBills = await getTrackedBills();
+    trackedBills = await getTrackedBills(isEmbed ? embedTrackerUrl : "");
     billSummaries = await getBillSummaries();
   } catch (error) {
     console.error(error?.message || "Unable to load bill summaries.");
@@ -715,6 +739,7 @@ function isVotingAction(vote = {}) {
 
         <form class="address-lookup" action="/my-state-rep#rep-results" method="get" data-results-form>
           {isEmbed && <input type="hidden" name="embed" value="1" />}
+          {isEmbed && <input type="hidden" name="partner" value={embedPartnerKey} />}
           <label for="address">Find your current State Representatives and State Senator</label>
 
           <div class="address-row">
@@ -823,6 +848,7 @@ function isVotingAction(vote = {}) {
       </section>}
 
       <div id="rep-results" data-results-region>
+      {embedTrackerError && <div class="status-message" aria-live="polite">{embedTrackerError}</div>}
       {lookupError && (
         <div class="status-message" aria-live="polite">
           {lookupError}
@@ -858,6 +884,7 @@ function isVotingAction(vote = {}) {
                     rep={rep}
                     trackedBills={trackedBills}
                     billSummaries={billSummaries}
+                    embed={isEmbed}
                   />
                 ))}
               </div>
@@ -995,6 +1022,7 @@ function isVotingAction(vote = {}) {
                       rep={rep}
                       trackedBills={trackedBills}
                       billSummaries={billSummaries}
+                      embed={isEmbed}
                     />
                   ))}
                 </div>
@@ -1022,13 +1050,14 @@ function isVotingAction(vote = {}) {
                       rep={rep}
                       trackedBills={trackedBills}
                       billSummaries={billSummaries}
+                      embed={isEmbed}
                     />
                   ))}
                 </div>
               </section>
             )}
 
-            {candidateOfficeGroups.length > 0 && (
+            {!isEmbed && candidateOfficeGroups.length > 0 && (
               <section class="candidate-results">
                 <div class="group-header">
                   <h2>2026 Legislative Candidates</h2>
@@ -1097,6 +1126,8 @@ function isVotingAction(vote = {}) {
 
         if (new URL(window.location.href).searchParams.get("embed") === "1") {
           params.set("embed", "1");
+          const partner = new URL(window.location.href).searchParams.get("partner");
+          if (partner) params.set("partner", partner);
         }
 
         return `/my-state-rep${params.toString() ? `?${params}` : ""}`;
@@ -1172,7 +1203,41 @@ function isVotingAction(vote = {}) {
       });
     </script>
     {isEmbed && (
+      <dialog class="embed-bill-dialog" data-embed-bill-dialog>
+        <form method="dialog"><button type="submit" aria-label="Close bill details">×</button></form>
+        <div data-embed-bill-content></div>
+      </dialog>
+    )}
+    {isEmbed && (
       <script>
+        const billDialog = document.querySelector("[data-embed-bill-dialog]");
+        const billDialogContent = document.querySelector("[data-embed-bill-content]");
+        const addBillDetail = (label, value) => {
+          if (!value) return;
+          const section = document.createElement("section");
+          const heading = document.createElement("strong");
+          const copy = document.createElement("p");
+          heading.textContent = label;
+          copy.textContent = value;
+          section.append(heading, copy);
+          billDialogContent?.append(section);
+        };
+
+        document.addEventListener("click", (event) => {
+          const trigger = event.target.closest?.("[data-embed-bill]");
+          if (!trigger || !billDialog || !billDialogContent) return;
+          event.preventDefault();
+          billDialogContent.replaceChildren();
+          const title = document.createElement("h2");
+          title.textContent = trigger.dataset.billCode || "Bill details";
+          billDialogContent.append(title);
+          addBillDetail("Preferred stance", trigger.dataset.billPreferred);
+          addBillDetail("Summary", trigger.dataset.billSummary);
+          addBillDetail("Yea", trigger.dataset.billYea);
+          addBillDetail("Nay", trigger.dataset.billNay);
+          billDialog.showModal();
+        });
+
         const notifyEmbedHeight = () => {
           const height = Math.ceil(Math.max(
             document.documentElement.scrollHeight || 0,
@@ -1213,6 +1278,22 @@ function isVotingAction(vote = {}) {
   :global(body.embed-mode) .help-text {
     display: none;
   }
+
+  .embed-bill-dialog {
+    border: 0;
+    border-radius: 14px;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.35);
+    color: #1f2933;
+    max-width: min(640px, calc(100vw - 32px));
+    padding: 24px;
+  }
+
+  .embed-bill-dialog::backdrop { background: rgba(15, 23, 42, 0.5); }
+  .embed-bill-dialog form { display: flex; justify-content: end; }
+  .embed-bill-dialog button { border: 0; background: transparent; cursor: pointer; font-size: 1.8rem; }
+  .embed-bill-dialog h2 { margin: 0 0 16px; }
+  .embed-bill-dialog section { border-top: 1px solid #e2e8f0; padding: 12px 0; }
+  .embed-bill-dialog p { line-height: 1.5; margin: 6px 0 0; }
 
   .hero {
     align-items: center;
