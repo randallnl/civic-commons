@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "civic-widget-v2",
+  "main": "src/lib/nhCivicsApiWorker.js",
+  "compatibility_date": "2026-08-26",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nhdb",
+      "database_id": "e72f4c03-671f-47d5-8f70-a6792ba8f6c0"
+    },
+    {
+      "binding": "CIVIC_COMMONS_DB",
+      "database_name": "nhdb",
+      "database_id": "e72f4c03-671f-47d5-8f70-a6792ba8f6c0"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "LEGISLATOR_PHOTOS",
+      "bucket_name": "nhdeservesbetter-legislator-photos"
+    }
+  ]
+}
