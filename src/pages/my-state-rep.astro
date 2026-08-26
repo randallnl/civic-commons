@@ -1269,10 +1269,14 @@ function isVotingAction(vote = {}) {
           const title = document.createElement("h2");
           title.textContent = trigger.dataset.billCode || "Bill details";
           billDialogContent.append(title);
+          addBillDetail("Legislator vote", trigger.dataset.billVote);
+          addBillDetail("What this vote means", trigger.dataset.billVoteExplanation);
           addBillDetail("Preferred stance", trigger.dataset.billPreferred);
           addBillDetail("Summary", trigger.dataset.billSummary);
-          addBillDetail("Yea", trigger.dataset.billYea);
-          addBillDetail("Nay", trigger.dataset.billNay);
+          if (!trigger.dataset.billVoteExplanation) {
+            addBillDetail("If voting yea", trigger.dataset.billYea);
+            addBillDetail("If voting nay", trigger.dataset.billNay);
+          }
           billDialog.showModal();
         });
 

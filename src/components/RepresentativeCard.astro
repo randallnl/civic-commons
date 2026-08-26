@@ -195,6 +195,16 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
       "",
   );
 }
+
+function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
+  const voteValue = String(vote.vote || vote.vote_label || vote.vote_code || "").trim().toLowerCase();
+  const isYea = ["1", "yea", "yes", "y", "in support", "support"].includes(voteValue) || voteValue.includes("support");
+  const isNay = ["2", "nay", "no", "n", "opposed", "oppose", "against"].includes(voteValue) || voteValue.includes("oppose") || voteValue.includes("against");
+
+  if (isYea) return trackedBill.yeaInterpretation || "";
+  if (isNay) return trackedBill.nayInterpretation || "";
+  return "";
+}
 ---
 
 <article
@@ -354,6 +364,7 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
             : representativeOnlineTestimonyVoteStance(vote, billSummary);
           const voteImpact = "";
           const billTitle = billPreviewTitle(billSummary, bill);
+          const voteInterpretation = voteInterpretationForEmbed(vote, bill);
 
           if (embed) {
             return (
@@ -363,10 +374,12 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
                   class:list={["tracker-vote-pill", stance.className]}
                   data-embed-bill
                   data-bill-code={bill?.code || vote.condensedbillno || "Bill"}
+                  data-bill-vote={stance.label}
+                  data-bill-vote-explanation={voteInterpretation}
                   data-bill-preferred={bill?.preferredStance || ""}
                   data-bill-summary={billSummary?.summary || bill?.summary || ""}
-                  data-bill-yea={bill?.yeaImpact || bill?.yeaInterpretation || ""}
-                  data-bill-nay={bill?.nayImpact || bill?.nayInterpretation || ""}
+                  data-bill-yea={bill?.yeaInterpretation || bill?.yeaImpact || ""}
+                  data-bill-nay={bill?.nayInterpretation || bill?.nayImpact || ""}
                 >
                   <strong>{bill?.code || vote.condensedbillno || "Bill"} · {stance.label}</strong>
                   {billTitle && <span>{billTitle}</span>}
@@ -384,10 +397,12 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
                       type="button"
                       data-embed-bill
                       data-bill-code={bill?.code || vote.condensedbillno || "Bill"}
+                      data-bill-vote={stance.label}
+                      data-bill-vote-explanation={voteInterpretation}
                       data-bill-preferred={bill?.preferredStance || ""}
                       data-bill-summary={billSummary?.summary || bill?.summary || ""}
-                      data-bill-yea={bill?.yeaImpact || bill?.yeaInterpretation || ""}
-                      data-bill-nay={bill?.nayImpact || bill?.nayInterpretation || ""}
+                      data-bill-yea={bill?.yeaInterpretation || bill?.yeaImpact || ""}
+                      data-bill-nay={bill?.nayInterpretation || bill?.nayImpact || ""}
                     >{bill?.code || vote.condensedbillno || "Bill"}</button>
                   ) : (
                     <a href={billDetailPath(bill?.code || vote.condensedbillno, billYear)}>
