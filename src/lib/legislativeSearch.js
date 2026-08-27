@@ -14,6 +14,67 @@ export const WARD_COMMUNITY_COUNTS = new Map([
   ["somersworth", 5],
 ]);
 
+export const LEGISLATIVE_COUNTY_OPTIONS = [
+  "Belknap",
+  "Carroll",
+  "Cheshire",
+  "Coos",
+  "Grafton",
+  "Hillsborough",
+  "Merrimack",
+  "Rockingham",
+  "Strafford",
+  "Sullivan",
+];
+
+export const LEGISLATIVE_OFFICE_OPTIONS = [
+  "State Representative",
+  "State Senate",
+];
+
+export function normalizeLegislativeSearchFilters(source = {}) {
+  const value = (key) => {
+    if (source instanceof URLSearchParams) return source.get(key)?.trim() || "";
+    return String(source?.[key] || "").trim();
+  };
+  const legacyBody = value("body");
+
+  return {
+    address: value("address"),
+    ward: normalizeWardNumber(value("ward")),
+    name: value("name"),
+    county: value("county"),
+    district: value("district"),
+    office: normalizeLegislativeOffice(value("office") || legacyBody),
+    town: value("town"),
+    sort: value("sort"),
+  };
+}
+
+export function normalizeLegislativeOffice(value = "") {
+  const normalized = normalizedSearchText(value);
+  if (!normalized || normalized === "all") return "";
+  if (normalized === "h" || normalized === "house" || /representative|state house/.test(normalized)) {
+    return "State Representative";
+  }
+  if (normalized === "s" || normalized === "senate" || /senator|state senate/.test(normalized)) {
+    return "State Senate";
+  }
+  return String(value || "").trim();
+}
+
+export function legislativeBodyFromOffice(value = "") {
+  const office = normalizeLegislativeOffice(value);
+  if (office === "State Representative") return "house";
+  if (office === "State Senate") return "senate";
+  return "";
+}
+
+export function hasLegislativeSearchFilters(filters = {}) {
+  return ["address", "ward", "name", "county", "district", "office", "town"]
+    .some((key) => String(filters?.[key] || "").trim());
+}
+
 export function normalizeWardNumber(value = "") {
   const match = String(value || "").match(/\d+/);
   return match ? String(Number(match[0])) : "";
@@ -164,6 +225,30 @@ export function filterLegislativeRecordsByTown(items = [], townName = "") {
   );
 }
 
+export function filterLegislativeSearchResults(items = [], filters = {}) {
+  const normalized = normalizeLegislativeSearchFilters(filters);
+  const name = normalizedSearchText(normalized.name);
+  const county = normalizedSearchText(normalized.county);
+  const district = normalizedSearchText(normalized.district).replace(/^district\s+/, "");
+  const officeBody = legislativeBodyFromOffice(normalized.office);
+
+  return filterLegislativeRecordsByWard(
+    filterLegislativeRecordsByTown(items, normalized.town).filter((record) => {
+      if (name && !normalizedSearchText(recordName(record)).includes(name)) return false;
+      if (county && !recordCountyValues(record).some((value) => normalizedSearchText(value).includes(county))) {
+        return false;
+      }
+      if (district && !recordDistrictValues(record).some((value) => {
+        const candidate = normalizedSearchText(value).replace(/^district\s+/, "");
+        return candidate === district || candidate.endsWith(` ${district}`);
+      })) return false;
+      if (officeBody && recordLegislativeBody(record) !== officeBody) return false;
+      return true;
+    }),
+    normalized.ward,
+  );
+}
+
 export function normalizeTownOption(value = "") {
   return String(value || "")
     .replace(/\s*-?\s*Wards?\s+.*$/i, "")
@@ -172,4 +257,76 @@ export function normalizeTownOption(value = "") {
 
 function escapeRegExp(value = "") {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizedSearchText(value = "") {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function recordName(record = {}) {
+  return [
+    record.name,
+    record.fullName,
+    record.candidateName,
+    record.candidate_name,
+    record.candidate_name_raw,
+    record.candidateFirstName,
+    record.candidateLastName,
+    record.candidate_first_name,
+    record.candidate_last_name,
+    record.firstname,
+    record.lastname,
+    record.nameAliases,
+    record.name_aliases,
+  ].flatMap(stringifyLegislativeValue).join(" ");
+}
+
+function recordCountyValues(record = {}) {
+  return [
+    record.county,
+    record.countyName,
+    record.county_name,
+    record.countiesRepresented,
+    record.counties_represented,
+    record.locationText,
+    record.location_text,
+    countyNameForCode(record.countycode || record.source_county_id),
+  ].flatMap(stringifyLegislativeValue);
+}
+
+function recordDistrictValues(record = {}) {
+  return [
+    record.district,
+    record.raw_district,
+    record.districtLabel,
+    record.district_label,
+  ].flatMap(stringifyLegislativeValue);
+}
+
+function recordLegislativeBody(record = {}) {
+  const body = normalizedSearchText(record.body || record.legislativebody || record.chamber);
+  if (body === "h" || body === "house") return "house";
+  if (body === "s" || body === "senate") return "senate";
+  return legislativeBodyFromOffice(record.office || record.officeType);
+}
+
+function countyNameForCode(value = "") {
+  const code = String(value || "").padStart(2, "0");
+  return {
+    "01": "Belknap",
+    "02": "Carroll",
+    "03": "Cheshire",
+    "04": "Coos",
+    "05": "Grafton",
+    "06": "Hillsborough",
+    "07": "Merrimack",
+    "08": "Rockingham",
+    "09": "Strafford",
+    "10": "Sullivan",
+  }[code] || "";
 }

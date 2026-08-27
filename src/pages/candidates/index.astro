@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import CandidateCard from "../../components/CandidateCard.astro";
-import FilterBar from "../../components/FilterBar.astro";
+import LegislativeSearchFilters from "../../components/LegislativeSearchFilters.astro";
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import {
@@ -18,6 +18,9 @@ import { getCommunities, getTownCommunity } from "../../lib/communitiesApi";
 import {
   filterLegislativeRecordsByTown as filterCandidatesByTown,
   filterLegislativeRecordsByWard as filterCandidatesByWard,
+  filterLegislativeSearchResults,
+  hasLegislativeSearchFilters,
+  normalizeLegislativeSearchFilters,
   normalizeWardNumber,
   representedTownsFromValue as townsFromValue,
   representsWard,
@@ -26,33 +29,12 @@ import {
 
 const API_BASE = civicApiBase();
 
-const address = Astro.url.searchParams.get("address")?.trim() || "";
-const selectedWard = normalizeWardNumber(Astro.url.searchParams.get("ward") || "");
-const county = Astro.url.searchParams.get("county")?.trim() || "";
-const district = Astro.url.searchParams.get("district")?.trim() || "";
-const name = Astro.url.searchParams.get("name")?.trim() || "";
-const office = Astro.url.searchParams.get("office")?.trim() || "";
-const town = Astro.url.searchParams.get("town")?.trim() || "";
-const sort = Astro.url.searchParams.get("sort")?.trim() || "";
+const searchFilters = normalizeLegislativeSearchFilters(Astro.url.searchParams);
+const { address, county, district, name, office, town, sort } = searchFilters;
+const selectedWard = searchFilters.ward;
 const electionYear = "2026";
 const INITIAL_CANDIDATE_PREVIEW_LIMIT = 12;
-const officeOptions = [
-  "State Representative",
-  "State Senate",
-];
-const selectedOffice = officeOptions.find((option) => option.toLowerCase() === office.toLowerCase()) || "";
-const countyOptions = [
-  "Belknap",
-  "Carroll",
-  "Cheshire",
-  "Coos",
-  "Grafton",
-  "Hillsborough",
-  "Merrimack",
-  "Rockingham",
-  "Strafford",
-  "Sullivan",
-];
+const selectedOffice = office;
 
 let candidates = [];
 let meta = {};
@@ -165,10 +147,10 @@ try {
   error = loadError?.message || "Unable to load candidates.";
 }
 
-const visibleCandidates = selectedOffice
-  ? filterCandidatesByOffice(candidates, selectedOffice)
-  : filterLegislativeCandidates(candidates);
-candidates = prioritizeLegislativeCandidates(filterCandidatesByName(visibleCandidates, name));
+const visibleCandidates = filterLegislativeCandidates(candidates);
+candidates = prioritizeLegislativeCandidates(
+  filterLegislativeSearchResults(visibleCandidates, searchFilters),
+);
 candidates = await enrichCandidatesWithLegislators(candidates);
 
 try {
@@ -183,7 +165,7 @@ try {
   townOptions = town ? [town] : [];
 }
 
-const hasFilters = address || county || district || selectedOffice || town || name;
+const hasFilters = hasLegislativeSearchFilters(searchFilters);
 const resultCount = candidates.length;
 const addressOfficeGroups = address ? groupCandidatesByOfficeDistrict(candidates) : [];
 const addressSeatTotal = totalSeats(addressOfficeGroups);
@@ -478,32 +460,6 @@ function looksLikeCandidate(value) {
       value.electionYear
     )
   );
-}
-
-function filterCandidatesByOffice(items = [], selectedOffice = "") {
-  const officeFilter = selectedOffice.trim().toLowerCase();
-  if (!officeFilter) return items;
-
-  return items.filter((candidate) =>
-    String(candidate.office || "")
-      .trim()
-      .toLowerCase()
-      .includes(officeFilter),
-  );
-}
-
-function filterCandidatesByName(items = [], filter = "") {
-  const nameFilter = normalizeSearch(filter);
-  if (!nameFilter) return items;
-
-  return items.filter((candidate) => {
-    const searchableName = [
-      candidateName(candidate),
-      candidate.nameAliases,
-      candidate.name_aliases,
-    ].filter(Boolean).join(" ");
-    return normalizeSearch(searchableName).includes(nameFilter);
-  });
 }
 
 function normalizeSearch(value = "") {
@@ -838,90 +794,14 @@ function uniqueOptions(values = []) {
         </form>
       </section>
 
-      <section class="candidate-filter-panel" aria-label="Candidate filters">
-        <FilterBar
-          action="/candidates"
-          submitLabel="Filter candidates"
-          clearHref={hasFilters ? "/candidates" : ""}
-          dataResultsForm
-          live
-        >
-          <label>
-            <span>Name</span>
-            <input
-              type="search"
-              name="name"
-              value={name}
-              list="candidateNameOptions"
-              placeholder="Start typing a candidate"
-              autocomplete="off"
-              data-fuzzy-search
-            />
-            <datalist id="candidateNameOptions">
-              {nameOptions.map((option) => <option value={option} />)}
-            </datalist>
-          </label>
-          <label>
-            <span>County</span>
-            <input
-              type="search"
-              name="county"
-              value={county}
-              list="candidateCountyOptions"
-              placeholder="Start typing a county"
-              autocomplete="off"
-              data-fuzzy-filter-field
-              data-fuzzy-field="county"
-            />
-            <datalist id="candidateCountyOptions">
-              {countyOptions.map((option) => <option value={option} />)}
-            </datalist>
-          </label>
-          <label>
-            <span>Office</span>
-            <input
-              type="search"
-              name="office"
-              value={selectedOffice || office}
-              list="candidateOfficeOptions"
-              placeholder="State Representative or State Senate"
-              autocomplete="off"
-              data-fuzzy-filter-field
-              data-fuzzy-field="office"
-            />
-            <datalist id="candidateOfficeOptions">
-              {officeOptions.map((option) => <option value={option} />)}
-            </datalist>
-          </label>
-          <label>
-            <span>Town</span>
-            <input
-              type="search"
-              name="town"
-              value={town}
-              list="candidateTownOptions"
-              placeholder="Start typing a town"
-              autocomplete="off"
-              data-fuzzy-filter-field
-              data-fuzzy-field="town"
-            />
-            <datalist id="candidateTownOptions">
-              {townOptions.map((option) => <option value={option} />)}
-            </datalist>
-          </label>
-          <label>
-            <span>Sort</span>
-            <select name="sort" data-fuzzy-sort>
-              <option value="" selected={!sort}>Default</option>
-              <option value="name:asc" selected={sort === "name:asc"}>Name A-Z</option>
-              <option value="district:asc" selected={sort === "district:asc"}>District</option>
-              <option value="updated:desc" selected={sort === "updated:desc"}>Recently updated</option>
-              <option value="missing:desc" selected={sort === "missing:desc"}>Missing photo/email/website</option>
-            </select>
-          </label>
-        </FilterBar>
-        <div class="filter-chips" data-fuzzy-chips hidden></div>
-      </section>
+      <LegislativeSearchFilters
+        action="/candidates"
+        resultType="candidates"
+        values={searchFilters}
+        nameOptions={nameOptions}
+        townOptions={townOptions}
+        clearHref={hasFilters ? "/candidates" : ""}
+      />
 
       {error ? (
         <p class="status-message">{error}</p>
@@ -1067,92 +947,6 @@ function uniqueOptions(values = []) {
         </section>
       )}
     </main>
-    <script>
-      const resultsRegion = document.querySelector("[data-results-region]");
-      const filterForm = document.querySelector("[data-fuzzy-live-form]");
-      let filterTimeout = 0;
-      let latestRequestId = 0;
-
-      function resultsUrlFor(form) {
-        const formData = new FormData(form);
-        const params = new URLSearchParams();
-
-        for (const [key, value] of formData.entries()) {
-          const text = String(value || "").trim();
-          if (text && text.toLowerCase() !== "all") params.set(key, text);
-        }
-
-        return `/candidates${params.toString() ? `?${params}` : ""}`;
-      }
-
-      async function loadResultsFromForm(form, { push = true, scroll = true } = {}) {
-        if (!resultsRegion) return false;
-
-        const submitButton = form.querySelector("button[type='submit']");
-        const originalText = submitButton?.textContent || "";
-        const url = resultsUrlFor(form);
-        const requestId = latestRequestId + 1;
-        latestRequestId = requestId;
-        if (submitButton && scroll) {
-          submitButton.disabled = true;
-          submitButton.textContent = "Loading...";
-        }
-
-        try {
-          const response = await fetch(url, { headers: { "x-requested-with": "fetch" } });
-          if (!response.ok) throw new Error("Unable to load results.");
-
-          const html = await response.text();
-          const doc = new DOMParser().parseFromString(html, "text/html");
-          const nextResults = doc.querySelector("[data-results-region]");
-          if (!nextResults) throw new Error("Unable to load results.");
-          if (requestId !== latestRequestId) return false;
-
-          resultsRegion.innerHTML = nextResults.innerHTML;
-          resultsRegion.closest("[x-data]")?.dispatchEvent(new CustomEvent("nhdb:fuzzy-refresh", { bubbles: true }));
-
-          if (push) {
-            window.history.pushState({}, "", url);
-          } else {
-            window.history.replaceState({}, "", url);
-          }
-          if (scroll) resultsRegion.scrollIntoView({ behavior: "smooth", block: "start" });
-          return true;
-        } catch (error) {
-          if (scroll) window.location.href = url;
-          return false;
-        } finally {
-          if (submitButton && scroll) {
-            submitButton.disabled = false;
-            submitButton.textContent = originalText;
-          }
-        }
-      }
-
-      document.addEventListener("submit", async (event) => {
-        const form = event.target;
-        if (!(form instanceof HTMLFormElement) || !form.matches("[data-results-form]") || !resultsRegion) {
-          return;
-        }
-
-        event.preventDefault();
-        await loadResultsFromForm(form, { push: true, scroll: true });
-      });
-
-      filterForm?.addEventListener("input", () => {
-        window.clearTimeout(filterTimeout);
-        filterTimeout = window.setTimeout(() => {
-          loadResultsFromForm(filterForm, { push: false, scroll: false });
-        }, 260);
-      });
-
-      filterForm?.addEventListener("change", () => {
-        window.clearTimeout(filterTimeout);
-        filterTimeout = window.setTimeout(() => {
-          loadResultsFromForm(filterForm, { push: false, scroll: false });
-        }, 120);
-      });
-    </script>
     <SiteFooter />
   </body>
 </html>

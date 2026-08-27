@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 
-import FilterBar from "../components/FilterBar.astro";
+import LegislativeSearchFilters from "../components/LegislativeSearchFilters.astro";
 import RepresentativeCard from "../components/RepresentativeCard.astro";
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
@@ -9,13 +9,16 @@ import { env } from "cloudflare:workers";
 import { getBillDetail, getBillSummaries } from "../lib/billsApi";
 import { civicApiBase, civicApiFetch } from "../lib/civicApi";
 import {
-  filterLegislativeRecordsByTown,
   filterLegislativeRecordsByWard,
+  filterLegislativeSearchResults,
+  hasLegislativeSearchFilters,
+  legislativeBodyFromOffice,
+  normalizeLegislativeSearchFilters,
   normalizeWardNumber,
   representedTownsFromValue,
   wardOptionsFor,
 } from "../lib/legislativeSearch";
-import { getRepresentative, getRepresentatives, repName } from "../lib/repsApi";
+import { getRepresentatives, repName } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import { profilePhotoUrl } from "../lib/photos";
 import {
@@ -26,36 +29,27 @@ import {
 
 const API_BASE = civicApiBase();
 const INITIAL_REP_PREVIEW_LIMIT = 36;
-const FILTERED_REP_LIMIT = 160;
-const REP_OPTION_LIMIT = 240;
-const address = Astro.url.searchParams.get("address")?.trim() || "";
+const FILTERED_REP_LIMIT = 600;
+const REP_OPTION_LIMIT = 600;
+const searchFilters = normalizeLegislativeSearchFilters(Astro.url.searchParams);
+const address = searchFilters.address;
 const isEmbed = ["1", "true", "yes"].includes(
   String(Astro.url.searchParams.get("embed") || "").trim().toLowerCase(),
 );
 const embedPartnerKey = Astro.url.searchParams.get("partner")?.trim().toLowerCase() || "";
 const embedOpenRep = Astro.url.searchParams.get("open")?.trim() || "";
-const selectedWard = normalizeWardNumber(Astro.url.searchParams.get("ward") || "");
-const filters = {
-  body: Astro.url.searchParams.get("body")?.trim() || "",
-  name: Astro.url.searchParams.get("name")?.trim() || "",
-  town: Astro.url.searchParams.get("town")?.trim() || "",
-  county: Astro.url.searchParams.get("county")?.trim() || "",
-};
-const sort = Astro.url.searchParams.get("sort")?.trim() || "";
-const normalizedBodyFilter = normalizeBodyFilter(filters.body);
-const hasDirectoryFilters = Object.values(filters).some(Boolean);
-const countyOptions = [
-  "Belknap",
-  "Carroll",
-  "Cheshire",
-  "Coos",
-  "Grafton",
-  "Hillsborough",
-  "Merrimack",
-  "Rockingham",
-  "Strafford",
-  "Sullivan",
-];
+const legislatorClearHref = isEmbed
+  ? `/my-state-rep?embed=1${embedPartnerKey ? `&partner=${encodeURIComponent(embedPartnerKey)}` : ""}#rep-results`
+  : "/my-state-rep#rep-results";
+const selectedWard = searchFilters.ward;
+const filters = searchFilters;
+const sort = searchFilters.sort;
+const normalizedBodyFilter = legislativeBodyFromOffice(filters.office);
+const hasDirectoryFilters = hasLegislativeSearchFilters({
+  ...searchFilters,
+  address: "",
+  ward: "",
+});
 
 let lookupData = null;
 let lookupError = "";
@@ -124,7 +118,10 @@ if (isEmbed) {
 
 if (address) {
   try {
-    const response = await civicApiFetch(`${API_BASE}/reps/lookup`, {
+    // The lookup payload already includes the profile fields and cached alignment
+    // data used by RepresentativeCard. Keep only a bounded vote sample so an
+    // address with several House members cannot exhaust the Worker's render budget.
+    const response = await civicApiFetch(`${API_BASE}/reps/lookup?voteLimit=24`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -170,10 +167,10 @@ if (!address && hasDirectoryFilters) {
       limit: filters.town ? 600 : FILTERED_REP_LIMIT,
     });
 
-    const matchedReps = (repData.representatives || []).filter((rep) => matchesDirectoryFilters(rep, filters));
+    const matchedReps = filterLegislativeSearchResults(repData.representatives || [], filters);
     const fallbackReps = matchedReps.length
       ? matchedReps
-      : allCurrentReps.filter((rep) => matchesDirectoryFilters(rep, filters));
+      : filterLegislativeSearchResults(allCurrentReps, filters);
 
     directoryReps = fallbackReps;
   } catch (error) {
@@ -237,13 +234,6 @@ const divisionSummaryText = address
     })
   : "";
 
-if (lookupData) {
-  [senateReps, houseReps] = await Promise.all([
-    hydrateVotePreviewDetails(senateReps),
-    hydrateVotePreviewDetails(houseReps),
-  ]);
-}
-
 if (lookupData && trackedBills.size) {
   await hydrateMissingBillSummaries([...senateReps, ...houseReps], billSummaries);
 }
@@ -252,76 +242,6 @@ if (!lookupData && directoryReps.length > 0 && trackedBills.size) {
   await hydrateMissingBillSummaries(directoryReps, billSummaries, {
     limit: hasDirectoryFilters ? 400 : 220,
   });
-}
-
-async function hydrateVotePreviewDetails(reps = []) {
-  const previewLimit = 80;
-  const previewReps = reps.slice(0, previewLimit);
-  const hydrated = await Promise.all(
-    previewReps.map(async (rep) => {
-      const slugOrId = rep.personid || rep.id || rep.slug || repName(rep);
-      if (!slugOrId) return rep;
-
-      try {
-        const data = await getRepresentative(slugOrId);
-        return {
-          ...rep,
-          ...(data.representative || data.rep || data.person || data),
-          voteHistory: data.voteHistory || data.votes || data.representative?.voteHistory || rep.voteHistory || [],
-        };
-      } catch (error) {
-        console.error(error?.message || "Unable to hydrate representative vote preview.");
-        return rep;
-      }
-    }),
-  );
-
-  return [...hydrated, ...reps.slice(previewLimit)];
-}
-
-function normalizeBodyFilter(value = "") {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "house" || normalized === "h") return "house";
-  if (normalized === "senate" || normalized === "s") return "senate";
-  return "";
-}
-
-function matchesDirectoryFilters(rep = {}, values = {}) {
-  return (
-    matchesBody(rep, values.body) &&
-    matchesText([repName(rep), rep.nameAliases, rep.name_aliases].filter(Boolean).join(" "), values.name) &&
-    (!values.town || filterLegislativeRecordsByTown([rep], values.town).length > 0) &&
-    matchesCounty(rep, values.county)
-  );
-}
-
-function matchesBody(rep = {}, query = "") {
-  const normalized = normalizeBodyFilter(query);
-  if (!normalized) return true;
-  return legislativeBody(rep).toLowerCase() === (normalized === "house" ? "house" : "senate");
-}
-
-function matchesCounty(record = {}, query = "") {
-  if (!query) return true;
-  return matchesText([
-    record.county,
-    record.countyName,
-    record.county_name,
-    countyNameForCode(record.countycode),
-    locationLabel(record),
-  ].filter(Boolean).join(" "), query);
-}
-
-function matchesText(source = "", query = "") {
-  if (!query) return true;
-  return normalizeSearch(source).includes(normalizeSearch(query));
-}
-
-function normalizeSearch(value = "") {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
 }
 
 function countyNameForCode(code = "") {
@@ -721,88 +641,16 @@ function embedRepresentativeKey(rep = {}) {
         </p>
       </section>
 
-      {!isEmbed && <section class="legislator-filter-panel" aria-label="Legislator filters">
-        <FilterBar
-          action="/my-state-rep#rep-results"
-          submitLabel="Filter current legislators"
-          clearHref={hasDirectoryFilters ? "/my-state-rep#rep-results" : ""}
-          dataResultsForm
-          live
-        >
-          <label>
-            <span>Name</span>
-            <input
-              type="search"
-              name="name"
-              value={filters.name}
-              list="legislatorNameOptions"
-              placeholder="Start typing a legislator"
-              autocomplete="off"
-              data-fuzzy-search
-            />
-            <datalist id="legislatorNameOptions">
-              {nameOptions.map((option) => <option value={option} />)}
-            </datalist>
-          </label>
-          <label>
-            <span>County</span>
-            <input
-              type="search"
-              name="county"
-              value={filters.county}
-              list="legislatorCountyOptions"
-              placeholder="Start typing a county"
-              autocomplete="off"
-              data-fuzzy-filter-field
-              data-fuzzy-field="county"
-            />
-            <datalist id="legislatorCountyOptions">
-              {countyOptions.map((option) => <option value={option} />)}
-            </datalist>
-          </label>
-          <label>
-            <span>Chamber</span>
-            <select
-              name="body"
-              data-fuzzy-filter-field
-              data-fuzzy-field="body"
-            >
-              <option value="" selected={!normalizedBodyFilter}>All</option>
-              <option value="house" selected={normalizedBodyFilter === "house"}>House</option>
-              <option value="senate" selected={normalizedBodyFilter === "senate"}>Senate</option>
-            </select>
-          </label>
-          <label>
-            <span>Town</span>
-            <input
-              type="search"
-              name="town"
-              value={filters.town}
-              list="legislatorTownOptions"
-              placeholder="Start typing a town"
-              autocomplete="off"
-              data-fuzzy-filter-field
-              data-fuzzy-field="town"
-            />
-            <datalist id="legislatorTownOptions">
-              {townOptions.map((option) => <option value={option} />)}
-            </datalist>
-          </label>
-          <label>
-            <span>Sort</span>
-            <select name="sort" data-fuzzy-sort>
-              <option value="" selected={!sort}>Default</option>
-              <option value="name:asc" selected={sort === "name:asc"}>Name A-Z</option>
-              <option value="district:asc" selected={sort === "district:asc"}>District</option>
-              <option value="grade:desc" selected={sort === "grade:desc"}>Grade high-low</option>
-              <option value="grade:asc" selected={sort === "grade:asc"}>Grade low-high</option>
-              <option value="updated:desc" selected={sort === "updated:desc"}>Recently updated</option>
-              <option value="missing:desc" selected={sort === "missing:desc"}>Missing info</option>
-            </select>
-          </label>
-        </FilterBar>
-        <div class="filter-chips" data-fuzzy-chips hidden></div>
-      </section>}
+      <LegislativeSearchFilters
+        action="/my-state-rep"
+        resultType="current-legislators"
+        values={searchFilters}
+        nameOptions={nameOptions}
+        townOptions={townOptions}
+        clearHref={hasDirectoryFilters ? legislatorClearHref : ""}
+        resultsAnchor="rep-results"
+        preserveEmbedParams={isEmbed}
+      />
 
       <div id="rep-results" data-results-region>
       {embedTrackerError && <div class="status-message" aria-live="polite">{embedTrackerError}</div>}
@@ -818,7 +666,7 @@ function embedRepresentativeKey(rep = {}) {
         </div>
       )}
 
-      {!isEmbed && !address && (
+      {!address && (!isEmbed || hasDirectoryFilters) && (
         <section class="filtered-directory">
           <div class="results-heading">
             <div>
@@ -828,7 +676,7 @@ function embedRepresentativeKey(rep = {}) {
                 <span data-fuzzy-matched-count>{directoryReps.length}</span> loaded matches
               </p>
             </div>
-            {hasDirectoryFilters && <a class="secondary-link" href="/my-state-rep#rep-results">Clear filters</a>}
+            {hasDirectoryFilters && <a class="secondary-link" href={legislatorClearHref}>Clear filters</a>}
           </div>
 
           {directoryError ? (
@@ -1067,99 +915,6 @@ function embedRepresentativeKey(rep = {}) {
       )}
       </div>
     </main>
-    <script>
-      const resultsRegion = document.querySelector("[data-results-region]");
-      const filterForm = document.querySelector("[data-fuzzy-live-form]");
-      let filterTimeout = 0;
-      let latestRequestId = 0;
-
-      function resultsUrlFor(form) {
-        const formData = new FormData(form);
-        const params = new URLSearchParams();
-
-        for (const [key, value] of formData.entries()) {
-          const text = String(value || "").trim();
-          if (text && text.toLowerCase() !== "all") params.set(key, text);
-        }
-
-        if (new URL(window.location.href).searchParams.get("embed") === "1") {
-          params.set("embed", "1");
-          const partner = new URL(window.location.href).searchParams.get("partner");
-          if (partner) params.set("partner", partner);
-        }
-
-        return `/my-state-rep${params.toString() ? `?${params}` : ""}`;
-      }
-
-      async function loadResultsFromForm(form, { push = true, scroll = true } = {}) {
-        if (!resultsRegion) return false;
-
-        const submitButton = form.querySelector("button[type='submit']");
-        const originalText = submitButton?.textContent || "";
-        const url = resultsUrlFor(form);
-        const requestId = latestRequestId + 1;
-        latestRequestId = requestId;
-        if (submitButton && scroll) {
-          submitButton.disabled = true;
-          submitButton.textContent = "Loading...";
-        }
-
-        try {
-          const response = await fetch(url, { headers: { "x-requested-with": "fetch" } });
-          if (!response.ok) throw new Error("Unable to load results.");
-
-          const html = await response.text();
-          const doc = new DOMParser().parseFromString(html, "text/html");
-          const nextResults = doc.querySelector("[data-results-region]");
-          if (!nextResults) throw new Error("Unable to load results.");
-          if (requestId !== latestRequestId) return false;
-
-          resultsRegion.innerHTML = nextResults.innerHTML;
-          resultsRegion.closest("[x-data]")?.dispatchEvent(new CustomEvent("nhdb:fuzzy-refresh", { bubbles: true }));
-
-          const nextUrl = `${url}#rep-results`;
-          if (push) {
-            window.history.pushState({}, "", nextUrl);
-          } else {
-            window.history.replaceState({}, "", nextUrl);
-          }
-          if (scroll) resultsRegion.scrollIntoView({ behavior: "smooth", block: "start" });
-          return true;
-        } catch (error) {
-          if (scroll) window.location.href = `${url}#rep-results`;
-          return false;
-        } finally {
-          if (submitButton && scroll) {
-            submitButton.disabled = false;
-            submitButton.textContent = originalText;
-          }
-        }
-      }
-
-      document.addEventListener("submit", async (event) => {
-        const form = event.target;
-        if (!(form instanceof HTMLFormElement) || !form.matches("[data-results-form]") || !resultsRegion) {
-          return;
-        }
-
-          event.preventDefault();
-          await loadResultsFromForm(form, { push: true, scroll: true });
-      });
-
-      filterForm?.addEventListener("input", () => {
-        window.clearTimeout(filterTimeout);
-        filterTimeout = window.setTimeout(() => {
-          loadResultsFromForm(filterForm, { push: false, scroll: false });
-        }, 260);
-      });
-
-      filterForm?.addEventListener("change", () => {
-        window.clearTimeout(filterTimeout);
-        filterTimeout = window.setTimeout(() => {
-          loadResultsFromForm(filterForm, { push: false, scroll: false });
-        }, 120);
-      });
-    </script>
     {isEmbed && (
       <dialog class="embed-bill-dialog" data-embed-bill-dialog>
         <div class="embed-bill-dialog-header">

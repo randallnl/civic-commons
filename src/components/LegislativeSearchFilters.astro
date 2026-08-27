@@ -1,0 +1,253 @@
+---
+import FilterBar from "./FilterBar.astro";
+import {
+  LEGISLATIVE_COUNTY_OPTIONS,
+  LEGISLATIVE_OFFICE_OPTIONS,
+  normalizeLegislativeSearchFilters,
+} from "../lib/legislativeSearch";
+
+const {
+  action,
+  resultType = "candidates",
+  values = {},
+  nameOptions = [],
+  townOptions = [],
+  clearHref = "",
+  resultsAnchor = "",
+  preserveEmbedParams = false,
+} = Astro.props;
+
+const filters = normalizeLegislativeSearchFilters(values);
+const isCurrentLegislators = resultType === "current-legislators";
+const submitLabel = isCurrentLegislators
+  ? "Filter current legislators"
+  : "Filter candidates";
+---
+
+<section
+  class="legislative-search-filters"
+  aria-label={isCurrentLegislators ? "Legislator filters" : "Candidate filters"}
+  data-legislative-search-filters
+  data-search-action={action}
+  data-results-anchor={resultsAnchor}
+  data-preserve-embed-params={preserveEmbedParams ? "true" : "false"}
+>
+  <FilterBar
+    action={resultsAnchor ? `${action}#${resultsAnchor}` : action}
+    submitLabel={submitLabel}
+    clearHref={clearHref}
+    dataResultsForm
+    live
+  >
+    <label>
+      <span>Name</span>
+      <input
+        type="search"
+        name="name"
+        value={filters.name}
+        list={`legislative-name-options-${resultType}`}
+        placeholder={isCurrentLegislators ? "Start typing a legislator" : "Start typing a candidate"}
+        autocomplete="off"
+        data-fuzzy-search
+      />
+      <datalist id={`legislative-name-options-${resultType}`}>
+        {nameOptions.map((option) => <option value={option} />)}
+      </datalist>
+    </label>
+
+    <label>
+      <span>County</span>
+      <input
+        type="search"
+        name="county"
+        value={filters.county}
+        list="legislative-county-options"
+        placeholder="Start typing a county"
+        autocomplete="off"
+        data-fuzzy-filter-field
+        data-fuzzy-field="county"
+      />
+      <datalist id="legislative-county-options">
+        {LEGISLATIVE_COUNTY_OPTIONS.map((option) => <option value={option} />)}
+      </datalist>
+    </label>
+
+    <label>
+      <span>Office</span>
+      <input
+        type="search"
+        name="office"
+        value={filters.office}
+        list="legislative-office-options"
+        placeholder="State Representative or State Senate"
+        autocomplete="off"
+        data-fuzzy-filter-field
+        data-fuzzy-field="office"
+      />
+      <datalist id="legislative-office-options">
+        {LEGISLATIVE_OFFICE_OPTIONS.map((option) => <option value={option} />)}
+      </datalist>
+    </label>
+
+    <label>
+      <span>Town</span>
+      <input
+        type="search"
+        name="town"
+        value={filters.town}
+        list={`legislative-town-options-${resultType}`}
+        placeholder="Start typing a town"
+        autocomplete="off"
+        data-fuzzy-filter-field
+        data-fuzzy-field="town"
+      />
+      <datalist id={`legislative-town-options-${resultType}`}>
+        {townOptions.map((option) => <option value={option} />)}
+      </datalist>
+    </label>
+
+    <label>
+      <span>Sort</span>
+      <select name="sort" data-fuzzy-sort>
+        <option value="" selected={!filters.sort}>Default</option>
+        <option value="name:asc" selected={filters.sort === "name:asc"}>Name A-Z</option>
+        <option value="district:asc" selected={filters.sort === "district:asc"}>District</option>
+        {isCurrentLegislators && <option value="grade:desc" selected={filters.sort === "grade:desc"}>Grade high-low</option>}
+        {isCurrentLegislators && <option value="grade:asc" selected={filters.sort === "grade:asc"}>Grade low-high</option>}
+        <option value="updated:desc" selected={filters.sort === "updated:desc"}>Recently updated</option>
+        <option value="missing:desc" selected={filters.sort === "missing:desc"}>
+          {isCurrentLegislators ? "Missing info" : "Missing photo/email/website"}
+        </option>
+      </select>
+    </label>
+  </FilterBar>
+  <div class="filter-chips" data-fuzzy-chips hidden></div>
+</section>
+
+<script>
+  const initializeLegislativeFilters = (wrapper) => {
+    if (wrapper.dataset.legislativeFiltersReady === "true") return;
+    wrapper.dataset.legislativeFiltersReady = "true";
+
+    const form = wrapper.querySelector("[data-fuzzy-live-form]");
+    const resultsRegion = document.querySelector("[data-results-region]");
+    if (!(form instanceof HTMLFormElement) || !resultsRegion) return;
+
+    let filterTimeout = 0;
+    let latestRequestId = 0;
+
+    const resultsUrlFor = () => {
+      const params = new URLSearchParams();
+      for (const [key, value] of new FormData(form).entries()) {
+        const text = String(value || "").trim();
+        if (text && text.toLowerCase() !== "all") params.set(key, text);
+      }
+
+      if (wrapper.dataset.preserveEmbedParams === "true") {
+        const current = new URL(window.location.href);
+        for (const key of ["embed", "partner", "open"]) {
+          const value = current.searchParams.get(key);
+          if (value) params.set(key, value);
+        }
+      }
+
+      const action = wrapper.dataset.searchAction || window.location.pathname;
+      return `${action}${params.toString() ? `?${params}` : ""}`;
+    };
+
+    const loadResults = async ({ push = true, scroll = true } = {}) => {
+      const submitButton = form.querySelector("button[type='submit']");
+      const originalText = submitButton?.textContent || "";
+      const url = resultsUrlFor();
+      const requestId = ++latestRequestId;
+
+      if (submitButton && scroll) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Loading...";
+      }
+
+      try {
+        const response = await fetch(url, { headers: { "x-requested-with": "fetch" } });
+        if (!response.ok) throw new Error("Unable to load results.");
+        const html = await response.text();
+        const nextResults = new DOMParser()
+          .parseFromString(html, "text/html")
+          .querySelector("[data-results-region]");
+        if (!nextResults) throw new Error("Unable to load results.");
+        if (requestId !== latestRequestId) return false;
+
+        resultsRegion.innerHTML = nextResults.innerHTML;
+        resultsRegion.closest("[x-data]")?.dispatchEvent(
+          new CustomEvent("nhdb:fuzzy-refresh", { bubbles: true }),
+        );
+
+        const anchor = wrapper.dataset.resultsAnchor;
+        const nextUrl = `${url}${anchor ? `#${anchor}` : ""}`;
+        window.history[push ? "pushState" : "replaceState"]({}, "", nextUrl);
+        if (scroll) resultsRegion.scrollIntoView({ behavior: "smooth", block: "start" });
+        return true;
+      } catch {
+        if (scroll) {
+          const anchor = wrapper.dataset.resultsAnchor;
+          window.location.href = `${url}${anchor ? `#${anchor}` : ""}`;
+        }
+        return false;
+      } finally {
+        if (submitButton && scroll) {
+          submitButton.disabled = false;
+          submitButton.textContent = originalText;
+        }
+      }
+    };
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await loadResults({ push: true, scroll: true });
+    });
+    form.addEventListener("input", () => {
+      window.clearTimeout(filterTimeout);
+      filterTimeout = window.setTimeout(() => loadResults({ push: false, scroll: false }), 260);
+    });
+    form.addEventListener("change", () => {
+      window.clearTimeout(filterTimeout);
+      filterTimeout = window.setTimeout(() => loadResults({ push: false, scroll: false }), 120);
+    });
+  };
+
+  document.querySelectorAll("[data-legislative-search-filters]")
+    .forEach(initializeLegislativeFilters);
+</script>
+
+<style>
+  .legislative-search-filters {
+    margin-top: 26px;
+  }
+
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .filter-chips :global(button) {
+    align-items: center;
+    background: #eef6ff;
+    border: 1px solid #93c5fd;
+    border-radius: 999px;
+    color: #1f2933;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 8px;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 900;
+    padding: 6px 9px;
+  }
+
+  .filter-chips :global(b) {
+    color: #9f1239;
+    font-size: 1rem;
+    line-height: 1;
+  }
+</style>
