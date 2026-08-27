@@ -234,12 +234,15 @@ const compactVotePreviews = voteHistory.slice(0, 2).map((preview) => {
   const vote = preview.vote;
   const bill = preview.trackedBill || trackedBillFor(vote);
   const billSummary = preview.billSummary || billSummaryFor(vote);
-  const stance = representativeOnlineTestimonyVoteStance(vote, billSummary);
+  const stance = embed
+    ? representativeVoteStance(vote, bill)
+    : representativeOnlineTestimonyVoteStance(vote, billSummary);
 
   return {
     code: bill?.code || vote.condensedbillno || "Bill",
     title: billPreviewTitle(billSummary, bill),
     stance,
+    action: embed ? embedVoteActionLabel(vote, stance.label) : stance.label,
   };
 });
 ---
@@ -351,32 +354,52 @@ const compactVotePreviews = voteHistory.slice(0, 2).map((preview) => {
         </div>
       )}
 
+      {embed && (
+        <div class="embed-contact-row">
+          <span><strong>Email:</strong> {cleanText(rep.email || "Not listed")}</span>
+          <span><strong>Phone:</strong> {cleanText(rep.phone || "Not listed")}</span>
+        </div>
+      )}
+
     </div>
     {embed && (
       <div class="embed-vote-preview" aria-hidden="true">
-        <span class="embed-vote-preview-label">Tracked vote record</span>
-        <strong>{trackerVoteStats.total || "—"}</strong>
-        <span>{trackerVoteStats.total === 1 ? "vote available" : "votes available"}</span>
-        <button type="button" tabindex="-1">
-          <span class="embed-vote-preview-open">Show votes</span>
-          <span class="embed-vote-preview-close">Hide votes</span>
-          <span aria-hidden="true">⌄</span>
-        </button>
+        <div class="embed-vote-preview-heading">
+          <span class="embed-vote-preview-label">Tracked vote record</span>
+          <strong>{trackerVoteStats.total || "—"} <small>{trackerVoteStats.total === 1 ? "vote" : "votes"}</small></strong>
+        </div>
+        {compactVotePreviews.length > 0 && (
+          <div class="embed-vote-preview-list">
+            {compactVotePreviews.map((preview) => (
+              <span class:list={["embed-vote-preview-pill", preview.stance.className]}>
+                <strong>{preview.code}</strong>
+                <span>{preview.action}</span>
+              </span>
+            ))}
+          </div>
+        )}
+        <span class="embed-vote-preview-action">
+          <span class="embed-vote-preview-open">See all tracked votes</span>
+          <span class="embed-vote-preview-close">Hide tracked votes</span>
+          <span aria-hidden="true">→</span>
+        </span>
       </div>
     )}
   </div>
 
   <div data-embed-rep-expanded={embed ? "" : undefined} hidden={embed && !isEmbedOpen}>
-  <div class="rep-contact">
-    <div>
-      <span>Email</span>
-      {cleanText(rep.email || "Email not listed")}
-    </div>
+  {(!embed || rep.notes) && <div class="rep-contact">
+    {!embed && <>
+      <div>
+        <span>Email</span>
+        {cleanText(rep.email || "Email not listed")}
+      </div>
 
-    <div>
-      <span>Phone</span>
-      {cleanText(rep.phone || "Phone not listed")}
-    </div>
+      <div>
+        <span>Phone</span>
+        {cleanText(rep.phone || "Phone not listed")}
+      </div>
+    </>}
 
     {rep.notes && (
       <div>
@@ -384,7 +407,7 @@ const compactVotePreviews = voteHistory.slice(0, 2).map((preview) => {
         <p>{cleanText(rep.notes)}</p>
       </div>
     )}
-  </div>
+  </div>}
 
   <div class="vote-summary">
     <span>{embed ? "Partner bill tracker votes" : "Online Testimony Alignment"}</span>
@@ -529,7 +552,7 @@ const compactVotePreviews = voteHistory.slice(0, 2).map((preview) => {
 
   .rep-card--embed .rep-card-top {
     cursor: pointer;
-    grid-template-columns: 76px minmax(0, 1fr) minmax(176px, 220px);
+    grid-template-columns: 76px minmax(0, 1fr);
   }
 
   .rep-card--embed .rep-card-top:focus-visible {
@@ -613,20 +636,35 @@ const compactVotePreviews = voteHistory.slice(0, 2).map((preview) => {
 
   .rep-card--embed .rep-photo { height: 95px; }
 
+  .embed-contact-row {
+    color: #475569;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: .86rem;
+    gap: 6px 18px;
+    margin-top: 12px;
+  }
+
+  .embed-contact-row strong { color: #334155; }
+
   .embed-vote-preview {
     align-items: center;
-    background: #f8fafc;
-    border: 1px solid #dbe4f0;
-    border-radius: 14px;
+    background: linear-gradient(135deg, var(--embed-accent-soft, #e8f0f7), #f8fafc 72%);
+    border: 1px solid color-mix(in srgb, var(--embed-accent, #3b5f8c) 28%, #dbe4f0);
+    border-radius: 12px;
     color: #64748b;
-    display: grid;
+    display: flex;
     font-size: .78rem;
     font-weight: 700;
-    gap: 2px;
+    gap: 14px;
     box-sizing: border-box;
-    min-height: 100%;
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    margin-top: 4px;
     padding: 18px;
   }
+
+  .embed-vote-preview-heading { display: grid; gap: 3px; min-width: 120px; }
 
   .embed-vote-preview-label {
     color: #64748b;
@@ -636,30 +674,49 @@ const compactVotePreviews = voteHistory.slice(0, 2).map((preview) => {
     text-transform: uppercase;
   }
 
-  .embed-vote-preview strong { color: #172554; font-size: 1.55rem; line-height: 1.05; }
+  .embed-vote-preview-heading > strong { color: #172554; font-size: 1.35rem; line-height: 1.05; }
+  .embed-vote-preview-heading > strong small { color: #64748b; font-size: .72rem; }
 
-  .embed-vote-preview button {
-    align-items: center;
-    align-self: end;
-    background: var(--embed-accent-soft, #e0e7ff);
-    border: 0;
+  .embed-vote-preview-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .embed-vote-preview-pill {
+    background: #fff;
+    border: 1px solid #cbd5e1;
     border-radius: 8px;
-    color: var(--embed-accent, #1d4ed8);
+    display: grid;
+    font-size: .72rem;
+    gap: 1px;
+    padding: 6px 8px;
+  }
+
+  .embed-vote-preview-pill strong { color: #1e293b; }
+  .embed-vote-preview-pill.legislator-support { background: #ecfdf3; border-color: #86efac; }
+  .embed-vote-preview-pill.legislator-oppose { background: #fef2f2; border-color: #fecaca; }
+
+  .embed-vote-preview-action {
+    align-items: center;
+    background: var(--embed-accent, #3b5f8c);
+    border: 1px solid var(--embed-accent, #3b5f8c);
+    border-radius: 8px;
+    color: #fff;
     display: inline-flex;
     font: inherit;
     font-weight: 900;
     gap: 5px;
-    margin-top: 8px;
-    padding: 8px 9px;
-    pointer-events: none;
+    padding: 10px 12px;
     text-align: left;
-    width: 100%;
+    white-space: nowrap;
   }
 
   .embed-vote-preview-close { display: none; }
   .rep-card-top[aria-expanded="true"] .embed-vote-preview-open { display: none; }
   .rep-card-top[aria-expanded="true"] .embed-vote-preview-close { display: inline; }
-  .rep-card-top[aria-expanded="true"] .embed-vote-preview strong > span:last-child { transform: rotate(180deg); }
+  .rep-card-top[aria-expanded="true"] .embed-vote-preview-action > span:last-child { transform: rotate(90deg); }
 
   .rep-title-block {
     display: grid;
@@ -981,9 +1038,8 @@ const compactVotePreviews = voteHistory.slice(0, 2).map((preview) => {
 
   @media (max-width: 720px) {
     .rep-card--embed .rep-card-top { grid-template-columns: 76px minmax(0, 1fr); }
-    .embed-vote-preview { grid-column: 1 / -1; grid-template-columns: 1fr auto; min-height: 0; }
-    .embed-vote-preview-label { grid-column: 1 / -1; }
-    .embed-vote-preview button { grid-column: 2; grid-row: 2 / span 2; margin: 0; width: auto; }
+    .embed-vote-preview { align-items: stretch; flex-direction: column; }
+    .embed-vote-preview-action { justify-content: center; }
     .compact-vote-list { grid-template-columns: 1fr; }
   }
 
