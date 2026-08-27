@@ -1074,6 +1074,11 @@ function embedRepresentativeKey(rep = {}) {
     padding: clamp(20px, 4vw, 38px);
   }
 
+  :global(body.embed-mode) .hero-copy > .eyebrow,
+  :global(body.embed-mode) .hero-copy > h1 {
+    display: none;
+  }
+
   :global(body.embed-mode) .help-text {
     display: none;
   }
