@@ -114,7 +114,7 @@ try {
       candidates = uniqueCandidates([
         ...lookupCandidates,
         ...candidatesFromCommunity(townData),
-        ...(directoryData.candidates || []),
+        ...filterCandidatesByTown(directoryData.candidates || [], lookupPlace),
       ]);
     } else {
       candidates = lookupCandidates;
@@ -138,7 +138,7 @@ try {
     const directoryData = directoryResult.status === "fulfilled" ? directoryResult.value : {};
     candidates = uniqueCandidates([
       ...candidatesFromCommunity(townData),
-      ...(directoryData.candidates || []),
+      ...filterCandidatesByTown(directoryData.candidates || [], town),
     ]);
     meta = townData.meta || directoryData.meta || {};
     resultContext = townData.town?.name || townData.community?.name || town;
@@ -863,6 +863,26 @@ function townsFromValue(value = []) {
     .split(/[,;|]/)
     .map(normalizeTownOption)
     .filter(Boolean);
+}
+
+function filterCandidatesByTown(items = [], townName = "") {
+  const normalizedTown = normalizedTownName(normalizeTownOption(townName));
+  if (!normalizedTown) return items;
+
+  return items.filter((candidate) =>
+    [
+      candidate.townsRepresented,
+      candidate.towns_represented,
+      candidate.communitiesRepresented,
+      candidate.communities_represented,
+      candidate.towns,
+      candidate.town,
+    ]
+      .flatMap(townsFromValue)
+      .some((representedTown) =>
+        normalizedTownName(normalizeTownOption(representedTown)) === normalizedTown
+      )
+  );
 }
 
 function normalizeTownOption(value = "") {
