@@ -18,7 +18,11 @@ export async function POST({ request, locals }) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ address }),
+      body: JSON.stringify({
+        address,
+        ward: body.ward,
+        resultType: body.resultType,
+      }),
     });
 
     const data = await response.json();

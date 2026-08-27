@@ -15,6 +15,14 @@ import {
 import { enrichCandidatesWithLegislators } from "../../lib/candidateLegislators";
 import { civicApiBase, civicApiFetch } from "../../lib/civicApi";
 import { getCommunities, getTownCommunity } from "../../lib/communitiesApi";
+import {
+  filterLegislativeRecordsByTown as filterCandidatesByTown,
+  filterLegislativeRecordsByWard as filterCandidatesByWard,
+  normalizeWardNumber,
+  representedTownsFromValue as townsFromValue,
+  representsWard,
+  wardOptionsFor,
+} from "../../lib/legislativeSearch";
 
 const API_BASE = civicApiBase();
 
@@ -28,21 +36,6 @@ const town = Astro.url.searchParams.get("town")?.trim() || "";
 const sort = Astro.url.searchParams.get("sort")?.trim() || "";
 const electionYear = "2026";
 const INITIAL_CANDIDATE_PREVIEW_LIMIT = 12;
-const WARD_COMMUNITY_COUNTS = new Map([
-  ["berlin", 4],
-  ["claremont", 3],
-  ["concord", 10],
-  ["dover", 6],
-  ["franklin", 3],
-  ["keene", 5],
-  ["laconia", 6],
-  ["lebanon", 3],
-  ["manchester", 12],
-  ["nashua", 9],
-  ["portsmouth", 5],
-  ["rochester", 6],
-  ["somersworth", 5],
-]);
 const officeOptions = [
   "State Representative",
   "State Senate",
@@ -76,7 +69,11 @@ try {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ address }),
+      body: JSON.stringify({
+        address,
+        ward: selectedWard,
+        resultType: "candidates",
+      }),
     });
 
     const data = await response.json();
@@ -88,7 +85,7 @@ try {
     lookupData = data;
     const lookupPlace = data.civic?.place?.name || data.normalizedInput?.city || "";
     const isTownOnlyLookup = lookupPlace && !String(data.normalizedInput?.line1 || "").trim();
-    const lookupWardOptions = wardOptionsFor(lookupPlace);
+    const lookupWardOptions = data.search?.wardOptions || wardOptionsFor(lookupPlace);
     const lookupWard = !isTownOnlyLookup && lookupWardOptions.length
       ? selectedWard || normalizeWardNumber(data.civic?.ward?.number || "")
       : "";
@@ -111,11 +108,12 @@ try {
       ]);
       const townData = townResult.status === "fulfilled" ? townResult.value : {};
       const directoryData = directoryResult.status === "fulfilled" ? directoryResult.value : {};
-      candidates = uniqueCandidates([
+      const townOnlyCandidates = uniqueCandidates([
         ...lookupCandidates,
         ...candidatesFromCommunity(townData),
         ...filterCandidatesByTown(directoryData.candidates || [], lookupPlace),
       ]);
+      candidates = filterCandidatesByWard(townOnlyCandidates, selectedWard);
     } else {
       candidates = lookupCandidates;
     }
@@ -193,7 +191,7 @@ const civic = lookupData?.civic || {};
 const matchedDistricts = lookupData?.matchedDistricts || [];
 const normalizedInput = lookupData?.normalizedInput || {};
 const place = civic.place?.name || normalizedInput.city || "";
-const wardOptions = wardOptionsFor(place);
+const wardOptions = lookupData?.search?.wardOptions || wardOptionsFor(place);
 const isWardedCommunity = wardOptions.length > 0;
 const wardNumber = isWardedCommunity
   ? selectedWard || normalizeWardNumber(civic.ward?.number || "")
@@ -522,69 +520,6 @@ function normalizeSearch(value = "") {
     .trim();
 }
 
-function normalizeWardNumber(value = "") {
-  const match = String(value || "").match(/\d+/);
-  return match ? String(Number(match[0])) : "";
-}
-
-function normalizedTownName(value = "") {
-  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function wardOptionsFor(townName = "") {
-  const count = WARD_COMMUNITY_COUNTS.get(normalizedTownName(townName)) || 0;
-  return Array.from({ length: count }, (_, index) => String(index + 1));
-}
-
-function representsWard(record = {}, wardValue = "") {
-  const wardNumber = normalizeWardNumber(wardValue);
-  if (!wardNumber) return true;
-
-  const text = recordText(record);
-  const directWard = new RegExp(`\\bward(?:s)?\\s*${escapeRegExp(wardNumber)}\\b`, "i");
-  if (directWard.test(text)) return true;
-
-  for (const match of text.matchAll(/\bwards?\s+(\d{1,2})\s*(?:-|–|—|to|through)\s*(\d{1,2})\b/gi)) {
-    const start = Number(match[1]);
-    const end = Number(match[2]);
-    const selected = Number(wardNumber);
-    if (selected >= Math.min(start, end) && selected <= Math.max(start, end)) return true;
-  }
-
-  return false;
-}
-
-function recordText(record = {}) {
-  return [
-    record.location_text,
-    record.locationText,
-    record.towns_represented,
-    record.townsRepresented,
-    record.towns,
-    record.town,
-    record.city,
-    record.district_label,
-    record.districtLabel,
-    record.name,
-    record.office,
-    record.district,
-    record.raw_district,
-  ].flatMap(stringifyValue).filter(Boolean).join(" ");
-}
-
-function stringifyValue(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) return value.flatMap(stringifyValue);
-  if (typeof value === "object") {
-    return [value.town, value.name, value.label, value.location_text, value.locationText].flatMap(stringifyValue);
-  }
-  return [String(value)];
-}
-
-function escapeRegExp(value = "") {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 function filterLegislativeCandidates(items = []) {
   return items.filter(isLegislativeCandidate);
 }
@@ -845,50 +780,6 @@ async function communityTownOptions() {
       ),
     ),
   );
-}
-
-function townsFromValue(value = []) {
-  if (Array.isArray(value)) {
-    return value
-      .map((item) =>
-        typeof item === "object" && item !== null
-          ? item.town || item.name || item.label
-          : item,
-      )
-      .map(normalizeTownOption)
-      .filter(Boolean);
-  }
-
-  return String(value || "")
-    .split(/[,;|]/)
-    .map(normalizeTownOption)
-    .filter(Boolean);
-}
-
-function filterCandidatesByTown(items = [], townName = "") {
-  const normalizedTown = normalizedTownName(normalizeTownOption(townName));
-  if (!normalizedTown) return items;
-
-  return items.filter((candidate) =>
-    [
-      candidate.townsRepresented,
-      candidate.towns_represented,
-      candidate.communitiesRepresented,
-      candidate.communities_represented,
-      candidate.towns,
-      candidate.town,
-    ]
-      .flatMap(townsFromValue)
-      .some((representedTown) =>
-        normalizedTownName(normalizeTownOption(representedTown)) === normalizedTown
-      )
-  );
-}
-
-function normalizeTownOption(value = "") {
-  return String(value || "")
-    .replace(/\s*-\s*Ward\s+\d+$/i, "")
-    .trim();
 }
 
 function uniqueOptions(values = []) {

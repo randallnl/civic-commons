@@ -41,6 +41,17 @@ function formatParty(party) {
   return cleanText(party);
 }
 
+function partyPillClass(party) {
+  const normalized = formatParty(party).toLowerCase();
+  if (normalized.includes("republican")) return "party-republican";
+  if (normalized.includes("democrat")) return "party-democrat";
+  return "";
+}
+
+function chamberPillClass(chamber) {
+  return /senate/i.test(String(chamber || "")) ? "chamber-senate" : "";
+}
+
 function slugify(value = "") {
   return String(value)
     .normalize("NFKD")
@@ -110,7 +121,7 @@ const voteHistory = embed
       .map((vote) => ({ vote, trackedBill: trackedBillForVote(trackedBills, vote) }))
       .filter(({ trackedBill }) => Boolean(trackedBill?.preferredStance))
       .map(({ vote, trackedBill }) => ({ vote, trackedBill, billSummary: billSummaryFor(vote) }))
-  : representativeOnlineTestimonyVotePreviews(rep, billSummaries, { limit: 3 });
+  : representativeOnlineTestimonyVotePreviews(rep, billSummaries, { limit: 12 });
 const grade = representativeGradeFor(rep, trackedBills, billSummaries);
 const testimonyAlignmentPercent = testimonyAlignmentPercentForGrade(grade);
 const trackerVoteStats = voteHistory.reduce(
@@ -217,6 +228,19 @@ function embedVoteActionLabel(vote = {}, fallback = "Vote not listed") {
   if (isNay) return "Opposed";
   return fallback;
 }
+
+const compactVotePreviews = voteHistory.slice(0, 2).map((preview) => {
+  const vote = preview.vote;
+  const bill = preview.trackedBill || trackedBillFor(vote);
+  const billSummary = preview.billSummary || billSummaryFor(vote);
+  const stance = representativeOnlineTestimonyVoteStance(vote, billSummary);
+
+  return {
+    code: bill?.code || vote.condensedbillno || "Bill",
+    title: billPreviewTitle(billSummary, bill),
+    stance,
+  };
+});
 ---
 
 <article
@@ -269,8 +293,8 @@ function embedVoteActionLabel(vote = {}, fallback = "Vote not listed") {
         <div class="rep-title-block">
           <h3>{embed ? name : <a href={profileHref}>{name}</a>}</h3>
           <div class="rep-meta">
-            <span>{cleanText(rep.chamber || "Legislator")}</span>
-            <span data-party-affiliation>{formatParty(rep.party)}</span>
+            <span class={chamberPillClass(rep.chamber)}>{cleanText(rep.chamber || "Legislator")}</span>
+            <span class={partyPillClass(rep.party)} data-party-affiliation>{formatParty(rep.party)}</span>
             {showFreeStateAligned && isFreeStater(rep) && (
               <a
                 class="free-stater-pill"
@@ -365,7 +389,26 @@ function embedVoteActionLabel(vote = {}, fallback = "Vote not listed") {
     <span>{embed ? "Partner bill tracker votes" : "Online Testimony Alignment"}</span>
 
     {voteHistory.length ? (
-      <div class="vote-list">
+      <details class:list={["vote-disclosure", embed && "vote-disclosure--embed"]} open={embed}>
+        {!embed && (
+          <summary>
+            <div class="vote-preview-heading">
+              <strong>Vote preview</strong>
+              <span class="vote-preview-open">Expand to see {voteHistory.length === 1 ? "vote" : `all ${voteHistory.length} votes`}</span>
+              <span class="vote-preview-close">Collapse votes</span>
+            </div>
+            <div class="compact-vote-list">
+              {compactVotePreviews.map((preview) => (
+                <span class:list={["compact-vote", preview.stance.className]}>
+                  <strong>{preview.code}</strong>
+                  {preview.title && <small>{preview.title}</small>}
+                  <em>{preview.stance.label}</em>
+                </span>
+              ))}
+            </div>
+          </summary>
+        )}
+        <div class="vote-list">
         {voteHistory.map((preview) => {
           const vote = preview.vote;
           const bill = preview.trackedBill || trackedBillFor(vote);
@@ -394,6 +437,7 @@ function embedVoteActionLabel(vote = {}, fallback = "Vote not listed") {
                   data-bill-summary={billSummary?.summary || bill?.summary || ""}
                   data-bill-yea={bill?.yeaInterpretation || bill?.yeaImpact || ""}
                   data-bill-nay={bill?.nayInterpretation || bill?.nayImpact || ""}
+                  data-bill-more-info-url={bill?.moreInfoUrl || ""}
                 >
                   <strong>{bill?.code || vote.condensedbillno || "Bill"} · {embedVoteAction}</strong>
                   {billTitle && <span>{billTitle}</span>}
@@ -418,6 +462,7 @@ function embedVoteActionLabel(vote = {}, fallback = "Vote not listed") {
                       data-bill-summary={billSummary?.summary || bill?.summary || ""}
                       data-bill-yea={bill?.yeaInterpretation || bill?.yeaImpact || ""}
                       data-bill-nay={bill?.nayInterpretation || bill?.nayImpact || ""}
+                      data-bill-more-info-url={bill?.moreInfoUrl || ""}
                     >{bill?.code || vote.condensedbillno || "Bill"}</button>
                   ) : (
                     <a href={billDetailPath(bill?.code || vote.condensedbillno, billYear)}>
@@ -452,7 +497,8 @@ function embedVoteActionLabel(vote = {}, fallback = "Vote not listed") {
             </div>
           );
         })}
-      </div>
+        </div>
+      </details>
     ) : (
       <p>No scored online testimony vote previews returned.</p>
     )}
@@ -695,6 +741,24 @@ function embedVoteActionLabel(vote = {}, fallback = "Vote not listed") {
     text-decoration: none;
   }
 
+  .rep-meta .party-republican {
+    background: #fee2e2;
+    border-color: #dc2626;
+    color: #991b1b;
+  }
+
+  .rep-meta .party-democrat {
+    background: #dbeafe;
+    border-color: #2563eb;
+    color: #1e3a8a;
+  }
+
+  .rep-meta .chamber-senate {
+    background: #ede9fe;
+    border-color: #7c3aed;
+    color: #5b21b6;
+  }
+
   .rep-meta .free-stater-pill {
     background: #4a2414;
     border-color: #f97316;
@@ -766,6 +830,111 @@ function embedVoteActionLabel(vote = {}, fallback = "Vote not listed") {
     margin-bottom: 10px;
   }
 
+  .vote-disclosure summary {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    cursor: pointer;
+    display: grid;
+    gap: 10px;
+    list-style: none;
+    padding: 12px;
+  }
+
+  .vote-disclosure summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .vote-disclosure summary:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 3px;
+  }
+
+  .vote-preview-heading {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+  }
+
+  .vote-preview-heading > strong {
+    color: #172554;
+    font-size: 0.9rem;
+  }
+
+  .vote-preview-heading > span {
+    color: #1d4ed8;
+    font-size: 0.76rem;
+    font-weight: 900;
+    margin-left: auto;
+  }
+
+  .vote-preview-close,
+  .vote-disclosure[open] .vote-preview-open,
+  .vote-disclosure[open] .compact-vote-list {
+    display: none;
+  }
+
+  .vote-disclosure[open] .vote-preview-close {
+    display: inline;
+  }
+
+  .compact-vote-list {
+    display: grid;
+    gap: 7px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .compact-vote {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 8px 10px;
+  }
+
+  .compact-vote.legislator-support {
+    background: #ecfdf3;
+    border-color: #86efac;
+  }
+
+  .compact-vote.legislator-oppose {
+    background: #fef2f2;
+    border-color: #fecaca;
+  }
+
+  .compact-vote > strong {
+    color: #172554;
+    font-size: 0.82rem;
+  }
+
+  .compact-vote small {
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .compact-vote em {
+    color: #475569;
+    font-size: 0.68rem;
+    font-style: normal;
+    font-weight: 900;
+  }
+
+  .vote-disclosure[open] .vote-list {
+    margin-top: 10px;
+  }
+
+  .vote-disclosure--embed .vote-list {
+    margin-top: 0;
+  }
+
   .vote-list {
     display: grid;
     gap: 8px;
@@ -812,6 +981,7 @@ function embedVoteActionLabel(vote = {}, fallback = "Vote not listed") {
     .embed-vote-preview { grid-column: 1 / -1; grid-template-columns: 1fr auto; min-height: 0; }
     .embed-vote-preview-label { grid-column: 1 / -1; }
     .embed-vote-preview button { grid-column: 2; grid-row: 2 / span 2; margin: 0; width: auto; }
+    .compact-vote-list { grid-template-columns: 1fr; }
   }
 
   .vote-heading {

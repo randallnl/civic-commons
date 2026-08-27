@@ -2,6 +2,7 @@
 // against its bound D1/R2 resources without calling a separate Worker.
 import { ensureArticlePreviewColumns } from "./articlePreviews";
 import { ensureGradeCacheColumns } from "./gradeCache";
+import { normalizeWardNumber, wardOptionsFor } from "./legislativeSearch";
 import { voteVisibilityCaseExpression } from "./voteVisibility";
 
 const corsHeaders = {
@@ -675,6 +676,16 @@ function handleVotingWidgetScript(request) {
     root.__nhccBills = data.bills || [];
     root.__nhccData = data;
 
+    const wardWrap = root.querySelector("[data-ward-wrap]");
+    const wardSelect = root.querySelector("[data-ward-select]");
+    const wardOptions = data.search?.wardOptions || [];
+    if (wardWrap && wardSelect) {
+      wardWrap.hidden = wardOptions.length === 0;
+      wardSelect.innerHTML = \`<option value="">Select ward</option>\` + wardOptions
+        .map((ward) => \`<option value="\${escapeHtml(ward)}"\${String(data.search?.wardNumber || "") === String(ward) ? " selected" : ""}>Ward \${escapeHtml(ward)}</option>\`)
+        .join("");
+    }
+
     root.querySelector("[data-summary]").innerHTML = \`
       <strong>\${escapeHtml(data.normalizedInput?.line1 || data.address)}</strong>
       <span>\${reps.length} legislators found · \${(data.bills || []).length} tracked bills</span>
@@ -777,6 +788,9 @@ function handleVotingWidgetScript(request) {
         .nhcc-intro { margin-bottom: 12px; color: #526173; font-size: .92rem; line-height: 1.42; }
         .nhcc-form { display: flex; gap: 8px; align-items: stretch; }
         .nhcc-form input { flex: 1; min-width: 0; border: 1px solid #b8c3d2; border-radius: 6px; padding: 10px 12px; font: inherit; }
+        .nhcc-ward { display: grid; gap: 4px; margin-top: 8px; }
+        .nhcc-ward label { color: #526173; font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+        .nhcc-ward select { width: min(220px, 100%); border: 1px solid #b8c3d2; border-radius: 6px; padding: 9px 11px; background: #fff; font: inherit; }
         .nhcc-form button { border: 0; border-radius: 6px; padding: 10px 12px; font: inherit; font-weight: 700; background: #174ea6; color: #fff; cursor: pointer; }
         .nhcc-form button:disabled { opacity: .65; cursor: wait; }
         .nhcc-status { margin: 10px 0 0; color: #526173; font-size: .92rem; }
@@ -883,6 +897,10 @@ function handleVotingWidgetScript(request) {
           <input name="address" autocomplete="street-address" placeholder="Enter your NH address" required>
           <button type="submit">\${escapeHtml(config.buttonText)}</button>
         </form>
+        <div class="nhcc-ward" data-ward-wrap hidden>
+          <label for="nhcc-ward-select">Ward</label>
+          <select id="nhcc-ward-select" data-ward-select><option value="">Select ward</option></select>
+        </div>
         <p class="nhcc-status" data-status></p>
         <div class="nhcc-summary" data-summary></div>
         <div data-divisions></div>
@@ -910,6 +928,7 @@ function handleVotingWidgetScript(request) {
     const button = root.querySelector("button");
     const repSelect = root.querySelector("[data-rep-select]");
     const issueFilter = root.querySelector("[data-issue-filter]");
+    const wardSelect = root.querySelector("[data-ward-select]");
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -922,6 +941,7 @@ function handleVotingWidgetScript(request) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             address,
+            ward: wardSelect?.value || "",
             partner: config.partner,
             billTrackerUrl: config.trackerUrl,
             embedderUrl: document.referrer || window.location.href
@@ -931,6 +951,8 @@ function handleVotingWidgetScript(request) {
         if (!response.ok) throw new Error(data.error || "Lookup failed.");
         const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.set("address", address);
+        if (wardSelect?.value) currentUrl.searchParams.set("ward", wardSelect.value);
+        else currentUrl.searchParams.delete("ward");
         window.history.replaceState({}, "", currentUrl);
         window.parent?.postMessage({ type: "nhcc:voting-widget:url", address, url: currentUrl.toString() }, "*");
         status.textContent = "";
@@ -944,6 +966,9 @@ function handleVotingWidgetScript(request) {
 
     repSelect.addEventListener("change", () => renderRepCard(root, repSelect.value));
     issueFilter.addEventListener("change", () => renderRepCard(root, repSelect.value));
+    wardSelect?.addEventListener("change", () => {
+      if (wardSelect.value) form.requestSubmit();
+    });
 
     root.addEventListener("click", (event) => {
       const repPill = event.target.closest?.("[data-rep-index]");
@@ -974,9 +999,14 @@ function handleVotingWidgetScript(request) {
       if (event.key === "Escape") closeBillDialog(root);
     });
 
-    const initialAddress = new URL(window.location.href).searchParams.get("address") || "";
+    const initialUrl = new URL(window.location.href);
+    const initialAddress = initialUrl.searchParams.get("address") || "";
+    const initialWard = initialUrl.searchParams.get("ward") || "";
     if (initialAddress) {
       form.elements.address.value = initialAddress;
+      if (initialWard && wardSelect) {
+        wardSelect.innerHTML = \`<option value="\${escapeHtml(initialWard)}" selected>Ward \${escapeHtml(initialWard)}</option>\`;
+      }
       form.requestSubmit();
     }
   }
@@ -1013,6 +1043,7 @@ async function handleVotingWidgetLookup(request, env) {
 
     const body = await request.json();
     const address = String(body.address || "").trim();
+    const ward = normalizeWardNumber(body.ward || "");
     const partner = await resolvePartnerConfig(env, body.partner, true);
     const requestedBillTrackerUrl = String(body.billTrackerUrl || "").trim();
 
@@ -1031,7 +1062,11 @@ async function handleVotingWidgetLookup(request, env) {
         new Request(request.url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address }),
+          body: JSON.stringify({
+            address,
+            ward,
+            resultType: "current-legislators",
+          }),
         }),
         env
       ),
@@ -1061,6 +1096,7 @@ async function handleVotingWidgetLookup(request, env) {
     return json({
       address,
       normalizedInput: lookup.normalizedInput || null,
+      search: lookup.search || null,
       representatives,
       groups: {
         senate: representatives.filter((rep) => rep.chamber === "Senate"),
@@ -3813,6 +3849,11 @@ async function handleAddressLookup(request, env) {
     const body = await request.json();
     await ensurePeopleGradeCacheColumns(env.DB);
     const address = String(body.address || "").trim();
+    const requestedWard = normalizeWardNumber(body.ward || "");
+    const requestedResultType = String(body.resultType || "both").trim().toLowerCase();
+    const resultType = ["both", "candidates", "current-legislators"].includes(requestedResultType)
+      ? requestedResultType
+      : "both";
     const url = new URL(request.url);
     const voteLimit = Number(url.searchParams.get("voteLimit") || 50);
     const candidateYear = boundedNumber(
@@ -3839,6 +3880,13 @@ async function handleAddressLookup(request, env) {
         name: civicData.normalizedInput.city,
       };
     }
+    if (requestedWard) {
+      parsed.ward = {
+        ocdId: "",
+        name: `Ward ${requestedWard}`,
+        number: Number(requestedWard),
+      };
+    }
 
     const matchedDistricts = await findAddressDistricts(
       env,
@@ -3848,28 +3896,42 @@ async function handleAddressLookup(request, env) {
     );
 
     const houseDistricts = matchedDistricts.filter((d) => d.body === "H");
+    const matchedSenateDistrict = matchedDistricts.find((d) => d.body === "S");
+    if (!parsed.senate && matchedSenateDistrict?.district) {
+      parsed.senate = {
+        ocdId: "",
+        name: matchedSenateDistrict.district_label || `District ${matchedSenateDistrict.district}`,
+        raw: String(matchedSenateDistrict.district),
+        body: "S",
+        county: null,
+        district: Number(matchedSenateDistrict.district),
+        districtLabel: String(matchedSenateDistrict.district_label || matchedSenateDistrict.district),
+      };
+    }
 
-    const houseReps = await findHouseRepsFromDistrictMappings(
-      env,
-      houseDistricts
-    );
+    let representatives = [];
+    if (resultType !== "candidates") {
+      const [houseReps, senators] = await Promise.all([
+        findHouseRepsFromDistrictMappings(env, houseDistricts),
+        parsed.senate ? findSenators(env, parsed.senate) : Promise.resolve([]),
+      ]);
+      representatives = await attachVoteHistory(
+        env,
+        [...senators, ...houseReps],
+        voteLimit
+      );
+    }
 
-    const senators = parsed.senate
-      ? await findSenators(env, parsed.senate)
-      : [];
-
-    const representatives = await attachVoteHistory(
-      env,
-      [...senators, ...houseReps],
-      voteLimit
-    );
-
-    const candidates = await getCandidatesForAddressDistricts(
-      env,
-      parsed,
-      houseDistricts,
-      candidateYear
-    );
+    const candidates = resultType === "current-legislators"
+      ? []
+      : await getCandidatesForAddressDistricts(
+          env,
+          parsed,
+          houseDistricts,
+          candidateYear
+        );
+    const wardOptions = wardOptionsFor(parsed.place?.name || "");
+    const effectiveWard = normalizeWardNumber(parsed.ward?.number || "");
 
     return json({
       address,
@@ -3890,6 +3952,14 @@ async function handleAddressLookup(request, env) {
           senate: candidates.filter((candidate) => candidate.office === "State Senate"),
           house: candidates.filter((candidate) => candidate.office === "State Representative"),
         },
+      },
+      search: {
+        resultType,
+        place: parsed.place?.name || "",
+        selectedWard: requestedWard,
+        wardNumber: effectiveWard,
+        wardOptions,
+        wardRequired: wardOptions.length > 0 && !effectiveWard,
       },
       meta: {
         voteLimit,
@@ -4941,15 +5011,15 @@ async function findDistrictsFromPlace(env, place, ward) {
       .all();
   }
 
-  const matches = wardNumber
-    ? (result.results || []).filter((row) =>
-        districtCommunityMatchesPlaceWard(
+  const matches = (result.results || []).filter((row) =>
+    wardNumber
+      ? districtCommunityMatchesPlaceWard(
           row.communities_represented,
           placeName,
           Number(wardNumber)
         )
-      )
-    : result.results || [];
+      : townDistrictMatches(row.communities_represented, placeName)
+  );
 
   return dedupeDistrictMappings(matches);
 }
