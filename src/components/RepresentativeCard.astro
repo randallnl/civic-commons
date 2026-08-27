@@ -210,12 +210,13 @@ function billPreviewTitle(billSummary = {}, trackedBill = {}) {
 }
 
 function voteInterpretationForEmbed(vote = {}, trackedBill = {}) {
+  const bill = trackedBill || {};
   const voteValue = String(vote.vote || vote.vote_label || vote.vote_code || "").trim().toLowerCase();
   const isYea = ["1", "yea", "yes", "y", "in support", "support"].includes(voteValue) || voteValue.includes("support");
   const isNay = ["2", "nay", "no", "n", "opposed", "oppose", "against"].includes(voteValue) || voteValue.includes("oppose") || voteValue.includes("against");
 
-  if (isYea) return trackedBill.yeaInterpretation || "";
-  if (isNay) return trackedBill.nayInterpretation || "";
+  if (isYea) return bill.yeaInterpretation || "";
+  if (isNay) return bill.nayInterpretation || "";
   return "";
 }
 
