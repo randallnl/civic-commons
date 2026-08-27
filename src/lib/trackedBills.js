@@ -435,20 +435,21 @@ export function representativeOnlineTestimonyAnalysis(vote = {}, bill = {}) {
 }
 
 function representativeVoteAnalysis(vote = {}, trackedBill = {}) {
+  const bill = trackedBill || {};
   const voteStance = normalizeVoteStance(vote);
-  const preferredStance = preferredStanceForBill(trackedBill);
+  const preferredStance = preferredStanceForBill(bill);
   const isNonVote = !voteStance && isDocumentedNonVote(vote);
   const interpretation =
     voteStance === "yea"
-      ? trackedBill.yeaInterpretation
+      ? bill.yeaInterpretation
       : voteStance === "nay"
-        ? trackedBill.nayInterpretation
+        ? bill.nayInterpretation
         : displayVoteLabel(vote);
   const impact =
     voteStance === "yea"
-      ? trackedBill.yeaImpact
+      ? bill.yeaImpact
       : voteStance === "nay"
-        ? trackedBill.nayImpact
+        ? bill.nayImpact
         : "";
   const alignment =
     !preferredStance || preferredStance === "neutral"
