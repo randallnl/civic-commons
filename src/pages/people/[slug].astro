@@ -771,6 +771,33 @@ function cleanDisplay(value = "") {
   return cleanText(value).trim();
 }
 
+function statementLinkSegments(value = "") {
+  const text = String(value || "");
+  const pattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\b((?:https?:\/\/|www\.)[^\s<>()]+)/gi;
+  const segments = [];
+  let cursor = 0;
+
+  for (const match of text.matchAll(pattern)) {
+    const index = match.index ?? 0;
+    if (index > cursor) segments.push({ text: text.slice(cursor, index), href: "" });
+
+    if (match[1] && match[2]) {
+      segments.push({ text: match[1], href: match[2] });
+    } else {
+      const rawUrl = match[3] || "";
+      const url = rawUrl.replace(/[.,!?;:\]}]+$/, "");
+      const trailing = rawUrl.slice(url.length);
+      segments.push({ text: url, href: url.startsWith("www.") ? `https://${url}` : url });
+      if (trailing) segments.push({ text: trailing, href: "" });
+    }
+
+    cursor = index + match[0].length;
+  }
+
+  if (cursor < text.length) segments.push({ text: text.slice(cursor), href: "" });
+  return segments.length ? segments : [{ text, href: "" }];
+}
+
 function candidateTownsRepresented(candidate = {}, legislator = {}) {
   const towns = [
     candidate?.townsRepresented,
@@ -2073,7 +2100,7 @@ function uniqueTowns(towns = []) {
               <div>
                 <p class="eyebrow">Organizations</p>
                 <h2>
-                  Endorsements and Ratings
+                  Organization Positions and Ratings
                   {endorsements.length > 0 && (
                     <span class="inline-count">({endorsements.length})</span>
                   )}
@@ -2092,7 +2119,7 @@ function uniqueTowns(towns = []) {
             {endorsements.length ? (
               <>
                 <div class="endorsement-list">
-                {endorsements.map((endorsement) => (
+                {endorsements.map((endorsement, index) => (
                   <article
                     class="endorsement-card"
                   >
@@ -2118,7 +2145,33 @@ function uniqueTowns(towns = []) {
                           )}
                         </div>
 
-                        {endorsement.statement && <p class="endorsement-preview">{endorsement.statement}</p>}
+                        {endorsement.statement && (
+                          <div class="endorsement-statement" data-expandable-statement>
+                            <p
+                              class="endorsement-preview"
+                              id={`endorsement-statement-${index}`}
+                              data-expandable-copy
+                            >
+                              {statementLinkSegments(endorsement.statement).map((segment) =>
+                                segment.href ? (
+                                  <a href={segment.href} target="_blank" rel="noopener noreferrer">
+                                    {segment.text}
+                                  </a>
+                                ) : segment.text
+                              )}
+                            </p>
+                            <button
+                              type="button"
+                              class="endorsement-expand"
+                              aria-controls={`endorsement-statement-${index}`}
+                              aria-expanded="false"
+                              data-expand-statement
+                              hidden
+                            >
+                              Show more
+                            </button>
+                          </div>
+                        )}
 
                         <div class="endorsement-meta">
                           {endorsement.office && <span>{endorsement.office}</span>}
@@ -2161,6 +2214,26 @@ function uniqueTowns(towns = []) {
       } catch {
         // Recently viewed profiles are a convenience; ignore storage failures.
       }
+    </script>
+    <script>
+      (() => {
+        const statements = Array.from(document.querySelectorAll("[data-expandable-statement]"));
+
+        statements.forEach((statement) => {
+          const copy = statement.querySelector("[data-expandable-copy]");
+          const toggle = statement.querySelector("[data-expand-statement]");
+          if (!(copy instanceof HTMLElement) || !(toggle instanceof HTMLButtonElement)) return;
+
+          if (copy.scrollHeight <= copy.clientHeight + 1) return;
+          toggle.hidden = false;
+
+          toggle.addEventListener("click", () => {
+            const expanded = statement.classList.toggle("is-expanded");
+            toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+            toggle.textContent = expanded ? "Show less" : "Show more";
+          });
+        });
+      })();
     </script>
     <script>
       (() => {
@@ -3490,6 +3563,38 @@ function uniqueTowns(towns = []) {
     -webkit-line-clamp: 3;
     display: -webkit-box;
     overflow: hidden;
+  }
+
+  .endorsement-statement.is-expanded .endorsement-preview {
+    -webkit-line-clamp: unset;
+    display: block;
+    overflow: visible;
+  }
+
+  .endorsement-preview a {
+    color: #1d4ed8;
+    overflow-wrap: anywhere;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .endorsement-expand {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    color: #1d4ed8;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 900;
+    margin-top: 6px;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .endorsement-expand:hover {
+    color: #1e3a8a;
   }
 
   .endorsement-list p {
