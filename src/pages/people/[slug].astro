@@ -5,6 +5,7 @@ import ArticleList from "../../components/ArticleList.astro";
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import ProfileViewTracker from "../../components/ProfileViewTracker.astro";
+import SocialGraphicGenerator from "../../components/SocialGraphicGenerator.astro";
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import profileIcon from "../../assets/profile icon.png";
@@ -21,6 +22,10 @@ import {
 } from "@lucide/astro";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
+import {
+  candidateGraphicFormValues,
+  legislatorGraphicFormValues,
+} from "../../lib/contentGenerator";
 import {
   FREE_STATE_ALIGNED_TOOLTIP,
   TPACTION_ALIGNED_TOOLTIP,
@@ -202,6 +207,31 @@ const linkedCandidateForEndorsements = currentCandidateProfile?.candidate || nul
 const linkedCandidateOfficeLine = candidateOfficeLine(linkedCandidateForEndorsements);
 const linkedCandidateOfficeContext = await candidateOfficeContext(linkedCandidateForEndorsements);
 const linkedCandidateTowns = candidateTownsRepresented(linkedCandidateForEndorsements, representative);
+const graphicCommunity = townServiceAreas
+  .flatMap((area) => area.towns)
+  .filter(Boolean)
+  .join(", ");
+const socialGraphicProfileType = hasLegislatorProfile ? "legislator" : "candidate";
+const socialGraphicProfileId = hasLegislatorProfile
+  ? representativeEntityKey
+  : profileCandidate?.filerEntityNumber || profileCandidate?.filer_entity_number || slug;
+const socialGraphicValues = hasLegislatorProfile
+  ? legislatorGraphicFormValues({
+      name: person.full_name,
+      office: officeLabel,
+      districtLine: [districtLabel, graphicCommunity].filter(Boolean).join(" · "),
+      image: portraitUrl,
+    })
+  : candidateGraphicFormValues({
+      name: person.full_name,
+      officeLine: candidateOfficeLine(profileCandidate),
+      community: graphicCommunity
+        ? `${graphicCommunity}, New Hampshire`
+        : profileCandidate?.county
+          ? `${profileCandidate.county} County, New Hampshire`
+          : "New Hampshire",
+      image: portraitUrl,
+    });
 const showCandidateRoleInHero = hasLegislatorProfile && Boolean(linkedCandidateForEndorsements);
 const heroEyebrow = showCandidateRoleInHero
   ? "2026 Candidate Role"
@@ -883,7 +913,7 @@ function uniqueTowns(towns = []) {
     />
   </head>
 
-  <body>
+  <body class="people-profile-page">
     <TopNav />
     <main class="page">
       <a class="back" href="/">Back home</a>
@@ -1480,6 +1510,12 @@ function uniqueTowns(towns = []) {
             </p>
           </div>
 
+          <SocialGraphicGenerator
+            profileType={socialGraphicProfileType}
+            profileId={socialGraphicProfileId}
+            values={socialGraphicValues}
+          />
+
           <form
             class="admin-edit-form"
             action="/api/admin/profile"
@@ -1992,7 +2028,7 @@ function uniqueTowns(towns = []) {
             <div class="section-heading split-heading">
               <div>
                 <p class="eyebrow">Community context</p>
-                <h2>Submissions and related coverage</h2>
+                <h2>What Your Neighbors and the Media Say...</h2>
                 <p>
                   Community submissions and related articles help neighbors understand
                   the public context around this profile.
@@ -2285,6 +2321,10 @@ function uniqueTowns(towns = []) {
 </html>
 
 <style>
+  :global(body.people-profile-page) {
+    background: #d5dde7;
+  }
+
   .back,
   a {
     color: #1f2933;

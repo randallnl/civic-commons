@@ -216,6 +216,57 @@ const submitLabel = isCurrentLegislators
 
   document.querySelectorAll("[data-legislative-search-filters]")
     .forEach(initializeLegislativeFilters);
+
+  const setNavigationFormBusy = (form, busy) => {
+    const submitButton = form.querySelector("button[type='submit']");
+    const resultsRegion = document.querySelector("[data-results-region]");
+
+    form.dataset.submitting = busy ? "true" : "false";
+    form.setAttribute("aria-busy", busy ? "true" : "false");
+    resultsRegion?.setAttribute("aria-busy", busy ? "true" : "false");
+
+    if (!(submitButton instanceof HTMLButtonElement)) return;
+    if (!submitButton.dataset.idleLabel) {
+      submitButton.dataset.idleLabel = submitButton.textContent?.trim() || "Submit";
+    }
+    submitButton.disabled = busy;
+    submitButton.textContent = busy
+      ? form.dataset.updatingLabel || "Updating results…"
+      : submitButton.dataset.idleLabel;
+  };
+
+  const initializeResultsNavigationForm = (form) => {
+    if (!(form instanceof HTMLFormElement)) return;
+    if (form.dataset.resultsNavigationReady === "true") return;
+    form.dataset.resultsNavigationReady = "true";
+
+    form.addEventListener("submit", () => setNavigationFormBusy(form, true));
+
+    if (form.hasAttribute("data-auto-submit-on-change")) {
+      form.querySelector("select[name='ward']")?.addEventListener("change", () => {
+        if (form.dataset.submitting === "true") return;
+        form.requestSubmit();
+      });
+    }
+  };
+
+  const resetResultsNavigationForms = () => {
+    document.querySelectorAll("[data-results-navigation-form]").forEach((form) => {
+      initializeResultsNavigationForm(form);
+      if (form instanceof HTMLFormElement) setNavigationFormBusy(form, false);
+    });
+  };
+
+  resetResultsNavigationForms();
+  window.addEventListener("pageshow", resetResultsNavigationForms);
+
+  const activeResultsAnchor = window.location.hash.slice(1);
+  const activeResultsRegion = document.querySelector("[data-results-region]");
+  if (activeResultsAnchor && activeResultsRegion?.id === activeResultsAnchor) {
+    window.requestAnimationFrame(() => {
+      activeResultsRegion.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 </script>
 
 <style>
@@ -249,5 +300,42 @@ const submitLabel = isCurrentLegislators
     color: #9f1239;
     font-size: 1rem;
     line-height: 1;
+  }
+
+  :global([data-results-navigation-form][data-submitting="true"] button[type="submit"]) {
+    cursor: wait;
+    opacity: 0.82;
+    padding-right: 42px;
+    position: relative;
+  }
+
+  :global([data-results-navigation-form][data-submitting="true"] button[type="submit"]::after) {
+    animation: legislative-results-spin 0.7s linear infinite;
+    border: 2px solid rgb(255 255 255 / 45%);
+    border-radius: 50%;
+    border-top-color: currentColor;
+    content: "";
+    height: 15px;
+    position: absolute;
+    right: 15px;
+    top: calc(50% - 7.5px);
+    width: 15px;
+  }
+
+  :global([data-results-region][aria-busy="true"]) {
+    opacity: 0.58;
+    transition: opacity 120ms ease;
+  }
+
+  @keyframes legislative-results-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :global([data-results-navigation-form][data-submitting="true"] button[type="submit"]::after) {
+      animation: none;
+    }
   }
 </style>

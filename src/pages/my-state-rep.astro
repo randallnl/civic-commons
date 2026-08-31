@@ -614,7 +614,13 @@ function embedRepresentativeKey(rep = {}) {
           </p>
         </div>
 
-        <form class="address-lookup" action="/my-state-rep#rep-results" method="get" data-results-form>
+        <form
+          class="address-lookup"
+          action="/my-state-rep#rep-results"
+          method="get"
+          data-results-form
+          data-results-navigation-form
+        >
           {isEmbed && <input type="hidden" name="embed" value="1" />}
           {isEmbed && <input type="hidden" name="partner" value={embedPartnerKey} />}
           <label for="address">Find your current State Representatives and State Senator</label>
@@ -725,7 +731,14 @@ function embedRepresentativeKey(rep = {}) {
               </div>
 
               {isWardedCommunity && (
-                <form class:list={["ward-filter", !wardNumber && "needs-ward"]} action="/my-state-rep#rep-results" method="get" data-results-form>
+                <form
+                  class:list={["ward-filter", !wardNumber && "needs-ward"]}
+                  action="/my-state-rep#rep-results"
+                  method="get"
+                  data-results-form
+                  data-results-navigation-form
+                  data-auto-submit-on-change
+                >
                   <input type="hidden" name="address" value={address} />
                   {isEmbed && <input type="hidden" name="embed" value="1" />}
                   {isEmbed && <input type="hidden" name="partner" value={embedPartnerKey} />}

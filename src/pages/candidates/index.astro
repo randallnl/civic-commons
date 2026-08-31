@@ -776,7 +776,12 @@ function uniqueOptions(values = []) {
           </p>
         </div>
 
-        <form class="address-lookup" action="/candidates" method="get">
+        <form
+          class="address-lookup"
+          action="/candidates#candidate-results"
+          method="get"
+          data-results-navigation-form
+        >
           <label for="address">Find State House and State Senate candidates for your address</label>
 
           <div class="address-row">
@@ -801,10 +806,18 @@ function uniqueOptions(values = []) {
         nameOptions={nameOptions}
         townOptions={townOptions}
         clearHref={hasFilters ? "/candidates" : ""}
+        resultsAnchor="candidate-results"
       />
 
       {error ? (
-        <p class="status-message">{error}</p>
+        <p
+          class="status-message results"
+          id="candidate-results"
+          data-results-region
+          aria-live="polite"
+        >
+          {error}
+        </p>
       ) : (
         <section class="results" id="candidate-results" data-results-region>
           <div class="results-heading">
@@ -826,7 +839,14 @@ function uniqueOptions(values = []) {
               {address && addressOfficeGroups.length ? (
                 <div class="address-office-results">
                   {isWardedCommunity && (
-                    <form class:list={["ward-filter", !wardNumber && "needs-ward"]} action="/candidates" method="get" data-results-form>
+                    <form
+                      class:list={["ward-filter", !wardNumber && "needs-ward"]}
+                      action="/candidates#candidate-results"
+                      method="get"
+                      data-results-form
+                      data-results-navigation-form
+                      data-auto-submit-on-change
+                    >
                       <input type="hidden" name="address" value={address} />
                       <div class="ward-filter-copy">
                         <label for="ward">Select your ward</label>

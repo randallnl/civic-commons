@@ -1,0 +1,625 @@
+---
+import {
+  CANDIDATE_GRAPHIC_TEMPLATE,
+  LEGISLATOR_GRAPHIC_TEMPLATE,
+} from "../lib/contentGenerator";
+
+const {
+  profileType = "candidate",
+  profileId = "",
+  values = {},
+} = Astro.props;
+const normalizedProfileType = profileType === "legislator" ? "legislator" : "candidate";
+const initialTemplate = values.template || (
+  normalizedProfileType === "legislator"
+    ? LEGISLATOR_GRAPHIC_TEMPLATE
+    : CANDIDATE_GRAPHIC_TEMPLATE
+);
+---
+
+<section
+  class="social-graphic-generator"
+  data-social-graphic-generator
+  data-entity-type={normalizedProfileType}
+  data-entity-id={String(profileId)}
+>
+  <details data-generator-details>
+    <summary>Create social graphic</summary>
+    <div class="generator-body">
+      <div class="generator-heading">
+        <p class="generator-eyebrow">Content Generator</p>
+        <h3>Create a profile update graphic</h3>
+        <p>
+          Review every field before rendering. The profile is unchanged if the
+          graphic service is unavailable.
+        </p>
+      </div>
+
+      <form data-generator-form novalidate>
+        <div class="generator-grid">
+          <label>
+            Template type
+            <select name="template" required>
+              <option value={CANDIDATE_GRAPHIC_TEMPLATE} selected={initialTemplate === CANDIDATE_GRAPHIC_TEMPLATE}>
+                Candidate profile update
+              </option>
+              <option value={LEGISLATOR_GRAPHIC_TEMPLATE} selected={initialTemplate === LEGISLATOR_GRAPHIC_TEMPLATE}>
+                Legislator profile update
+              </option>
+            </select>
+            <span class="generator-field-error" data-field-error-for="template"></span>
+          </label>
+
+          <label>
+            Update label / eyebrow <span>Optional</span>
+            <input name="eyebrow" value={values.eyebrow || ""} maxlength="42" />
+            <span class="generator-field-error" data-field-error-for="eyebrow"></span>
+          </label>
+
+          <label data-update-label-field hidden={initialTemplate !== LEGISLATOR_GRAPHIC_TEMPLATE}>
+            Update label <span>Optional</span>
+            <input name="updateLabel" value={values.updateLabel || ""} maxlength="42" />
+            <span class="generator-field-error" data-field-error-for="updateLabel"></span>
+          </label>
+
+          <label>
+            Person's name
+            <input name="headline" value={values.headline || ""} maxlength="70" required />
+            <span class="generator-field-error" data-field-error-for="headline"></span>
+          </label>
+
+          <label>
+            Office
+            <input name="office" value={values.office || ""} maxlength={initialTemplate === CANDIDATE_GRAPHIC_TEMPLATE ? 100 : 70} required />
+            <span class="generator-field-error" data-field-error-for="office"></span>
+          </label>
+
+          <label>
+            <span data-context-label>{initialTemplate === CANDIDATE_GRAPHIC_TEMPLATE ? "District / community" : "District / community"}</span>
+            <input
+              name="districtCommunity"
+              value={values.districtCommunity || ""}
+              maxlength={initialTemplate === CANDIDATE_GRAPHIC_TEMPLATE ? 80 : 110}
+            />
+            <span class="generator-field-error" data-field-error-for="districtCommunity"></span>
+          </label>
+        </div>
+
+        <label>
+          Description of what changed
+          <textarea name="body" rows="4" maxlength={initialTemplate === CANDIDATE_GRAPHIC_TEMPLATE ? 220 : 240} required>{values.body || ""}</textarea>
+          <span class="generator-field-error" data-field-error-for="body"></span>
+        </label>
+
+        <label>
+          Public portrait URL
+          <input
+            name="image"
+            type="url"
+            value={values.image || ""}
+            maxlength="2048"
+            placeholder="https://photos.example.org/profile.jpg"
+            required
+          />
+          <small>The renderer must be able to fetch this URL without signing in.</small>
+          <span class="generator-field-error" data-field-error-for="image"></span>
+        </label>
+
+        <label>
+          Call to action <span>Optional</span>
+          <input name="cta" value={values.cta || ""} maxlength="72" />
+          <span class="generator-field-error" data-field-error-for="cta"></span>
+        </label>
+
+        <div class="generator-actions">
+          <button type="submit" data-generate-button>Generate PNG</button>
+          <span class="generator-status" data-generator-status aria-live="polite"></span>
+        </div>
+      </form>
+
+      <section class="generator-result" data-generator-result hidden aria-live="polite">
+        <img data-result-image alt="Generated NH Deserves Better social graphic" />
+        <div class="generator-result-copy">
+          <strong data-result-title>Your social graphic is ready.</strong>
+          <span data-result-meta></span>
+          <div class="generator-result-actions">
+            <a data-download-link href="#">Download PNG</a>
+            <button type="button" data-create-variation>Create another variation</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="generator-recents" data-generator-recents hidden>
+        <h4>Recent graphics for this profile</h4>
+        <div data-generator-recents-list></div>
+      </section>
+    </div>
+  </details>
+</section>
+
+<script>
+  import { contentGraphicUiState } from "../lib/contentGraphicUiState.js";
+
+  const generators = document.querySelectorAll("[data-social-graphic-generator]");
+
+  generators.forEach((generator) => {
+    if (!(generator instanceof HTMLElement) || generator.dataset.enhanced === "true") return;
+    generator.dataset.enhanced = "true";
+
+    const details = generator.querySelector("[data-generator-details]");
+    const form = generator.querySelector("[data-generator-form]");
+    const template = form?.querySelector("[name='template']");
+    const updateLabelField = form?.querySelector("[data-update-label-field]");
+    const office = form?.querySelector("[name='office']");
+    const context = form?.querySelector("[name='districtCommunity']");
+    const body = form?.querySelector("[name='body']");
+    const button = form?.querySelector("[data-generate-button]");
+    const status = generator.querySelector("[data-generator-status]");
+    const result = generator.querySelector("[data-generator-result]");
+    const resultImage = generator.querySelector("[data-result-image]");
+    const resultTitle = generator.querySelector("[data-result-title]");
+    const resultMeta = generator.querySelector("[data-result-meta]");
+    const downloadLink = generator.querySelector("[data-download-link]");
+    const variationButton = generator.querySelector("[data-create-variation]");
+    const recents = generator.querySelector("[data-generator-recents]");
+    const recentsList = generator.querySelector("[data-generator-recents-list]");
+    let eventId = "";
+    let recentsLoaded = false;
+
+    function refreshTemplateRules() {
+      const isCandidate = template?.value === "candidate-profile-update";
+      if (updateLabelField instanceof HTMLElement) updateLabelField.hidden = isCandidate;
+      if (office instanceof HTMLInputElement) office.maxLength = isCandidate ? 100 : 70;
+      if (context instanceof HTMLInputElement) context.maxLength = isCandidate ? 80 : 110;
+      if (body instanceof HTMLTextAreaElement) body.maxLength = isCandidate ? 220 : 240;
+    }
+
+    function clearErrors() {
+      generator.querySelectorAll("[data-field-error-for]").forEach((fieldError) => {
+        fieldError.textContent = "";
+      });
+      form?.querySelectorAll("[aria-invalid='true']").forEach((field) => {
+        field.removeAttribute("aria-invalid");
+      });
+      if (status) {
+        status.textContent = "";
+        status.className = "generator-status";
+      }
+    }
+
+    function showFieldErrors(fieldErrors = {}) {
+      Object.entries(fieldErrors).forEach(([field, message]) => {
+        const errorElement = generator.querySelector(`[data-field-error-for="${field}"]`);
+        const input = form?.querySelector(`[name="${field}"]`);
+        if (errorElement) errorElement.textContent = String(message || "This field is invalid.");
+        input?.setAttribute("aria-invalid", "true");
+      });
+    }
+
+    function setLoading(isLoading) {
+      if (button instanceof HTMLButtonElement) {
+        button.disabled = isLoading;
+        if (isLoading) button.textContent = "Rendering…";
+        else if (button.textContent === "Rendering…") button.textContent = "Generate PNG";
+      }
+      if (variationButton instanceof HTMLButtonElement) variationButton.disabled = isLoading;
+      if (isLoading && status) {
+        status.textContent = "Rendering a 1080 × 1350 PNG. This can take up to 45 seconds.";
+        status.className = "generator-status loading";
+      }
+    }
+
+    function showSuccess(response) {
+      const next = contentGraphicUiState(response, eventId);
+      eventId = next.eventId;
+      if (status) {
+        status.textContent = next.message;
+        status.className = "generator-status success";
+      }
+      if (result instanceof HTMLElement) result.hidden = false;
+      if (resultImage instanceof HTMLImageElement) resultImage.src = response.imageUrl;
+      if (resultTitle) resultTitle.textContent = next.message;
+      if (resultMeta) {
+        const variation = response.variationName || response.variation || "Selected variation";
+        resultMeta.textContent = `${variation} · ${response.width || 1080} × ${response.height || 1350} · Render ${response.rendererId || "complete"}`;
+      }
+      if (downloadLink instanceof HTMLAnchorElement) {
+        downloadLink.href = response.downloadUrl || response.imageUrl;
+      }
+      prependRecent(response);
+    }
+
+    function showFailure(response) {
+      const next = contentGraphicUiState(response, eventId);
+      eventId = next.eventId;
+      showFieldErrors(next.fieldErrors);
+      if (status) {
+        status.textContent = next.message;
+        status.className = "generator-status error";
+      }
+      if (button instanceof HTMLButtonElement && next.retryable) {
+        button.textContent = "Retry same render";
+      }
+    }
+
+    async function submitGraphic() {
+      if (!(form instanceof HTMLFormElement)) return;
+      clearErrors();
+      refreshTemplateRules();
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+      if (!eventId) eventId = crypto.randomUUID();
+      const values = Object.fromEntries(new FormData(form).entries());
+      const payload = {
+        ...values,
+        eventId,
+        entityType: generator.dataset.entityType || "",
+        entityId: generator.dataset.entityId || "",
+      };
+
+      setLoading(true);
+      try {
+        const response = await fetch("/api/admin/content-graphics", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        const responseBody = await response.json().catch(() => ({
+          status: "error",
+          message: "The server returned an unreadable response.",
+          retryable: response.status >= 500,
+          eventId,
+        }));
+        if (!response.ok || responseBody.status !== "complete") {
+          showFailure(responseBody);
+          return;
+        }
+        showSuccess(responseBody);
+      } catch {
+        showFailure({
+          status: "error",
+          eventId,
+          message: "The request was interrupted. Retry to recover the original render.",
+          retryable: true,
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function recentCard(item) {
+      const card = document.createElement("article");
+      const imageLink = document.createElement("a");
+      const image = document.createElement("img");
+      const copy = document.createElement("div");
+      const title = document.createElement("strong");
+      const meta = document.createElement("span");
+      const download = document.createElement("a");
+
+      imageLink.href = item.imageUrl;
+      imageLink.target = "_blank";
+      imageLink.rel = "noopener noreferrer";
+      image.src = item.imageUrl;
+      image.alt = "Previously generated social graphic";
+      image.loading = "lazy";
+      imageLink.append(image);
+      title.textContent = item.variationName || item.variation || "Generated graphic";
+      meta.textContent = [item.template, formatDate(item.completedAt || item.createdAt)].filter(Boolean).join(" · ");
+      download.href = item.downloadUrl || item.imageUrl;
+      download.textContent = "Download PNG";
+      copy.append(title, meta, download);
+      card.append(imageLink, copy);
+      return card;
+    }
+
+    function prependRecent(item) {
+      if (!(recents instanceof HTMLElement) || !recentsList) return;
+      recents.hidden = false;
+      const existing = recentsList.querySelector(`[data-event-id="${item.eventId}"]`);
+      if (existing) existing.remove();
+      const card = recentCard(item);
+      card.dataset.eventId = item.eventId;
+      recentsList.prepend(card);
+    }
+
+    async function loadRecents() {
+      if (recentsLoaded) return;
+      recentsLoaded = true;
+      const query = new URLSearchParams({
+        entityType: generator.dataset.entityType || "",
+        entityId: generator.dataset.entityId || "",
+      });
+      try {
+        const response = await fetch(`/api/admin/content-graphics?${query}`, {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!Array.isArray(data.events) || !data.events.length || !recentsList) return;
+        data.events.forEach((item) => {
+          const card = recentCard(item);
+          card.dataset.eventId = item.eventId;
+          recentsList.append(card);
+        });
+        if (recents instanceof HTMLElement) recents.hidden = false;
+      } catch {
+        // Recent renders are a convenience; generation remains available.
+      }
+    }
+
+    function formatDate(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }).format(date);
+    }
+
+    template?.addEventListener("change", refreshTemplateRules);
+    details?.addEventListener("toggle", () => {
+      if (details.open) loadRecents();
+    });
+    form?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      submitGraphic();
+    });
+    variationButton?.addEventListener("click", () => {
+      eventId = crypto.randomUUID();
+      if (result instanceof HTMLElement) result.hidden = true;
+      submitGraphic();
+    });
+    refreshTemplateRules();
+  });
+</script>
+
+<style>
+  .social-graphic-generator {
+    margin-top: 1.25rem;
+  }
+
+  details {
+    border: 1px solid rgba(43, 72, 106, 0.22);
+    border-radius: 18px;
+    background: #f8fbff;
+    overflow: hidden;
+  }
+
+  summary {
+    cursor: pointer;
+    padding: 1rem 1.2rem;
+    color: #17324d;
+    font-weight: 900;
+    list-style-position: inside;
+  }
+
+  details[open] summary {
+    border-bottom: 1px solid rgba(43, 72, 106, 0.14);
+  }
+
+  .generator-body {
+    display: grid;
+    gap: 1.25rem;
+    padding: 1.2rem;
+  }
+
+  .generator-heading > * {
+    margin: 0;
+  }
+
+  .generator-heading h3 {
+    margin-top: 0.2rem;
+    color: #17324d;
+    font-size: 1.25rem;
+  }
+
+  .generator-heading p:last-child {
+    margin-top: 0.45rem;
+    color: #536475;
+    line-height: 1.55;
+  }
+
+  .generator-eyebrow {
+    color: #b42318;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  form {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .generator-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  label {
+    display: grid;
+    gap: 0.4rem;
+    color: #263b50;
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+
+  label > span:not(.generator-field-error) {
+    color: #718096;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #b8c5d1;
+    border-radius: 10px;
+    background: #fff;
+    color: #172b3d;
+    font: inherit;
+    font-weight: 500;
+    padding: 0.72rem 0.78rem;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  input[aria-invalid="true"],
+  select[aria-invalid="true"],
+  textarea[aria-invalid="true"] {
+    border-color: #b42318;
+    box-shadow: 0 0 0 2px rgba(180, 35, 24, 0.12);
+  }
+
+  small {
+    color: #637486;
+    font-size: 0.76rem;
+    font-weight: 500;
+  }
+
+  .generator-field-error {
+    min-height: 1em;
+    color: #b42318;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .generator-actions,
+  .generator-result-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+  }
+
+  button,
+  .generator-result-actions a {
+    border: 1px solid #17324d;
+    border-radius: 999px;
+    background: #17324d;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 900;
+    padding: 0.7rem 1rem;
+    text-decoration: none;
+  }
+
+  button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+  }
+
+  .generator-status {
+    color: #536475;
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+
+  .generator-status.success {
+    color: #17603a;
+  }
+
+  .generator-status.error {
+    color: #b42318;
+  }
+
+  .generator-result {
+    display: grid;
+    grid-template-columns: minmax(180px, 280px) 1fr;
+    gap: 1rem;
+    align-items: center;
+    border-top: 1px solid rgba(43, 72, 106, 0.14);
+    padding-top: 1.2rem;
+  }
+
+  .generator-result[hidden],
+  .generator-recents[hidden] {
+    display: none;
+  }
+
+  .generator-result img {
+    width: 100%;
+    border: 1px solid rgba(43, 72, 106, 0.18);
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  .generator-result-copy {
+    display: grid;
+    gap: 0.65rem;
+    color: #536475;
+  }
+
+  .generator-result-copy strong {
+    color: #17324d;
+    font-size: 1.05rem;
+  }
+
+  .generator-result-actions button {
+    background: #fff;
+    color: #17324d;
+  }
+
+  .generator-recents {
+    border-top: 1px solid rgba(43, 72, 106, 0.14);
+    padding-top: 1rem;
+  }
+
+  .generator-recents h4 {
+    margin: 0 0 0.75rem;
+    color: #17324d;
+  }
+
+  .generator-recents > div {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.8rem;
+  }
+
+  .generator-recents article {
+    display: grid;
+    gap: 0.55rem;
+    min-width: 0;
+  }
+
+  .generator-recents article img {
+    width: 100%;
+    border-radius: 10px;
+  }
+
+  .generator-recents article div {
+    display: grid;
+    gap: 0.25rem;
+    color: #536475;
+    font-size: 0.76rem;
+  }
+
+  .generator-recents article a:last-child {
+    color: #17324d;
+    font-weight: 800;
+  }
+
+  @media (max-width: 720px) {
+    .generator-grid,
+    .generator-result {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

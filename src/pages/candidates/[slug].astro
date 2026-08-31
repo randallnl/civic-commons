@@ -6,6 +6,7 @@ import SiteFooter from "../../components/SiteFooter.astro";
 import ArticleList from "../../components/ArticleList.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
 import FilterBar from "../../components/FilterBar.astro";
+import SocialGraphicGenerator from "../../components/SocialGraphicGenerator.astro";
 import profileIcon from "../../assets/profile icon.png";
 import {
   Camera,
@@ -19,6 +20,7 @@ import {
 } from "@lucide/astro";
 import { getArticles } from "../../lib/articlesApi";
 import { currentAdminSession } from "../../lib/adminAuth";
+import { candidateGraphicFormValues } from "../../lib/contentGenerator";
 import {
   FREE_STATE_ALIGNED_TOOLTIP,
   TPACTION_ALIGNED_TOOLTIP,
@@ -117,6 +119,16 @@ const officeParts = [
 ].filter(Boolean);
 const townsRepresented = candidateTownsRepresented(candidate, currentLegislator);
 const countiesRepresented = candidateCountiesRepresented(candidate, currentLegislator);
+const candidateGraphicValues = candidateGraphicFormValues({
+  name,
+  officeLine: officeParts.join(" · "),
+  community: townsRepresented
+    ? `${townsRepresented}, New Hampshire`
+    : candidate.county
+      ? `${candidate.county} County, New Hampshire`
+      : "New Hampshire",
+  image: portraitUrl,
+});
 const candidateRoles = uniqueCandidateRoles(candidate.candidateRoles?.length ? candidate.candidateRoles : [candidate]);
 const hasFreeStaterTag = isFreeStater(candidate) || isFreeStater(currentLegislator);
 const hasTpActionTag = isTpActionAligned(candidate) || isTpActionAligned(currentLegislator);
@@ -796,6 +808,12 @@ function uniqueArticles(articles = []) {
               saving to see the API-backed profile data.
             </p>
           </div>
+
+          <SocialGraphicGenerator
+            profileType="candidate"
+            profileId={candidateEntityKey}
+            values={candidateGraphicValues}
+          />
 
           <form
             class="admin-edit-form"

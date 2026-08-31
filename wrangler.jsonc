@@ -5,6 +5,9 @@
 	],
 	"name": "civic-commons",
 	"main": "@astrojs/cloudflare/entrypoints/server",
+	"vars": {
+		"CONTENT_GENERATOR_BASE_URL": "https://content-generator.randall-d53.workers.dev"
+	},
 	"assets": {
 		"directory": "./dist",
 		"binding": "ASSETS"
