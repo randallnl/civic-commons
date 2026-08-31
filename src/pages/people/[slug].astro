@@ -1096,12 +1096,12 @@ function uniqueTowns(towns = []) {
       )}
 
       {!linkedCandidateForEndorsements && (
-      <section class="panel profile-update-panel" aria-label="Suggest profile updates">
+      <section class="panel profile-update-panel" aria-label="Submit campaign information">
         <details class="profile-update-disclosure">
           <summary>
             <span>
-              <strong>Help improve this profile</strong>
-              <small>Submit a photo, website, or social account for review</small>
+              <strong>Submit Campaign Information</strong>
+              <small>Submit a photo, campaign website, or social account for review</small>
             </span>
             <strong>+</strong>
           </summary>
@@ -1188,7 +1188,7 @@ function uniqueTowns(towns = []) {
               <textarea name="notes" rows="3" placeholder="Where did you find this, or what should reviewers know?"></textarea>
             </label>
 
-            <button type="submit">Submit Profile Update</button>
+            <button type="submit">Submit Campaign Information</button>
           </form>
         </details>
       </section>
@@ -1201,15 +1201,26 @@ function uniqueTowns(towns = []) {
               <p class="eyebrow">{hasLegislatorProfile ? "Roles" : "2026 Candidate Role"}</p>
               <h2>{hasLegislatorProfile ? "Current role and candidacies" : "Candidate information for this person"}</h2>
             </div>
-            {adminSession && currentCandidateProfile && (
+            <div class="role-panel-actions">
               <button
                 type="button"
-                class="section-action"
-                data-admin-edit-toggle
+                class="campaign-info-button"
+                data-campaign-info-toggle
+                aria-expanded="false"
+                aria-controls="campaign-information-form"
               >
-                Show edit view
+                Submit Campaign Information
               </button>
-            )}
+              {adminSession && currentCandidateProfile && (
+                <button
+                  type="button"
+                  class="section-action"
+                  data-admin-edit-toggle
+                >
+                  Show edit view
+                </button>
+              )}
+            </div>
           </div>
 
           {hasLegislatorProfile ? (
@@ -1400,16 +1411,13 @@ function uniqueTowns(towns = []) {
             </div>
           )}
 
-          <div class="profile-update-panel profile-update-panel-inline" aria-label="Suggest profile updates">
-            <details class="profile-update-disclosure">
-              <summary>
-                <span>
-                  <strong>Help improve this profile</strong>
-                  <small>Submit a photo, website, or social account for review</small>
-                </span>
-                <strong>+</strong>
-              </summary>
-
+          <div
+            class="profile-update-panel profile-update-panel-inline"
+            id="campaign-information-form"
+            data-campaign-info-panel
+            aria-label="Submit campaign information"
+            hidden
+          >
               <form class="profile-update-form" action="/api/profile-updates" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="personKey" value={slug} />
                 <input type="hidden" name="personName" value={person.full_name} />
@@ -1492,9 +1500,8 @@ function uniqueTowns(towns = []) {
                   <textarea name="notes" rows="3" placeholder="Where did you find this, or what should reviewers know?"></textarea>
                 </label>
 
-                <button type="submit">Submit Profile Update</button>
+                <button type="submit">Submit Campaign Information</button>
               </form>
-            </details>
           </div>
         </section>
       )}
@@ -2273,6 +2280,29 @@ function uniqueTowns(towns = []) {
     </script>
     <script>
       (() => {
+        const toggles = Array.from(document.querySelectorAll("[data-campaign-info-toggle]"));
+        if (!toggles.length) return;
+
+        toggles.forEach((toggle) => {
+          const panelId = toggle.getAttribute("aria-controls");
+          const panel = panelId ? document.getElementById(panelId) : null;
+          if (!(toggle instanceof HTMLButtonElement) || !(panel instanceof HTMLElement)) return;
+
+          toggle.addEventListener("click", () => {
+            const isOpening = panel.hidden;
+            panel.hidden = !isOpening;
+            toggle.setAttribute("aria-expanded", isOpening ? "true" : "false");
+            toggle.textContent = isOpening ? "Close Campaign Information" : "Submit Campaign Information";
+
+            if (isOpening) {
+              panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
+          });
+        });
+      })();
+    </script>
+    <script>
+      (() => {
         const panels = Array.from(document.querySelectorAll("[data-admin-edit-panel]"));
         const toggles = Array.from(document.querySelectorAll("[data-admin-edit-toggle]"));
         if (!panels.length || !toggles.length) return;
@@ -2517,6 +2547,14 @@ function uniqueTowns(towns = []) {
     border-radius: 12px;
     margin-top: 16px;
     padding: 10px;
+  }
+
+  .profile-update-panel-inline[hidden] {
+    display: none;
+  }
+
+  .profile-update-panel-inline .profile-update-form {
+    margin-top: 0;
   }
 
   .profile-update-disclosure summary {
@@ -3504,6 +3542,33 @@ function uniqueTowns(towns = []) {
     justify-content: space-between;
   }
 
+  .role-panel-actions {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .campaign-info-button {
+    background: #dc4d09;
+    border: 1px solid #b6390a;
+    border-radius: 999px;
+    color: #fffaf0;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 950;
+    line-height: 1;
+    padding: 10px 14px;
+  }
+
+  .campaign-info-button:hover,
+  .campaign-info-button:focus-visible {
+    background: #b6390a;
+  }
+
   .section-action {
     background: #1f2933;
     border: 1px solid #e2e8f0;
@@ -3952,6 +4017,10 @@ function uniqueTowns(towns = []) {
 
     .split-heading {
       display: grid;
+    }
+
+    .role-panel-actions {
+      justify-content: flex-start;
     }
 
     .section-action {
