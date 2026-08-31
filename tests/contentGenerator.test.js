@@ -21,6 +21,7 @@ import {
 } from "../src/lib/contentGraphicAction.js";
 import {
   contentGraphicRetryPayload,
+  renderContentGraphic,
   shouldReuseContentGraphicPayload,
 } from "../src/lib/contentGraphicEvents.js";
 import { contentGraphicUiState } from "../src/lib/contentGraphicUiState.js";
@@ -42,6 +43,62 @@ function validRequest(overrides = {}) {
     image: "https://public.example.org/candidate-photo.jpg",
     cta: "View the candidate profile",
     ...overrides,
+  };
+}
+
+function createContentGraphicDbStub() {
+  let row = null;
+
+  return {
+    prepare(sql) {
+      let values = [];
+      return {
+        bind(...nextValues) {
+          values = nextValues;
+          return this;
+        },
+        async run() {
+          if (sql.includes("INSERT OR IGNORE INTO content_graphic_events")) {
+            if (row) return { meta: { changes: 0 } };
+            row = {
+              local_event_id: values[0],
+              entity_type: values[1],
+              entity_id: values[2],
+              candidate_id: values[3],
+              legislator_id: values[4],
+              template_slug: values[5],
+              source_id: values[6],
+              status: "pending",
+              request_json: values[7],
+              created_by: values[8],
+              renderer_duplicate: 0,
+              created_at: "2026-08-31 12:00:00",
+              updated_at: "2026-08-31 12:00:00",
+            };
+            return { meta: { changes: 1 } };
+          }
+          if (sql.includes("SET request_json = ?")) {
+            row.request_json = values[0];
+            row.status = "pending";
+            return { meta: { changes: 1 } };
+          }
+          if (sql.includes("SET renderer_render_id = ?")) {
+            row.renderer_render_id = values[0];
+            row.variation_id = values[1];
+            row.variation_name = values[2];
+            row.image_url = values[3];
+            row.status = "complete";
+            row.renderer_duplicate = values[4];
+            row.completed_at = values[5] || "2026-08-31 12:00:01";
+            return { meta: { changes: 1 } };
+          }
+          return { meta: { changes: 0 } };
+        },
+        async first() {
+          return row ? { ...row } : null;
+        },
+      };
+    },
   };
 }
 
@@ -223,6 +280,34 @@ test("reuses the same source ID and stored payload for an uncertain retry", () =
   assert.equal(shouldReuseContentGraphicPayload("pending", false), true);
   assert.deepEqual(contentGraphicRetryPayload("pending", JSON.stringify(original), edited), original);
   assert.equal(shouldReuseContentGraphicPayload("pending", true), false);
+});
+
+test("renders a newly inserted content event without reusing stale state", async () => {
+  const data = validateContentGraphicRequest(validRequest()).data;
+  const payload = buildContentGraphicPayload(data);
+  let sentPayload;
+
+  const result = await renderContentGraphic({
+    db: createContentGraphicDbStub(),
+    data,
+    payload,
+    baseUrl: "https://content-generator.example.com",
+    fetchImpl: async (_url, options) => {
+      sentPayload = JSON.parse(options.body);
+      return new Response(JSON.stringify({
+        id: "render_123",
+        status: "complete",
+        variation: "civic-blue",
+        variationName: "Civic Blue",
+        image_url: "/api/v1/assets/render_123.png",
+        duplicate: false,
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    },
+  });
+
+  assert.deepEqual(sentPayload, payload);
+  assert.equal(result.status, "complete");
+  assert.equal(result.rendererId, "render_123");
 });
 
 test("a variation UUID produces a new source ID", () => {

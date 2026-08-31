@@ -31,13 +31,12 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS content_graphic_events (
 export async function ensureContentGraphicEventsTable(db) {
   if (!db) throw new Error("D1 database binding is not configured.");
   await db.prepare(TABLE_SQL).run();
-  const insertResult = await db
+  await db
     .prepare(
       `CREATE INDEX IF NOT EXISTS idx_content_graphic_events_entity
        ON content_graphic_events(entity_type, entity_id, created_at DESC)`,
     )
     .run();
-  const isNewEvent = Number(insertResult.meta?.changes ?? insertResult.changes ?? 0) > 0;
   await db
     .prepare(
       `CREATE INDEX IF NOT EXISTS idx_content_graphic_events_status
@@ -60,7 +59,7 @@ export async function renderContentGraphic({
 
   const sourceId = contentGraphicSourceId(data.template, data.eventId);
   const requestJson = JSON.stringify(payload);
-  await db
+  const insertResult = await db
     .prepare(
       `INSERT OR IGNORE INTO content_graphic_events (
          local_event_id, entity_type, entity_id, candidate_id, legislator_id,
@@ -80,6 +79,7 @@ export async function renderContentGraphic({
       createdBy,
     )
     .run();
+  const isNewEvent = Number(insertResult.meta?.changes ?? insertResult.changes ?? 0) > 0;
 
   const existing = await getContentGraphicEvent(data.eventId, db);
   assertEventMatches(existing, data, sourceId);
