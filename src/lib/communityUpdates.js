@@ -51,6 +51,19 @@ const PHOTOS_TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_update_photos (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`;
 
+// Keep bulk hydration queries below D1's SQLite variable limit. The updates
+// page currently loads more records than can safely fit in one IN clause.
+const D1_IN_QUERY_CHUNK_SIZE = 80;
+
+function queryChunks(values = [], size = D1_IN_QUERY_CHUNK_SIZE) {
+  const uniqueValues = [...new Set(values.filter(Boolean))];
+  const chunks = [];
+  for (let index = 0; index < uniqueValues.length; index += size) {
+    chunks.push(uniqueValues.slice(index, index + size));
+  }
+  return chunks;
+}
+
 export function communityUpdatesDb() {
   return env.d1_db;
 }
@@ -383,9 +396,10 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
   const ids = updates.map((update) => update.id).filter(Boolean);
   if (!ids.length) return updates;
 
-  const result = await db
-    .prepare(
-      `SELECT
+  const results = await Promise.all(
+    queryChunks(ids).map((chunk) => db
+      .prepare(
+        `SELECT
           m.update_id,
           m.personid,
           m.person_id,
@@ -438,14 +452,15 @@ async function hydrateUpdateMentions(updates = [], db = communityUpdatesDb()) {
          ON lp.employeeno = COALESCE(p.employeeno, m.employeeno)
        LEFT JOIN county_codes cc
          ON cc.source_county_id = CAST(lr.countycode AS INTEGER)
-       WHERE m.update_id IN (${ids.map(() => "?").join(", ")})
+       WHERE m.update_id IN (${chunk.map(() => "?").join(", ")})
        ORDER BY m.name`,
-    )
-    .bind(...ids)
-    .all();
+      )
+      .bind(...chunk)
+      .all()),
+  );
   const mentionsByUpdate = new Map();
 
-  for (const mention of result.results || []) {
+  for (const mention of results.flatMap((result) => result.results || [])) {
     const list = mentionsByUpdate.get(mention.update_id) || [];
     const name = cleanText(
       mention.canonical_display_name ||
@@ -636,18 +651,20 @@ async function hydrateUpdatePhotos(updates = [], db = communityUpdatesDb()) {
   const ids = updates.map((update) => update.id).filter(Boolean);
   if (!ids.length) return updates;
 
-  const result = await db
-    .prepare(
-      `SELECT update_id, photo_url
+  const results = await Promise.all(
+    queryChunks(ids).map((chunk) => db
+      .prepare(
+        `SELECT update_id, photo_url
        FROM community_update_photos
-       WHERE update_id IN (${ids.map(() => "?").join(", ")})
+       WHERE update_id IN (${chunk.map(() => "?").join(", ")})
        ORDER BY sort_order, id`,
-    )
-    .bind(...ids)
-    .all();
+      )
+      .bind(...chunk)
+      .all()),
+  );
   const photosByUpdate = new Map();
 
-  for (const photo of result.results || []) {
+  for (const photo of results.flatMap((result) => result.results || [])) {
     const list = photosByUpdate.get(photo.update_id) || [];
     if (photo.photo_url) list.push(photo.photo_url);
     photosByUpdate.set(photo.update_id, list);
