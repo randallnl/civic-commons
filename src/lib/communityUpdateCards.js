@@ -1,15 +1,17 @@
-import { getArticlePreview } from "./articlePreviews";
+import { getArticlePreview, getCachedArticlePreview } from "./articlePreviews";
 import { profilePhotoUrl } from "./photos";
 import { cleanText } from "./text";
 
-export async function getCommunityUpdateCards(updates = []) {
-  return Promise.all(updates.map(updateViewModel));
+export async function getCommunityUpdateCards(updates = [], options = {}) {
+  return Promise.all(updates.map((update) => updateViewModel(update, options)));
 }
 
-export async function updateViewModel(update = {}) {
+export async function updateViewModel(update = {}, { fetchMissingPreviews = true } = {}) {
   const social = socialPreview(update.linkUrl);
   const fetchedLinkPreview = update.linkUrl
-    ? await getArticlePreview(update.linkUrl)
+    ? await (fetchMissingPreviews
+        ? getArticlePreview(update.linkUrl)
+        : getCachedArticlePreview(update.linkUrl))
     : null;
   const uploadedPhotoUrl = update.photoUrls?.[0] || update.photoUrl || "";
   const linkPreview = fetchedLinkPreview || genericLinkPreview(update.linkUrl, social);

@@ -25,10 +25,11 @@ const {
   variant = "",
   embedded = false,
   showPeoplePreview = true,
+  fetchMissingPreviews = true,
 } = Astro.props;
 
 const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
-const updateCards = await getCommunityUpdateCards(updates);
+const updateCards = await getCommunityUpdateCards(updates, { fetchMissingPreviews });
 const adminSession = await currentAdminSession(Astro.request);
 const canModerateUpdates = canModerateContent(adminSession);
 const hasInstagramEmbeds = updateCards.some((card) => card.social?.type === "instagram");

@@ -13,6 +13,7 @@ import {
   saveCommunityUpdatePhotos,
   saveCommunityUpdateMentions,
 } from "../../lib/communityUpdates";
+import { getArticlePreview } from "../../lib/articlePreviews";
 
 export async function POST({ request }) {
   let redirectTo = "/";
@@ -81,7 +82,10 @@ export async function POST({ request }) {
     }
     if (updateId && linkUrl) {
       await markCommunityUpdateArchivePending(updateId, linkUrl, db);
-      waitUntil(captureCommunityUpdateScreenshot({ updateId, sourceUrl: linkUrl, db }));
+      waitUntil(Promise.allSettled([
+        captureCommunityUpdateScreenshot({ updateId, sourceUrl: linkUrl, db }),
+        getArticlePreview(linkUrl),
+      ]));
     }
 
     if (email) {

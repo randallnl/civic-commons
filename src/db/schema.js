@@ -125,6 +125,39 @@ export const personCandidateRoles = sqliteTable(
   }),
 );
 
+export const candidateContributions = sqliteTable(
+  "d1_candidate_contributions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    personId: integer("person_id"),
+    filerEntityNumber: text("filer_entity_number").notNull(),
+    electionYear: integer("election_year").notNull().default(2026),
+    contributorName: text("contributor_name").notNull(),
+    amount: real("amount").notNull().default(0),
+    contributionDate: text("contribution_date"),
+    contributorType: text("contributor_type"),
+    contributorCity: text("contributor_city"),
+    contributorState: text("contributor_state"),
+    sourceFilingId: text("source_filing_id"),
+    sourceUrl: text("source_url"),
+    source: text("source").notNull().default("NH Secretary of State campaign finance filing"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    candidateIdx: index("idx_d1_candidate_contributions_candidate").on(
+      table.filerEntityNumber,
+      table.electionYear,
+      table.amount,
+    ),
+    personIdx: index("idx_d1_candidate_contributions_person").on(
+      table.personId,
+      table.electionYear,
+      table.amount,
+    ),
+  }),
+);
+
 export const articlePeople = sqliteTable(
   "d1_article_people",
   {

@@ -72,6 +72,10 @@ export async function getArticlePreview(articleUrl, apiBase = previewApiBase()) 
   }
 }
 
+export async function getCachedArticlePreview(articleUrl) {
+  return cachedLinkPreview(normalizePreviewUrl(articleUrl));
+}
+
 function normalizePreviewUrl(value = "") {
   try {
     const url = new URL(String(value || "").trim());

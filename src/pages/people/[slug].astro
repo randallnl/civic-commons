@@ -31,6 +31,7 @@ import {
   TPACTION_ALIGNED_TOOLTIP,
 } from "../../lib/alignmentTags";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
+import { getCandidateCampaignFinance } from "../../lib/campaignFinance";
 import { representativePersonIdForCandidate } from "../../lib/candidateLegislatorLinks";
 import { candidateProfileForLegislator } from "../../lib/candidateLegislators";
 import {
@@ -301,6 +302,41 @@ try {
   console.error(error?.message || "Unable to load organization endorsements.");
 }
 
+let campaignFinance = {
+  contributors: [],
+  itemizedTotal: 0,
+  totalRaised: 0,
+  hasData: false,
+};
+
+if (linkedCandidateForEndorsements) {
+  const reportedTotalRaised = Number(linkedCandidateForEndorsements.totalRaised) || 0;
+  try {
+    const itemizedFinance = await getCandidateCampaignFinance({
+      filerEntityNumber: linkedCandidateForEndorsements.filerEntityNumber,
+      electionYear: linkedCandidateForEndorsements.electionYear || 2026,
+    });
+    const totalRaised = reportedTotalRaised > 0
+      ? reportedTotalRaised
+      : itemizedFinance.itemizedTotal;
+    campaignFinance = {
+      ...itemizedFinance,
+      totalRaised,
+      hasData: totalRaised > 0 || itemizedFinance.contributors.length > 0,
+    };
+  } catch (error) {
+    console.error(error?.message || "Unable to load campaign finance details.");
+    campaignFinance = {
+      ...campaignFinance,
+      totalRaised: reportedTotalRaised,
+      hasData: reportedTotalRaised > 0,
+    };
+  }
+}
+
+const topCampaignContributors = campaignFinance.contributors.slice(0, 3);
+const remainingCampaignContributors = campaignFinance.contributors.slice(3);
+
 let relatedArticles =
   apiData?.relatedArticles ||
   representative?.relatedArticles ||
@@ -367,6 +403,14 @@ function wholeNumber(value) {
 
 function formatElectionNumber(value) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value || 0);
+}
+
+function formatCampaignCurrency(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Number(value) || 0);
 }
 
 function formatElectionPercent(value) {
@@ -1194,6 +1238,10 @@ function uniqueTowns(towns = []) {
       </section>
       )}
 
+      <section class:list={[
+        "profile-overview-grid",
+        !linkedCandidateForEndorsements && "profile-overview-grid-sidebar-only",
+      ]}>
       {linkedCandidateForEndorsements && (
         <section class="panel candidate-role-panel" id="candidate-role">
           <div class="section-heading split-heading">
@@ -1505,6 +1553,180 @@ function uniqueTowns(towns = []) {
           </div>
         </section>
       )}
+
+      <aside class="stack profile-overview-sidebar">
+        <section class="panel compact-panel endorsements-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Organizations</p>
+              <h2>
+                Organization Positions and Ratings
+                {endorsements.length > 0 && (
+                  <span class="inline-count">({endorsements.length})</span>
+                )}
+              </h2>
+            </div>
+            {linkedCandidateForEndorsements && (
+              <a
+                class="section-action"
+                href={`/endorsements/submit?candidate=${encodeURIComponent(candidateSlug(linkedCandidateForEndorsements))}`}
+              >
+                Submit
+              </a>
+            )}
+          </div>
+
+          {endorsements.length ? (
+            <div class="endorsement-list">
+              {endorsements.map((endorsement, index) => (
+                <article class="endorsement-card">
+                  <div class="endorsement-card-main">
+                    <a class="endorsement-media" href={organizationPath(endorsement.organization)}>
+                      {endorsementMediaUrl(endorsement) ? (
+                        <img src={endorsementMediaUrl(endorsement)} alt="" loading="lazy" />
+                      ) : (
+                        <span>{endorsement.organization.name.slice(0, 1)}</span>
+                      )}
+                    </a>
+                    <div>
+                      <div class="endorsement-topline">
+                        <strong>
+                          <a href={organizationPath(endorsement.organization)}>
+                            {endorsement.organization.name}
+                          </a>
+                        </strong>
+                        {endorsement.position && (
+                          <span class:list={[endorsementPillClass(endorsement)]}>
+                            {endorsement.position}
+                          </span>
+                        )}
+                      </div>
+
+                      {endorsement.statement && (
+                        <div class="endorsement-statement" data-expandable-statement>
+                          <p
+                            class="endorsement-preview"
+                            id={`endorsement-statement-${index}`}
+                            data-expandable-copy
+                          >
+                            {statementLinkSegments(endorsement.statement).map((segment) =>
+                              segment.href ? (
+                                <a href={segment.href} target="_blank" rel="noopener noreferrer">
+                                  {segment.text}
+                                </a>
+                              ) : segment.text
+                            )}
+                          </p>
+                          <button
+                            type="button"
+                            class="endorsement-expand"
+                            aria-controls={`endorsement-statement-${index}`}
+                            aria-expanded="false"
+                            data-expand-statement
+                            hidden
+                          >
+                            Show more
+                          </button>
+                        </div>
+                      )}
+
+                      <div class="endorsement-meta">
+                        {endorsement.office && <span>{endorsement.office}</span>}
+                        {endorsement.district && <span>{endorsement.district}</span>}
+                        {endorsement.electionYear && <span>{endorsement.electionYear}</span>}
+                        {endorsement.date && <span>{formatDate(endorsement.date)}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p class="empty">No organization positions or ratings have been published yet.</p>
+          )}
+        </section>
+
+        {linkedCandidateForEndorsements && (
+          <section class="panel compact-panel campaign-finance-panel">
+            <div class="section-heading campaign-finance-heading">
+              <div>
+                <p class="eyebrow">Campaign finance</p>
+                <h2>Total raised</h2>
+              </div>
+              <a
+                class="finance-source-link"
+                href="https://cfs.sos.nh.gov/public/cf/reports"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                NH filings <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+
+            <strong class="campaign-finance-total">
+              {campaignFinance.hasData
+                ? formatCampaignCurrency(campaignFinance.totalRaised)
+                : "Not reported"}
+            </strong>
+
+            <div class="campaign-contributor-heading">
+              <h3>Top contributors</h3>
+              {campaignFinance.contributors.length > 0 && (
+                <span>{campaignFinance.contributors.length} listed</span>
+              )}
+            </div>
+
+            {topCampaignContributors.length ? (
+              <>
+                <ol class="campaign-contributor-list">
+                  {topCampaignContributors.map((contributor) => (
+                    <li>
+                      <div class="campaign-contributor-row">
+                        <div>
+                          <strong>{contributor.name}</strong>
+                          {(contributor.city || contributor.state) && (
+                            <span>{[contributor.city, contributor.state].filter(Boolean).join(", ")}</span>
+                          )}
+                        </div>
+                        <strong>{formatCampaignCurrency(contributor.amount)}</strong>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+
+                {remainingCampaignContributors.length > 0 && (
+                  <details class="campaign-contributor-more">
+                    <summary>
+                      <span class="finance-show-more">See {remainingCampaignContributors.length} more</span>
+                      <span class="finance-show-less">Show fewer</span>
+                    </summary>
+                    <ol class="campaign-contributor-list" start="4">
+                      {remainingCampaignContributors.map((contributor) => (
+                        <li>
+                          <div class="campaign-contributor-row">
+                            <div>
+                              <strong>{contributor.name}</strong>
+                              {(contributor.city || contributor.state) && (
+                                <span>{[contributor.city, contributor.state].filter(Boolean).join(", ")}</span>
+                              )}
+                            </div>
+                            <strong>{formatCampaignCurrency(contributor.amount)}</strong>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
+                )}
+              </>
+            ) : (
+              <p class="empty campaign-finance-empty">
+                No itemized contributors have been added yet.
+              </p>
+            )}
+          </section>
+        )}
+      </aside>
+      </section>
 
       {adminSession && (
         <section class="panel admin-edit-panel" data-admin-edit-panel hidden={!adminEditInitiallyOpen}>
@@ -1921,7 +2143,7 @@ function uniqueTowns(towns = []) {
         </section>
       )}
 
-      <section class="content-grid">
+      <section class="content-grid profile-content-grid">
         <div class="stack">
           {hasLegislatorProfile && (
           <section class="panel">
@@ -2051,7 +2273,7 @@ function uniqueTowns(towns = []) {
               <div class="context-filter-control">
                 <span>Filter feed</span>
                 <div class="context-tab-list" role="tablist" aria-label="Community context filters">
-                  <label for="context-tab-all" id="context-tab-all-label" role="tab" aria-controls="context-panel-all">
+                  <label for="context-tab-all" id="context-tab-all-label" role="tab" aria-controls="context-panel-submissions context-panel-articles">
                     All context
                   </label>
                   <label for="context-tab-submissions" id="context-tab-submissions-label" role="tab" aria-controls="context-panel-submissions">
@@ -2065,38 +2287,7 @@ function uniqueTowns(towns = []) {
               </div>
 
               <div
-                class="context-tab-panel context-tab-panel-all"
-                id="context-panel-all"
-                role="tabpanel"
-                aria-labelledby="context-tab-all-label"
-              >
-                <div class="combined-context-feed">
-                  <CommunityUpdates
-                    entityType={hasLegislatorProfile ? "representative" : "candidate"}
-                    entityKey={hasLegislatorProfile ? representativeEntityKey : profileCandidate?.filerEntityNumber || slug}
-                    entityName={person.full_name}
-                    pageUrl={Astro.url.pathname}
-                    variant="narrow"
-                    embedded={true}
-                    showPeoplePreview={false}
-                  />
-
-                  <div class="context-feed-section">
-                    <div class="context-feed-section-heading">
-                      <p class="eyebrow">Related coverage</p>
-                      <h3>Articles</h3>
-                    </div>
-                    <ArticleList
-                      articles={relatedArticles}
-                      compact={true}
-                      emptyText="No related articles returned."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div
-                class="context-tab-panel context-tab-panel-submissions"
+                class="context-tab-panel context-tab-panel-updates"
                 id="context-panel-submissions"
                 role="tabpanel"
                 aria-labelledby="context-tab-submissions-label"
@@ -2109,6 +2300,7 @@ function uniqueTowns(towns = []) {
                   variant="narrow"
                   embedded={true}
                   showPeoplePreview={false}
+                  fetchMissingPreviews={false}
                 />
               </div>
 
@@ -2118,6 +2310,10 @@ function uniqueTowns(towns = []) {
                 role="tabpanel"
                 aria-labelledby="context-tab-articles-label"
               >
+                <div class="context-feed-section-heading">
+                  <p class="eyebrow">Related coverage</p>
+                  <h3>Articles</h3>
+                </div>
                 <ArticleList
                   articles={relatedArticles}
                   compact={true}
@@ -2137,105 +2333,6 @@ function uniqueTowns(towns = []) {
           </section>
         </div>
 
-        <aside class="stack">
-          <section class="panel compact-panel endorsements-panel">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Organizations</p>
-                <h2>
-                  Organization Positions and Ratings
-                  {endorsements.length > 0 && (
-                    <span class="inline-count">({endorsements.length})</span>
-                  )}
-                </h2>
-              </div>
-              {linkedCandidateForEndorsements && (
-                <a
-                  class="section-action"
-                  href={`/endorsements/submit?candidate=${encodeURIComponent(candidateSlug(linkedCandidateForEndorsements))}`}
-                >
-                  Submit
-                </a>
-              )}
-            </div>
-
-            {endorsements.length ? (
-              <>
-                <div class="endorsement-list">
-                {endorsements.map((endorsement, index) => (
-                  <article
-                    class="endorsement-card"
-                  >
-                    <div class="endorsement-card-main">
-                      <a class="endorsement-media" href={organizationPath(endorsement.organization)}>
-                        {endorsementMediaUrl(endorsement) ? (
-                          <img src={endorsementMediaUrl(endorsement)} alt="" loading="lazy" />
-                        ) : (
-                          <span>{endorsement.organization.name.slice(0, 1)}</span>
-                        )}
-                      </a>
-                      <div>
-                        <div class="endorsement-topline">
-                          <strong>
-                            <a href={organizationPath(endorsement.organization)}>
-                              {endorsement.organization.name}
-                            </a>
-                          </strong>
-                          {endorsement.position && (
-                            <span class:list={[endorsementPillClass(endorsement)]}>
-                              {endorsement.position}
-                            </span>
-                          )}
-                        </div>
-
-                        {endorsement.statement && (
-                          <div class="endorsement-statement" data-expandable-statement>
-                            <p
-                              class="endorsement-preview"
-                              id={`endorsement-statement-${index}`}
-                              data-expandable-copy
-                            >
-                              {statementLinkSegments(endorsement.statement).map((segment) =>
-                                segment.href ? (
-                                  <a href={segment.href} target="_blank" rel="noopener noreferrer">
-                                    {segment.text}
-                                  </a>
-                                ) : segment.text
-                              )}
-                            </p>
-                            <button
-                              type="button"
-                              class="endorsement-expand"
-                              aria-controls={`endorsement-statement-${index}`}
-                              aria-expanded="false"
-                              data-expand-statement
-                              hidden
-                            >
-                              Show more
-                            </button>
-                          </div>
-                        )}
-
-                        <div class="endorsement-meta">
-                          {endorsement.office && <span>{endorsement.office}</span>}
-                          {endorsement.district && <span>{endorsement.district}</span>}
-                          {endorsement.electionYear && <span>{endorsement.electionYear}</span>}
-                          {endorsement.date && <span>{formatDate(endorsement.date)}</span>}
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-                </div>
-              </>
-            ) : (
-              <p class="empty">
-                No endorsements or ratings have been published yet.
-              </p>
-            )}
-          </section>
-
-        </aside>
       </section>
     </main>
     <ProfileViewTracker slug={slug} />
@@ -2533,7 +2630,27 @@ function uniqueTowns(towns = []) {
   }
 
   .candidate-role-panel {
+    margin: 0;
+  }
+
+  .profile-overview-grid {
+    align-items: start;
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
     margin: 18px 0 28px;
+  }
+
+  .profile-overview-grid-sidebar-only {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile-overview-grid-sidebar-only .profile-overview-sidebar {
+    grid-column: 1;
+  }
+
+  .profile-overview-sidebar {
+    grid-column: 2;
   }
 
   .profile-update-panel {
@@ -2827,27 +2944,26 @@ function uniqueTowns(towns = []) {
     display: none;
   }
 
-  #context-tab-all:checked ~ .context-tab-panel-all,
-  #context-tab-submissions:checked ~ .context-tab-panel-submissions,
+  #context-tab-all:checked ~ .context-tab-panel-updates,
+  #context-tab-all:checked ~ .context-tab-panel-articles,
+  #context-tab-submissions:checked ~ .context-tab-panel-updates,
   #context-tab-articles:checked ~ .context-tab-panel-articles {
     display: block;
   }
 
-  .combined-context-feed {
-    display: grid;
-    gap: 18px;
+  #context-tab-all:checked ~ .context-tab-panel-articles {
+    border-top: 1px solid #dbeafe;
+    padding-top: 18px;
   }
 
-  .context-feed-section {
-    border-top: 1px solid #dbeafe;
-    display: grid;
-    gap: 12px;
-    padding-top: 18px;
+  .context-tab-panel-articles {
+    display: none;
   }
 
   .context-feed-section-heading {
     display: grid;
     gap: 4px;
+    margin-bottom: 12px;
   }
 
   .context-tab-panel-articles .text-link {
@@ -3308,6 +3424,137 @@ function uniqueTowns(towns = []) {
     display: grid;
     gap: 24px;
     grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
+  }
+
+  .profile-content-grid > .stack {
+    grid-column: 1;
+  }
+
+  .campaign-finance-heading {
+    align-items: start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+  }
+
+  .finance-source-link {
+    color: #64748b;
+    flex: 0 0 auto;
+    font-size: 0.76rem;
+    font-weight: 850;
+    text-decoration: underline;
+    text-decoration-color: #cbd5e1;
+    text-underline-offset: 3px;
+  }
+
+  .campaign-finance-total {
+    color: #1f2933;
+    display: block;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1;
+    margin: 4px 0 22px;
+  }
+
+  .campaign-contributor-heading {
+    align-items: baseline;
+    border-bottom: 1px solid #dbe4ef;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    padding-bottom: 8px;
+  }
+
+  .campaign-contributor-heading h3 {
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  .campaign-contributor-heading span {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 850;
+  }
+
+  .campaign-contributor-list {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding-left: 24px;
+  }
+
+  .campaign-contributor-list li {
+    border-bottom: 1px solid #e2e8f0;
+    color: #64748b;
+    padding: 11px 0 11px 3px;
+  }
+
+  .campaign-contributor-list li::marker {
+    color: #94a3b8;
+    font-size: 0.76rem;
+    font-weight: 900;
+  }
+
+  .campaign-contributor-list li,
+  .campaign-contributor-row,
+  .campaign-contributor-row > div {
+    min-width: 0;
+  }
+
+  .campaign-contributor-row {
+    align-items: start;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .campaign-contributor-row > div {
+    display: grid;
+    gap: 3px;
+  }
+
+  .campaign-contributor-list li strong {
+    color: #1f2933;
+    font-size: 0.84rem;
+    overflow-wrap: anywhere;
+  }
+
+  .campaign-contributor-row > strong {
+    color: #1d4ed8;
+    white-space: nowrap;
+  }
+
+  .campaign-contributor-list li span {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+
+  .campaign-contributor-more summary {
+    color: #1d4ed8;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 900;
+    list-style: none;
+    padding-top: 12px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .campaign-contributor-more summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .campaign-contributor-more .finance-show-less,
+  .campaign-contributor-more[open] .finance-show-more {
+    display: none;
+  }
+
+  .campaign-contributor-more[open] .finance-show-less {
+    display: inline;
+  }
+
+  .campaign-finance-empty {
+    margin-top: 12px;
   }
 
   .stack {
@@ -3984,10 +4231,16 @@ function uniqueTowns(towns = []) {
 
   @media (max-width: 860px) {
     .profile-hero,
+    .profile-overview-grid,
     .content-grid,
     .form-grid,
     .vote-color-legend {
       grid-template-columns: 1fr;
+    }
+
+    .profile-overview-sidebar,
+    .profile-content-grid > .stack {
+      grid-column: 1;
     }
 
     .portrait-card {
