@@ -1237,6 +1237,10 @@ function uniqueTowns(towns = []) {
       </section>
       )}
 
+      <div class:list={[
+        "profile-layout-grid",
+        !linkedCandidateForEndorsements && "profile-layout-grid-sidebar-only",
+      ]}>
       <section class:list={[
         "profile-overview-grid",
         !linkedCandidateForEndorsements && "profile-overview-grid-sidebar-only",
@@ -2306,6 +2310,7 @@ function uniqueTowns(towns = []) {
         </div>
 
       </section>
+      </div>
     </main>
     <ProfileViewTracker slug={slug} />
     <script define:vars={{ recentlyViewedProfile }}>
@@ -2605,7 +2610,7 @@ function uniqueTowns(towns = []) {
     margin: 0;
   }
 
-  .profile-overview-grid {
+  .profile-layout-grid {
     align-items: start;
     display: grid;
     gap: 24px;
@@ -2613,16 +2618,42 @@ function uniqueTowns(towns = []) {
     margin: 18px 0 28px;
   }
 
-  .profile-overview-grid-sidebar-only {
-    grid-template-columns: minmax(0, 1fr);
+  .profile-overview-grid,
+  .content-grid {
+    display: contents;
   }
 
-  .profile-overview-grid-sidebar-only .profile-overview-sidebar {
+  .candidate-role-panel {
     grid-column: 1;
+    grid-row: 1;
   }
 
   .profile-overview-sidebar {
     grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .profile-content-grid > .stack {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .profile-layout-grid > .admin-edit-panel {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .profile-layout-grid-sidebar-only .profile-overview-sidebar,
+  .profile-layout-grid-sidebar-only .profile-content-grid > .stack {
+    grid-column: 1 / -1;
+  }
+
+  .profile-layout-grid-sidebar-only .profile-overview-sidebar {
+    grid-row: 2;
+  }
+
+  .profile-layout-grid-sidebar-only .profile-content-grid > .stack {
+    grid-row: 1;
   }
 
   .profile-update-panel {
@@ -3389,17 +3420,6 @@ function uniqueTowns(towns = []) {
     letter-spacing: 0.1em;
     margin-bottom: 8px;
     text-transform: uppercase;
-  }
-
-  .content-grid {
-    align-items: start;
-    display: grid;
-    gap: 24px;
-    grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
-  }
-
-  .profile-content-grid > .stack {
-    grid-column: 1;
   }
 
   .campaign-finance-heading {
@@ -4173,16 +4193,38 @@ function uniqueTowns(towns = []) {
 
   @media (max-width: 860px) {
     .profile-hero,
-    .profile-overview-grid,
-    .content-grid,
+    .profile-layout-grid,
     .form-grid,
     .vote-color-legend {
       grid-template-columns: 1fr;
     }
 
-    .profile-overview-sidebar,
+    .candidate-role-panel {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
     .profile-content-grid > .stack {
       grid-column: 1;
+      grid-row: 2;
+    }
+
+    .profile-overview-sidebar {
+      grid-column: 1;
+      grid-row: 3;
+    }
+
+    .profile-layout-grid > .admin-edit-panel {
+      grid-column: 1;
+      grid-row: 4;
+    }
+
+    .profile-layout-grid-sidebar-only .profile-content-grid > .stack {
+      grid-row: 1;
+    }
+
+    .profile-layout-grid-sidebar-only .profile-overview-sidebar {
+      grid-row: 2;
     }
 
     .portrait-card {
