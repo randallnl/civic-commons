@@ -5,12 +5,6 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
 
 {showFundraisingTools && (
   <>
-    <script
-      is:inline
-      async
-      src="https://widgets.givebutter.com/latest.umd.cjs?acct=iq1I5oL6otdFZf0i&p=other"
-    ></script>
-
     <div class="crowdfunding-popup" data-crowdfunding-popup hidden>
       <div class="crowdfunding-scrim" data-crowdfunding-dismiss></div>
       <section
@@ -29,51 +23,30 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
           x
         </button>
 
-        <p class="crowdfunding-eyebrow">Before the September primary</p>
-        <h2 id="crowdfunding-title">Help finish FindMyNHCandidate.org</h2>
+        <p class="crowdfunding-eyebrow">Support the project</p>
+        <h2 id="crowdfunding-title">Help Randall keep this resource growing</h2>
         <p id="crowdfunding-description" class="crowdfunding-lede">
-          New Hampshire's citizen legislature only works when people know what
-          they're voting for. NH Deserves Better is building free civic tools
-          that make informed voting easier.
+          Randall has donated countless hours to making sure the community has
+          the information it needs about legislators and candidates. A
+          contribution, no matter how small, shows that his work matters and
+          helps him continue improving this project.
         </p>
-
-        <div class="crowdfunding-body">
-          <div>
-            <h3>Democracy shouldn't be this hard.</h3>
-            <p>
-              Most people do not have hours to search legislative websites,
-              read lengthy bills, or piece together how State House decisions
-              affect everyday life. We are bringing public information and
-              community context together in one place.
-            </p>
-          </div>
-
-          <ul class="crowdfunding-features" aria-label="What donations support">
-            <li>Candidate and legislator profiles</li>
-            <li>Voting records with public testimony context</li>
-            <li>Plain-language bill summaries</li>
-            <li>Community-submitted civic context</li>
-          </ul>
-        </div>
 
         <div class="crowdfunding-actions">
-          <a class="crowdfunding-primary" href={campaignUrl} target="_blank" rel="noopener">
-            Support the work
+          <a
+            class="crowdfunding-primary"
+            href={campaignUrl}
+            target="_blank"
+            rel="noopener"
+            data-crowdfunding-dismiss
+          >
+            Donate
           </a>
           <button class="crowdfunding-secondary" type="button" data-crowdfunding-dismiss>
-            Maybe later
+            Not now
           </button>
         </div>
-
-        <p class="crowdfunding-note">
-          Donation levels start at $25 and help expand access, connect the dots,
-          and build long-term civic infrastructure for New Hampshire.
-        </p>
       </section>
-    </div>
-
-    <div class="givebutter-persistent-widget" aria-label="Donation widget">
-      <givebutter-widget id="p5MnmO"></givebutter-widget>
     </div>
   </>
 )}
@@ -81,6 +54,40 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
 <script>
   const popup = document.querySelector("[data-crowdfunding-popup]");
   const storageKey = "nhdb_crowdfunding_popup_dismissed_v1";
+  const engagementStorageKey = "nhdb_crowdfunding_engagement_v2";
+  const activeDelayMs = 3 * 60 * 1000;
+  const requiredInteractions = 2;
+
+  type EngagementState = {
+    activeMs: number;
+    interactions: number;
+    scrollSignals: string[];
+  };
+
+  function readEngagementState(): EngagementState {
+    try {
+      const stored = JSON.parse(window.sessionStorage.getItem(engagementStorageKey) || "{}");
+      return {
+        activeMs: Number.isFinite(stored.activeMs) ? Math.max(0, stored.activeMs) : 0,
+        interactions: Number.isFinite(stored.interactions)
+          ? Math.max(0, stored.interactions)
+          : 0,
+        scrollSignals: Array.isArray(stored.scrollSignals) ? stored.scrollSignals : [],
+      };
+    } catch {
+      return { activeMs: 0, interactions: 0, scrollSignals: [] };
+    }
+  }
+
+  const engagement = readEngagementState();
+
+  function saveEngagementState() {
+    try {
+      window.sessionStorage.setItem(engagementStorageKey, JSON.stringify(engagement));
+    } catch {
+      // Keep tracking in memory when session storage is unavailable.
+    }
+  }
 
   function todayKey() {
     const now = new Date();
@@ -95,6 +102,10 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
     if (!(popup instanceof HTMLElement)) return;
     popup.hidden = true;
     document.documentElement.classList.remove("crowdfunding-open");
+    engagement.activeMs = 0;
+    engagement.interactions = 0;
+    engagement.scrollSignals = [];
+    saveEngagementState();
     try {
       window.localStorage.setItem(storageKey, todayKey());
     } catch {
@@ -111,11 +122,78 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
     }
   }
 
+  let popupShown = false;
+  let lastTick = performance.now();
+  let wasVisible = document.visibilityState === "visible";
+
+  function recordInteraction() {
+    engagement.interactions = Math.min(engagement.interactions + 1, 20);
+    saveEngagementState();
+    evaluateCrowdfundingPopup();
+  }
+
+  function updateActiveTime() {
+    const now = performance.now();
+    if (wasVisible) {
+      engagement.activeMs += Math.min(now - lastTick, 2000);
+    }
+    lastTick = now;
+    wasVisible = document.visibilityState === "visible";
+  }
+
+  function evaluateCrowdfundingPopup() {
+    updateActiveTime();
+    saveEngagementState();
+
+    if (
+      popupShown ||
+      !(popup instanceof HTMLElement) ||
+      !shouldShowCrowdfundingPopup() ||
+      engagement.activeMs < activeDelayMs ||
+      engagement.interactions < requiredInteractions
+    ) {
+      return;
+    }
+
+    popupShown = true;
+    popup.hidden = false;
+    document.documentElement.classList.add("crowdfunding-open");
+  }
+
   if (popup instanceof HTMLElement && shouldShowCrowdfundingPopup()) {
+    const engagementTimer = window.setInterval(evaluateCrowdfundingPopup, 1000);
+
+    document.addEventListener("visibilitychange", evaluateCrowdfundingPopup);
+    window.addEventListener("pagehide", () => {
+      evaluateCrowdfundingPopup();
+      window.clearInterval(engagementTimer);
+    });
+
+    document.addEventListener("click", (event) => {
+      const target = event.target instanceof Element
+        ? event.target.closest("a, button, summary, input, select, textarea")
+        : null;
+      if (!target || target.closest("[data-crowdfunding-popup]")) return;
+      recordInteraction();
+    });
+
+    window.addEventListener("scroll", () => {
+      const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (scrollableHeight <= 0) return;
+
+      const depth = window.scrollY / scrollableHeight;
+      [0.25, 0.5, 0.75].forEach((milestone) => {
+        const signal = `${window.location.pathname}:${milestone}`;
+        if (depth >= milestone && !engagement.scrollSignals.includes(signal)) {
+          engagement.scrollSignals.push(signal);
+          recordInteraction();
+        }
+      });
+    }, { passive: true });
+
     window.setTimeout(() => {
-      popup.hidden = false;
-      document.documentElement.classList.add("crowdfunding-open");
-    }, 900);
+      evaluateCrowdfundingPopup();
+    }, 1000);
   }
 
   popup?.addEventListener("click", (event) => {
@@ -145,17 +223,6 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
     display: none;
   }
 
-  .givebutter-persistent-widget {
-    bottom: 76px;
-    position: fixed;
-    right: 18px;
-    z-index: 900;
-  }
-
-  .givebutter-persistent-widget givebutter-widget {
-    display: block;
-  }
-
   .crowdfunding-popup {
     align-items: center;
     display: flex;
@@ -181,12 +248,12 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
     box-shadow: 0 30px 90px rgba(15, 23, 42, 0.32);
     box-sizing: border-box;
     color: #1f2933;
-    max-height: min(88vh, 760px);
-    max-width: 720px;
+    max-height: min(88vh, 560px);
+    max-width: 600px;
     overflow: auto;
     padding: clamp(24px, 5vw, 40px);
     position: relative;
-    width: min(100%, 720px);
+    width: min(100%, 600px);
   }
 
   .crowdfunding-card::before {
@@ -233,7 +300,7 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
     letter-spacing: 0;
     line-height: 1;
     margin: 0;
-    max-width: min(100%, 13ch);
+    max-width: min(100%, 18ch);
     overflow-wrap: anywhere;
     word-break: break-word;
   }
@@ -245,64 +312,6 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
     line-height: 1.55;
     margin: 18px 0 0;
     max-width: 58ch;
-  }
-
-  .crowdfunding-body {
-    display: grid;
-    gap: 20px;
-    grid-template-columns: minmax(0, 1.1fr) minmax(220px, 0.9fr);
-    margin-top: 24px;
-  }
-
-  .crowdfunding-body h3 {
-    color: #6b2805;
-    font-size: 0.92rem;
-    letter-spacing: 0.08em;
-    margin: 0 0 8px;
-    text-transform: uppercase;
-  }
-
-  .crowdfunding-body p {
-    color: #4b5563;
-    font-size: 0.98rem;
-    line-height: 1.55;
-    margin: 0;
-  }
-
-  .crowdfunding-features {
-    background: white;
-    border: 1px solid #fed7aa;
-    border-radius: 14px;
-    display: grid;
-    gap: 10px;
-    list-style: none;
-    margin: 0;
-    padding: 16px;
-  }
-
-  .crowdfunding-features li {
-    color: #1f2933;
-    font-size: 0.92rem;
-    font-weight: 850;
-    line-height: 1.35;
-    padding-left: 24px;
-    position: relative;
-  }
-
-  .crowdfunding-features li::before {
-    background: #dc4d09;
-    border-radius: 999px;
-    color: white;
-    content: "✓";
-    font-size: 0.72rem;
-    font-weight: 950;
-    height: 16px;
-    left: 0;
-    line-height: 16px;
-    position: absolute;
-    text-align: center;
-    top: 2px;
-    width: 16px;
   }
 
   .crowdfunding-actions {
@@ -346,19 +355,7 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
     color: #1f2933;
   }
 
-  .crowdfunding-note {
-    color: #6b7280;
-    font-size: 0.86rem;
-    line-height: 1.5;
-    margin: 18px 0 0;
-  }
-
   @media (max-width: 680px) {
-    .givebutter-persistent-widget {
-      bottom: 64px;
-      right: 10px;
-    }
-
     .crowdfunding-popup {
       align-items: flex-end;
       padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
@@ -373,10 +370,6 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
     .crowdfunding-card h2 {
       font-size: clamp(1.65rem, 9vw, 2.4rem);
       max-width: calc(100% - 28px);
-    }
-
-    .crowdfunding-body {
-      grid-template-columns: 1fr;
     }
 
     .crowdfunding-actions {

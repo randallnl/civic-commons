@@ -4,7 +4,7 @@ import ClientEnhancements from "./ClientEnhancements.astro";
 import CrowdfundingPopup from "./CrowdfundingPopup.astro";
 
 const currentPath = Astro.url.pathname;
-const suggestHref = `/suggest-update?page=${encodeURIComponent(Astro.url.href)}`;
+const campaignUrl = "https://givebutter.com/findmyNHcandidate";
 
 const links = [
   { href: "/", label: "Home", match: (path) => path === "/" },
@@ -116,7 +116,9 @@ const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
     </nav>
 
     <div class="utility-links">
-      <a class="suggest-link" href={suggestHref}>Suggest an update</a>
+      <a class="donation-link" href={campaignUrl} target="_blank" rel="noopener">
+        Donate
+      </a>
     </div>
   </div>
 </header>
@@ -274,7 +276,7 @@ const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
   .nav-link,
   .dropdown-link,
   .admin-link,
-  .suggest-link {
+  .donation-link {
     color: #1f2933;
     text-decoration: none;
   }
@@ -342,8 +344,7 @@ const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
   .nav-link:hover,
   .nav-link.active,
   .nav-dropdown.active > summary,
-  .nav-dropdown[open] > summary,
-  .suggest-link:hover {
+  .nav-dropdown[open] > summary {
     background: #fff7ed;
     border-color: #fed7aa;
     color: #b6390a;
@@ -426,20 +427,24 @@ const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
     border-color: #fed7aa;
   }
 
-  .suggest-link {
+  .donation-link {
     background: #dc4d09;
-    border: 1px solid #dc4d09;
-    border-radius: 4px;
+    border: 2px solid #dc4d09;
+    border-radius: 8px;
+    box-shadow: 0 5px 14px rgba(185, 57, 10, 0.24);
     color: white;
-    font-size: 0.88rem;
-    font-weight: 900;
+    font-size: 1.08rem;
+    font-weight: 950;
     line-height: 1;
-    padding: 10px 12px;
+    padding: 16px 24px;
     white-space: nowrap;
   }
 
-  .suggest-link:hover {
-    color: #b6390a;
+  .donation-link:hover {
+    background: #b6390a;
+    border-color: #b6390a;
+    color: white;
+    transform: translateY(-1px);
   }
 
   @media (max-width: 1040px) {
@@ -489,12 +494,20 @@ const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
       width: 42px;
     }
 
-    .primary-nav,
-    .utility-links {
+    .primary-nav {
       display: none;
       grid-column: 1 / -1;
       justify-content: flex-start;
       width: 100%;
+    }
+
+    .utility-links {
+      display: flex;
+      grid-column: 3;
+      grid-row: 1;
+      justify-self: end;
+      width: auto;
+      z-index: 2;
     }
 
     .site-nav.nav-open .primary-nav {
@@ -506,17 +519,10 @@ const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
       padding-top: 10px;
     }
 
-    .site-nav.nav-open .utility-links {
-      display: flex;
-      flex-wrap: wrap;
-      grid-row: 4;
-      padding-bottom: 4px;
-    }
-
     .admin-link,
-    .suggest-link {
-      font-size: 0.82rem;
-      padding: 8px 10px;
+    .donation-link {
+      font-size: 0.9rem;
+      padding: 12px 15px;
     }
 
     .nav-link {
@@ -539,6 +545,12 @@ const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
       min-width: 0;
       position: static;
       width: min(100%, 320px);
+    }
+  }
+
+  @media (max-width: 680px) {
+    .brand span {
+      display: none;
     }
   }
 
