@@ -334,8 +334,7 @@ if (linkedCandidateForEndorsements) {
   }
 }
 
-const topCampaignContributors = campaignFinance.contributors.slice(0, 3);
-const remainingCampaignContributors = campaignFinance.contributors.slice(3);
+const topCampaignContributors = campaignFinance.contributors.slice(0, 5);
 
 let relatedArticles =
   apiData?.relatedArticles ||
@@ -1671,9 +1670,6 @@ function uniqueTowns(towns = []) {
 
             <div class="campaign-contributor-heading">
               <h3>Top contributors</h3>
-              {campaignFinance.contributors.length > 0 && (
-                <span>{campaignFinance.contributors.length} listed</span>
-              )}
             </div>
 
             {topCampaignContributors.length ? (
@@ -1693,30 +1689,6 @@ function uniqueTowns(towns = []) {
                     </li>
                   ))}
                 </ol>
-
-                {remainingCampaignContributors.length > 0 && (
-                  <details class="campaign-contributor-more">
-                    <summary>
-                      <span class="finance-show-more">See {remainingCampaignContributors.length} more</span>
-                      <span class="finance-show-less">Show fewer</span>
-                    </summary>
-                    <ol class="campaign-contributor-list" start="4">
-                      {remainingCampaignContributors.map((contributor) => (
-                        <li>
-                          <div class="campaign-contributor-row">
-                            <div>
-                              <strong>{contributor.name}</strong>
-                              {(contributor.city || contributor.state) && (
-                                <span>{[contributor.city, contributor.state].filter(Boolean).join(", ")}</span>
-                              )}
-                            </div>
-                            <strong>{formatCampaignCurrency(contributor.amount)}</strong>
-                          </div>
-                        </li>
-                      ))}
-                    </ol>
-                  </details>
-                )}
               </>
             ) : (
               <p class="empty campaign-finance-empty">
@@ -3469,12 +3441,6 @@ function uniqueTowns(towns = []) {
     margin: 0;
   }
 
-  .campaign-contributor-heading span {
-    color: #64748b;
-    font-size: 0.75rem;
-    font-weight: 850;
-  }
-
   .campaign-contributor-list {
     display: grid;
     gap: 0;
@@ -3527,30 +3493,6 @@ function uniqueTowns(towns = []) {
     color: #64748b;
     font-size: 0.72rem;
     font-weight: 800;
-  }
-
-  .campaign-contributor-more summary {
-    color: #1d4ed8;
-    cursor: pointer;
-    font-size: 0.82rem;
-    font-weight: 900;
-    list-style: none;
-    padding-top: 12px;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-
-  .campaign-contributor-more summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .campaign-contributor-more .finance-show-less,
-  .campaign-contributor-more[open] .finance-show-more {
-    display: none;
-  }
-
-  .campaign-contributor-more[open] .finance-show-less {
-    display: inline;
   }
 
   .campaign-finance-empty {
