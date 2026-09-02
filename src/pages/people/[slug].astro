@@ -4242,7 +4242,7 @@ function uniqueTowns(towns = []) {
 
     .profile-hero.has-alignment > .portrait-card {
       grid-column: 1;
-      grid-row: 3;
+      grid-row: 3 / span 2;
       max-width: 170px;
     }
 
@@ -4301,7 +4301,10 @@ function uniqueTowns(towns = []) {
     }
 
     .profile-hero.has-alignment .hero-meta {
-      margin-top: 2px;
+      align-self: start;
+      grid-column: 2;
+      grid-row: 4;
+      margin-top: 0;
     }
 
     .profile-hero.has-alignment .hero-details {
