@@ -670,7 +670,7 @@ const profileResourceLinks = [
   },
   stateHouseProfileUrl && stateHouseProfileUrl !== person.website_url && {
     href: stateHouseProfileUrl,
-    label: "State House Profile",
+    label: officialProfileLabel(stateHouseProfileUrl) || "Gen Court Profile",
     icon: Landmark,
   },
   person.substack_url && {
@@ -735,9 +735,7 @@ function contactHref(type, value) {
 function officialProfileLabel(value = "") {
   const url = String(value || "").toLowerCase();
   if (!/gencourt\.state\.nh\.us|gc\.nh\.gov/.test(url)) return "";
-  if (/\/house\/members\/member\.aspx/.test(url)) return "State House Profile";
-  if (/\/senate\/members\//.test(url)) return "State Senate Profile";
-  return "General Court Profile";
+  return "Gen Court Profile";
 }
 
 function socialField(primary = {}, fallback = {}, platform = "") {
