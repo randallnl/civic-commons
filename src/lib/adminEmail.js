@@ -1,5 +1,9 @@
 import { env } from "cloudflare:workers";
 import { bindingValue } from "./adminAuth";
+import {
+  submissionDetailsHtml,
+  submissionDetailsText,
+} from "./submissionEmailDetails";
 
 const DEFAULT_FROM = "admin@nhdeservesbetter.com";
 const MODERATION_CC = "randall@nhdeservesbetter.com";
@@ -39,6 +43,7 @@ export async function sendSubmissionReceivedEmail({
   to,
   type = "update",
   pageUrl = "",
+  details = [],
 } = {}) {
   if (!to) return false;
 
@@ -46,10 +51,14 @@ export async function sendSubmissionReceivedEmail({
   const from = await senderAddress();
   const label = type === "feedback" ? "feedback" : "community update";
   const subject = `We received your ${label}`;
+  const detailText = submissionDetailsText(details);
+  const detailHtml = submissionDetailsHtml(details);
   const text = [
     `Thanks for sending a ${label} to NH Deserves Better.`,
     "",
     "It has been added to the review queue. A reviewer will check it before any public changes are made.",
+    detailText ? "Your submission:" : "",
+    detailText,
     pageUrl ? `Page: ${pageUrl}` : "",
     "",
     "If we have a question or an update about the review, we may follow up by email.",
@@ -57,6 +66,7 @@ export async function sendSubmissionReceivedEmail({
   const html = `
     <p>Thanks for sending a ${escapeHtml(label)} to NH Deserves Better.</p>
     <p>It has been added to the review queue. A reviewer will check it before any public changes are made.</p>
+    ${detailHtml ? `<h2 style="font-size: 18px; margin: 20px 0 10px;">Your submission</h2>${detailHtml}` : ""}
     ${pageUrl ? `<p><strong>Page:</strong> <a href="${escapeHtml(pageUrl)}">${escapeHtml(pageUrl)}</a></p>` : ""}
     <p>If we have a question or an update about the review, we may follow up by email.</p>
   `;
@@ -80,6 +90,7 @@ export async function sendSubmissionResponseEmail({
   outcome = "",
   note = "",
   pageUrl = "",
+  details = [],
 } = {}) {
   if (!to || !note) return false;
 
@@ -92,13 +103,18 @@ export async function sendSubmissionResponseEmail({
       ? "Change not applied"
       : "Review update";
   const subject = `Update on your NH Deserves Better ${label}`;
+  const detailText = submissionDetailsText(details);
+  const detailHtml = submissionDetailsHtml(details);
   const text = [
     `A reviewer left an update about your ${label}.`,
     "",
     `Status: ${outcomeLabel}`,
     "",
+    "Reviewer's feedback:",
     note,
     "",
+    detailText ? "Your submission:" : "",
+    detailText,
     pageUrl ? `Page: ${pageUrl}` : "",
     "",
     "Thank you for helping keep NH Deserves Better accurate and useful.",
@@ -106,7 +122,8 @@ export async function sendSubmissionResponseEmail({
   const html = `
     <p>A reviewer left an update about your ${escapeHtml(label)}.</p>
     <p><strong>Status:</strong> ${escapeHtml(outcomeLabel)}</p>
-    <p>${escapeHtml(note).replace(/\n/g, "<br />")}</p>
+    <p><strong>Reviewer's feedback:</strong><br />${escapeHtml(note).replace(/\n/g, "<br />")}</p>
+    ${detailHtml ? `<h2 style="font-size: 18px; margin: 20px 0 10px;">Your submission</h2>${detailHtml}` : ""}
     ${pageUrl ? `<p><strong>Page:</strong> <a href="${escapeHtml(pageUrl)}">${escapeHtml(pageUrl)}</a></p>` : ""}
     <p>Thank you for helping keep NH Deserves Better accurate and useful.</p>
   `;

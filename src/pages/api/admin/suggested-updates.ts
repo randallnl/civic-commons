@@ -42,7 +42,7 @@ export async function POST({ request }) {
 
     const existing = await db
       .prepare(
-        `SELECT id, page_url, submitter_email, status,
+        `SELECT id, page_url, submitter_email, suggestion, other_info, status,
                 response_status, response_note, response_sent_at
          FROM suggested_updates
          WHERE id = ?`,
@@ -87,6 +87,10 @@ export async function POST({ request }) {
           outcome: responseStatus,
           note: responseNote,
           pageUrl: existing.page_url,
+          details: [
+            { label: "Suggested update", value: existing.suggestion },
+            { label: "Additional information", value: existing.other_info },
+          ],
         });
         await db
           .prepare(

@@ -45,6 +45,10 @@ export async function POST({ request }) {
             to: submitterEmail,
             type: "feedback",
             pageUrl,
+            details: [
+              { label: "Suggested update", value: suggestion },
+              { label: "Additional information", value: otherInfo },
+            ],
           });
         }
       } catch (error) {

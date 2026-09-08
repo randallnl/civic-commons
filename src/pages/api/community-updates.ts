@@ -94,6 +94,14 @@ export async function POST({ request }) {
           to: email,
           type: "community-update",
           pageUrl,
+          details: communityUpdateEmailDetails({
+            entityType,
+            entityKey,
+            entityName,
+            comment,
+            linkUrl,
+            photoCount: photoUrls.length,
+          }),
         });
       } catch (emailError) {
         console.error(emailError?.message || "Unable to send community update received email.");
@@ -108,6 +116,26 @@ export async function POST({ request }) {
   } catch (error) {
     return redirectWithError(request, redirectTo, error?.message || "Unable to submit community update.");
   }
+}
+
+function communityUpdateEmailDetails({
+  entityType = "",
+  entityKey = "",
+  entityName = "",
+  comment = "",
+  linkUrl = "",
+  photoCount = 0,
+} = {}) {
+  const subject = entityName || [entityType, entityKey].filter(Boolean).join(": ");
+  return [
+    { label: "Submitted about", value: subject },
+    { label: "Update text", value: comment },
+    { label: "Source link", value: linkUrl, href: linkUrl },
+    {
+      label: "Photos",
+      value: photoCount ? `${photoCount} photo${photoCount === 1 ? "" : "s"} uploaded` : "",
+    },
+  ];
 }
 
 async function uploadCommunityPhoto(file, entityType, entityKey, index = 0) {

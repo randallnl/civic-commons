@@ -142,10 +142,7 @@ export async function POST({ request }) {
     }
 
     if (action === "save") {
-      const saved = await db
-        .prepare("SELECT email, page_url FROM community_updates WHERE id = ?")
-        .bind(id)
-        .first();
+      const saved = await communityUpdateEmailContext(db, id);
       if (responseNote && saved?.email) {
         try {
           await sendSubmissionResponseEmail({
@@ -154,6 +151,7 @@ export async function POST({ request }) {
             outcome: responseStatus,
             note: responseNote,
             pageUrl: saved.page_url,
+            details: communityUpdateEmailDetails(saved),
           });
         } catch (emailError) {
           console.error(emailError?.message || "Unable to send community update response email.");
@@ -166,10 +164,7 @@ export async function POST({ request }) {
     }
 
     const status = action === "approve" ? "approved" : "rejected";
-    const existing = await db
-      .prepare("SELECT email, page_url FROM community_updates WHERE id = ?")
-      .bind(id)
-      .first();
+    const existing = await communityUpdateEmailContext(db, id);
     const result = await db
       .prepare(
         `UPDATE community_updates
@@ -195,6 +190,7 @@ export async function POST({ request }) {
           outcome: responseStatus,
           note: responseNote,
           pageUrl: existing.page_url,
+          details: communityUpdateEmailDetails(existing),
         });
       } catch (emailError) {
         console.error(emailError?.message || "Unable to send community update response email.");
@@ -211,6 +207,37 @@ export async function POST({ request }) {
     }
     return redirectWithError(request, redirectTo, error?.message || "Unable to moderate community update.");
   }
+}
+
+async function communityUpdateEmailContext(db, id) {
+  return db
+    .prepare(
+      `SELECT entity_type, entity_key, entity_name, email, page_url, comment,
+              link_url,
+              (SELECT COUNT(*) FROM community_update_photos WHERE update_id = community_updates.id) AS photo_count
+       FROM community_updates
+       WHERE id = ?`,
+    )
+    .bind(id)
+    .first();
+}
+
+function communityUpdateEmailDetails(update = {}) {
+  const entityType = cleanText(update.entity_type || "");
+  const entityKey = cleanText(update.entity_key || "");
+  const subject = cleanText(update.entity_name || "") || [entityType, entityKey].filter(Boolean).join(": ");
+  const linkUrl = cleanText(update.link_url || "");
+  const photoCount = Number(update.photo_count || 0);
+
+  return [
+    { label: "Submitted about", value: subject },
+    { label: "Update text", value: cleanText(update.comment || "") },
+    { label: "Source link", value: linkUrl, href: linkUrl },
+    {
+      label: "Photos",
+      value: photoCount ? `${photoCount} photo${photoCount === 1 ? "" : "s"} uploaded` : "",
+    },
+  ];
 }
 
 function normalizeResponseStatus(value = "") {

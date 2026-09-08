@@ -2005,6 +2005,7 @@ function uniqueTowns(towns = []) {
             />
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
             <input type="hidden" name="clearFields" value="linkedRepresentativePersonId" />
+            <input type="hidden" name="clearFields" value="candidateWebsite" />
 
             <label>
               Linked Legislator
@@ -2049,6 +2050,16 @@ function uniqueTowns(towns = []) {
                 <input name="district" value={linkedCandidateForEndorsements.district || ""} />
               </label>
             </div>
+
+            <label>
+              Campaign Website
+              <input
+                name="candidateWebsite"
+                type="url"
+                value={linkedCandidateForEndorsements.candidateWebsite || ""}
+                placeholder="https://example.com"
+              />
+            </label>
 
             <input
               type="hidden"
