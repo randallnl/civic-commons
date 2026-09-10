@@ -125,6 +125,46 @@ export const personCandidateRoles = sqliteTable(
   }),
 );
 
+export const candidatePrimaryResults = sqliteTable(
+  "d1_candidate_primary_results",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    personId: integer("person_id").notNull(),
+    candidateRoleId: integer("candidate_role_id").notNull(),
+    filerEntityNumber: text("filer_entity_number").notNull(),
+    electionYear: integer("election_year").notNull(),
+    electionDate: text("election_date").notNull(),
+    electionType: text("election_type").notNull().default("primary"),
+    party: text("party"),
+    office: text("office"),
+    county: text("county"),
+    district: text("district"),
+    outcome: text("outcome").notNull(),
+    votesReceived: integer("votes_received"),
+    votePercentage: real("vote_percentage"),
+    totalContestVotes: integer("total_contest_votes"),
+    seatsAvailable: integer("seats_available"),
+    externalRaceId: text("external_race_id"),
+    resultStatus: text("result_status"),
+    sourceUrl: text("source_url").notNull(),
+    source: text("source").notNull().default("Associated Press via NHPR"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    resultIdx: uniqueIndex("idx_d1_candidate_primary_results_unique").on(
+      table.filerEntityNumber,
+      table.electionDate,
+      table.electionType,
+    ),
+    personIdx: index("idx_d1_candidate_primary_results_person").on(
+      table.personId,
+      table.electionYear,
+      table.outcome,
+    ),
+  }),
+);
+
 export const candidateContributions = sqliteTable(
   "d1_candidate_contributions",
   {

@@ -3307,6 +3307,7 @@ function candidateBaseCte() {
       LEFT JOIN d1_person_candidate_roles cr
         ON cr.person_id = p.id
         AND cr.election_year = 2026
+        AND cr.status = 'active'
       LEFT JOIN active_legislator_roles lr
         ON lr.person_id = p.id
       LEFT JOIN county_codes cc

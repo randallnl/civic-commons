@@ -111,6 +111,36 @@ export async function ensureUnifiedPeopleTables(db = adminDb()) {
 
   await db
     .prepare(
+      `CREATE TABLE IF NOT EXISTS d1_candidate_primary_results (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        person_id INTEGER NOT NULL,
+        candidate_role_id INTEGER NOT NULL,
+        filer_entity_number TEXT NOT NULL,
+        election_year INTEGER NOT NULL,
+        election_date TEXT NOT NULL,
+        election_type TEXT NOT NULL DEFAULT 'primary',
+        party TEXT,
+        office TEXT,
+        county TEXT,
+        district TEXT,
+        outcome TEXT NOT NULL,
+        votes_received INTEGER,
+        vote_percentage REAL,
+        total_contest_votes INTEGER,
+        seats_available INTEGER,
+        external_race_id TEXT,
+        result_status TEXT,
+        source_url TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT 'Associated Press via NHPR',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(filer_entity_number, election_date, election_type)
+      )`,
+    )
+    .run();
+
+  await db
+    .prepare(
       `CREATE TABLE IF NOT EXISTS d1_article_people (
         article_id INTEGER NOT NULL,
         person_id INTEGER NOT NULL,
@@ -127,6 +157,8 @@ export async function ensureUnifiedPeopleTables(db = adminDb()) {
     db.prepare("CREATE INDEX IF NOT EXISTS idx_d1_people_name ON d1_people(lastname, firstname)").run(),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_d1_people_candidate ON d1_people(is_2026_candidate, filer_entity_number)").run(),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_d1_people_legislator ON d1_people(is_current_legislator, gc_personid)").run(),
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_d1_candidate_primary_results_person ON d1_candidate_primary_results(person_id, election_year, outcome)").run(),
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_d1_candidate_primary_results_role ON d1_candidate_primary_results(candidate_role_id)").run(),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_d1_article_people_person ON d1_article_people(person_id)").run(),
   ]);
 }
@@ -193,7 +225,16 @@ export async function syncCandidateLegislatorIdentity(candidateFilerEntityNumber
        SET filer_entity_number = ?,
            website_url = COALESCE(NULLIF(?, ''), website_url),
            photo_url = COALESCE(NULLIF(photo_url, ''), ?),
-           is_2026_candidate = CASE WHEN ? = 2026 THEN 1 ELSE is_2026_candidate END,
+           is_2026_candidate = CASE
+             WHEN ? = 2026 AND NOT EXISTS (
+               SELECT 1
+               FROM d1_person_candidate_roles archived_role
+               WHERE archived_role.filer_entity_number = ?
+                 AND archived_role.election_year = 2026
+                 AND archived_role.status = 'lost_primary'
+             ) THEN 1
+             ELSE is_2026_candidate
+           END,
            is_free_stater = CASE WHEN ? = 1 THEN 1 ELSE is_free_stater END,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
@@ -203,6 +244,7 @@ export async function syncCandidateLegislatorIdentity(candidateFilerEntityNumber
       candidate.candidate_website || "",
       candidate.photo_url || "",
       Number(candidate.election_year) || null,
+      filer,
       freeStaterInt(candidate.is_free_stater),
       personId,
     )
@@ -421,7 +463,17 @@ export async function upsertPersonFromCandidate(filer, db = adminDb()) {
          email = excluded.email,
          website_url = excluded.website_url,
          photo_url = COALESCE(NULLIF(excluded.photo_url, ''), d1_people.photo_url),
-         is_2026_candidate = excluded.is_2026_candidate,
+         is_2026_candidate = CASE
+           WHEN excluded.is_2026_candidate = 1 AND NOT EXISTS (
+             SELECT 1
+             FROM d1_person_candidate_roles archived_role
+             WHERE archived_role.filer_entity_number = excluded.filer_entity_number
+               AND archived_role.election_year = 2026
+               AND archived_role.status = 'lost_primary'
+           ) THEN 1
+           WHEN excluded.is_2026_candidate = 0 THEN 0
+           ELSE d1_people.is_2026_candidate
+         END,
          is_free_stater = CASE WHEN excluded.is_free_stater = 1 THEN 1 ELSE d1_people.is_free_stater END,
          updated_at = CURRENT_TIMESTAMP`,
     )
