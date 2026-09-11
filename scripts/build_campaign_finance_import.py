@@ -16,8 +16,6 @@ from pathlib import Path
 
 CYCLE_START = dt.date(2024, 11, 6)
 ELECTION_YEAR = 2026
-MAX_DISPLAYED_CONTRIBUTORS = 5
-SOURCE_LABEL = "NH Secretary of State campaign finance CSV (download (2).csv)"
 SOURCE_URL = "https://cfs.sos.nh.gov/public/cf/reports"
 
 # Committee IDs are stable within the source export. These overrides cover names
@@ -59,6 +57,8 @@ EXPLICIT_COMMITTEE_PEOPLE = {
     "243730": "Ted Trost",
     "244202": "Tom Trost",
     "242100": "Terry Spahr",
+    "244452": "Andy Dow",
+    "244401": "Jim Kelly",
 }
 
 STOP_WORDS = {
@@ -69,9 +69,12 @@ STOP_WORDS = {
 }
 NAME_SUFFIXES = {"ii", "iii", "iv", "jr", "sr"}
 TOTAL_RECEIPT_SUBTYPES = {
-    "Interest", "Itemized Monetary", "Monetary Contribution", "Unitemized Monetary",
+    "Interest", "Interest Earned", "Itemized Monetary",
+    "Itemized Monetary Contribution", "Monetary Contribution", "Unitemized Monetary",
 }
-CONTRIBUTOR_RECEIPT_SUBTYPES = {"Itemized Monetary", "Monetary Contribution"}
+CONTRIBUTOR_RECEIPT_SUBTYPES = {
+    "Itemized Monetary", "Itemized Monetary Contribution", "Monetary Contribution",
+}
 NON_DISPLAY_CONTRIBUTORS = {
     "anonymous", "name withheld", "under threshold name withheld", "unitemized",
     "unitemized contributions",
@@ -128,11 +131,11 @@ def fetch_candidates() -> list[dict]:
              cr.filer_entity_number, cr.office, cr.county, cr.district
       FROM d1_person_candidate_roles cr
       JOIN d1_people p ON p.id = cr.person_id
-      WHERE cr.election_year = 2026 AND cr.status = 'active'
+      WHERE cr.election_year = 2026
       ORDER BY p.display_name COLLATE NOCASE
     """
     command = [
-        "npx", "wrangler", "d1", "execute", "nhdb", "--remote", "--json",
+        "wrangler", "d1", "execute", "nhdb", "--remote", "--json",
         "--command", sql,
     ]
     result = subprocess.run(command, check=True, capture_output=True, text=True)
@@ -151,10 +154,14 @@ def candidate_variants(candidate: dict) -> list[str]:
 
 def resolve_candidates(committees: dict[str, str], candidates: list[dict]):
     by_exact_name: dict[str, list[dict]] = defaultdict(list)
+    by_exact_display_name: dict[str, list[dict]] = defaultdict(list)
+    by_filer: dict[str, list[dict]] = defaultdict(list)
     surname_counts: dict[str, int] = defaultdict(int)
     candidate_cores = []
 
     for candidate in candidates:
+        by_filer[(candidate.get("filer_entity_number") or "").strip()].append(candidate)
+        by_exact_display_name[normalize(candidate["display_name"])].append(candidate)
         for variant in candidate_variants(candidate):
             by_exact_name[normalize(variant)].append(candidate)
         core = name_tokens(candidate["display_name"])
@@ -168,6 +175,11 @@ def resolve_candidates(committees: dict[str, str], candidates: list[dict]):
     unresolved: list[dict] = []
 
     for committee_id, committee_name in committees.items():
+        filer_options = by_filer.get(committee_id, [])
+        if len(filer_options) == 1:
+            resolved[committee_id] = filer_options[0]
+            continue
+
         explicit_name = EXPLICIT_COMMITTEE_PEOPLE.get(committee_id)
         if explicit_name:
             normalized_explicit = normalize(explicit_name)
@@ -184,6 +196,13 @@ def resolve_candidates(committees: dict[str, str], candidates: list[dict]):
                 "committee_name": committee_name,
                 "reason": f"explicit person not uniquely found: {explicit_name}",
             })
+            continue
+
+        exact_options = by_exact_display_name.get(normalize(committee_name), [])
+        if len(exact_options) != 1:
+            exact_options = by_exact_name.get(normalize(committee_name), [])
+        if len(exact_options) == 1:
+            resolved[committee_id] = exact_options[0]
             continue
 
         c_compact = compact(committee_name)
@@ -231,18 +250,56 @@ def build_import(csv_path: Path, output_path: Path):
     rows = []
     committees: dict[str, str] = {}
 
-    with csv_path.open(newline="", encoding="cp1252") as source:
+    with csv_path.open(newline="", encoding="utf-8-sig") as source:
+        first_line = source.readline()
+        new_export = first_line.startswith("Contributions  Download as of")
+        if not new_export:
+            source.seek(0)
         for row in csv.DictReader(source):
-            if row.get("Committee Subtype") != "Candidate Committee":
+            if new_export:
+                committee_id = (row.get("Filer Entity Id") or "").strip()
+                entity_name = (row.get("Entity Committee Name") or "").strip()
+                if not entity_name:
+                    entity_name = " ".join(
+                        (row.get(field) or "").strip()
+                        for field in ("Entity First Name", "Entity Middle Name", "Entity Last Name")
+                        if (row.get(field) or "").strip()
+                    )
+                receipt_date = parse_date(row.get("Download Transaction Date") or "")
+                normalized_row = {
+                    **row,
+                    "_committee_id": committee_id,
+                    "_date": receipt_date,
+                    "_transaction_type": (row.get("Transaction Type Desc") or "").strip(),
+                    "_subtype": (row.get("Transaction Sub Type") or "").strip(),
+                    "_amount": money(row.get("Download Transaction Amount") or ""),
+                    "_contributor": (row.get("Source Name") or "").strip(),
+                    "_contributor_type": (row.get("Transaction Source") or "").strip(),
+                    "_city": (row.get("Source City") or "").strip(),
+                    "_state": (row.get("Source State Code") or "").strip(),
+                }
+            else:
+                if row.get("Committee Subtype") != "Candidate Committee":
+                    continue
+                committee_id = (row.get("Filing Entity ID") or "").strip()
+                entity_name = (row.get("Committee Name") or "").strip()
+                receipt_date = parse_date(row.get("Date of Receipt") or "")
+                normalized_row = {
+                    **row,
+                    "_committee_id": committee_id,
+                    "_date": receipt_date,
+                    "_transaction_type": (row.get("Transaction Type") or "").strip(),
+                    "_subtype": (row.get("Transaction Sub Type") or "").strip(),
+                    "_amount": money(row.get("Amount of receipt") or ""),
+                    "_contributor": (row.get("Contributor Name") or "").strip(),
+                    "_contributor_type": (row.get("Contributor Type") or "").strip(),
+                    "_city": (row.get("Contributor City") or "").strip(),
+                    "_state": (row.get("Contributor State") or "").strip(),
+                }
+            if not committee_id or not receipt_date or receipt_date < CYCLE_START:
                 continue
-            committee_id = (row.get("Filing Entity ID") or "").strip()
-            committees[committee_id] = (row.get("Committee Name") or "").strip()
-            receipt_date = parse_date(row.get("Date of Receipt") or "")
-            if not receipt_date or receipt_date < CYCLE_START:
-                continue
-            row["_committee_id"] = committee_id
-            row["_date"] = receipt_date
-            rows.append(row)
+            committees[committee_id] = entity_name
+            rows.append(normalized_row)
 
     resolved, unresolved = resolve_candidates(committees, candidates)
     totals: dict[int, float] = defaultdict(float)
@@ -251,6 +308,8 @@ def build_import(csv_path: Path, output_path: Path):
     mapped_committees: dict[int, set[str]] = defaultdict(set)
     candidate_by_person: dict[int, dict] = {}
 
+    duplicate_rows_skipped = 0
+    seen_named_transactions: set[tuple] = set()
     for row in rows:
         committee_id = row["_committee_id"]
         candidate = resolved.get(committee_id)
@@ -259,17 +318,32 @@ def build_import(csv_path: Path, output_path: Path):
         person_id = int(candidate["person_id"])
         candidate_by_person[person_id] = candidate
         mapped_committees[person_id].add(committee_id)
-        transaction_type = (row.get("Transaction Type") or "").strip()
-        subtype = (row.get("Transaction Sub Type") or "").strip()
-        amount = money(row.get("Amount of receipt") or "")
+        transaction_type = row["_transaction_type"]
+        subtype = row["_subtype"]
+        amount = row["_amount"]
+
+        contributor = row["_contributor"]
+        contributor_key = normalize(contributor)
+        transaction_signature = (
+            committee_id, contributor_key, row["_date"], round(amount, 2),
+            transaction_type, subtype, normalize(row["_city"]), normalize(row["_state"]),
+            normalize(row.get("Source Address Line1") or row.get("Contributor Address") or ""),
+            money(row.get("Download Total Transaction To The Filer") or ""),
+        )
+        # Named rows that are byte-for-byte equivalent in the SOS download are
+        # duplicate records. Withheld rows may represent separate donors and must
+        # remain distinct even when their public fields are identical.
+        if contributor_key and not contributor_key.startswith("under threshold"):
+            if transaction_signature in seen_named_transactions:
+                duplicate_rows_skipped += 1
+                continue
+            seen_named_transactions.add(transaction_signature)
 
         if transaction_type == "Receipt" and subtype in TOTAL_RECEIPT_SUBTYPES:
             totals[person_id] += amount
         elif transaction_type == "Return Receipt" and subtype in CONTRIBUTOR_RECEIPT_SUBTYPES:
             totals[person_id] -= amount
 
-        contributor = (row.get("Contributor Name") or "").strip()
-        contributor_key = normalize(contributor)
         if (
             not contributor
             or contributor_key in NON_DISPLAY_CONTRIBUTORS
@@ -291,19 +365,22 @@ def build_import(csv_path: Path, output_path: Path):
             contribution_meta[key] = {
                 "name": contributor,
                 "date": row["_date"],
-                "type": (row.get("Contributor Type") or "").strip(),
-                "city": (row.get("Contributor City") or "").strip(),
-                "state": (row.get("Contributor State") or "").strip(),
+                "type": row["_contributor_type"],
+                "city": row["_city"],
+                "state": row["_state"],
             }
 
-    top_contributors: dict[int, list[tuple[float, dict]]] = defaultdict(list)
+    contributors_by_person: dict[int, list[tuple[float, dict]]] = defaultdict(list)
     for (person_id, contributor_key), amount in contribution_totals.items():
         if amount <= 0:
             continue
-        top_contributors[person_id].append((round(amount, 2), contribution_meta[(person_id, contributor_key)]))
-    for person_id in top_contributors:
-        top_contributors[person_id].sort(key=lambda item: (-item[0], item[1]["name"].lower()))
-        top_contributors[person_id] = top_contributors[person_id][:MAX_DISPLAYED_CONTRIBUTORS]
+        contributors_by_person[person_id].append(
+            (round(amount, 2), contribution_meta[(person_id, contributor_key)])
+        )
+    for person_id in contributors_by_person:
+        contributors_by_person[person_id].sort(
+            key=lambda item: (-item[0], item[1]["name"].lower())
+        )
 
     people_ids = sorted(candidate_by_person)
     sql = [
@@ -336,7 +413,7 @@ def build_import(csv_path: Path, output_path: Path):
         ])
 
         source_ids = ",".join(sorted(mapped_committees[person_id], key=int))
-        for amount, meta in top_contributors.get(person_id, []):
+        for amount, meta in contributors_by_person.get(person_id, []):
             sql.extend([
                 "INSERT INTO d1_candidate_contributions (",
                 "  person_id, filer_entity_number, election_year, contributor_name, amount,",
@@ -345,7 +422,7 @@ def build_import(csv_path: Path, output_path: Path):
                 ") VALUES (",
                 f"  {person_id}, {sql_text(filer)}, {ELECTION_YEAR}, {sql_text(meta['name'])}, {amount:.2f},",
                 f"  {sql_text(meta['date'].isoformat())}, {sql_text(meta['type'])}, {sql_text(meta['city'])}, {sql_text(meta['state'])},",
-                f"  {sql_text(source_ids)}, {sql_text(SOURCE_URL)}, {sql_text(SOURCE_LABEL)}, CURRENT_TIMESTAMP",
+                f"  {sql_text(source_ids)}, {sql_text(SOURCE_URL)}, {sql_text('NH Secretary of State campaign finance CSV (' + csv_path.name + ')')}, CURRENT_TIMESTAMP",
                 ");",
             ])
         sql.append("")
@@ -356,7 +433,8 @@ def build_import(csv_path: Path, output_path: Path):
         "candidate_committees": len(committees),
         "resolved_committees": len(resolved),
         "profiles_populated": len(people_ids),
-        "top_contributor_rows": sum(len(items) for items in top_contributors.values()),
+        "contributor_rows": sum(len(items) for items in contributors_by_person.values()),
+        "duplicate_named_rows_skipped": duplicate_rows_skipped,
         "unresolved": unresolved,
     }
 

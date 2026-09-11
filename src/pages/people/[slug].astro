@@ -31,7 +31,10 @@ import {
   TPACTION_ALIGNED_TOOLTIP,
 } from "../../lib/alignmentTags";
 import { billDetailPath, getBillDetail, getBillSummaries } from "../../lib/billsApi";
-import { getCandidateCampaignFinance } from "../../lib/campaignFinance";
+import {
+  contributorFinancePath,
+  getCandidateCampaignFinance,
+} from "../../lib/campaignFinance";
 import { representativePersonIdForCandidate } from "../../lib/candidateLegislatorLinks";
 import { candidateProfileForLegislator } from "../../lib/candidateLegislators";
 import {
@@ -1678,7 +1681,14 @@ function uniqueTowns(towns = []) {
                 <ol class="campaign-contributor-list">
                   {topCampaignContributors.map((contributor) => (
                     <li>
-                      <div class="campaign-contributor-row">
+                      <a
+                        class="campaign-contributor-row"
+                        href={contributorFinancePath(
+                          contributor.name,
+                          linkedCandidateForEndorsements.electionYear || 2026,
+                        )}
+                        aria-label={`See candidates who received contributions from ${contributor.name}`}
+                      >
                         <div>
                           <strong>{contributor.name}</strong>
                           {(contributor.city || contributor.state) && (
@@ -1686,7 +1696,7 @@ function uniqueTowns(towns = []) {
                           )}
                         </div>
                         <strong>{formatCampaignCurrency(contributor.amount)}</strong>
-                      </div>
+                      </a>
                     </li>
                   ))}
                 </ol>
@@ -3496,9 +3506,27 @@ function uniqueTowns(towns = []) {
 
   .campaign-contributor-row {
     align-items: start;
+    color: inherit;
     display: grid;
     gap: 10px;
     grid-template-columns: minmax(0, 1fr) auto;
+    margin: -6px -8px;
+    padding: 6px 8px;
+    text-decoration: none;
+  }
+
+  .campaign-contributor-row:hover,
+  .campaign-contributor-row:focus-visible {
+    background: #eff6ff;
+    border-radius: 6px;
+    outline: none;
+  }
+
+  .campaign-contributor-row:hover > div > strong,
+  .campaign-contributor-row:focus-visible > div > strong {
+    color: #1d4ed8;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .campaign-contributor-row > div {
