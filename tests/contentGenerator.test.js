@@ -41,7 +41,6 @@ function validRequest(overrides = {}) {
     districtCommunity: "Concord, New Hampshire",
     party: "Democratic",
     townsRepresented: "Concord · Bow · Hopkinton",
-    endorsements: "Granite Civic Group",
     body: "New campaign website and community questionnaire added.",
     image: "https://public.example.org/candidate-photo.jpg",
     freeStateAligned: true,
@@ -115,7 +114,6 @@ test("maps a candidate profile into the candidate renderer payload", () => {
     community: "Concord, New Hampshire",
     party: "Democratic",
     townsRepresented: "Concord · Bow · Hopkinton",
-    endorsements: "Granite Civic Group",
     freeStateAligned: true,
     tpactionAligned: false,
     body: "New campaign website and community questionnaire added.",
@@ -131,7 +129,6 @@ test("maps a candidate profile into the candidate renderer payload", () => {
       office: "State Representative · Merrimack District 9",
       party: "Democratic",
       townsRepresented: "Concord · Bow · Hopkinton",
-      endorsements: "Granite Civic Group",
       body: "New campaign website and community questionnaire added.",
       image: "https://public.example.org/candidate-photo.jpg",
       freeStateAligned: true,
@@ -186,7 +183,6 @@ test("enforces template-specific required fields and character limits", () => {
     office: "O".repeat(101),
     party: "P".repeat(49),
     townsRepresented: "T".repeat(1601),
-    endorsements: "E".repeat(241),
     body: "B".repeat(221),
   }));
   assert.equal(validation.ok, false);
@@ -194,7 +190,6 @@ test("enforces template-specific required fields and character limits", () => {
   assert.match(validation.fieldErrors.office, /100/);
   assert.match(validation.fieldErrors.party, /48/);
   assert.match(validation.fieldErrors.townsRepresented, /1600/);
-  assert.match(validation.fieldErrors.endorsements, /240/);
   assert.match(validation.fieldErrors.body, /220/);
 });
 

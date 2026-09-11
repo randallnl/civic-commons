@@ -38,10 +38,6 @@ test("builds a seat share model with canonical candidate profiles and fallback p
           photoUrl: "https://photos.example.test/ada.png",
           isFreeStateAligned2026: 1,
           isTpActionAligned2026: true,
-          endorsements: [
-            { organization: { name: "Granite Civic Group" }, position: "Endorsed" },
-            { organization: { name: "Granite Civic Group" }, position: "Endorsed" },
-          ],
         },
         {
           filerEntityNumber: "67890",
@@ -61,9 +57,6 @@ test("builds a seat share model with canonical candidate profiles and fallback p
   assert.equal(seats[0].candidates[0].freeStateAligned, true);
   assert.equal(seats[0].candidates[0].tpactionAligned, true);
   assert.deepEqual(seats[0].candidates[0].tags, ["Free State Aligned", "TPAction Aligned"]);
-  assert.deepEqual(seats[0].candidates[0].endorsements, [
-    { organization: "Granite Civic Group", position: "Endorsed" },
-  ]);
   assert.equal(seats[0].candidates[1].portraitUrl, "https://nhdeservesbetter.com/nhdb-logo-circle.png");
 });
 
@@ -74,7 +67,6 @@ test("creates ready-to-paste seat copy with every candidate profile link and a c
       {
         name: "Ada Lovelace",
         profileUrl: "https://nhdeservesbetter.com/people/ada-lovelace",
-        endorsements: [{ organization: "Granite Civic Group", position: "Endorsed" }],
       },
       { name: "Grace Hopper", profileUrl: "https://nhdeservesbetter.com/people/grace-hopper" },
     ],
@@ -85,8 +77,9 @@ test("creates ready-to-paste seat copy with every candidate profile link and a c
   assert.match(post, /^Do you know your candidates\?/);
   assert.match(post, /For State Senate, District 6, your candidates are:/);
   assert.match(post, /Ada Lovelace: https:\/\/nhdeservesbetter\.com\/people\/ada-lovelace/);
-  assert.match(post, /Endorsements: Granite Civic Group \(Endorsed\)/);
   assert.match(post, /Grace Hopper: https:\/\/nhdeservesbetter\.com\/people\/grace-hopper/);
-  assert.match(post, /verifiable information/i);
+  assert.match(post, /Get to know your candidates or share information to keep others informed\./);
+  assert.match(post, /published endorsements, mentions in the news, and community input/i);
+  assert.match(post, /Share verifiable information/i);
   assert.match(post, /https:\/\/nhdeservesbetter\.com\/suggest-update/);
 });

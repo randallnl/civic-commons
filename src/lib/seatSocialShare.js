@@ -73,17 +73,13 @@ export function socialPostCopyForSeat(seat, {
     "Do you know your candidates?",
     "",
     `For ${label || "this seat"}, your candidates are:`,
-    ...candidates.flatMap((candidate) => {
-      const endorsements = Array.isArray(candidate.endorsements)
-        ? candidate.endorsements.map(endorsementLabel).filter(Boolean)
-        : [];
-      return [
-        `${cleanText(candidate.name)}: ${cleanText(candidate.profileUrl)}`,
-        endorsements.length ? `Endorsements: ${endorsements.join(" · ")}` : "",
-      ].filter(Boolean);
-    }),
+    ...candidates.map((candidate) =>
+      `${cleanText(candidate.name)}: ${cleanText(candidate.profileUrl)}`,
+    ),
     "",
-    "Do you have verifiable information to share about your candidate? Share it at NH Deserves Better:",
+    "Get to know your candidates or share information to keep others informed.",
+    "NH Deserves Better offers insights on published endorsements, mentions in the news, and community input about candidates’ actions, positions, and involvement.",
+    "Share verifiable information at NH Deserves Better:",
     submissionUrl,
   ];
 
@@ -114,7 +110,6 @@ function shareCandidate(candidate = {}, { origin = "" } = {}) {
     freeStateAligned: isFreeStater(candidate),
     tpactionAligned: isTpActionAligned(candidate),
     tags: candidateContextTags(candidate),
-    endorsements: candidateEndorsements(candidate),
   };
 }
 
@@ -123,33 +118,6 @@ function candidateContextTags(candidate = {}) {
     isFreeStater(candidate) ? "Free State Aligned" : "",
     isTpActionAligned(candidate) ? "TPAction Aligned" : "",
   ].filter(Boolean);
-}
-
-function candidateEndorsements(candidate = {}) {
-  const seen = new Set();
-  return (Array.isArray(candidate.endorsements) ? candidate.endorsements : [])
-    .map((endorsement) => {
-      const organization = cleanText(
-        endorsement?.organization?.name ||
-          endorsement?.organizationName ||
-          endorsement?.organization,
-      );
-      const position = cleanText(endorsement?.position);
-      if (!organization) return null;
-
-      const key = `${organization.toLowerCase()}|${position.toLowerCase()}`;
-      if (seen.has(key)) return null;
-      seen.add(key);
-      return { organization, position };
-    })
-    .filter(Boolean);
-}
-
-function endorsementLabel(endorsement = {}) {
-  const organization = cleanText(endorsement.organization);
-  const position = cleanText(endorsement.position);
-  if (!organization) return "";
-  return position ? `${organization} (${position})` : organization;
 }
 
 function seatLabel(group = {}) {

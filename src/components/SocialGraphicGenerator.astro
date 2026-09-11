@@ -97,11 +97,6 @@ const initialTemplate = values.template || (
             <span class="generator-field-error" data-field-error-for="townsRepresented"></span>
           </label>
 
-          <label data-candidate-specific-fields hidden={initialTemplate !== CANDIDATE_GRAPHIC_TEMPLATE}>
-            Published endorsements <span>Optional</span>
-            <input name="endorsements" value={values.endorsements || ""} maxlength="240" />
-            <span class="generator-field-error" data-field-error-for="endorsements"></span>
-          </label>
         </div>
 
         <fieldset data-candidate-specific-fields hidden={initialTemplate !== CANDIDATE_GRAPHIC_TEMPLATE}>
