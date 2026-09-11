@@ -175,6 +175,11 @@ const seatPayload = seats.map((seat) => ({
       const download = document.createElement("a");
       const profile = document.createElement("a");
 
+      card.className = "seat-social-share-result-card";
+      imageLink.className = "seat-social-share-result-image-link";
+      image.className = "seat-social-share-result-image";
+      content.className = "seat-social-share-result-copy";
+      actions.className = "seat-social-share-result-actions";
       imageLink.href = response.imageUrl;
       imageLink.target = "_blank";
       imageLink.rel = "noopener noreferrer";
@@ -440,42 +445,43 @@ const seatPayload = seats.map((seat) => ({
   .seat-social-share-results > div {
     display: grid;
     gap: 0.7rem;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 130px));
+    grid-template-columns: repeat(auto-fill, minmax(84px, 96px));
     margin-top: 0.7rem;
   }
 
-  .seat-social-share-results article {
+  .seat-social-share-results :global(.seat-social-share-result-card) {
     display: grid;
-    gap: 0.5rem;
+    gap: 0.4rem;
     min-width: 0;
   }
 
-  .seat-social-share-results img {
+  .seat-social-share-results :global(.seat-social-share-result-image) {
     border: 1px solid #dbeafe;
-    border-radius: 10px;
+    border-radius: 7px;
     display: block;
-    width: 100%;
+    width: 96px;
   }
 
-  .seat-social-share-results article > div {
+  .seat-social-share-results :global(.seat-social-share-result-copy) {
     display: grid;
-    gap: 0.45rem;
+    gap: 0.35rem;
   }
 
-  .seat-social-share-results strong {
+  .seat-social-share-results :global(.seat-social-share-result-copy strong) {
     color: #17324d;
-    font-size: 0.9rem;
+    font-size: 0.76rem;
+    line-height: 1.2;
   }
 
-  .seat-social-share-results article > div > div {
+  .seat-social-share-results :global(.seat-social-share-result-actions) {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.65rem;
+    gap: 0.3rem 0.45rem;
   }
 
-  .seat-social-share-results article a:not(:first-child) {
+  .seat-social-share-results :global(.seat-social-share-result-actions a) {
     color: #17324d;
-    font-size: 0.82rem;
+    font-size: 0.7rem;
     font-weight: 850;
   }
 
