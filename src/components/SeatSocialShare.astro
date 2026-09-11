@@ -146,11 +146,24 @@ const seatPayload = seats.map((seat) => ({
         office: candidate.office || seat.label,
         party: candidate.party || "",
         townsRepresented: candidate.townsRepresented || "",
+        endorsements: candidateEndorsementText(candidate),
         body: "Know your candidate and help us get the most up-to-date information.",
         image: candidate.portraitUrl,
         freeStateAligned: Boolean(candidate.freeStateAligned),
         tpactionAligned: Boolean(candidate.tpactionAligned),
       };
+    }
+
+    function candidateEndorsementText(candidate) {
+      const endorsements = Array.isArray(candidate?.endorsements)
+        ? candidate.endorsements
+        : [];
+      const labels = endorsements
+        .map((endorsement) => String(endorsement?.organization || "").trim())
+        .filter(Boolean);
+      const unique = [...new Set(labels)];
+      if (unique.length <= 3) return unique.join(" · ");
+      return `${unique.slice(0, 3).join(" · ")} · +${unique.length - 3} more`;
     }
 
     function resultCard(candidate, response) {
