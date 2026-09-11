@@ -100,8 +100,13 @@ function shareCandidate(candidate = {}, { origin = "" } = {}) {
     entityId: cleanText(candidate.filerEntityNumber || candidate.filer_entity_number || candidateSlug(candidate)),
     profileUrl,
     portraitUrl,
+    office: candidateOfficeLine(candidate),
+    community: candidateCommunity(candidate),
+    party: candidateParty(candidate),
+    townsRepresented: candidateTowns(candidate),
+    freeStateAligned: isFreeStater(candidate),
+    tpactionAligned: isTpActionAligned(candidate),
     tags: candidateContextTags(candidate),
-    testimonyAlignmentPercent: testimonyAlignmentPercent(candidate),
   };
 }
 
@@ -110,17 +115,6 @@ function candidateContextTags(candidate = {}) {
     isFreeStater(candidate) ? "Free State Aligned" : "",
     isTpActionAligned(candidate) ? "TPAction Aligned" : "",
   ].filter(Boolean);
-}
-
-function testimonyAlignmentPercent(candidate = {}) {
-  const value = Number(
-    candidate.onlineTestimonyAlignmentPct ??
-      candidate.online_testimony_alignment_pct,
-  );
-  if (!Number.isFinite(value)) return null;
-
-  const percent = value > 1 ? value : value * 100;
-  return Math.round(Math.max(0, Math.min(100, percent)));
 }
 
 function seatLabel(group = {}) {
@@ -148,6 +142,76 @@ function normalizedOfficeLabel(value = "") {
   if (/state senate|state senator/i.test(office)) return "State Senate";
   if (/state representative|representative/i.test(office)) return "State Representative";
   return office;
+}
+
+function candidateOfficeLine(candidate = {}) {
+  const office = normalizedOfficeLabel(candidate.office);
+  const district = cleanText(candidate.district);
+
+  return [office, district ? `District ${district}` : ""]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function candidateParty(candidate = {}) {
+  const party = cleanText(candidate.politicalParty || candidate.political_party || candidate.party);
+  const normalized = party.toLowerCase();
+  if (normalized === "d" || normalized === "dem") return "Democratic";
+  if (normalized === "r" || normalized === "rep") return "Republican";
+  if (normalized === "i" || normalized === "ind") return "Independent";
+  return party.replace(/\s+Party$/i, "");
+}
+
+function candidateTowns(candidate = {}) {
+  const towns = [
+    candidate.townsRepresented,
+    candidate.towns_represented,
+    candidate.communitiesRepresented,
+    candidate.communities_represented,
+    candidate.towns,
+    candidate.locationText,
+    candidate.location_text,
+    candidate.legislatorTownsRepresented,
+    candidate.legislatorLocationText,
+  ].flatMap(townsFromValue);
+
+  const seen = new Set();
+  return towns.filter((town) => {
+    const key = town.toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).join(" · ");
+}
+
+function candidateCommunity(candidate = {}) {
+  const directCommunity = cleanText(
+    candidate.community || candidate.city || candidate.town || candidate.legislatorLocationText,
+  );
+  if (directCommunity) return ensureNewHampshire(directCommunity);
+
+  const firstTown = candidateTowns(candidate).split(" · ")[0];
+  if (firstTown) return ensureNewHampshire(firstTown);
+
+  const county = cleanText(candidate.county);
+  return county ? `${county} County, New Hampshire` : "New Hampshire";
+}
+
+function ensureNewHampshire(value = "") {
+  const community = cleanText(value);
+  if (!community || /new hampshire|\bnh\b/i.test(community)) return community || "New Hampshire";
+  return `${community}, New Hampshire`;
+}
+
+function townsFromValue(value = "") {
+  if (Array.isArray(value)) return value.flatMap(townsFromValue);
+  if (typeof value === "object" && value !== null) {
+    return townsFromValue(value.town || value.name || value.label || "");
+  }
+
+  const text = cleanText(value);
+  const delimiter = /ward/i.test(text) ? /;|\||\s+and\s+/i : /[,;|]|\s+and\s+/i;
+  return text.split(delimiter).map(cleanText).filter(Boolean);
 }
 
 function candidateOfficePriority(value = "") {

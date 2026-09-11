@@ -124,9 +124,6 @@ const seatPayload = seats.map((seat) => ({
       link.textContent = candidate.name;
       const context = [
         ...(Array.isArray(candidate.tags) ? candidate.tags : []),
-        Number.isFinite(candidate.testimonyAlignmentPercent)
-          ? `${candidate.testimonyAlignmentPercent}% testimony aligned`
-          : "",
       ].filter(Boolean);
       item.append(link);
       if (context.length) {
@@ -143,26 +140,18 @@ const seatPayload = seats.map((seat) => ({
         entityType: "candidate",
         entityId: candidate.entityId,
         template: "candidate-profile-update",
-        eyebrow: "YOUR 2026 CANDIDATES",
+        eyebrow: "CANDIDATE PROFILE UPDATED",
         updateLabel: "",
         headline: candidate.name,
-        office: seat.label,
-        districtCommunity: "New Hampshire",
-        body: graphicBody(candidate),
+        office: candidate.office || seat.label,
+        districtCommunity: candidate.community || "New Hampshire",
+        party: candidate.party || "",
+        townsRepresented: candidate.townsRepresented || "",
+        body: "Candidate profile information has been updated.",
         image: candidate.portraitUrl,
-        cta: "View the candidate profile",
+        freeStateAligned: Boolean(candidate.freeStateAligned),
+        tpactionAligned: Boolean(candidate.tpactionAligned),
       };
-    }
-
-    function graphicBody(candidate) {
-      const context = [
-        ...(Array.isArray(candidate.tags) ? candidate.tags : []),
-        Number.isFinite(candidate.testimonyAlignmentPercent)
-          ? `${candidate.testimonyAlignmentPercent}% testimony aligned`
-          : "",
-      ].filter(Boolean);
-      const base = `Learn about ${candidate.name}'s public profile and campaign information.`;
-      return context.length ? `${base} ${context.join(" · ")}.` : base;
     }
 
     function resultCard(candidate, response) {
@@ -445,7 +434,7 @@ const seatPayload = seats.map((seat) => ({
   .seat-social-share-results > div {
     display: grid;
     gap: 0.7rem;
-    grid-template-columns: repeat(auto-fill, minmax(84px, 96px));
+    grid-template-columns: repeat(auto-fill, minmax(124px, 140px));
     margin-top: 0.7rem;
   }
 
@@ -459,7 +448,7 @@ const seatPayload = seats.map((seat) => ({
     border: 1px solid #dbeafe;
     border-radius: 7px;
     display: block;
-    width: 96px;
+    width: 140px;
   }
 
   .seat-social-share-results :global(.seat-social-share-result-copy) {

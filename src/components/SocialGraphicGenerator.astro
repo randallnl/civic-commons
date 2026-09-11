@@ -83,7 +83,41 @@ const initialTemplate = values.template || (
             />
             <span class="generator-field-error" data-field-error-for="districtCommunity"></span>
           </label>
+
+          <label data-candidate-specific-fields hidden={initialTemplate !== CANDIDATE_GRAPHIC_TEMPLATE}>
+            Party <span>Optional</span>
+            <input name="party" value={values.party || ""} maxlength="48" />
+            <span class="generator-field-error" data-field-error-for="party"></span>
+          </label>
+
+          <label data-candidate-specific-fields hidden={initialTemplate !== CANDIDATE_GRAPHIC_TEMPLATE}>
+            Towns represented <span>Optional</span>
+            <input name="townsRepresented" value={values.townsRepresented || ""} maxlength="1600" />
+            <span class="generator-field-error" data-field-error-for="townsRepresented"></span>
+          </label>
         </div>
+
+        <fieldset data-candidate-specific-fields hidden={initialTemplate !== CANDIDATE_GRAPHIC_TEMPLATE}>
+          <legend>Profile labels</legend>
+          <label>
+            <input
+              name="freeStateAligned"
+              type="checkbox"
+              value="true"
+              checked={Boolean(values.freeStateAligned)}
+            />
+            Free State Aligned
+          </label>
+          <label>
+            <input
+              name="tpactionAligned"
+              type="checkbox"
+              value="true"
+              checked={Boolean(values.tpactionAligned)}
+            />
+            TPAction Aligned
+          </label>
+        </fieldset>
 
         <label>
           Description of what changed
@@ -105,7 +139,7 @@ const initialTemplate = values.template || (
           <span class="generator-field-error" data-field-error-for="image"></span>
         </label>
 
-        <label>
+        <label data-cta-field hidden={initialTemplate === CANDIDATE_GRAPHIC_TEMPLATE}>
           Call to action <span>Optional</span>
           <input name="cta" value={values.cta || ""} maxlength="72" />
           <span class="generator-field-error" data-field-error-for="cta"></span>
@@ -150,6 +184,8 @@ const initialTemplate = values.template || (
     const form = generator.querySelector("[data-generator-form]");
     const template = form?.querySelector("[name='template']");
     const updateLabelField = form?.querySelector("[data-update-label-field]");
+    const candidateSpecificFields = form?.querySelectorAll("[data-candidate-specific-fields]");
+    const ctaField = form?.querySelector("[data-cta-field]");
     const office = form?.querySelector("[name='office']");
     const context = form?.querySelector("[name='districtCommunity']");
     const body = form?.querySelector("[name='body']");
@@ -169,6 +205,10 @@ const initialTemplate = values.template || (
     function refreshTemplateRules() {
       const isCandidate = template?.value === "candidate-profile-update";
       if (updateLabelField instanceof HTMLElement) updateLabelField.hidden = isCandidate;
+      candidateSpecificFields?.forEach((field) => {
+        if (field instanceof HTMLElement) field.hidden = !isCandidate;
+      });
+      if (ctaField instanceof HTMLElement) ctaField.hidden = isCandidate;
       if (office instanceof HTMLInputElement) office.maxLength = isCandidate ? 100 : 70;
       if (context instanceof HTMLInputElement) context.maxLength = isCandidate ? 80 : 110;
       if (body instanceof HTMLTextAreaElement) body.maxLength = isCandidate ? 220 : 240;
@@ -459,6 +499,42 @@ const initialTemplate = values.template || (
     color: #718096;
     font-size: 0.75rem;
     font-weight: 700;
+  }
+
+  fieldset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    margin: 0;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+  }
+
+  fieldset[hidden],
+  [data-candidate-specific-fields][hidden],
+  [data-cta-field][hidden] {
+    display: none;
+  }
+
+  legend {
+    color: #263b50;
+    font-size: 0.86rem;
+    font-weight: 800;
+    padding: 0 0.2rem;
+  }
+
+  fieldset label {
+    align-items: center;
+    display: flex;
+    gap: 0.45rem;
+  }
+
+  fieldset input[type="checkbox"] {
+    height: 1rem;
+    margin: 0;
+    padding: 0;
+    width: 1rem;
   }
 
   input,

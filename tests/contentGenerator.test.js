@@ -39,9 +39,12 @@ function validRequest(overrides = {}) {
     headline: "Candidate Name",
     office: "State Representative · Merrimack District 9",
     districtCommunity: "Concord, New Hampshire",
+    party: "Democratic",
+    townsRepresented: "Concord · Bow · Hopkinton",
     body: "New campaign website and community questionnaire added.",
     image: "https://public.example.org/candidate-photo.jpg",
-    cta: "View the candidate profile",
+    freeStateAligned: true,
+    tpactionAligned: false,
     ...overrides,
   };
 }
@@ -109,6 +112,10 @@ test("maps a candidate profile into the candidate renderer payload", () => {
     county: "Merrimack",
     district: "9",
     community: "Concord, New Hampshire",
+    party: "Democratic",
+    townsRepresented: "Concord · Bow · Hopkinton",
+    freeStateAligned: true,
+    tpactionAligned: false,
     body: "New campaign website and community questionnaire added.",
     image: "https://public.example.org/candidate-photo.jpg",
   });
@@ -121,17 +128,16 @@ test("maps a candidate profile into the candidate renderer payload", () => {
       headline: "Candidate Name",
       office: "State Representative · Merrimack District 9",
       community: "Concord, New Hampshire",
+      party: "Democratic",
+      townsRepresented: "Concord · Bow · Hopkinton",
       body: "New campaign website and community questionnaire added.",
       image: "https://public.example.org/candidate-photo.jpg",
-      cta: "View the candidate profile",
-    },
-    image: {
-      url: "https://public.example.org/candidate-photo.jpg",
-      alt: "Portrait of Candidate Name",
+      freeStateAligned: true,
+      tpactionAligned: false,
     },
     source: {
       app: "nh-deserves-better",
-      id: `candidate-profile-update:${EVENT_ID}`,
+      id: "candidate-123",
     },
   });
 });
@@ -176,14 +182,16 @@ test("enforces template-specific required fields and character limits", () => {
   const validation = validateContentGraphicRequest(validRequest({
     headline: "",
     office: "O".repeat(101),
+    party: "P".repeat(49),
+    townsRepresented: "T".repeat(1601),
     body: "B".repeat(221),
-    cta: "C".repeat(73),
   }));
   assert.equal(validation.ok, false);
   assert.equal(validation.fieldErrors.headline, "This field is required.");
   assert.match(validation.fieldErrors.office, /100/);
+  assert.match(validation.fieldErrors.party, /48/);
+  assert.match(validation.fieldErrors.townsRepresented, /1600/);
   assert.match(validation.fieldErrors.body, /220/);
-  assert.match(validation.fieldErrors.cta, /72/);
 });
 
 test("accepts public HTTP(S) portraits and rejects local or private URLs", () => {

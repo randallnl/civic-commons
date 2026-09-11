@@ -30,10 +30,13 @@ test("builds a seat share model with canonical candidate profiles and fallback p
           filerEntityNumber: "12345",
           candidateFirstName: "Ada",
           candidateLastName: "Lovelace",
+          office: "State Representative",
+          district: "9",
+          politicalParty: "D",
+          townsRepresented: ["Concord", "Bow", "Hopkinton"],
           photoUrl: "https://photos.example.test/ada.png",
           isFreeStateAligned2026: 1,
           isTpActionAligned2026: true,
-          onlineTestimonyAlignmentPct: 0.865,
         },
         {
           filerEntityNumber: "67890",
@@ -47,8 +50,13 @@ test("builds a seat share model with canonical candidate profiles and fallback p
   assert.equal(seats.length, 1);
   assert.equal(seats[0].candidates[0].profileUrl, "https://nhdeservesbetter.com/people/12345-ada-lovelace");
   assert.equal(seats[0].candidates[0].portraitUrl, "https://photos.example.test/ada.png");
+  assert.equal(seats[0].candidates[0].office, "State Representative · District 9");
+  assert.equal(seats[0].candidates[0].community, "Concord, New Hampshire");
+  assert.equal(seats[0].candidates[0].party, "Democratic");
+  assert.equal(seats[0].candidates[0].townsRepresented, "Concord · Bow · Hopkinton");
+  assert.equal(seats[0].candidates[0].freeStateAligned, true);
+  assert.equal(seats[0].candidates[0].tpactionAligned, true);
   assert.deepEqual(seats[0].candidates[0].tags, ["Free State Aligned", "TPAction Aligned"]);
-  assert.equal(seats[0].candidates[0].testimonyAlignmentPercent, 87);
   assert.equal(seats[0].candidates[1].portraitUrl, "https://nhdeservesbetter.com/nhdb-logo-circle.png");
 });
 

@@ -21,9 +21,10 @@ const TEMPLATE_RULES = {
     headline: { max: 70, required: true },
     office: { max: 100, required: true },
     districtCommunity: { max: 80 },
+    party: { max: 48 },
+    townsRepresented: { max: 1600 },
     body: { max: 220, required: true },
     image: { max: 2048, required: true, publicUrl: true },
-    cta: { max: 72 },
   },
   [LEGISLATOR_GRAPHIC_TEMPLATE]: {
     eyebrow: { max: 42 },
@@ -83,11 +84,21 @@ export function candidateGraphicFormValues(profile = {}) {
     headline,
     office,
     districtCommunity: graphicText(profile.community || profile.towns || ""),
+    party: graphicText(profile.party || profile.politicalParty || ""),
+    townsRepresented: graphicText(
+      profile.townsRepresented ||
+        profile.towns ||
+        profile.communitiesRepresented ||
+        profile.community ||
+        "",
+    ),
     body: graphicText(
       profile.body || "Candidate profile information has been updated.",
     ),
     image: publicImageDefault(profile.image || profile.photoUrl || ""),
     cta: graphicText(profile.cta || "View the candidate profile"),
+    freeStateAligned: normalizeBoolean(profile.freeStateAligned ?? profile.isFreeStateAligned2026),
+    tpactionAligned: normalizeBoolean(profile.tpactionAligned ?? profile.isTpActionAligned2026),
   };
 }
 
@@ -154,9 +165,13 @@ export function validateContentGraphicRequest(value = {}) {
     headline: normalizeText(value.headline),
     office: normalizeText(value.office),
     districtCommunity: normalizeText(value.districtCommunity),
+    party: normalizeText(value.party),
+    townsRepresented: normalizeText(value.townsRepresented),
     body: normalizeText(value.body),
     image: normalizeText(value.image),
     cta: normalizeText(value.cta),
+    freeStateAligned: normalizeBoolean(value.freeStateAligned),
+    tpactionAligned: normalizeBoolean(value.tpactionAligned),
   };
 
   const rules = TEMPLATE_RULES[template];
@@ -188,7 +203,9 @@ export function validateContentGraphicRequest(value = {}) {
 export function buildContentGraphicPayload(data = {}) {
   const source = {
     app: CONTENT_GRAPHIC_SOURCE_APP,
-    id: contentGraphicSourceId(data.template, data.eventId),
+    id: data.template === CANDIDATE_GRAPHIC_TEMPLATE
+      ? data.entityId
+      : contentGraphicSourceId(data.template, data.eventId),
   };
   const image = {
     url: data.image,
@@ -203,11 +220,13 @@ export function buildContentGraphicPayload(data = {}) {
         headline: data.headline,
         office: data.office,
         community: data.districtCommunity,
+        party: data.party,
+        townsRepresented: data.townsRepresented,
         body: data.body,
         image: data.image,
-        cta: data.cta,
+        freeStateAligned: data.freeStateAligned,
+        tpactionAligned: data.tpactionAligned,
       },
-      image,
       source,
     };
   }
@@ -253,6 +272,9 @@ export function mapRendererFieldErrors(details = {}) {
     office: "office",
     community: "districtCommunity",
     district: "districtCommunity",
+    party: "party",
+    townsRepresented: "townsRepresented",
+    towns_represented: "townsRepresented",
     update_label: "updateLabel",
     body: "body",
     image: "image",
@@ -387,6 +409,14 @@ function joinGraphicParts(parts = []) {
 
 function normalizeText(value = "") {
   return graphicText(value);
+}
+
+function normalizeBoolean(value) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  return ["1", "true", "yes", "y", "on"].includes(
+    String(value ?? "").trim().toLowerCase(),
+  );
 }
 
 function graphicText(value = "") {

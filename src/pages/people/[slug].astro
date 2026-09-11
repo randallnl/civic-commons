@@ -231,6 +231,10 @@ const socialGraphicValues = hasLegislatorProfile
         : profileCandidate?.county
           ? `${profileCandidate.county} County, New Hampshire`
           : "New Hampshire",
+      party: profileCandidate?.politicalParty || profileCandidate?.political_party || profileCandidate?.party || "",
+      townsRepresented: linkedCandidateTowns.replaceAll(", ", " · "),
+      freeStateAligned: isFreeStater(profileCandidate),
+      tpactionAligned: isTpActionAligned(profileCandidate),
       image: portraitUrl,
     });
 const showCandidateRoleInHero = hasLegislatorProfile && Boolean(linkedCandidateForEndorsements);
