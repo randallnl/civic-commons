@@ -835,6 +835,7 @@ function uniqueArticles(articles = []) {
             <input type="hidden" name="clearFields" value="ballotpediaUrl" />
             <input type="hidden" name="clearFields" value="citizensCountUrl" />
             <input type="hidden" name="clearFields" value="stateHouseProfileUrl" />
+            <input type="hidden" name="clearFields" value="profileUrlAliases" />
 
             <label>
               Name
@@ -847,6 +848,15 @@ function uniqueArticles(articles = []) {
               <small class="field-help">
                 Add alternate names separated by commas or new lines. These are
                 used for search, tagging, and mention matching.
+              </small>
+            </label>
+
+            <label>
+              Alternative Profile URLs
+              <textarea name="profileUrlAliases" rows="3" placeholder="marissa-salisbury">{candidate.profileUrlAliases || candidate.profile_url_aliases || ""}</textarea>
+              <small class="field-help">
+                Add one short profile URL or slug per line. For example,
+                nhdeservesbetter.com/people/marissa-salisbury.
               </small>
             </label>
 

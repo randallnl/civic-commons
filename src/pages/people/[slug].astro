@@ -101,10 +101,11 @@ if (!representative && (!candidateFallback?.filerEntityNumber && !candidateFallb
 
 const hasLegislatorProfile = Boolean(representative);
 const profileCandidate = candidateFallback || null;
+const canonicalProfileSlug = representative?.slug || profileCandidate?.slug || slug;
 const person = {
-  id: representative?.personid || representative?.id || profileCandidate?.personId || profileCandidate?.filerEntityNumber || slug,
+  id: representative?.personid || representative?.id || profileCandidate?.personId || profileCandidate?.filerEntityNumber || canonicalProfileSlug,
   full_name: representative?.name || candidateName(profileCandidate) || "Civic Profile",
-  slug,
+  slug: canonicalProfileSlug,
   bio: representative?.notes || profileCandidate?.notes || "",
   photo_url: representative?.photo || profileCandidate?.photoUrl || profileCandidate?.legislatorPhotoUrl || "",
   party: representative?.party || profileCandidate?.politicalParty || profileCandidate?.party || "",
@@ -121,8 +122,14 @@ const person = {
   x_url: socialField(representative, profileCandidate, "x"),
   bluesky_url: socialField(representative, profileCandidate, "bluesky"),
 };
-const representativeEntityKey = representative?.personid || representative?.id || slug;
-const trackedVotesHref = `/people/${slug}/votes`;
+const profileUrlAliases =
+  representative?.profileUrlAliases ||
+  representative?.profile_url_aliases ||
+  profileCandidate?.profileUrlAliases ||
+  profileCandidate?.profile_url_aliases ||
+  "";
+const representativeEntityKey = representative?.personid || representative?.id || canonicalProfileSlug;
+const trackedVotesHref = `/people/${canonicalProfileSlug}/votes`;
 
 const apiTerm = representative
   ? representativeToTerm(representative)
@@ -203,7 +210,7 @@ const currentCandidateProfile = representative
   : profileCandidate
     ? {
         candidate: profileCandidate,
-        href: `/people/${slug}`,
+        href: `/people/${canonicalProfileSlug}`,
         label: "Candidate Profile",
       }
     : null;
@@ -218,7 +225,7 @@ const graphicCommunity = townServiceAreas
 const socialGraphicProfileType = hasLegislatorProfile ? "legislator" : "candidate";
 const socialGraphicProfileId = hasLegislatorProfile
   ? representativeEntityKey
-  : profileCandidate?.filerEntityNumber || profileCandidate?.filer_entity_number || slug;
+  : profileCandidate?.filerEntityNumber || profileCandidate?.filer_entity_number || canonicalProfileSlug;
 const socialGraphicValues = hasLegislatorProfile
   ? legislatorGraphicFormValues({
       name: person.full_name,
@@ -257,7 +264,7 @@ const heroPartyValue = showCandidateRoleInHero
 const recentlyViewedProfile = {
   kind: hasLegislatorProfile ? "legislator" : "candidate",
   name: person.full_name,
-  href: `/people/${slug}`,
+  href: `/people/${canonicalProfileSlug}`,
   photoUrl: portraitUrl || "",
   party: hasLegislatorProfile ? formatParty(person.party) : formatCandidateParty(person.party),
   officeLine: [officeLabel, districtLabel].filter(Boolean).join(", "),
@@ -290,7 +297,7 @@ if (adminSession && linkedCandidateForEndorsements) {
 
 try {
   const endorsementProfile = linkedCandidateForEndorsements || profileCandidate || {
-    slug,
+    slug: canonicalProfileSlug,
     name: person.full_name,
     filerEntityNumber:
       representative?.filerEntityNumber ||
@@ -299,7 +306,7 @@ try {
     personid: representative?.personid || representative?.id || "",
   };
   organizations = await getOrganizations();
-  endorsements = endorsementsForCandidate(organizations, endorsementProfile, slug);
+  endorsements = endorsementsForCandidate(organizations, endorsementProfile, canonicalProfileSlug);
 } catch (error) {
   console.error(error?.message || "Unable to load organization endorsements.");
 }
@@ -1150,7 +1157,7 @@ function uniqueTowns(towns = []) {
           </summary>
 
           <form class="profile-update-form" action="/api/profile-updates" method="post" enctype="multipart/form-data">
-            <input type="hidden" name="personKey" value={slug} />
+            <input type="hidden" name="personKey" value={canonicalProfileSlug} />
             <input type="hidden" name="personName" value={person.full_name} />
             <input type="hidden" name="pageUrl" value={Astro.url.href} />
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
@@ -1470,7 +1477,7 @@ function uniqueTowns(towns = []) {
             hidden
           >
               <form class="profile-update-form" action="/api/profile-updates" method="post" enctype="multipart/form-data">
-                <input type="hidden" name="personKey" value={slug} />
+                <input type="hidden" name="personKey" value={canonicalProfileSlug} />
                 <input type="hidden" name="personName" value={person.full_name} />
                 <input type="hidden" name="pageUrl" value={Astro.url.href} />
                 <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
@@ -1737,7 +1744,7 @@ function uniqueTowns(towns = []) {
             hx-swap="innerHTML"
           >
             <input type="hidden" name="entityType" value="person" />
-            <input type="hidden" name="entityKey" value={slug} />
+            <input type="hidden" name="entityKey" value={canonicalProfileSlug} />
             <input type="hidden" name="gcPersonid" value={representative?.personid || representative?.id || ""} />
             <input type="hidden" name="filerEntityNumber" value={linkedCandidateForEndorsements?.filerEntityNumber || ""} />
             {representative?.personid || representative?.id ? (
@@ -1762,6 +1769,7 @@ function uniqueTowns(towns = []) {
             <input type="hidden" name="clearFields" value="ballotpediaUrl" />
             <input type="hidden" name="clearFields" value="citizensCountUrl" />
             <input type="hidden" name="clearFields" value="stateHouseProfileUrl" />
+            <input type="hidden" name="clearFields" value="profileUrlAliases" />
 
             <label>
               Name
@@ -1774,6 +1782,15 @@ function uniqueTowns(towns = []) {
               <small class="field-help">
                 Add alternate names separated by commas or new lines. These are
                 used for search, tagging, and mention matching.
+              </small>
+            </label>
+
+            <label>
+              Alternative Profile URLs
+              <textarea name="profileUrlAliases" rows="3" placeholder="marissa-salisbury">{profileUrlAliases}</textarea>
+              <small class="field-help">
+                Add one short profile URL or slug per line. For example,
+                nhdeservesbetter.com/people/marissa-salisbury.
               </small>
             </label>
 
@@ -1925,7 +1942,7 @@ function uniqueTowns(towns = []) {
             <input
               type="hidden"
               name="entityKey"
-              value={slug}
+              value={canonicalProfileSlug}
             />
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
 
@@ -1942,7 +1959,7 @@ function uniqueTowns(towns = []) {
               R2 key <span class="optional-field-note">optional</span>
               <input
                 name="key"
-                placeholder={`people/${slug}-profile-photo.jpg`}
+                placeholder={`people/${canonicalProfileSlug}-profile-photo.jpg`}
               />
               <small class="field-help">
                 Leave blank to create a fresh key so the new photo appears
@@ -1965,7 +1982,7 @@ function uniqueTowns(towns = []) {
             <input
               type="hidden"
               name="entityKey"
-              value={representative.personid || representative.id || slug}
+              value={representative.personid || representative.id || canonicalProfileSlug}
             />
             <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
 
@@ -2288,7 +2305,7 @@ function uniqueTowns(towns = []) {
               >
                 <CommunityUpdates
                   entityType={hasLegislatorProfile ? "representative" : "candidate"}
-                  entityKey={hasLegislatorProfile ? representativeEntityKey : profileCandidate?.filerEntityNumber || slug}
+                  entityKey={hasLegislatorProfile ? representativeEntityKey : profileCandidate?.filerEntityNumber || canonicalProfileSlug}
                   entityName={person.full_name}
                   pageUrl={Astro.url.pathname}
                   variant="narrow"
@@ -2330,7 +2347,7 @@ function uniqueTowns(towns = []) {
       </section>
       </div>
     </main>
-    <ProfileViewTracker slug={slug} />
+    <ProfileViewTracker slug={canonicalProfileSlug} />
     <script define:vars={{ recentlyViewedProfile }}>
       const storageKey = "nhdb:recently-viewed-profiles";
       const maxItems = 6;

@@ -49,6 +49,7 @@ const CANDIDATE_FIELDS = [
   "ballotpediaUrl",
   "citizensCountUrl",
   "stateHouseProfileUrl",
+  "profileUrlAliases",
 ];
 
 const PERSON_FIELDS = [
@@ -77,6 +78,7 @@ const PERSON_FIELDS = [
   "ballotpediaUrl",
   "citizensCountUrl",
   "stateHouseProfileUrl",
+  "profileUrlAliases",
 ];
 
 const REPRESENTATIVE_FIELDS = [
@@ -108,6 +110,7 @@ const REPRESENTATIVE_FIELDS = [
   "ballotpediaUrl",
   "citizensCountUrl",
   "stateHouseProfileUrl",
+  "profileUrlAliases",
 ];
 
 export async function POST({ request }) {
@@ -357,6 +360,7 @@ async function updateRepresentativeSource(db, entityKey, data) {
   changed += await updatePersonSocialLinks(db, { gcPersonid: personid }, data);
   changed += await updatePersonReferenceLinks(db, { gcPersonid: personid }, data);
   changed += await updatePersonAlignmentFlags(db, { gcPersonid: personid }, data);
+  changed += await updatePersonProfileUrlAliases(db, { gcPersonid: personid }, data);
 
   if (!changed) throw new Error("No matching legislator source row was updated.");
   return { changed };
@@ -434,6 +438,15 @@ async function updatePersonSource(db, entityKey, data) {
       gcPersonid,
       filerEntityNumber,
       slug: key,
+    },
+    data,
+  );
+  changed += await updatePersonProfileUrlAliases(
+    db,
+    {
+      key,
+      gcPersonid,
+      filerEntityNumber,
     },
     data,
   );
@@ -635,6 +648,11 @@ async function updateCandidateSource(db, entityKey, data) {
     { filerEntityNumber: String(entityKey), slug: String(entityKey) },
     data,
   );
+  changed += await updatePersonProfileUrlAliases(
+    db,
+    { filerEntityNumber: String(entityKey), slug: String(entityKey) },
+    data,
+  );
 
   if (!changed) throw new Error("No matching candidate source row was updated.");
   return { changed };
@@ -828,6 +846,157 @@ async function updatePersonAliases(db, identifiers = {}, data = {}) {
     .bind(...params.map(d1Param))
     .run();
   return result.meta?.changes ?? result.changes ?? 0;
+}
+
+async function updatePersonProfileUrlAliases(db, identifiers = {}, data = {}) {
+  if (!Object.prototype.hasOwnProperty.call(data, "profileUrlAliases")) return 0;
+
+  const person = await resolveUnifiedPerson(db, identifiers);
+  if (!person) throw new Error("No matching people profile was found for the alternative URL.");
+
+  const aliases = normalizeProfileUrlAliases(data.profileUrlAliases, person.slug);
+  for (const alias of aliases) {
+    await assertProfileUrlAliasAvailable(db, alias, person.id);
+  }
+
+  const statements = [
+    db.prepare("DELETE FROM d1_person_profile_url_aliases WHERE person_id = ?").bind(person.id),
+    ...aliases.map((alias) =>
+      db.prepare(
+        `INSERT INTO d1_person_profile_url_aliases (
+           alias_slug, person_id, updated_at
+         ) VALUES (?, ?, CURRENT_TIMESTAMP)`,
+      ).bind(alias, person.id),
+    ),
+  ];
+  const results = await db.batch(statements);
+  return results.reduce(
+    (total, result) => total + (result.meta?.changes ?? result.changes ?? 0),
+    0,
+  );
+}
+
+async function resolveUnifiedPerson(db, identifiers = {}) {
+  const clauses = [];
+  const params = [];
+
+  if (identifiers.key) {
+    clauses.push("slug = ?", "CAST(id AS TEXT) = ?");
+    params.push(identifiers.key, identifiers.key);
+  }
+  if (identifiers.slug) {
+    clauses.push("slug = ?");
+    params.push(identifiers.slug);
+  }
+  if (identifiers.gcPersonid) {
+    clauses.push("gc_personid = ?");
+    params.push(identifiers.gcPersonid);
+  }
+  if (identifiers.filerEntityNumber) {
+    clauses.push(
+      "filer_entity_number = ?",
+      `id IN (
+        SELECT person_id
+        FROM d1_person_candidate_roles
+        WHERE filer_entity_number = ?
+      )`,
+    );
+    params.push(identifiers.filerEntityNumber, identifiers.filerEntityNumber);
+  }
+  if (!clauses.length) return null;
+
+  return db.prepare(
+    `SELECT id, slug
+     FROM d1_people
+     WHERE ${clauses.join(" OR ")}
+     LIMIT 1`,
+  ).bind(...params.map(d1Param)).first();
+}
+
+function normalizeProfileUrlAliases(value = "", canonicalSlug = "") {
+  const aliases = String(value || "")
+    .split(/[\n,;]/)
+    .map(normalizeProfileUrlAlias)
+    .filter(Boolean)
+    .filter((alias) => alias !== String(canonicalSlug || "").toLowerCase());
+
+  return aliases.filter((alias, index) => aliases.indexOf(alias) === index);
+}
+
+function normalizeProfileUrlAlias(value = "") {
+  let alias = String(value || "").trim();
+  if (!alias) return "";
+
+  if (/^(?:https?:\/\/)?(?:www\.)?nhdeservesbetter\.com\//i.test(alias)) {
+    const url = new URL(/^https?:\/\//i.test(alias) ? alias : `https://${alias}`);
+    const match = url.pathname.match(/^\/people\/([^/]+)\/?$/i);
+    if (!match) throw new Error("Alternative profile URLs must use /people/your-short-name.");
+    alias = decodeURIComponent(match[1]);
+  } else {
+    alias = alias.replace(/^\/?people\//i, "").replace(/^\/+|\/+$/g, "");
+  }
+
+  alias = alias
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’']/g, "")
+    .replace(/[\s_]+/g, "-");
+
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(alias) || alias.length > 80) {
+    throw new Error("Alternative profile URLs may use up to 80 letters, numbers, and hyphens.");
+  }
+  if (/^\d+$/.test(alias)) {
+    throw new Error("Alternative profile URLs cannot contain only numbers.");
+  }
+  return alias;
+}
+
+async function assertProfileUrlAliasAvailable(db, alias, personId) {
+  const canonicalOwner = await db.prepare(
+    "SELECT id FROM d1_people WHERE slug = ? COLLATE NOCASE LIMIT 1",
+  ).bind(alias).first();
+  if (canonicalOwner && Number(canonicalOwner.id) !== Number(personId)) {
+    throw new Error(`The profile URL “${alias}” is already used by another person.`);
+  }
+
+  const aliasOwner = await db.prepare(
+    `SELECT person_id
+     FROM d1_person_profile_url_aliases
+     WHERE alias_slug = ? COLLATE NOCASE
+     LIMIT 1`,
+  ).bind(alias).first();
+  if (aliasOwner && Number(aliasOwner.person_id) !== Number(personId)) {
+    throw new Error(`The profile URL “${alias}” is already used by another person.`);
+  }
+
+  const candidateOwner = await db.prepare(
+    `SELECT COALESCE(person.id, role.person_id) AS person_id
+     FROM candidates candidate
+     LEFT JOIN d1_people person
+       ON person.filer_entity_number = candidate.filer_entity_number
+     LEFT JOIN d1_person_candidate_roles role
+       ON role.filer_entity_number = candidate.filer_entity_number
+     WHERE candidate.slug = ? COLLATE NOCASE
+     LIMIT 1`,
+  ).bind(alias).first();
+  if (candidateOwner?.person_id && Number(candidateOwner.person_id) !== Number(personId)) {
+    throw new Error(`The profile URL “${alias}” is already used by another person.`);
+  }
+
+  const legislatorOwner = await db.prepare(
+    `SELECT person.id
+     FROM d1_legislators legislator
+     JOIN d1_people person
+       ON person.gc_personid = legislator.personid
+       OR person.employeeno = legislator.employeeno
+     WHERE legislator.active = 1
+       AND LOWER(legislator.firstname || '-' || legislator.lastname) = ?
+     LIMIT 1`,
+  ).bind(alias).first();
+  if (legislatorOwner && Number(legislatorOwner.id) !== Number(personId)) {
+    throw new Error(`The profile URL “${alias}” is already used by another person.`);
+  }
 }
 
 async function updatePersonSocialLinks(db, identifiers = {}, data = {}) {

@@ -1582,6 +1582,11 @@ async function handleRepProfile(request, env) {
       l.personid,
       l.employeeno,
       people.slug AS slug,
+      COALESCE((
+        SELECT GROUP_CONCAT(profile_alias.alias_slug, ', ')
+        FROM d1_person_profile_url_aliases profile_alias
+        WHERE profile_alias.person_id = people.id
+      ), '') AS profile_url_aliases,
       CASE l.legislativebody
         WHEN 'S' THEN 'Senate'
         WHEN 'H' THEN 'House'
@@ -1653,11 +1658,17 @@ async function handleRepProfile(request, env) {
           : `(
               LOWER(l.firstname || '-' || l.lastname) = LOWER(?)
               OR LOWER(COALESCE(people.slug, '')) = LOWER(?)
+              OR EXISTS (
+                SELECT 1
+                FROM d1_person_profile_url_aliases profile_alias
+                WHERE profile_alias.person_id = people.id
+                  AND profile_alias.alias_slug = ? COLLATE NOCASE
+              )
             )`
       }
     LIMIT 1
   `)
-    .bind(...(isNumeric ? [identifier] : [identifier, identifier]))
+    .bind(...(isNumeric ? [identifier] : [identifier, identifier, identifier]))
     .first();
 
   if (!legislator) {
@@ -3002,12 +3013,19 @@ async function handleCandidateDetail(request, env) {
       OR c.slug = ?
       OR c.legacy_slug = ?
       OR CAST(c.person_id AS TEXT) = ?
+      OR EXISTS (
+        SELECT 1
+        FROM d1_person_profile_url_aliases profile_alias
+        WHERE profile_alias.person_id = c.person_id
+          AND profile_alias.alias_slug = ? COLLATE NOCASE
+      )
     LIMIT 1
   `)
     .bind(
       identifier,
       identifierFilerPrefix,
       identifierFilerPrefix,
+      identifier,
       identifier,
       identifier,
       identifier,
@@ -3294,6 +3312,11 @@ function candidateBaseCte() {
         p.bluesky_url AS bluesky_url,
         COALESCE(NULLIF(p.photo_url, ''), c.photo_url, '') AS photo_url,
         p.slug AS slug,
+        COALESCE((
+          SELECT GROUP_CONCAT(profile_alias.alias_slug, ', ')
+          FROM d1_person_profile_url_aliases profile_alias
+          WHERE profile_alias.person_id = p.id
+        ), '') AS profile_url_aliases,
         c.slug AS legacy_slug,
         ${freeStateAlignedExpression("p.is_free_state_aligned_2026", "p.is_free_stater")} AS is_free_stater,
         p.is_tpaction_aligned_2026 AS is_tpaction_aligned_2026,
@@ -3376,6 +3399,7 @@ function candidateBaseSelectColumns(tableAlias = "c") {
     "bluesky_url",
     "photo_url",
     "slug",
+    "profile_url_aliases",
     isFreeStaterSelectExpression(`${prefix}is_free_stater`),
     isTpActionAlignedSelectExpression(`${prefix}is_tpaction_aligned_2026`),
     "source_county_id",
@@ -3466,6 +3490,8 @@ function formatCandidate(candidate) {
     bluesky_url: candidate.bluesky_url,
     photoUrl: candidate.photo_url,
     slug: candidate.slug,
+    profileUrlAliases: candidate.profile_url_aliases || "",
+    profile_url_aliases: candidate.profile_url_aliases || "",
     is_free_stater: candidate.is_free_stater || "no",
     isFreeStater: candidate.is_free_stater || "no",
     is_tpaction_aligned_2026: candidate.is_tpaction_aligned_2026 || "no",
