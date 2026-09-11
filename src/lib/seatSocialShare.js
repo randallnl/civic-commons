@@ -20,10 +20,15 @@ export function groupCandidatesForSocialShare(candidates = []) {
         office: cleanText(candidate.office),
         county: cleanText(candidate.county),
         district: cleanText(candidate.district),
+        seats: candidateSeatCount(candidate),
+        communitiesRepresented: candidateCommunities(candidate),
         candidates: [],
       });
     }
-    groups.get(label).candidates.push(candidate);
+    const group = groups.get(label);
+    group.seats ||= candidateSeatCount(candidate);
+    group.communitiesRepresented ||= candidateCommunities(candidate);
+    group.candidates.push(candidate);
   }
 
   return [...groups.values()].sort((first, second) => {
@@ -47,7 +52,8 @@ export function seatSocialShareOptions(groups = [], { origin = "" } = {}) {
   return groups
     .map((group) => {
       const label = seatLabel(group);
-      const candidates = uniqueShareCandidates(group?.candidates || [])
+      const sourceCandidates = group?.candidates || [];
+      const candidates = uniqueShareCandidates(sourceCandidates)
         .map((candidate) => shareCandidate(candidate, { origin }))
         .filter((candidate) => candidate.name && candidate.profileUrl && candidate.entityId);
 
@@ -56,6 +62,8 @@ export function seatSocialShareOptions(groups = [], { origin = "" } = {}) {
       return {
         id: seatId(group, label),
         label,
+        seats: positiveWholeNumber(group.seats) || sourceCandidates.map(candidateSeatCount).find(Boolean) || 1,
+        communitiesRepresented: cleanText(group.communitiesRepresented) || sourceCandidates.map(candidateCommunities).find(Boolean) || "",
         candidates,
       };
     })
@@ -67,23 +75,44 @@ export function socialPostCopyForSeat(seat, {
 } = {}) {
   const label = cleanText(seat?.label);
   const candidates = Array.isArray(seat?.candidates) ? seat.candidates : [];
+  const seats = positiveWholeNumber(seat?.seats) || 1;
+  const communitiesRepresented = cleanText(seat?.communitiesRepresented);
   const submissionUrl = cleanText(suggestUpdateUrl) || DEFAULT_SUGGEST_UPDATE_PATH;
+  const districtDetails = [
+    `For ${label || "this seat"}, there ${seats === 1 ? "is" : "are"} ${seats} ${seats === 1 ? "seat" : "seats"} and ${candidates.length} ${candidates.length === 1 ? "candidate" : "candidates"}.`,
+    communitiesRepresented ? `This district represents ${communitiesRepresented}.` : "",
+  ].filter(Boolean);
 
   const lines = [
     "Do you know your candidates?",
     "",
-    `For ${label || "this seat"}, your candidates are:`,
+    ...districtDetails,
+    "",
+    "Your candidates are:",
     ...candidates.map((candidate) =>
       `${cleanText(candidate.name)}: ${cleanText(candidate.profileUrl)}`,
     ),
     "",
-    `In ${label || "this district"}, there is 1 seat and ${candidates.length} ${candidates.length === 1 ? "candidate" : "candidates"}.`,
     "Get to know your candidates or share information to keep others informed.",
     "Share verifiable information at NH Deserves Better:",
     submissionUrl,
   ];
 
   return lines.join("\n");
+}
+
+function candidateSeatCount(candidate = {}) {
+  return positiveWholeNumber(candidate.seats ?? candidate.seatCount ?? candidate.seat_count);
+}
+
+function candidateCommunities(candidate = {}) {
+  const value = candidate.communitiesRepresented || candidate.communities_represented || candidate.townsRepresented || candidate.towns_represented;
+  return Array.isArray(value) ? value.map(cleanText).filter(Boolean).join(" · ") : cleanText(value);
+}
+
+function positiveWholeNumber(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : 0;
 }
 
 function shareCandidate(candidate = {}, { origin = "" } = {}) {

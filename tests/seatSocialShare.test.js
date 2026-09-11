@@ -25,6 +25,8 @@ test("builds a seat share model with canonical candidate profiles and fallback p
   const seats = seatSocialShareOptions([
     {
       label: "State Representative, Merrimack, District 9",
+      seats: 3,
+      communitiesRepresented: "Concord · Bow · Hopkinton",
       candidates: [
         {
           filerEntityNumber: "12345",
@@ -49,6 +51,8 @@ test("builds a seat share model with canonical candidate profiles and fallback p
   ], { origin: "https://nhdeservesbetter.com" });
 
   assert.equal(seats.length, 1);
+  assert.equal(seats[0].seats, 3);
+  assert.equal(seats[0].communitiesRepresented, "Concord · Bow · Hopkinton");
   assert.equal(seats[0].candidates[0].profileUrl, "https://nhdeservesbetter.com/people/12345-ada-lovelace");
   assert.equal(seats[0].candidates[0].portraitUrl, "https://photos.example.test/ada.png");
   assert.equal(seats[0].candidates[0].office, "State Representative · Merrimack · District 9");
@@ -62,7 +66,9 @@ test("builds a seat share model with canonical candidate profiles and fallback p
 
 test("creates ready-to-paste seat copy with every candidate profile link and a contribution route", () => {
   const post = socialPostCopyForSeat({
-    label: "State Senate, District 6",
+    label: "State Representative, Hillsborough, District 8",
+    seats: 3,
+    communitiesRepresented: "Nashua Ward 6",
     candidates: [
       {
         name: "Ada Lovelace",
@@ -75,11 +81,12 @@ test("creates ready-to-paste seat copy with every candidate profile link and a c
   });
 
   assert.match(post, /^Do you know your candidates\?/);
-  assert.match(post, /For State Senate, District 6, your candidates are:/);
+  assert.match(post, /For State Representative, Hillsborough, District 8, there are 3 seats and 2 candidates\./);
+  assert.match(post, /This district represents Nashua Ward 6\./);
+  assert.match(post, /Your candidates are:/);
   assert.match(post, /Ada Lovelace: https:\/\/nhdeservesbetter\.com\/people\/ada-lovelace/);
   assert.match(post, /Grace Hopper: https:\/\/nhdeservesbetter\.com\/people\/grace-hopper/);
   assert.match(post, /Get to know your candidates or share information to keep others informed\./);
-  assert.match(post, /In State Senate, District 6, there is 1 seat and 2 candidates\./);
   assert.doesNotMatch(post, /offers insights on published endorsements/i);
   assert.match(post, /Share verifiable information/i);
   assert.match(post, /https:\/\/nhdeservesbetter\.com\/suggest-update/);
