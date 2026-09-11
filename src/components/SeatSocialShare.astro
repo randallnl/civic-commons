@@ -1,0 +1,452 @@
+---
+import {
+  seatSocialShareOptions,
+  socialPostCopyForSeat,
+} from "../lib/seatSocialShare.js";
+
+const {
+  groups = [],
+  origin = Astro.url.origin,
+} = Astro.props;
+
+const seats = seatSocialShareOptions(groups, { origin });
+const suggestUpdateUrl = new URL("/suggest-update", origin).toString();
+const seatPayload = seats.map((seat) => ({
+  ...seat,
+  postCopy: socialPostCopyForSeat(seat, { suggestUpdateUrl }),
+}));
+---
+
+{seatPayload.length > 0 && (
+  <section class="seat-social-share" data-seat-social-share>
+    <div class="seat-social-share-heading">
+      <div>
+        <p class="seat-social-share-eyebrow">Social publishing</p>
+        <h2>Share a seat’s candidate profiles</h2>
+        <p>
+          Select a seat to generate a social-ready PNG for each candidate and
+          copy a post with direct links to their profiles.
+        </p>
+      </div>
+      <span class="seat-social-share-badge">Editor tool</span>
+    </div>
+
+    <label class="seat-selector">
+      <span>Seat</span>
+      <select data-seat-select aria-label="Select a seat to share">
+        {seatPayload.map((seat) => (
+          <option value={seat.id}>{seat.label} · {seat.candidates.length} {seat.candidates.length === 1 ? "candidate" : "candidates"}</option>
+        ))}
+      </select>
+    </label>
+
+    <div class="seat-social-share-preview">
+      <p class="seat-social-share-label">Candidates included</p>
+      <ul data-seat-candidates></ul>
+    </div>
+
+    <label class="seat-social-copy-field">
+      <span>Social post copy</span>
+      <textarea data-seat-post-copy rows="9" aria-label="Generated social post copy"></textarea>
+    </label>
+
+    <div class="seat-social-share-actions">
+      <button type="button" class="secondary" data-copy-post>Copy post copy</button>
+      <button type="button" class="primary" data-generate-graphics>Generate profile PNGs</button>
+      <span class="seat-social-share-status" data-seat-status aria-live="polite"></span>
+    </div>
+
+    <div class="seat-social-share-results" data-seat-results hidden aria-live="polite">
+      <p class="seat-social-share-label">Profile PNGs</p>
+      <div data-seat-results-list></div>
+    </div>
+
+    <script type="application/json" data-seat-payload set:html={JSON.stringify(seatPayload).replace(/</g, "\\u003c")}></script>
+  </section>
+)}
+
+<script>
+  const sharePanels = document.querySelectorAll("[data-seat-social-share]");
+
+  sharePanels.forEach((panel) => {
+    if (!(panel instanceof HTMLElement) || panel.dataset.enhanced === "true") return;
+    panel.dataset.enhanced = "true";
+
+    const payloadElement = panel.querySelector("[data-seat-payload]");
+    const select = panel.querySelector("[data-seat-select]");
+    const candidateList = panel.querySelector("[data-seat-candidates]");
+    const copyField = panel.querySelector("[data-seat-post-copy]");
+    const copyButton = panel.querySelector("[data-copy-post]");
+    const generateButton = panel.querySelector("[data-generate-graphics]");
+    const status = panel.querySelector("[data-seat-status]");
+    const results = panel.querySelector("[data-seat-results]");
+    const resultsList = panel.querySelector("[data-seat-results-list]");
+
+    let seats = [];
+    try {
+      seats = JSON.parse(payloadElement?.textContent || "[]");
+    } catch {
+      return;
+    }
+
+    function selectedSeat() {
+      const selectedId = select instanceof HTMLSelectElement ? select.value : "";
+      return seats.find((seat) => seat.id === selectedId) || seats[0] || null;
+    }
+
+    function setStatus(message = "", tone = "") {
+      if (!(status instanceof HTMLElement)) return;
+      status.textContent = message;
+      status.className = `seat-social-share-status${tone ? ` ${tone}` : ""}`;
+    }
+
+    function refreshSeat() {
+      const seat = selectedSeat();
+      if (!seat) return;
+      if (copyField instanceof HTMLTextAreaElement) copyField.value = seat.postCopy || "";
+      if (candidateList instanceof HTMLElement) {
+        candidateList.replaceChildren(...seat.candidates.map(candidateItem));
+      }
+      if (generateButton instanceof HTMLButtonElement) {
+        const count = seat.candidates.length;
+        generateButton.textContent = `Generate ${count} profile ${count === 1 ? "PNG" : "PNGs"}`;
+      }
+      if (results instanceof HTMLElement) results.hidden = true;
+      if (resultsList instanceof HTMLElement) resultsList.replaceChildren();
+      setStatus();
+    }
+
+    function candidateItem(candidate) {
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = candidate.profileUrl;
+      link.textContent = candidate.name;
+      item.append(link);
+      return item;
+    }
+
+    function graphicRequest(candidate, seat) {
+      return {
+        eventId: crypto.randomUUID(),
+        entityType: "candidate",
+        entityId: candidate.entityId,
+        template: "candidate-profile-update",
+        eyebrow: "YOUR 2026 CANDIDATES",
+        updateLabel: "",
+        headline: candidate.name,
+        office: seat.label,
+        districtCommunity: "New Hampshire",
+        body: `Learn about ${candidate.name}'s public profile and campaign information.`,
+        image: candidate.portraitUrl,
+        cta: "View the candidate profile",
+      };
+    }
+
+    function resultCard(candidate, response) {
+      const card = document.createElement("article");
+      const imageLink = document.createElement("a");
+      const image = document.createElement("img");
+      const content = document.createElement("div");
+      const name = document.createElement("strong");
+      const actions = document.createElement("div");
+      const download = document.createElement("a");
+      const profile = document.createElement("a");
+
+      imageLink.href = response.imageUrl;
+      imageLink.target = "_blank";
+      imageLink.rel = "noopener noreferrer";
+      image.src = response.imageUrl;
+      image.alt = `Social profile graphic for ${candidate.name}`;
+      image.loading = "lazy";
+      imageLink.append(image);
+      name.textContent = candidate.name;
+      download.href = response.downloadUrl || response.imageUrl;
+      download.textContent = "Download PNG";
+      profile.href = candidate.profileUrl;
+      profile.textContent = "View profile";
+      actions.append(download, profile);
+      content.append(name, actions);
+      card.append(imageLink, content);
+      return card;
+    }
+
+    async function copyPostCopy() {
+      if (!(copyField instanceof HTMLTextAreaElement)) return;
+      try {
+        await navigator.clipboard.writeText(copyField.value);
+        setStatus("Post copy copied.", "success");
+      } catch {
+        copyField.focus();
+        copyField.select();
+        document.execCommand("copy");
+        setStatus("Post copy selected and copied.", "success");
+      }
+    }
+
+    async function generateGraphics() {
+      const seat = selectedSeat();
+      if (!seat || !(generateButton instanceof HTMLButtonElement)) return;
+
+      generateButton.disabled = true;
+      if (resultsList instanceof HTMLElement) resultsList.replaceChildren();
+      if (results instanceof HTMLElement) results.hidden = false;
+      let completed = 0;
+      const failures = [];
+
+      for (const candidate of seat.candidates) {
+        setStatus(`Rendering ${completed + 1} of ${seat.candidates.length}: ${candidate.name}…`, "loading");
+        try {
+          const response = await fetch("/api/admin/content-graphics", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(graphicRequest(candidate, seat)),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || data.status !== "complete" || !data.imageUrl) {
+            throw new Error(data.message || "The profile graphic could not be rendered.");
+          }
+          if (resultsList instanceof HTMLElement) resultsList.append(resultCard(candidate, data));
+          completed += 1;
+        } catch (error) {
+          failures.push(`${candidate.name}: ${error?.message || "could not be rendered"}`);
+        }
+      }
+
+      generateButton.disabled = false;
+      if (failures.length) {
+        setStatus(
+          `${completed} of ${seat.candidates.length} PNGs are ready. ${failures.join(" ")}`,
+          "error",
+        );
+      } else {
+        setStatus(`${completed} profile ${completed === 1 ? "PNG is" : "PNGs are"} ready to download.`, "success");
+      }
+    }
+
+    select?.addEventListener("change", refreshSeat);
+    copyButton?.addEventListener("click", copyPostCopy);
+    generateButton?.addEventListener("click", generateGraphics);
+    refreshSeat();
+  });
+</script>
+
+<style>
+  .seat-social-share {
+    background:
+      radial-gradient(circle at 100% 0, rgba(220, 77, 9, 0.16), transparent 34%),
+      #fff;
+    border: 1px solid #bfdbfe;
+    border-radius: 18px;
+    display: grid;
+    gap: 1.15rem;
+    margin: 1.5rem 0 2rem;
+    padding: clamp(1rem, 2.2vw, 1.5rem);
+  }
+
+  .seat-social-share-heading {
+    align-items: start;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+  }
+
+  .seat-social-share-heading h2,
+  .seat-social-share-heading p {
+    margin: 0;
+  }
+
+  .seat-social-share-heading h2 {
+    color: #17324d;
+    font-size: clamp(1.2rem, 2vw, 1.45rem);
+    margin-top: 0.2rem;
+  }
+
+  .seat-social-share-heading p:last-child {
+    color: #4b5563;
+    font-weight: 650;
+    line-height: 1.5;
+    margin-top: 0.45rem;
+    max-width: 46rem;
+  }
+
+  .seat-social-share-eyebrow,
+  .seat-social-share-label {
+    color: #1d4ed8;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  .seat-social-share-badge {
+    background: #e0f2fe;
+    border: 1px solid #7dd3fc;
+    border-radius: 999px;
+    color: #075985;
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    font-weight: 900;
+    padding: 0.4rem 0.65rem;
+  }
+
+  .seat-selector,
+  .seat-social-copy-field {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .seat-selector > span,
+  .seat-social-copy-field > span {
+    color: #263b50;
+    font-size: 0.84rem;
+    font-weight: 900;
+  }
+
+  .seat-selector select,
+  .seat-social-copy-field textarea {
+    background: #fff;
+    border: 1px solid #b8c5d1;
+    border-radius: 10px;
+    box-sizing: border-box;
+    color: #172b3d;
+    font: inherit;
+    padding: 0.7rem 0.78rem;
+    width: 100%;
+  }
+
+  .seat-social-copy-field textarea {
+    line-height: 1.45;
+    resize: vertical;
+  }
+
+  .seat-social-share-preview {
+    background: #f8fbff;
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    padding: 0.85rem 0.95rem;
+  }
+
+  .seat-social-share-preview ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.9rem;
+    list-style: none;
+    margin: 0.65rem 0 0;
+    padding: 0;
+  }
+
+  .seat-social-share-preview a {
+    color: #17324d;
+    font-size: 0.9rem;
+    font-weight: 850;
+  }
+
+  .seat-social-share-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+  }
+
+  .seat-social-share-actions button {
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 900;
+    padding: 0.72rem 1rem;
+  }
+
+  .seat-social-share-actions .primary {
+    background: #17324d;
+    border: 1px solid #17324d;
+    color: #fff;
+  }
+
+  .seat-social-share-actions .secondary {
+    background: #fff;
+    border: 1px solid #93c5fd;
+    color: #17324d;
+  }
+
+  .seat-social-share-actions button:disabled {
+    cursor: wait;
+    opacity: 0.7;
+  }
+
+  .seat-social-share-status {
+    color: #536475;
+    font-size: 0.86rem;
+    font-weight: 750;
+  }
+
+  .seat-social-share-status.success {
+    color: #17603a;
+  }
+
+  .seat-social-share-status.error {
+    color: #b42318;
+  }
+
+  .seat-social-share-results {
+    border-top: 1px solid #dbeafe;
+    padding-top: 1rem;
+  }
+
+  .seat-social-share-results[hidden] {
+    display: none;
+  }
+
+  .seat-social-share-results > div {
+    display: grid;
+    gap: 0.8rem;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    margin-top: 0.7rem;
+  }
+
+  .seat-social-share-results article {
+    display: grid;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .seat-social-share-results img {
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    display: block;
+    width: 100%;
+  }
+
+  .seat-social-share-results article > div {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .seat-social-share-results strong {
+    color: #17324d;
+    font-size: 0.9rem;
+  }
+
+  .seat-social-share-results article > div > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+
+  .seat-social-share-results article a:not(:first-child) {
+    color: #17324d;
+    font-size: 0.82rem;
+    font-weight: 850;
+  }
+
+  @media (max-width: 600px) {
+    .seat-social-share-heading {
+      display: grid;
+    }
+  }
+</style>
