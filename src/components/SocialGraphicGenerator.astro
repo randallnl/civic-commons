@@ -74,12 +74,13 @@ const initialTemplate = values.template || (
             <span class="generator-field-error" data-field-error-for="office"></span>
           </label>
 
-          <label>
-            <span data-context-label>{initialTemplate === CANDIDATE_GRAPHIC_TEMPLATE ? "District / community" : "District / community"}</span>
+          <label data-context-field hidden={initialTemplate === CANDIDATE_GRAPHIC_TEMPLATE}>
+            District / community
             <input
               name="districtCommunity"
               value={values.districtCommunity || ""}
-              maxlength={initialTemplate === CANDIDATE_GRAPHIC_TEMPLATE ? 80 : 110}
+              maxlength="110"
+              disabled={initialTemplate === CANDIDATE_GRAPHIC_TEMPLATE}
             />
             <span class="generator-field-error" data-field-error-for="districtCommunity"></span>
           </label>
@@ -186,6 +187,7 @@ const initialTemplate = values.template || (
     const updateLabelField = form?.querySelector("[data-update-label-field]");
     const candidateSpecificFields = form?.querySelectorAll("[data-candidate-specific-fields]");
     const ctaField = form?.querySelector("[data-cta-field]");
+    const contextField = form?.querySelector("[data-context-field]");
     const office = form?.querySelector("[name='office']");
     const context = form?.querySelector("[name='districtCommunity']");
     const body = form?.querySelector("[name='body']");
@@ -209,8 +211,12 @@ const initialTemplate = values.template || (
         if (field instanceof HTMLElement) field.hidden = !isCandidate;
       });
       if (ctaField instanceof HTMLElement) ctaField.hidden = isCandidate;
+      if (contextField instanceof HTMLElement) contextField.hidden = isCandidate;
       if (office instanceof HTMLInputElement) office.maxLength = isCandidate ? 100 : 70;
-      if (context instanceof HTMLInputElement) context.maxLength = isCandidate ? 80 : 110;
+      if (context instanceof HTMLInputElement) {
+        context.disabled = isCandidate;
+        context.maxLength = 110;
+      }
       if (body instanceof HTMLTextAreaElement) body.maxLength = isCandidate ? 220 : 240;
     }
 
@@ -513,6 +519,7 @@ const initialTemplate = values.template || (
 
   fieldset[hidden],
   [data-candidate-specific-fields][hidden],
+  [data-context-field][hidden],
   [data-cta-field][hidden] {
     display: none;
   }

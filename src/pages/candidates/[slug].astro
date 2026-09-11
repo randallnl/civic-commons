@@ -122,11 +122,6 @@ const countiesRepresented = candidateCountiesRepresented(candidate, currentLegis
 const candidateGraphicValues = candidateGraphicFormValues({
   name,
   officeLine: officeParts.join(" · "),
-  community: townsRepresented
-    ? `${townsRepresented}, New Hampshire`
-    : candidate.county
-      ? `${candidate.county} County, New Hampshire`
-      : "New Hampshire",
   party: candidate.politicalParty || candidate.political_party || candidate.party || "",
   townsRepresented: townsRepresented.replaceAll(", ", " · "),
   freeStateAligned: isFreeStater(candidate) || isFreeStater(currentLegislator),

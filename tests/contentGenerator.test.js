@@ -127,7 +127,6 @@ test("maps a candidate profile into the candidate renderer payload", () => {
       eyebrow: "CANDIDATE PROFILE UPDATED",
       headline: "Candidate Name",
       office: "State Representative · Merrimack District 9",
-      community: "Concord, New Hampshire",
       party: "Democratic",
       townsRepresented: "Concord · Bow · Hopkinton",
       body: "New campaign website and community questionnaire added.",

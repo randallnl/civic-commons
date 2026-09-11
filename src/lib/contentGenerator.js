@@ -20,7 +20,6 @@ const TEMPLATE_RULES = {
     eyebrow: { max: 42 },
     headline: { max: 70, required: true },
     office: { max: 100, required: true },
-    districtCommunity: { max: 80 },
     party: { max: 48 },
     townsRepresented: { max: 1600 },
     body: { max: 220, required: true },
@@ -83,7 +82,6 @@ export function candidateGraphicFormValues(profile = {}) {
     updateLabel: "",
     headline,
     office,
-    districtCommunity: graphicText(profile.community || profile.towns || ""),
     party: graphicText(profile.party || profile.politicalParty || ""),
     townsRepresented: graphicText(
       profile.townsRepresented ||
@@ -93,7 +91,7 @@ export function candidateGraphicFormValues(profile = {}) {
         "",
     ),
     body: graphicText(
-      profile.body || "Candidate profile information has been updated.",
+      profile.body || "Know your candidate and help us get the most up-to-date information.",
     ),
     image: publicImageDefault(profile.image || profile.photoUrl || ""),
     cta: graphicText(profile.cta || "View the candidate profile"),
@@ -219,7 +217,6 @@ export function buildContentGraphicPayload(data = {}) {
         eyebrow: data.eyebrow,
         headline: data.headline,
         office: data.office,
-        community: data.districtCommunity,
         party: data.party,
         townsRepresented: data.townsRepresented,
         body: data.body,

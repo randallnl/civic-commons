@@ -101,7 +101,6 @@ function shareCandidate(candidate = {}, { origin = "" } = {}) {
     profileUrl,
     portraitUrl,
     office: candidateOfficeLine(candidate),
-    community: candidateCommunity(candidate),
     party: candidateParty(candidate),
     townsRepresented: candidateTowns(candidate),
     freeStateAligned: isFreeStater(candidate),
@@ -146,9 +145,11 @@ function normalizedOfficeLabel(value = "") {
 
 function candidateOfficeLine(candidate = {}) {
   const office = normalizedOfficeLabel(candidate.office);
+  const isSenate = /state senate|state senator/i.test(office);
+  const county = isSenate ? "" : cleanText(candidate.county);
   const district = cleanText(candidate.district);
 
-  return [office, district ? `District ${district}` : ""]
+  return [office, county, district ? `District ${district}` : ""]
     .filter(Boolean)
     .join(" · ");
 }
@@ -182,25 +183,6 @@ function candidateTowns(candidate = {}) {
     seen.add(key);
     return true;
   }).join(" · ");
-}
-
-function candidateCommunity(candidate = {}) {
-  const directCommunity = cleanText(
-    candidate.community || candidate.city || candidate.town || candidate.legislatorLocationText,
-  );
-  if (directCommunity) return ensureNewHampshire(directCommunity);
-
-  const firstTown = candidateTowns(candidate).split(" · ")[0];
-  if (firstTown) return ensureNewHampshire(firstTown);
-
-  const county = cleanText(candidate.county);
-  return county ? `${county} County, New Hampshire` : "New Hampshire";
-}
-
-function ensureNewHampshire(value = "") {
-  const community = cleanText(value);
-  if (!community || /new hampshire|\bnh\b/i.test(community)) return community || "New Hampshire";
-  return `${community}, New Hampshire`;
 }
 
 function townsFromValue(value = "") {
