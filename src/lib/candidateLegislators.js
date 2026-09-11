@@ -103,6 +103,26 @@ export function attachLegislatorMatch(candidate = {}, representatives = [], link
   if (!match) return candidate;
 
   return {
+    onlineTestimonyAlignmentPct:
+      candidate.onlineTestimonyAlignmentPct ??
+      candidate.online_testimony_alignment_pct ??
+      match.onlineTestimonyAlignmentPct ??
+      match.online_testimony_alignment_pct,
+    onlineTestimonyGrade:
+      candidate.onlineTestimonyGrade ??
+      candidate.online_testimony_grade ??
+      match.onlineTestimonyGrade ??
+      match.online_testimony_grade,
+    isFreeStateAligned2026:
+      candidate.isFreeStateAligned2026 ??
+      candidate.is_free_state_aligned_2026 ??
+      match.isFreeStateAligned2026 ??
+      match.is_free_state_aligned_2026,
+    isTpActionAligned2026:
+      candidate.isTpActionAligned2026 ??
+      candidate.is_tpaction_aligned_2026 ??
+      match.isTpActionAligned2026 ??
+      match.is_tpaction_aligned_2026,
     ...candidate,
     currentLegislator: true,
     legislatorName: repName(match),

@@ -119,9 +119,21 @@ const seatPayload = seats.map((seat) => ({
     function candidateItem(candidate) {
       const item = document.createElement("li");
       const link = document.createElement("a");
+      const details = document.createElement("span");
       link.href = candidate.profileUrl;
       link.textContent = candidate.name;
+      const context = [
+        ...(Array.isArray(candidate.tags) ? candidate.tags : []),
+        Number.isFinite(candidate.testimonyAlignmentPercent)
+          ? `${candidate.testimonyAlignmentPercent}% testimony aligned`
+          : "",
+      ].filter(Boolean);
       item.append(link);
+      if (context.length) {
+        details.className = "candidate-context";
+        details.textContent = context.join(" · ");
+        item.append(details);
+      }
       return item;
     }
 
@@ -136,10 +148,21 @@ const seatPayload = seats.map((seat) => ({
         headline: candidate.name,
         office: seat.label,
         districtCommunity: "New Hampshire",
-        body: `Learn about ${candidate.name}'s public profile and campaign information.`,
+        body: graphicBody(candidate),
         image: candidate.portraitUrl,
         cta: "View the candidate profile",
       };
+    }
+
+    function graphicBody(candidate) {
+      const context = [
+        ...(Array.isArray(candidate.tags) ? candidate.tags : []),
+        Number.isFinite(candidate.testimonyAlignmentPercent)
+          ? `${candidate.testimonyAlignmentPercent}% testimony aligned`
+          : "",
+      ].filter(Boolean);
+      const base = `Learn about ${candidate.name}'s public profile and campaign information.`;
+      return context.length ? `${base} ${context.join(" · ")}.` : base;
     }
 
     function resultCard(candidate, response) {
@@ -332,9 +355,8 @@ const seatPayload = seats.map((seat) => ({
   }
 
   .seat-social-share-preview ul {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem 0.9rem;
+    display: grid;
+    gap: 0.55rem;
     list-style: none;
     margin: 0.65rem 0 0;
     padding: 0;
@@ -344,6 +366,19 @@ const seatPayload = seats.map((seat) => ({
     color: #17324d;
     font-size: 0.9rem;
     font-weight: 850;
+  }
+
+  .seat-social-share-preview li {
+    align-items: baseline;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.6rem;
+  }
+
+  .seat-social-share-preview .candidate-context {
+    color: #536475;
+    font-size: 0.78rem;
+    font-weight: 750;
   }
 
   .seat-social-share-actions {
@@ -404,8 +439,8 @@ const seatPayload = seats.map((seat) => ({
 
   .seat-social-share-results > div {
     display: grid;
-    gap: 0.8rem;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.7rem;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 130px));
     margin-top: 0.7rem;
   }
 

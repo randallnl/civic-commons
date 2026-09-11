@@ -1,0 +1,139 @@
+---
+export const prerender = false;
+
+import SeatSocialShare from "../../components/SeatSocialShare.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
+import TopNav from "../../components/TopNav.astro";
+import { canEditProfiles, currentAdminSession } from "../../lib/adminAuth";
+import { enrichCandidatesWithLegislators } from "../../lib/candidateLegislators";
+import { getLegislativeCandidates } from "../../lib/candidatesApi";
+import { groupCandidatesForSocialShare } from "../../lib/seatSocialShare";
+
+const session = await currentAdminSession(Astro.request);
+
+if (!session || !canEditProfiles(session)) {
+  return Astro.redirect("/admin", 302);
+}
+
+let seatGroups = [];
+let loadError = "";
+
+try {
+  const candidates = await getLegislativeCandidates({ electionYear: 2026 });
+  seatGroups = groupCandidatesForSocialShare(
+    await enrichCandidatesWithLegislators(candidates),
+  );
+} catch (error) {
+  loadError = error?.message || "Unable to load candidates for social sharing.";
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/nhdb-logo-circle.png" />
+    <link rel="apple-touch-icon" href="/nhdb-logo-circle.png" />
+    <title>Candidate Social Sharing | Admin | NH Deserves Better</title>
+    <meta name="robots" content="noindex" />
+  </head>
+
+  <body>
+    <TopNav />
+    <main class="page">
+      <a class="back" href="/admin">Back to admin</a>
+
+      <section class="hero">
+        <p class="eyebrow">Admin · Social publishing</p>
+        <h1>Candidate seat sharing</h1>
+        <p>
+          Build a social post and profile PNGs for every candidate in a 2026
+          State House or State Senate seat. The generated post includes each
+          candidate’s NH Deserves Better profile link, applicable alignment
+          tags, and testimony-alignment percentage.
+        </p>
+      </section>
+
+      {loadError ? (
+        <p class="status-message error">{loadError}</p>
+      ) : seatGroups.length ? (
+        <SeatSocialShare groups={seatGroups} origin={Astro.url.origin} />
+      ) : (
+        <p class="status-message">No 2026 legislative candidates are available yet.</p>
+      )}
+    </main>
+    <SiteFooter />
+  </body>
+</html>
+
+<style>
+  .page {
+    margin: 0 auto;
+    padding: 26px 0 56px;
+    width: min(1040px, calc(100% - clamp(28px, 4vw, 64px)));
+  }
+
+  .back {
+    color: #1e3a8a;
+    display: inline-flex;
+    font-size: 0.9rem;
+    font-weight: 850;
+    margin-bottom: 1rem;
+    text-decoration: none;
+  }
+
+  .back::before {
+    content: "←";
+    margin-right: 0.45rem;
+  }
+
+  .hero {
+    background:
+      radial-gradient(circle at 100% 0, rgba(220, 77, 9, 0.16), transparent 34%),
+      linear-gradient(135deg, #eff6ff, #fff);
+    border: 1px solid #bfdbfe;
+    border-radius: 18px;
+    margin-bottom: 1.5rem;
+    padding: clamp(1.35rem, 3.5vw, 2.35rem);
+  }
+
+  .eyebrow {
+    color: #1d4ed8;
+    font-size: 0.76rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    color: #17324d;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.05;
+    margin: 0.45rem 0 0;
+  }
+
+  .hero > p:last-child {
+    color: #425466;
+    font-size: 1.04rem;
+    font-weight: 650;
+    line-height: 1.55;
+    margin: 0.8rem 0 0;
+    max-width: 46rem;
+  }
+
+  .status-message {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    color: #475569;
+    font-weight: 750;
+    padding: 1rem;
+  }
+
+  .status-message.error {
+    background: #fff7f7;
+    border-color: #fecaca;
+    color: #b42318;
+  }
+</style>

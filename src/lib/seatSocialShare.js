@@ -1,7 +1,42 @@
 import { profilePhotoUrl } from "./photos.js";
+import { isFreeStater, isTpActionAligned } from "./civicTags.js";
 
 const DEFAULT_SUGGEST_UPDATE_PATH = "/suggest-update";
 const DEFAULT_FALLBACK_PORTRAIT_PATH = "/nhdb-logo-circle.png";
+
+/**
+ * Groups legislative candidates into the offices voters see as one ballot
+ * choice. This stays separate from the page display grouping so the admin
+ * publisher can load every available seat at once.
+ */
+export function groupCandidatesForSocialShare(candidates = []) {
+  const groups = new Map();
+
+  for (const candidate of candidates) {
+    const label = candidateSeatLabel(candidate);
+    if (!groups.has(label)) {
+      groups.set(label, {
+        label,
+        office: cleanText(candidate.office),
+        county: cleanText(candidate.county),
+        district: cleanText(candidate.district),
+        candidates: [],
+      });
+    }
+    groups.get(label).candidates.push(candidate);
+  }
+
+  return [...groups.values()].sort((first, second) => {
+    const officeDifference = candidateOfficePriority(first.office) - candidateOfficePriority(second.office);
+    if (officeDifference) return officeDifference;
+
+    return [
+      first.county.localeCompare(second.county),
+      numericSortValue(first.district) - numericSortValue(second.district),
+      first.label.localeCompare(second.label),
+    ].find((value) => value !== 0) || 0;
+  });
+}
 
 /**
  * Turns the office groups already shown in the directory into a small,
@@ -65,7 +100,27 @@ function shareCandidate(candidate = {}, { origin = "" } = {}) {
     entityId: cleanText(candidate.filerEntityNumber || candidate.filer_entity_number || candidateSlug(candidate)),
     profileUrl,
     portraitUrl,
+    tags: candidateContextTags(candidate),
+    testimonyAlignmentPercent: testimonyAlignmentPercent(candidate),
   };
+}
+
+function candidateContextTags(candidate = {}) {
+  return [
+    isFreeStater(candidate) ? "Free State Aligned" : "",
+    isTpActionAligned(candidate) ? "TPAction Aligned" : "",
+  ].filter(Boolean);
+}
+
+function testimonyAlignmentPercent(candidate = {}) {
+  const value = Number(
+    candidate.onlineTestimonyAlignmentPct ??
+      candidate.online_testimony_alignment_pct,
+  );
+  if (!Number.isFinite(value)) return null;
+
+  const percent = value > 1 ? value : value * 100;
+  return Math.round(Math.max(0, Math.min(100, percent)));
 }
 
 function seatLabel(group = {}) {
@@ -73,6 +128,38 @@ function seatLabel(group = {}) {
     group.officeLabel || group.office,
     group.districtLabel,
   ].filter(Boolean).join(", "));
+}
+
+function candidateSeatLabel(candidate = {}) {
+  const office = normalizedOfficeLabel(candidate.office);
+  const isSenate = /state senate|state senator/i.test(office);
+  const county = cleanText(candidate.county);
+  const district = cleanText(candidate.district);
+
+  return [
+    office || "Office",
+    isSenate ? "" : county,
+    district ? `District ${district}` : "",
+  ].filter(Boolean).join(", ");
+}
+
+function normalizedOfficeLabel(value = "") {
+  const office = cleanText(value);
+  if (/state senate|state senator/i.test(office)) return "State Senate";
+  if (/state representative|representative/i.test(office)) return "State Representative";
+  return office;
+}
+
+function candidateOfficePriority(value = "") {
+  const office = cleanText(value).toLowerCase();
+  if (/state representative|representative in general court|nh house/.test(office)) return 0;
+  if (/state senate|state senator|nh senate/.test(office)) return 1;
+  return 2;
+}
+
+function numericSortValue(value = "") {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 999;
 }
 
 function seatId(group = {}, label = "") {

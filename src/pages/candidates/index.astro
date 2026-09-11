@@ -3,10 +3,8 @@ export const prerender = false;
 
 import CandidateCard from "../../components/CandidateCard.astro";
 import LegislativeSearchFilters from "../../components/LegislativeSearchFilters.astro";
-import SeatSocialShare from "../../components/SeatSocialShare.astro";
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
-import { currentAdminSession } from "../../lib/adminAuth";
 import {
   candidateName,
   candidateOfficePriority,
@@ -37,7 +35,6 @@ const selectedWard = searchFilters.ward;
 const electionYear = "2026";
 const INITIAL_CANDIDATE_PREVIEW_LIMIT = 12;
 const selectedOffice = office;
-const adminSession = await currentAdminSession(Astro.request);
 
 let candidates = [];
 let meta = {};
@@ -171,7 +168,6 @@ try {
 const hasFilters = hasLegislativeSearchFilters(searchFilters);
 const resultCount = candidates.length;
 const addressOfficeGroups = address ? groupCandidatesByOfficeDistrict(candidates) : [];
-const seatShareGroups = groupCandidatesByOfficeDistrict(candidates);
 const addressSeatTotal = totalSeats(addressOfficeGroups);
 const civic = lookupData?.civic || {};
 const matchedDistricts = lookupData?.matchedDistricts || [];
@@ -837,10 +833,6 @@ function uniqueOptions(values = []) {
             </div>
             {hasFilters && <a href="/candidates">Clear filters</a>}
           </div>
-
-          {adminSession?.canEditProfiles && seatShareGroups.length > 0 && (
-            <SeatSocialShare groups={seatShareGroups} origin={Astro.url.origin} />
-          )}
 
           {candidates.length ? (
             <>

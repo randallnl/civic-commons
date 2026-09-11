@@ -7,6 +7,7 @@ import CommunityUpdateCard from "../components/CommunityUpdateCard.astro";
 import profileIcon from "../assets/profile icon.png";
 import { getBills, normalizeBillCodeForUrl } from "../lib/billsApi";
 import {
+  canEditProfiles,
   canEditOrganizations,
   canManageReviewers,
   canModerateContent,
@@ -124,6 +125,7 @@ let volunteerReviewers = [];
 let volunteerReviewerCounts = { total: 0, pending: 0, approved: 0, disabled: 0, rejected: 0 };
 let profileTraffic = emptyProfileTraffic();
 const userCanReviewProfiles = session ? canReviewProfiles(session) : false;
+const userCanEditProfiles = session ? canEditProfiles(session) : false;
 const userCanModerateContent = session ? canModerateContent(session) : false;
 const userCanEditOrganizations = session ? canEditOrganizations(session) : false;
 const userCanUploadAssets = session ? canUploadAssets(session) : false;
@@ -497,6 +499,7 @@ function profileTrafficDate(value = "") {
             <nav class="admin-links" aria-label="Admin sections">
               <a class:list={[adminArea === "overview" && "active"]} href="/admin">Overview</a>
               {userCanReviewProfiles && <a class:list={[adminArea === "profiles" && "active"]} href="/admin/profiles">Profiles</a>}
+              {userCanEditProfiles && <a href="/admin/social-sharing">Social sharing</a>}
               {userCanModerateContent && <a class:list={[adminArea === "moderation" && "active"]} href="/admin/moderation">Moderation</a>}
               {userCanManageReviewers && <a class:list={[adminArea === "reviewers" && "active"]} href="/admin/reviewers">Reviewers</a>}
               {userCanUseDataArea && <a class:list={[adminArea === "data" && "active"]} href="/admin/data">Data tools</a>}

@@ -2,9 +2,24 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  groupCandidatesForSocialShare,
   seatSocialShareOptions,
   socialPostCopyForSeat,
 } from "../src/lib/seatSocialShare.js";
+
+test("groups candidates into ordered State House and State Senate share seats", () => {
+  const seats = groupCandidatesForSocialShare([
+    { office: "State Senate", district: "4", candidateFirstName: "Senate", candidateLastName: "Candidate" },
+    { office: "State Representative", county: "Belknap", district: "2", candidateFirstName: "House", candidateLastName: "Candidate" },
+    { office: "State Representative", county: "Belknap", district: "2", candidateFirstName: "Another", candidateLastName: "Candidate" },
+  ]);
+
+  assert.deepEqual(seats.map((seat) => seat.label), [
+    "State Representative, Belknap, District 2",
+    "State Senate, District 4",
+  ]);
+  assert.equal(seats[0].candidates.length, 2);
+});
 
 test("builds a seat share model with canonical candidate profiles and fallback portraits", () => {
   const seats = seatSocialShareOptions([
@@ -16,6 +31,9 @@ test("builds a seat share model with canonical candidate profiles and fallback p
           candidateFirstName: "Ada",
           candidateLastName: "Lovelace",
           photoUrl: "https://photos.example.test/ada.png",
+          isFreeStateAligned2026: 1,
+          isTpActionAligned2026: true,
+          onlineTestimonyAlignmentPct: 0.865,
         },
         {
           filerEntityNumber: "67890",
@@ -29,6 +47,8 @@ test("builds a seat share model with canonical candidate profiles and fallback p
   assert.equal(seats.length, 1);
   assert.equal(seats[0].candidates[0].profileUrl, "https://nhdeservesbetter.com/people/12345-ada-lovelace");
   assert.equal(seats[0].candidates[0].portraitUrl, "https://photos.example.test/ada.png");
+  assert.deepEqual(seats[0].candidates[0].tags, ["Free State Aligned", "TPAction Aligned"]);
+  assert.equal(seats[0].candidates[0].testimonyAlignmentPercent, 87);
   assert.equal(seats[0].candidates[1].portraitUrl, "https://nhdeservesbetter.com/nhdb-logo-circle.png");
 });
 
