@@ -91,7 +91,7 @@ export function candidateGraphicFormValues(profile = {}) {
         "",
     ),
     body: graphicText(
-      profile.body || "Know your candidate and help us get the most up-to-date information.",
+      profile.body || "NH Deserves Better offers insights on published endorsements, mentions in the news, and community input about candidates’ actions, positions, and involvement.",
     ),
     image: publicImageDefault(profile.image || profile.photoUrl || ""),
     cta: graphicText(profile.cta || "View the candidate profile"),
