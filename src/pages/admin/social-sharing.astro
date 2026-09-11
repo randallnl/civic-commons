@@ -7,6 +7,7 @@ import TopNav from "../../components/TopNav.astro";
 import { canEditProfiles, currentAdminSession } from "../../lib/adminAuth";
 import { enrichCandidatesWithLegislators } from "../../lib/candidateLegislators";
 import { getLegislativeCandidates } from "../../lib/candidatesApi";
+import { endorsementsForCandidate, getOrganizations } from "../../lib/organizationsApi";
 import { groupCandidatesForSocialShare } from "../../lib/seatSocialShare";
 
 const session = await currentAdminSession(Astro.request);
@@ -20,9 +21,17 @@ let loadError = "";
 
 try {
   const candidates = await getLegislativeCandidates({ electionYear: 2026 });
-  seatGroups = groupCandidatesForSocialShare(
-    await enrichCandidatesWithLegislators(candidates),
-  );
+  const enrichedCandidates = await enrichCandidatesWithLegislators(candidates);
+  let organizations = [];
+  try {
+    organizations = await getOrganizations();
+  } catch (error) {
+    console.error(error?.message || "Unable to load organization endorsements.");
+  }
+  seatGroups = groupCandidatesForSocialShare(enrichedCandidates.map((candidate) => ({
+    ...candidate,
+    endorsements: endorsementsForCandidate(organizations, candidate),
+  })));
 } catch (error) {
   loadError = error?.message || "Unable to load candidates for social sharing.";
 }
@@ -50,7 +59,7 @@ try {
           Build a social post and profile PNGs for every candidate in a 2026
           State House or State Senate seat. The generated post includes each
           candidate’s NH Deserves Better profile link, applicable alignment
-          tags, party, and towns represented.
+          tags, party, towns represented, and any published endorsements.
         </p>
       </section>
 
