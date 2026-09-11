@@ -72,8 +72,6 @@ test("creates ready-to-paste seat copy with every candidate profile link and a c
     ],
   }, {
     suggestUpdateUrl: "https://nhdeservesbetter.com/suggest-update",
-    availableSeatCount: 18,
-    availableCandidateCount: 42,
   });
 
   assert.match(post, /^Do you know your candidates\?/);
@@ -81,7 +79,7 @@ test("creates ready-to-paste seat copy with every candidate profile link and a c
   assert.match(post, /Ada Lovelace: https:\/\/nhdeservesbetter\.com\/people\/ada-lovelace/);
   assert.match(post, /Grace Hopper: https:\/\/nhdeservesbetter\.com\/people\/grace-hopper/);
   assert.match(post, /Get to know your candidates or share information to keep others informed\./);
-  assert.match(post, /42 candidates across 18 seats available to share/i);
+  assert.match(post, /In State Senate, District 6, there is 1 seat and 2 candidates\./);
   assert.doesNotMatch(post, /offers insights on published endorsements/i);
   assert.match(post, /Share verifiable information/i);
   assert.match(post, /https:\/\/nhdeservesbetter\.com\/suggest-update/);

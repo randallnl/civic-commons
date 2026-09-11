@@ -64,16 +64,10 @@ export function seatSocialShareOptions(groups = [], { origin = "" } = {}) {
 
 export function socialPostCopyForSeat(seat, {
   suggestUpdateUrl = "",
-  availableSeatCount = 0,
-  availableCandidateCount = 0,
 } = {}) {
   const label = cleanText(seat?.label);
   const candidates = Array.isArray(seat?.candidates) ? seat.candidates : [];
   const submissionUrl = cleanText(suggestUpdateUrl) || DEFAULT_SUGGEST_UPDATE_PATH;
-  const availabilityLine = socialSharingAvailabilityLine({
-    seatCount: availableSeatCount,
-    candidateCount: availableCandidateCount,
-  });
 
   const lines = [
     "Do you know your candidates?",
@@ -83,22 +77,13 @@ export function socialPostCopyForSeat(seat, {
       `${cleanText(candidate.name)}: ${cleanText(candidate.profileUrl)}`,
     ),
     "",
-    availabilityLine,
+    `In ${label || "this district"}, there is 1 seat and ${candidates.length} ${candidates.length === 1 ? "candidate" : "candidates"}.`,
     "Get to know your candidates or share information to keep others informed.",
     "Share verifiable information at NH Deserves Better:",
     submissionUrl,
   ];
 
   return lines.join("\n");
-}
-
-function socialSharingAvailabilityLine({ seatCount = 0, candidateCount = 0 } = {}) {
-  const seats = Number(seatCount);
-  const candidates = Number(candidateCount);
-  if (!Number.isFinite(seats) || !Number.isFinite(candidates) || seats < 1 || candidates < 1) {
-    return "";
-  }
-  return `NH Deserves Better currently has ${candidates} ${candidates === 1 ? "candidate" : "candidates"} across ${seats} ${seats === 1 ? "seat" : "seats"} available to share.`;
 }
 
 function shareCandidate(candidate = {}, { origin = "" } = {}) {
