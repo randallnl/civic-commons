@@ -11,9 +11,14 @@ const {
 
 const seats = seatSocialShareOptions(groups, { origin });
 const suggestUpdateUrl = new URL("/suggest-update", origin).toString();
+const availableCandidateCount = seats.reduce((count, seat) => count + seat.candidates.length, 0);
 const seatPayload = seats.map((seat) => ({
   ...seat,
-  postCopy: socialPostCopyForSeat(seat, { suggestUpdateUrl }),
+  postCopy: socialPostCopyForSeat(seat, {
+    suggestUpdateUrl,
+    availableSeatCount: seats.length,
+    availableCandidateCount,
+  }),
 }));
 ---
 

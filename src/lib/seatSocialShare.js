@@ -64,10 +64,16 @@ export function seatSocialShareOptions(groups = [], { origin = "" } = {}) {
 
 export function socialPostCopyForSeat(seat, {
   suggestUpdateUrl = "",
+  availableSeatCount = 0,
+  availableCandidateCount = 0,
 } = {}) {
   const label = cleanText(seat?.label);
   const candidates = Array.isArray(seat?.candidates) ? seat.candidates : [];
   const submissionUrl = cleanText(suggestUpdateUrl) || DEFAULT_SUGGEST_UPDATE_PATH;
+  const availabilityLine = socialSharingAvailabilityLine({
+    seatCount: availableSeatCount,
+    candidateCount: availableCandidateCount,
+  });
 
   const lines = [
     "Do you know your candidates?",
@@ -77,13 +83,22 @@ export function socialPostCopyForSeat(seat, {
       `${cleanText(candidate.name)}: ${cleanText(candidate.profileUrl)}`,
     ),
     "",
+    availabilityLine,
     "Get to know your candidates or share information to keep others informed.",
-    "NH Deserves Better offers insights on published endorsements, mentions in the news, and community input about candidates’ actions, positions, and involvement.",
     "Share verifiable information at NH Deserves Better:",
     submissionUrl,
   ];
 
   return lines.join("\n");
+}
+
+function socialSharingAvailabilityLine({ seatCount = 0, candidateCount = 0 } = {}) {
+  const seats = Number(seatCount);
+  const candidates = Number(candidateCount);
+  if (!Number.isFinite(seats) || !Number.isFinite(candidates) || seats < 1 || candidates < 1) {
+    return "";
+  }
+  return `NH Deserves Better currently has ${candidates} ${candidates === 1 ? "candidate" : "candidates"} across ${seats} ${seats === 1 ? "seat" : "seats"} available to share.`;
 }
 
 function shareCandidate(candidate = {}, { origin = "" } = {}) {
