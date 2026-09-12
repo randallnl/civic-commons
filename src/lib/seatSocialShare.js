@@ -122,8 +122,10 @@ function shareCandidate(candidate = {}, { origin = "" } = {}) {
     origin,
   );
   const portraitUrl = absoluteUrl(
-    profilePhotoUrl(candidate.photoUrl) ||
-      profilePhotoUrl(candidate.legislatorPhotoUrl) ||
+    // The People profile is the canonical public profile linked from this
+    // export. Prefer its current photo to the candidate filing's snapshot.
+    profilePhotoUrl(candidate.legislatorPhotoUrl) ||
+      profilePhotoUrl(candidate.photoUrl) ||
       DEFAULT_FALLBACK_PORTRAIT_PATH,
     origin,
   );

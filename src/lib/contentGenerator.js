@@ -201,9 +201,10 @@ export function validateContentGraphicRequest(value = {}) {
 export function buildContentGraphicPayload(data = {}) {
   const source = {
     app: CONTENT_GRAPHIC_SOURCE_APP,
-    id: data.template === CANDIDATE_GRAPHIC_TEMPLATE
-      ? data.entityId
-      : contentGraphicSourceId(data.template, data.eventId),
+    // Each button press gets an event UUID. Sending that stable-per-event ID
+    // lets the renderer recover a retry while permitting an updated profile
+    // (including a new portrait) to create a fresh graphic.
+    id: contentGraphicSourceId(data.template, data.eventId),
   };
   const image = {
     url: data.image,

@@ -38,6 +38,7 @@ test("builds a seat share model with canonical candidate profiles and fallback p
           politicalParty: "D",
           townsRepresented: ["Concord", "Bow", "Hopkinton"],
           photoUrl: "https://photos.example.test/ada.png",
+          legislatorPhotoUrl: "https://photos.example.test/ada-current.png",
           isFreeStateAligned2026: 1,
           isTpActionAligned2026: true,
         },
@@ -54,7 +55,7 @@ test("builds a seat share model with canonical candidate profiles and fallback p
   assert.equal(seats[0].seats, 3);
   assert.equal(seats[0].communitiesRepresented, "Concord · Bow · Hopkinton");
   assert.equal(seats[0].candidates[0].profileUrl, "https://nhdeservesbetter.com/people/12345-ada-lovelace");
-  assert.equal(seats[0].candidates[0].portraitUrl, "https://photos.example.test/ada.png");
+  assert.equal(seats[0].candidates[0].portraitUrl, "https://photos.example.test/ada-current.png");
   assert.equal(seats[0].candidates[0].office, "State Representative · Merrimack · District 9");
   assert.equal(seats[0].candidates[0].party, "Democratic");
   assert.equal(seats[0].candidates[0].townsRepresented, "Concord · Bow · Hopkinton");

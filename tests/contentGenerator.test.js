@@ -136,7 +136,7 @@ test("maps a candidate profile into the candidate renderer payload", () => {
     },
     source: {
       app: "nh-deserves-better",
-      id: "candidate-123",
+      id: `candidate-profile-update:${EVENT_ID}`,
     },
   });
 });
