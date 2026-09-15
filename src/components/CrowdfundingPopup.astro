@@ -1,7 +1,9 @@
 ---
-const donationPath = "/donate";
+const donationPath = "/donate/";
 const showFundraisingTools =
-  !Astro.url.pathname.startsWith("/admin") && Astro.url.pathname !== donationPath;
+  !Astro.url.pathname.startsWith("/admin") &&
+  Astro.url.pathname !== "/donate" &&
+  Astro.url.pathname !== donationPath;
 ---
 
 {showFundraisingTools && (

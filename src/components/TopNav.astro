@@ -4,7 +4,8 @@ import ClientEnhancements from "./ClientEnhancements.astro";
 import CrowdfundingPopup from "./CrowdfundingPopup.astro";
 
 const currentPath = Astro.url.pathname;
-const donationPath = "/donate";
+const donationPath = "/donate/";
+const isDonationPage = currentPath === "/donate" || currentPath === donationPath;
 
 const links = [
   { href: "/", label: "Home", match: (path) => path === "/" },
@@ -117,9 +118,9 @@ const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
 
     <div class="utility-links">
       <a
-        class:list={["donation-link", currentPath === donationPath && "active"]}
+        class:list={["donation-link", isDonationPage && "active"]}
         href={donationPath}
-        aria-current={currentPath === donationPath ? "page" : undefined}
+        aria-current={isDonationPage ? "page" : undefined}
       >
         Donate
       </a>
