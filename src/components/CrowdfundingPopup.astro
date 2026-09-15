@@ -1,6 +1,7 @@
 ---
-const campaignUrl = "https://givebutter.com/findmyNHcandidate";
-const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
+const donationPath = "/donate";
+const showFundraisingTools =
+  !Astro.url.pathname.startsWith("/admin") && Astro.url.pathname !== donationPath;
 ---
 
 {showFundraisingTools && (
@@ -35,9 +36,7 @@ const showFundraisingTools = !Astro.url.pathname.startsWith("/admin");
         <div class="crowdfunding-actions">
           <a
             class="crowdfunding-primary"
-            href={campaignUrl}
-            target="_blank"
-            rel="noopener"
+            href={donationPath}
             data-crowdfunding-dismiss
           >
             Donate

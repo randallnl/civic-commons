@@ -4,7 +4,7 @@ import ClientEnhancements from "./ClientEnhancements.astro";
 import CrowdfundingPopup from "./CrowdfundingPopup.astro";
 
 const currentPath = Astro.url.pathname;
-const campaignUrl = "https://givebutter.com/findmyNHcandidate";
+const donationPath = "/donate";
 
 const links = [
   { href: "/", label: "Home", match: (path) => path === "/" },
@@ -116,7 +116,11 @@ const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
     </nav>
 
     <div class="utility-links">
-      <a class="donation-link" href={campaignUrl} target="_blank" rel="noopener">
+      <a
+        class:list={["donation-link", currentPath === donationPath && "active"]}
+        href={donationPath}
+        aria-current={currentPath === donationPath ? "page" : undefined}
+      >
         Donate
       </a>
     </div>
@@ -445,6 +449,11 @@ const isExploreOrGuideActive = isExploreActive || isGuidePageActive;
     border-color: #b6390a;
     color: white;
     transform: translateY(-1px);
+  }
+
+  .donation-link.active {
+    background: #9a3412;
+    border-color: #9a3412;
   }
 
   @media (max-width: 1040px) {
