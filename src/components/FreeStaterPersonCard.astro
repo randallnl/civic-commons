@@ -1,0 +1,128 @@
+---
+import profileIcon from "../assets/profile icon.png";
+import { personRoleFilterValue } from "../lib/freeStaterDirectory";
+import { profilePhotoUrl } from "../lib/photos";
+
+const { person } = Astro.props;
+const name = String(person.display_name || "").trim();
+const href = `/people/${encodeURIComponent(person.slug)}`;
+const photoUrl = profilePhotoUrl(person.photo_url);
+const roles = personRoleFilterValue(person);
+const party = partyLabel(person.party);
+const grade = Number(person.online_testimony_alignment_pct);
+const hasGrade = person.online_testimony_alignment_pct != null && Number.isFinite(grade);
+const searchableText = [
+  name,
+  person.name_aliases,
+  person.body,
+  party,
+  person.towns,
+  person.counties,
+  person.districtLabel,
+  person.candidateDistrictLabel,
+  "Free State Aligned",
+].flat().filter(Boolean).join(" ");
+
+function partyLabel(value = "") {
+  const party = String(value || "").trim();
+  if (party === "R") return "Republican";
+  if (party === "D") return "Democrat";
+  if (party === "I") return "Independent";
+  return party;
+}
+---
+
+<article
+  class="person-card"
+  data-fuzzy-item
+  data-fuzzy-name={name}
+  data-fuzzy-aliases={person.name_aliases || ""}
+  data-fuzzy-town={person.towns.join(" ")}
+  data-fuzzy-county={person.counties.join(" ")}
+  data-fuzzy-district={[person.districtLabel, person.candidateDistrictLabel].filter(Boolean).join(" ")}
+  data-fuzzy-body={person.body}
+  data-fuzzy-kind={roles}
+  data-fuzzy-party={party}
+  data-fuzzy-sort-name={name}
+  data-fuzzy-sort-district={person.districtLabel || person.candidateDistrictLabel}
+  data-fuzzy-sort-grade={hasGrade ? grade : ""}
+  data-fuzzy-sort-updated={Date.parse(person.updated_at || "") || 0}
+  data-fuzzy-text={searchableText}
+>
+  <a class="photo" href={href} aria-label={`View ${name}'s profile`}>
+    <img src={photoUrl || profileIcon.src} alt={photoUrl ? `Photo of ${name}` : ""} loading="lazy" />
+  </a>
+  <div class="person-copy">
+    <h3><a href={href}>{name}</a></h3>
+    <div class="badges">
+      <span class="aligned">Free State Aligned</span>
+      {person.isCurrentLegislator && <span>Current legislator</span>}
+      {person.isCurrentCandidate && <span>2026 candidate</span>}
+    </div>
+    {party && <p class="meta">{party}</p>}
+    {person.isCurrentLegislator && person.districtLabel && <p class="meta">Current role: {person.districtLabel}</p>}
+    {person.isCurrentCandidate && person.candidateDistrictLabel && <p class="meta">Candidacy: {person.candidateDistrictLabel}</p>}
+    {!person.isCurrentLegislator && !person.isCurrentCandidate && <p class="meta">No current legislative or candidate role</p>}
+    {person.counties.length > 0 && <p class="location">{person.counties.join(", ")}</p>}
+    <a class="profile-link" href={href}>View profile <span aria-hidden="true">→</span></a>
+  </div>
+  {person.isCurrentLegislator && hasGrade && (
+    <div class="alignment" aria-label={`${Math.round(grade)}% testimony aligned`}>
+      <strong>{Math.round(grade)}%</strong>
+      <span>testimony aligned</span>
+    </div>
+  )}
+</article>
+
+<style>
+  .person-card {
+    align-items: start;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: 96px minmax(0, 1fr) auto;
+    padding: 18px;
+  }
+
+  .person-card[hidden] { display: none; }
+
+  .photo {
+    background: #eef2f7;
+    border-radius: 8px;
+    display: block;
+    overflow: hidden;
+  }
+
+  .photo img { aspect-ratio: 1; display: block; object-fit: cover; width: 100%; }
+
+  h3 { font-size: 1.3rem; line-height: 1.15; margin: 0 0 10px; }
+  h3 a, .profile-link { color: #1f2933; }
+
+  .badges { display: flex; flex-wrap: wrap; gap: 7px; }
+  .badges span {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #334155;
+    font-size: .76rem;
+    font-weight: 850;
+    padding: 4px 9px;
+  }
+  .badges .aligned { background: #fff7ed; border-color: #fdba74; color: #9a3412; }
+
+  .meta, .location { color: #475569; font-size: .9rem; margin: 8px 0 0; }
+  .profile-link { display: inline-block; font-size: .88rem; font-weight: 900; margin-top: 12px; }
+
+  .alignment { color: #1e3a5f; text-align: center; white-space: nowrap; }
+  .alignment strong { display: block; font-size: 1.7rem; line-height: 1; }
+  .alignment span { display: block; font-size: .66rem; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+
+  @media (max-width: 640px) {
+    .person-card { grid-template-columns: 72px minmax(0, 1fr); padding: 14px; }
+    .alignment { grid-column: 2; text-align: left; }
+    .alignment strong, .alignment span { display: inline; font-size: .88rem; }
+    .alignment strong { margin-right: 4px; }
+  }
+</style>

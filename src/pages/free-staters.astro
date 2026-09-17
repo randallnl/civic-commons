@@ -1,16 +1,12 @@
 ---
 export const prerender = false;
 
-import CandidateCard from "../components/CandidateCard.astro";
+import { env } from "cloudflare:workers";
 import FilterBar from "../components/FilterBar.astro";
-import RepresentativeCard from "../components/RepresentativeCard.astro";
+import FreeStaterPersonCard from "../components/FreeStaterPersonCard.astro";
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
-import { getBillSummaries } from "../lib/billsApi";
-import { getCandidates, isLegislativeCandidate } from "../lib/candidatesApi";
-import { isFreeStater } from "../lib/civicTags";
-import { getRepresentatives, repName } from "../lib/repsApi";
-import { getTrackedBills } from "../lib/trackedBills";
+import { getFreeStateAlignedPeople } from "../lib/freeStaterDirectory";
 
 const freeStateLogoUrl = organizationAssetUrl("freestateprojectlogo.png");
 const filterName = cleanFilter(Astro.url.searchParams.get("q"));
@@ -20,76 +16,20 @@ const filterParty = cleanFilter(Astro.url.searchParams.get("party")) || "all";
 const filterCounty = cleanFilter(Astro.url.searchParams.get("county"));
 const filterTown = cleanFilter(Astro.url.searchParams.get("town"));
 const sort = cleanFilter(Astro.url.searchParams.get("sort"));
-let trackedBills = new Map();
-let billSummaries = new Map();
-let freeStaterLegislators = [];
-let freeStaterCandidates = [];
+let people = [];
 let directoryError = "";
 
 try {
-  [trackedBills, billSummaries] = await Promise.all([
-    getTrackedBills(),
-    getBillSummaries(),
-  ]);
+  people = await getFreeStateAlignedPeople(env.d1_db);
 } catch (error) {
-  console.error(error?.message || "Unable to load vote context.");
+  console.error("Unable to load Free State Aligned directory", error);
+  directoryError = "The Free State Aligned directory is temporarily unavailable.";
 }
 
-try {
-  const [houseData, senateData, houseGradeData, senateGradeData, candidateData] = await Promise.all([
-    getRepresentatives({ body: "house", include: "votes", limit: 500 }),
-    getRepresentatives({ body: "senate", include: "votes", limit: 50 }),
-    getRepresentatives({ body: "house", limit: 500 }),
-    getRepresentatives({ body: "senate", limit: 50 }),
-    getCandidates({ electionYear: 2026, limit: 800 }),
-  ]);
-
-  const gradeLookup = new Map(
-    [
-      ...(houseGradeData.representatives || []),
-      ...(senateGradeData.representatives || []),
-    ].map((rep) => [repKey(rep), rep]),
-  );
-
-  freeStaterLegislators = [
-    ...(houseData.representatives || []),
-    ...(senateData.representatives || []),
-  ]
-    .map((rep) => {
-      const gradeRep = gradeLookup.get(repKey(rep));
-      return {
-        ...rep,
-        alignment_percent:
-          rep.alignment_percent ??
-          rep.alignmentPercent ??
-          gradeRep?.alignment_percent ??
-          gradeRep?.alignmentPercent,
-      };
-    })
-    .filter(isFreeStater)
-    .sort((a, b) => repName(a).localeCompare(repName(b)));
-
-  freeStaterCandidates = (candidateData.candidates || [])
-    .filter((candidate) => isLegislativeCandidate(candidate) && isFreeStater(candidate))
-    .sort((a, b) =>
-      String(a.name || `${a.candidateFirstName || ""} ${a.candidateLastName || ""}`)
-        .localeCompare(String(b.name || `${b.candidateFirstName || ""} ${b.candidateLastName || ""}`)),
-    );
-} catch (error) {
-  directoryError = error?.message || "Unable to load Free Stater directory.";
-}
-
-const countyOptions = uniqueOptions([
-  ...freeStaterLegislators.map(countyForRep),
-  ...freeStaterCandidates.map((candidate) => candidate.county),
-]);
-const townOptions = uniqueOptions([
-  ...freeStaterLegislators.flatMap(townsForRep),
-  ...freeStaterCandidates.flatMap(townsForCandidate),
-]);
-
-const filteredFreeStaterLegislators = freeStaterLegislators.filter(matchesLegislatorFilters);
-const filteredFreeStaterCandidates = freeStaterCandidates.filter(matchesCandidateFilters);
+const countyOptions = uniqueOptions(people.flatMap((person) => person.counties));
+const townOptions = uniqueOptions(people.flatMap((person) => person.towns));
+const legislatorCount = people.filter((person) => person.isCurrentLegislator).length;
+const candidateCount = people.filter((person) => person.isCurrentCandidate).length;
 const hasDirectoryFilters =
   filterName ||
   filterType !== "all" ||
@@ -105,136 +45,8 @@ function organizationAssetUrl(filename = "") {
     .join("/")}`;
 }
 
-function repKey(rep = {}) {
-  return String(
-    rep.personid ||
-      rep.id ||
-      rep.employeeno ||
-      rep.slug ||
-      repName(rep),
-  ).toLowerCase();
-}
-
 function cleanFilter(value = "") {
   return String(value || "").trim();
-}
-
-function matchesLegislatorFilters(rep = {}) {
-  if (filterType === "candidates") return false;
-  if (!matchesText([repName(rep), rep.nameAliases, rep.name_aliases].filter(Boolean).join(" "), filterName)) return false;
-  if (!matchesBody(bodyForRep(rep), filterBody)) return false;
-  if (!matchesParty(rep.party, filterParty)) return false;
-  if (!matchesText(countyForRep(rep), filterCounty)) return false;
-  if (filterTown && !townsForRep(rep).some((town) => matchesText(town, filterTown))) return false;
-  return true;
-}
-
-function matchesCandidateFilters(candidate = {}) {
-  if (filterType === "legislators") return false;
-  if (!matchesText([
-    candidateDisplayName(candidate),
-    candidate.nameAliases,
-    candidate.name_aliases,
-  ].filter(Boolean).join(" "), filterName)) return false;
-  if (!matchesBody(candidate.office, filterBody)) return false;
-  if (!matchesParty(candidate.politicalParty, filterParty)) return false;
-  if (!matchesText(candidate.county, filterCounty)) return false;
-  if (filterTown && !townsForCandidate(candidate).some((town) => matchesText(town, filterTown))) return false;
-  return true;
-}
-
-function candidateDisplayName(candidate = {}) {
-  return String(candidate.name || `${candidate.candidateFirstName || ""} ${candidate.candidateLastName || ""}`).trim();
-}
-
-function bodyForRep(rep = {}) {
-  const value = String(rep.chamber || rep.legislativebody || "").toLowerCase();
-  if (value.includes("senate") || value === "s") return "senate";
-  return "house";
-}
-
-function matchesBody(value = "", filter = "all") {
-  if (!filter || filter === "all") return true;
-  const normalized = normalizeSearch(value);
-  const normalizedFilter = normalizeSearch(filter);
-  if (normalizedFilter === "house") return normalized.includes("house") || normalized.includes("representative");
-  if (normalizedFilter === "senate") return normalized.includes("senate") || normalized.includes("senator");
-  return true;
-}
-
-function matchesParty(value = "", filter = "all") {
-  if (!filter || filter === "all") return true;
-  const normalized = normalizeSearch(value);
-  const normalizedFilter = normalizeSearch(filter);
-  if (normalizedFilter === "republican") return normalized === "r" || normalized.includes("republican");
-  if (normalizedFilter === "democrat") return normalized === "d" || normalized.includes("democrat");
-  if (normalizedFilter === "independent") return normalized === "i" || normalized.includes("independent");
-  return normalized.includes(normalizedFilter);
-}
-
-function countyForRep(rep = {}) {
-  return rep.county || rep.county_name || rep.countyName || countyNameFromDistrict(rep.raw_district || rep.district || "");
-}
-
-function countyNameFromDistrict(value = "") {
-  const prefix = String(value).trim().split(/\s+/)[0]?.toUpperCase();
-  const countyMap = {
-    BEL: "Belknap",
-    CAR: "Carroll",
-    CHE: "Cheshire",
-    COO: "Coos",
-    GRA: "Grafton",
-    HIL: "Hillsborough",
-    MER: "Merrimack",
-    ROC: "Rockingham",
-    STR: "Strafford",
-    SUL: "Sullivan",
-  };
-  return countyMap[prefix] || "";
-}
-
-function townsForRep(rep = {}) {
-  return uniqueOptions([
-    ...splitList(rep.location_text),
-    ...splitList(rep.towns_represented),
-    ...splitList(rep.townsRepresented),
-  ]);
-}
-
-function townsForCandidate(candidate = {}) {
-  return uniqueOptions([
-    candidate.town,
-    candidate.city,
-    ...splitList(candidate.towns),
-    ...splitList(candidate.townsRepresented),
-  ]);
-}
-
-function splitList(value = "") {
-  if (Array.isArray(value)) return value.map(cleanFilter).filter(Boolean);
-  return String(value || "")
-    .split(/[,;|]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function matchesText(value = "", filter = "") {
-  if (!filter) return true;
-  return normalizeSearch(value).includes(normalizeSearch(filter));
-}
-
-function normalizeSearch(value = "") {
-  return String(value || "")
-    .replace(/â€™|â€˜/g, "'")
-    .replace(/â€œ|â€/g, "\"")
-    .replace(/â€“|â€”/g, "-")
-    .replace(/Â·/g, " ")
-    .replace(/Â/g, "")
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
 }
 
 function uniqueOptions(values = []) {
@@ -270,9 +82,10 @@ function uniqueOptions(values = []) {
           <h1>What Does Free State Aligned Mean?</h1>
           <p class="lede">
             On NH Deserves Better, <strong>Free State Aligned</strong> means a
-            state legislator has consistently voted in alignment with the Free
-            Stater agenda, based on the New Hampshire Liberty Alliance's 2026
-            legislative ratings.
+            state legislator received a qualifying New Hampshire Liberty
+            Alliance rating or a 2026 legislative candidate received an
+            explicit NHLA endorsement. It does not claim formal Free State
+            Project membership.
           </p>
         </div>
         <div class="hero-logo">
@@ -357,6 +170,13 @@ function uniqueOptions(values = []) {
             combined grade of <strong>B+ or higher</strong> are labeled Free
             State Aligned. When those same people are also 2026 legislative
             candidates, the designation appears on their candidate profiles too.
+            The designation also applies to candidates named on NHLA's
+            <a href="https://www.nhliberty.org/2026-candidate-endorsements/">
+              2026 Candidate Endorsements
+            </a>
+            page, including non-incumbents who do not have a legislative voting
+            record. An endorsement indicates NHLA's electoral support; it is not
+            evidence of formal Free State Project membership.
           </p>
         </section>
       </article>
@@ -364,30 +184,29 @@ function uniqueOptions(values = []) {
       <section class="directory-section" id="directory" x-data="nhdbFuzzyFilter({ pageSize: 12 })">
         <div class="directory-heading">
           <p class="eyebrow">Directory</p>
-          <h2>Free State Aligned Legislators and Candidates</h2>
+          <h2>Free State Aligned People</h2>
           <p>
-            These are current New Hampshire state legislators and 2026
-            legislative candidates marked with a Free State Aligned designation
-            in the site data. These individuals have consistently voted in
-            alignment with the Free Stater agenda. Open a profile to see
-            districts, contact details, votes, articles, and community updates.
+            Each person marked Free State Aligned appears once, whether they are a
+            current legislator, a 2026 candidate, both, or neither. Filter by current
+            role below. Open a profile for the evidence behind the designation and
+            more details about the person.
           </p>
         </div>
 
         {directoryError && <p class="status-message">{directoryError}</p>}
 
-        <div class="directory-summary">
+        {!directoryError && <div class="directory-summary">
           <article>
-            <span>Current Legislators</span>
-            <strong>{filteredFreeStaterLegislators.length}</strong>
-            <small>{freeStaterLegislators.length} total</small>
+            <span>Matching people</span>
+            <strong data-fuzzy-matched-count>{people.length}</strong>
+            <small>of {people.length} labeled people</small>
           </article>
           <article>
-            <span>2026 Legislative Candidates</span>
-            <strong>{filteredFreeStaterCandidates.length}</strong>
-            <small>{freeStaterCandidates.length} total</small>
+            <span>Current roles</span>
+            <strong>{legislatorCount} / {candidateCount}</strong>
+            <small>legislators / 2026 candidates; some are both</small>
           </article>
-        </div>
+        </div>}
 
         <FilterBar
           action="/free-staters#directory"
@@ -402,8 +221,8 @@ function uniqueOptions(values = []) {
 
           <label>
             <span>Show</span>
-            <select name="type" data-fuzzy-filter-field data-fuzzy-field="kind" data-fuzzy-match="exact">
-              <option value="all" selected={filterType === "all"}>Legislators and candidates</option>
+            <select name="type" data-fuzzy-filter-field data-fuzzy-field="kind" data-fuzzy-match="contains">
+              <option value="all" selected={filterType === "all"}>All labeled people</option>
               <option value="legislators" selected={filterType === "legislators"}>Current legislators</option>
               <option value="candidates" selected={filterType === "candidates"}>2026 candidates</option>
             </select>
@@ -475,60 +294,37 @@ function uniqueOptions(values = []) {
 
         <section class="directory-block">
           <div class="section-heading">
-            <h3>Current Legislators</h3>
+            <h3>People</h3>
             <p>
-              Profiles include district information, contact details, vote
-              testimony alignment, and recent tracked bill votes where available.
+              People with both current roles are shown once and match either role filter.
             </p>
           </div>
 
-          {filteredFreeStaterLegislators.length ? (
-            <div class="rep-card-list">
-              {filteredFreeStaterLegislators.map((rep) => (
-                <RepresentativeCard
-                  rep={rep}
-                  trackedBills={trackedBills}
-                  billSummaries={billSummaries}
-                />
+          {people.length ? (
+            <div class="person-card-list">
+              {people.map((person) => (
+                <FreeStaterPersonCard person={person} />
               ))}
             </div>
           ) : (
-            <p class="empty">No current Free State Aligned legislators match these filters.</p>
-          )}
-        </section>
-
-        <section class="directory-block">
-          <div class="section-heading">
-            <h3>2026 Legislative Candidates</h3>
-            <p>
-              Candidate profiles include office, district, party, fundraising,
-              links, and any connected legislator profile.
-            </p>
-          </div>
-
-          {filteredFreeStaterCandidates.length ? (
-            <div class="candidate-card-list">
-              {filteredFreeStaterCandidates.map((candidate) => (
-                <CandidateCard candidate={candidate} />
-              ))}
-            </div>
-          ) : (
-            <p class="empty">No Free State Aligned legislative candidates match these filters.</p>
+            !directoryError && <p class="empty">No people are currently labeled Free State Aligned.</p>
           )}
         </section>
 
         <div class="see-more-row">
-          <button type="button" data-fuzzy-more hidden>Show more loaded profiles</button>
+          <button type="button" data-fuzzy-more hidden>Show more profiles</button>
         </div>
 
-        <div class="status-message empty-state" data-fuzzy-empty hidden>
-          <strong>No Free State Aligned profiles matched those filters.</strong>
-          <ul>
-            <li>Try searching by last name.</li>
-            <li>Remove the town, county, or party chip above.</li>
-            <li>Clear the Show filter to include legislators and candidates.</li>
-          </ul>
-        </div>
+        {!directoryError && (
+          <div class="status-message empty-state" data-fuzzy-empty hidden>
+            <strong>No Free State Aligned profiles matched those filters.</strong>
+            <ul>
+              <li>Try searching by last name.</li>
+              <li>Remove the town, county, or party chip above.</li>
+              <li>Clear the Show filter to include everyone labeled Free State Aligned.</li>
+            </ul>
+          </div>
+        )}
       </section>
     </main>
     <SiteFooter />
@@ -690,12 +486,6 @@ function uniqueOptions(values = []) {
     line-height: 1;
   }
 
-  .directory-block + .directory-block,
-  .directory-section section + section {
-    border-top: 2px solid #1f2933;
-    padding-top: 18px;
-  }
-
   .section-heading h3 {
     font-size: clamp(1.55rem, 3vw, 2.15rem);
     line-height: 1.05;
@@ -731,14 +521,9 @@ function uniqueOptions(values = []) {
     padding-left: 20px;
   }
 
-  .rep-card-list,
-  .candidate-card-list {
+  .person-card-list {
     display: grid;
     gap: 18px;
-  }
-
-  .candidate-card-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .see-more-row {
@@ -823,8 +608,7 @@ function uniqueOptions(values = []) {
       box-shadow: none;
     }
 
-    .directory-summary,
-    .candidate-card-list {
+    .directory-summary {
       grid-template-columns: 1fr;
     }
   }
