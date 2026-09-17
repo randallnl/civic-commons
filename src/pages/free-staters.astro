@@ -524,6 +524,7 @@ function uniqueOptions(values = []) {
   .person-card-list {
     display: grid;
     gap: 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .see-more-row {
@@ -608,7 +609,8 @@ function uniqueOptions(values = []) {
       box-shadow: none;
     }
 
-    .directory-summary {
+    .directory-summary,
+    .person-card-list {
       grid-template-columns: 1fr;
     }
   }

@@ -1,16 +1,28 @@
 ---
 import profileIcon from "../assets/profile icon.png";
+import { formatCandidateParty, partyClassName } from "../lib/candidatesApi";
 import { hasValidAlignmentPercent, personRoleFilterValue } from "../lib/freeStaterDirectory";
 import { profilePhotoUrl } from "../lib/photos";
+import { FREE_STATE_ALIGNED_TOOLTIP } from "../lib/alignmentTags";
 
 const { person } = Astro.props;
 const name = String(person.display_name || "").trim();
 const href = `/people/${encodeURIComponent(person.slug)}`;
 const photoUrl = profilePhotoUrl(person.photo_url);
 const roles = personRoleFilterValue(person);
-const party = partyLabel(person.party);
+const party = formatCandidateParty(person.party);
 const grade = Number(person.online_testimony_alignment_pct);
 const hasGrade = hasValidAlignmentPercent(person.online_testimony_alignment_pct);
+const currentOffice = person.legislativebody === "S" ? "State Senator" : "State Representative";
+const primaryOffice = person.isCurrentLegislator
+  ? currentOffice
+  : person.isCurrentCandidate
+    ? person.candidate_office || "2026 candidate"
+    : "Profile";
+const primaryDistrict = person.isCurrentLegislator ? person.districtLabel : person.candidateDistrictLabel;
+const officeLine = [primaryOffice, primaryDistrict].filter(Boolean).join(" · ");
+const showSeparateCandidacy = person.isCurrentLegislator && person.isCurrentCandidate &&
+  person.candidateDistrictLabel && person.candidateDistrictLabel !== person.districtLabel;
 const searchableText = [
   name,
   person.name_aliases,
@@ -23,17 +35,10 @@ const searchableText = [
   "Free State Aligned",
 ].flat().filter(Boolean).join(" ");
 
-function partyLabel(value = "") {
-  const party = String(value || "").trim();
-  if (party === "R") return "Republican";
-  if (party === "D") return "Democrat";
-  if (party === "I") return "Independent";
-  return party;
-}
 ---
 
 <article
-  class="person-card"
+  class="candidate-card"
   data-fuzzy-item
   data-fuzzy-name={name}
   data-fuzzy-aliases={person.name_aliases || ""}
@@ -49,80 +54,116 @@ function partyLabel(value = "") {
   data-fuzzy-sort-updated={Date.parse(person.updated_at || "") || 0}
   data-fuzzy-text={searchableText}
 >
-  <a class="photo" href={href} aria-label={`View ${name}'s profile`}>
-    <img src={photoUrl || profileIcon.src} alt={photoUrl ? `Photo of ${name}` : ""} loading="lazy" />
+  <a class="photo-wrap" href={href} aria-label={`View ${name}'s profile`}>
+    <img class:list={[!photoUrl && "photo-fallback"]} src={photoUrl || profileIcon.src} alt={photoUrl ? `Photo of ${name}` : ""} loading="lazy" />
   </a>
-  <div class="person-copy">
+  <div class="candidate-copy">
     <h3><a href={href}>{name}</a></h3>
-    <div class="badges">
-      <span class="aligned">Free State Aligned</span>
-      {person.isCurrentLegislator && <span>Current legislator</span>}
-      {person.isCurrentCandidate && <span>2026 candidate</span>}
+    <div class="pill-row">
+      <span class:list={["party-pill", partyClassName(person.party)]} data-party-affiliation>{party}</span>
+      <a class="free-stater-pill" href="/free-staters" title={FREE_STATE_ALIGNED_TOOLTIP} aria-label={FREE_STATE_ALIGNED_TOOLTIP}>Free State Aligned</a>
+      {person.isCurrentLegislator && <span>Current Legislator</span>}
+      {person.isCurrentCandidate && <span>2026 Candidate</span>}
     </div>
-    {party && <p class="meta">{party}</p>}
-    {person.isCurrentLegislator && person.districtLabel && <p class="meta">Current role: {person.districtLabel}</p>}
-    {person.isCurrentCandidate && person.candidateDistrictLabel && <p class="meta">Candidacy: {person.candidateDistrictLabel}</p>}
-    {!person.isCurrentLegislator && !person.isCurrentCandidate && <p class="meta">No current legislative or candidate role</p>}
-    {person.counties.length > 0 && <p class="location">{person.counties.join(", ")}</p>}
-    <a class="profile-link" href={href}>View profile <span aria-hidden="true">→</span></a>
+    <p class="office-line">{officeLine}</p>
+    {showSeparateCandidacy && <p class="towns-line"><span>2026 candidacy</span>{person.candidateDistrictLabel}</p>}
+    {person.towns.length > 0 && <p class="towns-line"><span>Towns represented</span>{person.towns.join(", ")}</p>}
+    {person.counties.length > 0 && <p class="towns-line"><span>Counties represented</span>{person.counties.join(", ")}</p>}
+    {person.isCurrentLegislator && hasGrade && <p class="towns-line"><span>Testimony aligned</span>{Math.round(grade)}%</p>}
+    <div class="actions"><a href={href}>View profile</a></div>
   </div>
-  {person.isCurrentLegislator && hasGrade && (
-    <div class="alignment" aria-label={`${Math.round(grade)}% testimony aligned`}>
-      <strong>{Math.round(grade)}%</strong>
-      <span>testimony aligned</span>
-    </div>
-  )}
 </article>
 
 <style>
-  .person-card {
-    align-items: start;
+  .candidate-card {
     background: white;
-    border: 1px solid #d1d5db;
-    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: none;
+    color: inherit;
     display: grid;
-    gap: 18px;
-    grid-template-columns: 96px minmax(0, 1fr) auto;
-    padding: 18px;
+    gap: 16px;
+    grid-template-columns: 92px 1fr;
+    padding: 16px;
   }
 
-  .person-card[hidden] { display: none; }
+  .candidate-card[hidden] { display: none; }
+  a { color: inherit; }
 
-  .photo {
-    background: #eef2f7;
+  .photo-wrap, .photo-wrap img, .photo-fallback { width: 92px; }
+  .photo-wrap img, .photo-fallback {
+    aspect-ratio: 4 / 5;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
-    display: block;
-    overflow: hidden;
+    box-sizing: border-box;
+    height: 115px;
+    object-fit: cover;
+    object-position: center top;
   }
+  .photo-wrap img.photo-fallback { background: transparent; object-fit: cover; padding: 0; }
 
-  .photo img { aspect-ratio: 1; display: block; object-fit: cover; width: 100%; }
+  h3 { font-size: 1.25rem; line-height: 1.1; margin: 0; }
+  .candidate-card:hover h3 a { text-decoration: underline; }
 
-  h3 { font-size: 1.3rem; line-height: 1.15; margin: 0 0 10px; }
-  h3 a, .profile-link { color: #1f2933; }
-
-  .badges { display: flex; flex-wrap: wrap; gap: 7px; }
-  .badges span {
-    background: #f1f5f9;
-    border: 1px solid #cbd5e1;
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .pill-row span, .pill-row a {
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
     border-radius: 999px;
-    color: #334155;
-    font-size: .76rem;
-    font-weight: 850;
-    padding: 4px 9px;
+    color: #1f2933;
+    font-size: 0.78rem;
+    font-weight: 900;
+    padding: 5px 9px;
+    text-decoration: none;
   }
-  .badges .aligned { background: #fff7ed; border-color: #fdba74; color: #9a3412; }
+  .pill-row .party-democrat { background: #dbeafe; border-color: #2563eb; }
+  .pill-row .party-republican { background: #fee2e2; border-color: #dc2626; }
+  .pill-row .party-libertarian { background: #fef3c7; border-color: #d97706; }
+  .pill-row .free-stater-pill {
+    background: #4a2414;
+    border-color: #f97316;
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px rgba(255, 180, 60, 0.25), 0 0 12px rgba(255, 107, 26, 0.18);
+    color: #fffdf7 !important;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  .pill-row .free-stater-pill:hover { background: #35180d; color: #fffdf7; }
 
-  .meta, .location { color: #475569; font-size: .9rem; margin: 8px 0 0; }
-  .profile-link { display: inline-block; font-size: .88rem; font-weight: 900; margin-top: 12px; }
+  .office-line {
+    color: #4b5563;
+    font-weight: 800;
+    line-height: 1.4;
+    margin: 12px 0 0;
+  }
 
-  .alignment { color: #1e3a5f; text-align: center; white-space: nowrap; }
-  .alignment strong { display: block; font-size: 1.7rem; line-height: 1; }
-  .alignment span { display: block; font-size: .66rem; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; }
+  .towns-line {
+    color: #4b5563;
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1.4;
+    margin: 8px 0 0;
+  }
+  .towns-line span {
+    color: #6b4f2a;
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+  }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .actions a {
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    font-size: 0.84rem;
+    font-weight: 900;
+    padding: 7px 10px;
+    text-decoration: none;
+  }
 
-  @media (max-width: 640px) {
-    .person-card { grid-template-columns: 72px minmax(0, 1fr); padding: 14px; }
-    .alignment { grid-column: 2; text-align: left; }
-    .alignment strong, .alignment span { display: inline; font-size: .88rem; }
-    .alignment strong { margin-right: 4px; }
+  @media (max-width: 520px) {
+    .candidate-card { grid-template-columns: 1fr; }
   }
 </style>
