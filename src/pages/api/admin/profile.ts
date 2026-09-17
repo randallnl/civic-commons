@@ -190,7 +190,7 @@ export async function POST({ request }) {
     return redirectWithMessage(redirectTo, savedMessage);
   } catch (error) {
     if (wantsHtml) {
-      return htmlMessage(error?.message || "Unable to save profile edits.", "error");
+      return htmlMessage(error?.message || "Unable to save profile edits.", "error", 400);
     }
     return redirectWithError(redirectTo, error?.message || "Unable to save profile edits.");
   }

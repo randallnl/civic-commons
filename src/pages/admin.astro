@@ -504,6 +504,7 @@ function profileTrafficDate(value = "") {
               {userCanManageReviewers && <a class:list={[adminArea === "reviewers" && "active"]} href="/admin/reviewers">Reviewers</a>}
               {userCanUseDataArea && <a class:list={[adminArea === "data" && "active"]} href="/admin/data">Data tools</a>}
               {userCanUseSourceDataTools && <a href="/admin/votes">Vote review</a>}
+              {userCanManageReviewers && <a href="/admin/audit-log">Audit log</a>}
             </nav>
           </section>
 

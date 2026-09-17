@@ -1,0 +1,148 @@
+---
+export const prerender = false;
+
+import TopNav from "../../components/TopNav.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
+import { adminDb, currentAdminSession } from "../../lib/adminAuth";
+import { ensureAdminAuditLog, getAdminAuditLog } from "../../lib/adminAudit";
+
+const session = await currentAdminSession(Astro.request);
+if (!session) return Astro.redirect("/admin", 302);
+if (session.role !== "super_admin") {
+  return new Response("Forbidden", {
+    status: 403,
+    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+  });
+}
+Astro.response.headers.set("Cache-Control", "no-store");
+
+const areas = [
+  ["", "All tools"], ["profile", "Profiles"], ["remove", "Removal"],
+  ["upload", "Uploads"], ["workflow", "Workflow"],
+  ["community-updates", "Community updates"], ["suggested-updates", "Feedback"],
+  ["article-submissions", "Articles"], ["article-links", "Article links"],
+  ["profile-updates", "Profile updates"], ["endorsements", "Endorsements"],
+  ["organizations", "Organizations"], ["reviewers", "Reviewer access"],
+  ["bills", "Bills"], ["vote-visibility", "Vote visibility"],
+  ["grades", "Grade cache"], ["sql", "SQL"],
+  ["content-graphics", "Social graphics"], ["logout", "Logout"],
+  ["verify", "Sign-ins"],
+];
+const allowedAreas = new Set(areas.map(([value]) => value));
+const actor = (Astro.url.searchParams.get("actor") || "").trim().slice(0, 254);
+const requestedArea = Astro.url.searchParams.get("area") || "";
+const area = allowedAreas.has(requestedArea) ? requestedArea : "";
+const requestedOutcome = Astro.url.searchParams.get("outcome") || "";
+const outcome = ["success", "error", "denied"].includes(requestedOutcome) ? requestedOutcome : "";
+const before = Number(Astro.url.searchParams.get("before") || 0);
+let log = { rows: [], nextCursor: 0 };
+let loadError = "";
+
+try {
+  const db = adminDb();
+  await ensureAdminAuditLog(db);
+  log = await getAdminAuditLog(db, { actor, area, outcome, before });
+} catch (error) {
+  console.error("Unable to load admin audit log:", error);
+  loadError = "The audit log is temporarily unavailable.";
+}
+
+const nextUrl = new URL(Astro.url);
+if (log.nextCursor) nextUrl.searchParams.set("before", String(log.nextCursor));
+
+function formattedDate(value) {
+  const date = new Date(`${value.replace(" ", "T")}Z`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-US", {
+    dateStyle: "medium", timeStyle: "short", timeZone: "America/New_York",
+  });
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="/nhdb-logo-circle.png" />
+    <title>Admin Audit Log | NH Deserves Better</title>
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body>
+    <TopNav />
+    <main class="page">
+      <a class="back" href="/admin">← Back to admin</a>
+      <header class="hero">
+        <p class="eyebrow">Super admin</p>
+        <h1>Audit log</h1>
+        <p>Recent authenticated admin actions. Entries show identifiers and outcomes, never submitted text, SQL, files, or login tokens.</p>
+      </header>
+
+      <form class="filters" method="get" action="/admin/audit-log">
+        <label>Admin email
+          <input type="search" name="actor" value={actor} placeholder="Exact email" />
+        </label>
+        <label>Tool
+          <select name="area">
+            {areas.map(([value, label]) => <option value={value} selected={value === area}>{label}</option>)}
+          </select>
+        </label>
+        <label>Outcome
+          <select name="outcome">
+            <option value="" selected={!outcome}>All outcomes</option>
+            <option value="success" selected={outcome === "success"}>Success</option>
+            <option value="error" selected={outcome === "error"}>Error</option>
+            <option value="denied" selected={outcome === "denied"}>Denied</option>
+          </select>
+        </label>
+        <button type="submit">Filter</button>
+      </form>
+
+      {loadError ? <p class="notice error">{loadError}</p> : log.rows.length ? (
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">When (ET)</th><th scope="col">Admin</th><th scope="col">Action</th><th scope="col">Target</th><th scope="col">Outcome</th></tr></thead>
+            <tbody>
+              {log.rows.map((row) => (
+                <tr>
+                  <td><time datetime={`${row.occurred_at.replace(" ", "T")}Z`}>{formattedDate(row.occurred_at)}</time></td>
+                  <td><strong>{row.actor_email}</strong><small>{row.actor_role.replaceAll("_", " ")}</small></td>
+                  <td><strong>{row.action}</strong><small>{row.request_path}</small></td>
+                  <td>{row.target_id ? `${row.target_type || "record"}: ${row.target_id}` : "—"}</td>
+                  <td><span class:list={["outcome", row.outcome]}>{row.outcome}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : <p class="notice">No audit entries match these filters.</p>}
+
+      {log.nextCursor > 0 && <a class="next" href={`${nextUrl.pathname}${nextUrl.search}`}>Older entries →</a>}
+    </main>
+    <SiteFooter />
+  </body>
+</html>
+
+<style>
+  .page { margin: 0 auto; padding: 32px 0 70px; width: min(1280px, calc(100% - 32px)); }
+  .back { color: #1d4ed8; font-weight: 850; text-decoration: none; }
+  .hero { margin: 32px 0 28px; }
+  .eyebrow { color: #9a3412; font-size: .8rem; font-weight: 950; letter-spacing: .12em; margin: 0 0 10px; text-transform: uppercase; }
+  h1 { color: #1f2933; font-size: clamp(2.5rem, 6vw, 4.5rem); margin: 0; }
+  .hero p:last-child { color: #475569; line-height: 1.55; max-width: 760px; }
+  .filters { align-items: end; background: white; border: 1px solid #cbd5e1; border-radius: 12px; display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding: 18px; }
+  .filters label { color: #334155; display: grid; flex: 1 1 180px; font-size: .8rem; font-weight: 900; gap: 6px; }
+  input, select { background: #f8fafc; border: 1px solid #94a3b8; border-radius: 8px; box-sizing: border-box; color: #1f2933; font: inherit; min-height: 42px; padding: 8px 10px; width: 100%; }
+  button { background: #1d4ed8; border: 0; border-radius: 8px; color: white; cursor: pointer; font: inherit; font-weight: 900; min-height: 42px; padding: 8px 18px; }
+  .table-wrap { background: white; border: 1px solid #cbd5e1; border-radius: 12px; overflow-x: auto; }
+  table { border-collapse: collapse; min-width: 850px; width: 100%; }
+  th, td { border-bottom: 1px solid #e2e8f0; padding: 13px 16px; text-align: left; vertical-align: top; }
+  th { background: #f8fafc; color: #475569; font-size: .76rem; letter-spacing: .08em; text-transform: uppercase; }
+  td { color: #1f2933; font-size: .9rem; overflow-wrap: anywhere; }
+  td small { color: #64748b; display: block; margin-top: 3px; }
+  .outcome { border-radius: 6px; display: inline-block; font-size: .76rem; font-weight: 950; padding: 5px 8px; text-transform: uppercase; }
+  .outcome.success { background: #dcfce7; color: #166534; }
+  .outcome.error { background: #fee2e2; color: #991b1b; }
+  .outcome.denied { background: #fef3c7; color: #92400e; }
+  .notice { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; color: #475569; padding: 18px; }
+  .notice.error { background: #fef2f2; color: #991b1b; }
+  .next { color: #1d4ed8; display: inline-block; font-weight: 900; margin-top: 20px; }
+</style>

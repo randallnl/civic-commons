@@ -730,8 +730,8 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
-function endorsementMediaUrl(endorsement = {}) {
-  return endorsement.photoUrl || endorsement.organization?.logoUrl || "";
+function endorsementOrganizationLogo(endorsement = {}) {
+  return endorsement.organization?.logoUrl || "";
 }
 
 function contactHref(type, value) {
@@ -1281,6 +1281,23 @@ function uniqueTowns(towns = []) {
             </div>
           </div>
 
+          <details class="role-disclosure" id="role-details">
+            <summary>
+              <span class="role-summary-copy">
+                <span class="role-summary-label">At a glance</span>
+                <strong>{hasLegislatorProfile
+                  ? `${officeLabel}${districtLabel ? ` · ${districtLabel}` : ""}`
+                  : linkedCandidateOfficeLine || "Office not listed"}</strong>
+                <span class="role-summary-meta">{hasLegislatorProfile
+                  ? `2026 candidacy: ${linkedCandidateOfficeLine || "Office not listed"}`
+                  : `2026 candidate · ${formatCandidateParty(linkedCandidateForEndorsements.politicalParty)}`}</span>
+              </span>
+              <span class="role-summary-toggle">
+                <span class="role-summary-more">View more</span>
+                <span class="role-summary-less">Show less</span>
+              </span>
+            </summary>
+            <div class="role-disclosure-content">
           {hasLegislatorProfile ? (
             <div class="role-tabs">
               <input type="radio" name="profile-role-tabs" id="role-tab-current" checked />
@@ -1468,6 +1485,8 @@ function uniqueTowns(towns = []) {
               )}
             </div>
           )}
+            </div>
+          </details>
 
           <div
             class="profile-update-panel profile-update-panel-inline"
@@ -1592,8 +1611,8 @@ function uniqueTowns(towns = []) {
                 <article class="endorsement-card">
                   <div class="endorsement-card-main">
                     <a class="endorsement-media" href={organizationPath(endorsement.organization)}>
-                      {endorsementMediaUrl(endorsement) ? (
-                        <img src={endorsementMediaUrl(endorsement)} alt="" loading="lazy" />
+                      {endorsementOrganizationLogo(endorsement) ? (
+                        <img src={endorsementOrganizationLogo(endorsement)} alt="" loading="lazy" />
                       ) : (
                         <span>{endorsement.organization.name.slice(0, 1)}</span>
                       )}
@@ -2834,6 +2853,88 @@ function uniqueTowns(towns = []) {
     font-weight: 900;
     justify-self: start;
     padding: 12px 16px;
+  }
+
+  .role-disclosure {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .role-disclosure > summary {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    list-style: none;
+    padding: 16px;
+  }
+
+  .role-disclosure > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .role-disclosure > summary:hover {
+    background: #eff6ff;
+  }
+
+  .role-disclosure > summary:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: -3px;
+  }
+
+  .role-summary-copy {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .role-summary-label {
+    color: #7c5a2f;
+    font-size: 0.7rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .role-summary-copy strong {
+    color: #1f2933;
+    font-size: 1.05rem;
+    line-height: 1.3;
+  }
+
+  .role-summary-meta {
+    color: #475569;
+    font-size: 0.85rem;
+    font-weight: 750;
+    line-height: 1.35;
+  }
+
+  .role-summary-toggle {
+    background: #eaf4ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1d4ed8;
+    flex: 0 0 auto;
+    font-size: 0.82rem;
+    font-weight: 900;
+    padding: 8px 12px;
+  }
+
+  .role-summary-less,
+  .role-disclosure[open] .role-summary-more {
+    display: none;
+  }
+
+  .role-disclosure[open] .role-summary-less {
+    display: inline;
+  }
+
+  .role-disclosure-content {
+    border-top: 1px solid #dbeafe;
+    padding: 16px;
   }
 
   .role-tabs {
