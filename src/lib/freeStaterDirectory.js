@@ -61,7 +61,7 @@ export function enrichPerson(person, districtByKey = new Map()) {
   const isCurrentLegislator = Number(person.is_current_legislator) === 1 && person.legislator_role_id != null;
   const isCurrentCandidate = Number(person.is_2026_candidate) === 1 && person.candidate_role_id != null;
   const legislatorBody = person.legislativebody === "S" ? "senate" : person.legislativebody === "H" ? "house" : "";
-  const candidateBody = /senate/i.test(person.candidate_office || "")
+  const candidateBody = /senat(?:e|or)/i.test(person.candidate_office || "")
     ? "senate"
     : /representative|house|general court/i.test(person.candidate_office || "")
       ? "house"
@@ -81,9 +81,9 @@ export function enrichPerson(person, districtByKey = new Map()) {
     candidateDistrict?.communities_represented,
   ]);
   const counties = uniqueParts([
-    legislatorCounty,
+    legislatorBody === "senate" && legislatorDistrict ? "" : legislatorCounty,
     legislatorDistrict?.counties_represented,
-    candidateCounty,
+    candidateBody === "senate" && candidateDistrict ? "" : candidateCounty,
     candidateDistrict?.counties_represented,
   ]);
   const body = uniqueParts([isCurrentLegislator && legislatorBody, isCurrentCandidate && candidateBody]).join(" ");
@@ -98,12 +98,16 @@ export function enrichPerson(person, districtByKey = new Map()) {
     towns,
     counties,
     districtLabel: isCurrentLegislator
-      ? legislatorDistrict?.district_label || roleDistrict(legislatorBody, legislatorCounty, person.legislator_district)
+      ? legislatorBody === "senate"
+        ? roleDistrict(legislatorBody, "", person.legislator_district)
+        : legislatorDistrict?.district_label || roleDistrict(legislatorBody, legislatorCounty, person.legislator_district)
       : isCurrentCandidate
         ? roleDistrict(candidateBody, candidateCounty, person.candidate_district)
         : "",
     candidateDistrictLabel: isCurrentCandidate
-      ? candidateDistrict?.district_label || roleDistrict(candidateBody, candidateCounty, person.candidate_district)
+      ? candidateBody === "senate"
+        ? roleDistrict(candidateBody, "", person.candidate_district)
+        : candidateDistrict?.district_label || roleDistrict(candidateBody, candidateCounty, person.candidate_district)
       : "",
   };
 }
@@ -113,6 +117,10 @@ export function personRoleFilterValue(person) {
     person.isCurrentLegislator && "legislators",
     person.isCurrentCandidate && "candidates",
   ].filter(Boolean).join(" ") || "none";
+}
+
+export function hasValidAlignmentPercent(value) {
+  return value != null && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100;
 }
 
 function districtKey(body, county, district) {

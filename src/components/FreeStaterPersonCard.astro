@@ -1,6 +1,6 @@
 ---
 import profileIcon from "../assets/profile icon.png";
-import { personRoleFilterValue } from "../lib/freeStaterDirectory";
+import { hasValidAlignmentPercent, personRoleFilterValue } from "../lib/freeStaterDirectory";
 import { profilePhotoUrl } from "../lib/photos";
 
 const { person } = Astro.props;
@@ -10,7 +10,7 @@ const photoUrl = profilePhotoUrl(person.photo_url);
 const roles = personRoleFilterValue(person);
 const party = partyLabel(person.party);
 const grade = Number(person.online_testimony_alignment_pct);
-const hasGrade = person.online_testimony_alignment_pct != null && Number.isFinite(grade);
+const hasGrade = hasValidAlignmentPercent(person.online_testimony_alignment_pct);
 const searchableText = [
   name,
   person.name_aliases,

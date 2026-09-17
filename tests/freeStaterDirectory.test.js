@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { enrichPerson, getFreeStateAlignedPeople, personRoleFilterValue } from "../src/lib/freeStaterDirectory.js";
+import { enrichPerson, getFreeStateAlignedPeople, hasValidAlignmentPercent, personRoleFilterValue } from "../src/lib/freeStaterDirectory.js";
 
 test("person-based directory loads each labeled person once with overlapping roles", async () => {
   const statements = [];
@@ -68,4 +68,27 @@ test("an archived candidacy does not qualify for the current candidate filter", 
     legislator_role_id: null, candidate_role_id: null,
   });
   assert.equal(person.isCurrentCandidate, false);
+});
+
+test("missing alignment sentinels are not displayed as percentages", () => {
+  assert.equal(hasValidAlignmentPercent(-1), false);
+  assert.equal(hasValidAlignmentPercent(null), false);
+  assert.equal(hasValidAlignmentPercent(0), true);
+  assert.equal(hasValidAlignmentPercent(100), true);
+});
+
+test("senators use Senate district labels and represented counties", () => {
+  const districts = new Map([
+    ["S::23", { district_label: "23", communities_represented: "Exeter", counties_represented: "Rockingham" }],
+  ]);
+  const person = enrichPerson({
+    id: 5, is_current_legislator: 1, is_2026_candidate: 1,
+    legislator_role_id: 11, candidate_role_id: 22,
+    legislativebody: "S", countycode: "10", legislator_district: "23",
+    candidate_office: "State Senator", candidate_county: "Sullivan", candidate_district: "23",
+  }, districts);
+  assert.equal(person.districtLabel, "Senate District 23");
+  assert.equal(person.candidateDistrictLabel, "Senate District 23");
+  assert.deepEqual(person.counties, ["Rockingham"]);
+  assert.equal(person.body, "senate");
 });
