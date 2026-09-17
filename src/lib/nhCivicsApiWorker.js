@@ -2,6 +2,7 @@
 // against its bound D1/R2 resources without calling a separate Worker.
 import { ensureArticlePreviewColumns } from "./articlePreviews";
 import { ensureGradeCacheColumns } from "./gradeCache";
+import { candidateRoleVisibilitySql } from "./candidateVisibility";
 import { normalizeWardNumber, wardOptionsFor } from "./legislativeSearch";
 import { voteVisibilityCaseExpression } from "./voteVisibility";
 
@@ -3005,7 +3006,7 @@ async function handleCandidateDetail(request, env) {
   const identifierFilerPrefix = identifier.match(/^(\d+)(?:-|$)/)?.[1] || "";
 
   const candidate = await env.DB.prepare(`
-    ${candidateBaseCte()}
+    ${candidateBaseCte({ includeInactive: true })}
     SELECT ${candidateBaseSelectColumns()}
     FROM candidate_base c
     WHERE c.filer_entity_number = ?
@@ -3019,6 +3020,8 @@ async function handleCandidateDetail(request, env) {
         WHERE profile_alias.person_id = c.person_id
           AND profile_alias.alias_slug = ? COLLATE NOCASE
       )
+    ORDER BY CASE WHEN c.candidacy_status = 'active' AND c.election_year = 2026 THEN 0 ELSE 1 END,
+      c.election_year DESC
     LIMIT 1
   `)
     .bind(
@@ -3051,11 +3054,12 @@ async function handleCandidateDetail(request, env) {
 
 async function getCandidateRolesForPerson(env, personId) {
   const result = await env.DB.prepare(`
-    ${candidateBaseCte()}
+    ${candidateBaseCte({ includeInactive: true })}
     SELECT ${candidateBaseSelectColumns()}
     FROM candidate_base c
     WHERE c.person_id = ?
     ORDER BY
+      CASE WHEN c.candidacy_status = 'active' AND c.election_year = 2026 THEN 0 ELSE 1 END,
       c.election_year DESC,
       CASE
         WHEN c.office = 'State Representative' THEN 1
@@ -3260,7 +3264,8 @@ function normalizeCandidateIdentity(value = "") {
     .trim();
 }
 
-function candidateBaseCte() {
+function candidateBaseCte({ includeInactive = false } = {}) {
+  const visibility = candidateRoleVisibilitySql({ includeInactive });
   return `
     WITH active_legislator_roles AS (
       SELECT *
@@ -3295,8 +3300,9 @@ function candidateBaseCte() {
           END,
           ''
         ) AS political_party,
-        COALESCE(cr.election_year, 2026) AS election_year,
-        COALESCE(NULLIF(cr.election_cycle, ''), '2026 Election Cycle') AS election_cycle,
+        COALESCE(cr.election_year, c.election_year, 2026) AS election_year,
+        COALESCE(NULLIF(cr.election_cycle, ''), NULLIF(c.election_cycle, ''), '2026 Election Cycle') AS election_cycle,
+        COALESCE(cr.status, CASE WHEN p.is_2026_candidate = 1 THEN 'active' ELSE 'inactive' END) AS candidacy_status,
         COALESCE(cr.total_raised, 0) AS total_raised,
         COALESCE(cr.total_spent, 0) AS total_spent,
         COALESCE(NULLIF(p.website_url, ''), c.candidate_website, '') AS candidate_website,
@@ -3329,8 +3335,7 @@ function candidateBaseCte() {
       FROM d1_people p
       LEFT JOIN d1_person_candidate_roles cr
         ON cr.person_id = p.id
-        AND cr.election_year = 2026
-        AND cr.status = 'active'
+        ${visibility.joinCondition}
       LEFT JOIN active_legislator_roles lr
         ON lr.person_id = p.id
       LEFT JOIN county_codes cc
@@ -3364,7 +3369,7 @@ function candidateBaseCte() {
       LEFT JOIN candidates c
         ON c.filer_entity_number = cr.filer_entity_number
         OR c.filer_entity_number = p.filer_entity_number
-      WHERE p.is_2026_candidate = 1
+      WHERE ${visibility.personWhere}
     )
   `;
 }
@@ -3384,6 +3389,7 @@ function candidateBaseSelectColumns(tableAlias = "c") {
     "political_party",
     "election_year",
     "election_cycle",
+    "candidacy_status",
     "total_raised",
     "total_spent",
     "candidate_website",
@@ -3466,6 +3472,8 @@ function formatCandidate(candidate) {
     politicalParty: candidate.political_party,
     electionYear: candidate.election_year,
     electionCycle: candidate.election_cycle,
+    candidacyStatus: candidate.candidacy_status,
+    isCurrentCandidate: candidate.candidacy_status === "active" && Number(candidate.election_year) === 2026,
     totalRaised: candidate.total_raised,
     totalSpent: candidate.total_spent,
     candidateWebsite: candidate.candidate_website,
@@ -3518,6 +3526,7 @@ function formatCandidateRole(candidate) {
     politicalParty: candidate.political_party,
     electionYear: candidate.election_year,
     electionCycle: candidate.election_cycle,
+    candidacyStatus: candidate.candidacy_status,
     totalRaised: candidate.total_raised,
     totalSpent: candidate.total_spent,
     districtLabel: candidate.district_label,

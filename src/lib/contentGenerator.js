@@ -6,6 +6,7 @@ export const CONTENT_GENERATOR_TIMEOUT_MS = 45_000;
 export const CONTENT_GRAPHIC_SOURCE_APP = "nh-deserves-better";
 export const CANDIDATE_GRAPHIC_TEMPLATE = "candidate-profile-update";
 export const LEGISLATOR_GRAPHIC_TEMPLATE = "legislator-profile-update";
+export const MAX_CANDIDATE_GRAPHIC_TOWNS_LENGTH = 160;
 export const CONTENT_GRAPHIC_TEMPLATES = [
   CANDIDATE_GRAPHIC_TEMPLATE,
   LEGISLATOR_GRAPHIC_TEMPLATE,
@@ -21,7 +22,7 @@ const TEMPLATE_RULES = {
     headline: { max: 70, required: true },
     office: { max: 100, required: true },
     party: { max: 48 },
-    townsRepresented: { max: 1600 },
+    townsRepresented: { max: MAX_CANDIDATE_GRAPHIC_TOWNS_LENGTH },
     body: { max: 220, required: true },
     image: { max: 2048, required: true, publicUrl: true },
   },

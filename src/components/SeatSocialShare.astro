@@ -155,6 +155,17 @@ const seatPayload = seats.map((seat) => ({
       };
     }
 
+    function graphicErrorMessage(data) {
+      const fields = Object.entries(data.fieldErrors || {}).map(([field, message]) =>
+        `${field === "townsRepresented" ? "Towns represented" : field}: ${message}`,
+      );
+      return [
+        data.message || "The profile graphic could not be rendered.",
+        ...fields,
+        data.requestId ? `Request ID: ${data.requestId}` : "",
+      ].filter(Boolean).join(" ");
+    }
+
     function resultCard(candidate, response) {
       const card = document.createElement("article");
       const imageLink = document.createElement("a");
@@ -225,7 +236,7 @@ const seatPayload = seats.map((seat) => ({
           });
           const data = await response.json().catch(() => ({}));
           if (!response.ok || data.status !== "complete" || !data.imageUrl) {
-            throw new Error(data.message || "The profile graphic could not be rendered.");
+            throw new Error(graphicErrorMessage(data));
           }
           if (resultsList instanceof HTMLElement) resultsList.append(resultCard(candidate, data));
           completed += 1;

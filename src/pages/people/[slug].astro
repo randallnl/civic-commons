@@ -38,6 +38,7 @@ import {
   getCandidateCampaignFinance,
 } from "../../lib/campaignFinance";
 import { representativePersonIdForCandidate } from "../../lib/candidateLegislatorLinks";
+import { isCurrentCandidateRecord } from "../../lib/candidateVisibility";
 import { candidateProfileForLegislator } from "../../lib/candidateLegislators";
 import {
   candidateName,
@@ -104,6 +105,11 @@ if (!representative && (!candidateFallback?.filerEntityNumber && !candidateFallb
 
 const hasLegislatorProfile = Boolean(representative);
 const profileCandidate = candidateFallback || null;
+const isFormerCandidateProfile = !hasLegislatorProfile && profileCandidate &&
+  !isCurrentCandidateRecord(profileCandidate);
+const formerCandidacyLabel = profileCandidate?.candidacyStatus === "lost_primary"
+  ? "Lost 2026 primary"
+  : "No longer a candidate";
 const canonicalProfileSlug = representative?.slug || profileCandidate?.slug || slug;
 const sharePreviewCapture = Astro.url.searchParams.get("share-preview") === "1";
 let profileRevision = "original";
@@ -260,12 +266,12 @@ const heroEyebrow = showCandidateRoleInHero
   ? "2026 Candidate Role"
   : hasLegislatorProfile
     ? officeLabel
-    : "Candidate Profile";
+    : isFormerCandidateProfile ? "Past Candidate Profile" : "Candidate Profile";
 const heroDetailsTitle = showCandidateRoleInHero
   ? "Candidate Details"
   : hasLegislatorProfile
     ? "Official Role"
-    : "Candidate Details";
+    : isFormerCandidateProfile ? "Past Candidacy" : "Candidate Details";
 const heroPartyLabel = showCandidateRoleInHero
   ? formatCandidateParty(linkedCandidateForEndorsements?.politicalParty || linkedCandidateForEndorsements?.party)
   : hasLegislatorProfile
@@ -1037,6 +1043,7 @@ function uniqueTowns(towns = []) {
             <span class:list={["meta-pill", "party-pill", partyClass(heroPartyValue)]} data-party-affiliation>
               {heroPartyLabel}
             </span>
+            {isFormerCandidateProfile && <span class="meta-pill">{formerCandidacyLabel}</span>}
             {(isFreeStater(representative) || isFreeStater(profileCandidate)) && (
               <a
                 class="meta-pill free-stater-pill"
@@ -1274,7 +1281,7 @@ function uniqueTowns(towns = []) {
         <section class="panel candidate-role-panel" id="candidate-role">
           <div class="section-heading split-heading">
             <div>
-              <p class="eyebrow">{hasLegislatorProfile ? "Roles" : "2026 Candidate Role"}</p>
+              <p class="eyebrow">{hasLegislatorProfile ? "Roles" : isFormerCandidateProfile ? "Past Candidacy" : "2026 Candidate Role"}</p>
               <h2>{hasLegislatorProfile ? "Current role and candidacies" : "Candidate information for this person"}</h2>
             </div>
             <div class="role-panel-actions">
@@ -1308,7 +1315,7 @@ function uniqueTowns(towns = []) {
                   : linkedCandidateOfficeLine || "Office not listed"}</strong>
                 <span class="role-summary-meta">{hasLegislatorProfile
                   ? `2026 candidacy: ${linkedCandidateOfficeLine || "Office not listed"}`
-                  : `2026 candidate · ${formatCandidateParty(linkedCandidateForEndorsements.politicalParty)}`}</span>
+                  : `${isFormerCandidateProfile ? formerCandidacyLabel : "2026 candidate"} · ${formatCandidateParty(linkedCandidateForEndorsements.politicalParty)}`}</span>
               </span>
               <span class="role-summary-toggle">
                 <span class="role-summary-more">View more</span>

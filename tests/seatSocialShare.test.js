@@ -5,7 +5,9 @@ import {
   groupCandidatesForSocialShare,
   seatSocialShareOptions,
   socialPostCopyForSeat,
+  summarizeGraphicTowns,
 } from "../src/lib/seatSocialShare.js";
+import { MAX_CANDIDATE_GRAPHIC_TOWNS_LENGTH, validateContentGraphicRequest } from "../src/lib/contentGenerator.js";
 
 test("groups candidates into ordered State House and State Senate share seats", () => {
   const seats = groupCandidatesForSocialShare([
@@ -91,4 +93,43 @@ test("creates ready-to-paste seat copy with every candidate profile link and a c
   assert.doesNotMatch(post, /offers insights on published endorsements/i);
   assert.match(post, /Share verifiable information/i);
   assert.match(post, /https:\/\/nhdeservesbetter\.com\/suggest-update/);
+});
+
+test("Senate District 7 graphics fit the renderer's town limit without cutting a town name", () => {
+  const districtTowns = "Alexandria, Andover, Boscawen, Bradford, Bridgewater, Bristol, Danbury, Franklin-Ward 1, Franklin-Ward 2, Franklin-Ward 3, Goshen, Grafton, Hebron, Henniker, Hill, Hillsborough, Newbury, Orange, Salisbury, Sutton, Tilton, Warner, Webster, Wilmot";
+  const [seat] = seatSocialShareOptions([{
+    label: "State Senate, District 7",
+    candidates: [
+      { filerEntityNumber: "218747", name: "Daniel Innis", office: "State Senate", district: "7", townsRepresented: districtTowns },
+      { filerEntityNumber: "243715", name: "Rebecca Harned", office: "State Senate", district: "7", townsRepresented: districtTowns },
+    ],
+  }], { origin: "https://nhdeservesbetter.com" });
+
+  assert.equal(seat.candidates.length, 2);
+  for (const candidate of seat.candidates) {
+    assert.ok(candidate.townsRepresented.length <= MAX_CANDIDATE_GRAPHIC_TOWNS_LENGTH);
+    assert.match(candidate.townsRepresented, /Alexandria · Andover/);
+    assert.match(candidate.townsRepresented, /\+\d+ more communities$/);
+    const validation = validateContentGraphicRequest({
+      eventId: "7b8aeada-aeb8-4ee8-9c91-3dbb45b1af96",
+      entityType: "candidate",
+      entityId: candidate.entityId,
+      template: "candidate-profile-update",
+      headline: candidate.name,
+      office: candidate.office,
+      townsRepresented: candidate.townsRepresented,
+      body: "Get to know your candidate.",
+      image: candidate.portraitUrl,
+    });
+    assert.equal(validation.ok, true);
+  }
+});
+
+test("graphic town summaries preserve shorter lists and ward-qualified communities", () => {
+  assert.equal(summarizeGraphicTowns("Concord · Bow · Hopkinton"), "Concord · Bow · Hopkinton");
+  const [seat] = seatSocialShareOptions([{
+    label: "State Representative, Hillsborough, District 1",
+    candidates: [{ filerEntityNumber: "123", name: "Sample Candidate", townsRepresented: "Manchester, Ward 1, Nashua, Ward 2" }],
+  }], { origin: "https://nhdeservesbetter.com" });
+  assert.equal(seat.candidates[0].townsRepresented, "Manchester, Ward 1 · Nashua, Ward 2");
 });

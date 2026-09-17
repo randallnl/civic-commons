@@ -22,7 +22,7 @@ export async function getCommunities({
   if (body) params.set("body", body);
   if (limit) params.set("limit", String(limit));
   if (offset) params.set("offset", String(offset));
-  if (articleLimit) params.set("articleLimit", String(articleLimit));
+  if (articleLimit !== undefined && articleLimit !== null) params.set("articleLimit", String(articleLimit));
 
   const query = params.toString();
   const response = await civicApiFetch(`${apiBase}/communities${query ? `?${query}` : ""}`, {

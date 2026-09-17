@@ -182,14 +182,14 @@ test("enforces template-specific required fields and character limits", () => {
     headline: "",
     office: "O".repeat(101),
     party: "P".repeat(49),
-    townsRepresented: "T".repeat(1601),
+    townsRepresented: "T".repeat(161),
     body: "B".repeat(221),
   }));
   assert.equal(validation.ok, false);
   assert.equal(validation.fieldErrors.headline, "This field is required.");
   assert.match(validation.fieldErrors.office, /100/);
   assert.match(validation.fieldErrors.party, /48/);
-  assert.match(validation.fieldErrors.townsRepresented, /1600/);
+  assert.match(validation.fieldErrors.townsRepresented, /160/);
   assert.match(validation.fieldErrors.body, /220/);
 });
 

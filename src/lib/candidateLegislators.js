@@ -1,4 +1,5 @@
 import { candidateName, candidatePath, getCandidate, getCandidates } from "./candidatesApi";
+import { isCurrentCandidateRecord } from "./candidateVisibility";
 import { getRepresentative, getRepresentatives, repName, repSlug } from "./repsApi";
 import {
   candidateFilerForRepresentative,
@@ -66,7 +67,7 @@ export async function candidateProfileForLegislator(rep = {}) {
         const data = await getCandidate(linkedCandidateId);
         const linkedMatch = data.candidate || data;
 
-        if (linkedMatch) {
+        if (isCurrentCandidateRecord(linkedMatch)) {
           return {
             candidate: linkedMatch,
             href: candidatePath(linkedMatch),

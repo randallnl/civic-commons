@@ -1,5 +1,6 @@
 import { profilePhotoUrl } from "./photos.js";
 import { isFreeStater, isTpActionAligned } from "./civicTags.js";
+import { MAX_CANDIDATE_GRAPHIC_TOWNS_LENGTH } from "./contentGenerator.js";
 
 const DEFAULT_SUGGEST_UPDATE_PATH = "/suggest-update";
 const DEFAULT_FALLBACK_PORTRAIT_PATH = "/nhdb-logo-circle.png";
@@ -137,7 +138,7 @@ function shareCandidate(candidate = {}, { origin = "" } = {}) {
     portraitUrl,
     office: candidateOfficeLine(candidate),
     party: candidateParty(candidate),
-    townsRepresented: candidateTowns(candidate),
+    townsRepresented: summarizeGraphicTowns(candidateTowns(candidate)),
     freeStateAligned: isFreeStater(candidate),
     tpactionAligned: isTpActionAligned(candidate),
     tags: candidateContextTags(candidate),
@@ -220,6 +221,25 @@ function candidateTowns(candidate = {}) {
   }).join(" · ");
 }
 
+export function summarizeGraphicTowns(value = "") {
+  const fullList = cleanText(value);
+  if (fullList.length <= MAX_CANDIDATE_GRAPHIC_TOWNS_LENGTH) return fullList;
+
+  const communities = fullList.split(/\s*·\s*/).filter(Boolean);
+  const shown = [];
+  for (const community of communities) {
+    const remaining = communities.length - shown.length - 1;
+    const next = [...shown, community].join(" · ");
+    const suffix = remaining ? ` · +${remaining} more communities` : "";
+    if (next.length + suffix.length > MAX_CANDIDATE_GRAPHIC_TOWNS_LENGTH) break;
+    shown.push(community);
+  }
+
+  if (!shown.length) return "See profile for the full list of towns and wards";
+  if (shown.length === communities.length) return shown.join(" · ");
+  return `${shown.join(" · ")} · +${communities.length - shown.length} more communities`;
+}
+
 function townsFromValue(value = "") {
   if (Array.isArray(value)) return value.flatMap(townsFromValue);
   if (typeof value === "object" && value !== null) {
@@ -227,7 +247,7 @@ function townsFromValue(value = "") {
   }
 
   const text = cleanText(value);
-  const delimiter = /ward/i.test(text) ? /;|\||\s+and\s+/i : /[,;|]|\s+and\s+/i;
+  const delimiter = /;|\||,(?!\s*Ward\b)|\s+and\s+/i;
   return text.split(delimiter).map(cleanText).filter(Boolean);
 }
 
