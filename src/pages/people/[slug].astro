@@ -1,9 +1,11 @@
 ---
 export const prerender = false;
 
+import { env } from "cloudflare:workers";
 import ArticleList from "../../components/ArticleList.astro";
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
+import GlobalTheme from "../../components/GlobalTheme.astro";
 import ProfileViewTracker from "../../components/ProfileViewTracker.astro";
 import SocialGraphicGenerator from "../../components/SocialGraphicGenerator.astro";
 import TopNav from "../../components/TopNav.astro";
@@ -46,6 +48,7 @@ import {
 } from "../../lib/candidatesApi";
 import { isFreeStater, isTpActionAligned } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
+import { profileShareImageUrl, PROFILE_SHARE_HEIGHT, PROFILE_SHARE_WIDTH } from "../../lib/profileSharePreview";
 import { cleanText } from "../../lib/text";
 import { endorsementPillClass } from "../../lib/endorsementPresentation";
 import {
@@ -102,6 +105,16 @@ if (!representative && (!candidateFallback?.filerEntityNumber && !candidateFallb
 const hasLegislatorProfile = Boolean(representative);
 const profileCandidate = candidateFallback || null;
 const canonicalProfileSlug = representative?.slug || profileCandidate?.slug || slug;
+const sharePreviewCapture = Astro.url.searchParams.get("share-preview") === "1";
+let profileRevision = "original";
+try {
+  const profileRow = await env.d1_db?.prepare("SELECT updated_at FROM d1_people WHERE slug = ? LIMIT 1")
+    .bind(canonicalProfileSlug).first();
+  profileRevision = profileRow?.updated_at || profileRevision;
+} catch (error) {
+  console.error(error?.message || "Unable to load profile share revision.");
+}
+const profileShareImage = profileShareImageUrl(canonicalProfileSlug, profileRevision);
 const person = {
   id: representative?.personid || representative?.id || profileCandidate?.personId || profileCandidate?.filerEntityNumber || canonicalProfileSlug,
   full_name: representative?.name || candidateName(profileCandidate) || "Civic Profile",
@@ -951,11 +964,16 @@ function uniqueTowns(towns = []) {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="/nhdb-logo-circle.png" />
     <link rel="apple-touch-icon" href="/nhdb-logo-circle.png" />
-    <meta property="og:image" content="https://nhdeservesbetter.com/nhdb-seo-image.png" />
-    <meta property="og:image:width" content="2048" />
-    <meta property="og:image:height" content="1000" />
+    <meta property="og:type" content="profile" />
+    <meta property="og:title" content={`${person.full_name} | NH Deserves Better`} />
+    <meta property="og:description" content={`Profile, offices, links, and tracked votes for ${person.full_name}.`} />
+    <meta property="og:url" content={`https://nhdeservesbetter.com/people/${canonicalProfileSlug}`} />
+    <meta property="og:image" content={profileShareImage} />
+    <meta property="og:image:width" content={PROFILE_SHARE_WIDTH} />
+    <meta property="og:image:height" content={PROFILE_SHARE_HEIGHT} />
+    <meta property="og:image:alt" content={`Profile overview for ${person.full_name}`} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://nhdeservesbetter.com/nhdb-seo-image.png" />
+    <meta name="twitter:image" content={profileShareImage} />
     <title>{person.full_name} | NH Deserves Better</title>
     <meta
       name="description"
@@ -963,10 +981,10 @@ function uniqueTowns(towns = []) {
     />
   </head>
 
-  <body class="people-profile-page">
-    <TopNav />
+  <body class:list={["people-profile-page", sharePreviewCapture && "profile-share-capture"]}>
+    {sharePreviewCapture ? <GlobalTheme /> : <TopNav />}
     <main class="page">
-      <a class="back" href="/">Back home</a>
+      {!sharePreviewCapture && <a class="back" href="/">Back home</a>}
 
       {error && <p class="status-message error">{error}</p>}
       {message && <p class="status-message success">{message}</p>}
@@ -2366,7 +2384,7 @@ function uniqueTowns(towns = []) {
       </section>
       </div>
     </main>
-    <ProfileViewTracker slug={canonicalProfileSlug} />
+    {!sharePreviewCapture && <ProfileViewTracker slug={canonicalProfileSlug} />}
     <script define:vars={{ recentlyViewedProfile }}>
       const storageKey = "nhdb:recently-viewed-profiles";
       const maxItems = 6;
@@ -2474,13 +2492,44 @@ function uniqueTowns(towns = []) {
         render();
       })();
     </script>
-    <SiteFooter />
+    {!sharePreviewCapture && <SiteFooter />}
   </body>
 </html>
 
 <style>
   :global(body.people-profile-page) {
     background: #d5dde7;
+  }
+
+  :global(body.profile-share-capture) {
+    height: 630px;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  :global(body.profile-share-capture) :global(.party-blind-launcher),
+  :global(body.profile-share-capture) :global(.party-blind-panel) {
+    display: none;
+  }
+
+  :global(body.profile-share-capture) .page {
+    box-sizing: border-box;
+    margin: 0 auto;
+    max-width: 1200px;
+    padding: 0 !important;
+    width: 100%;
+  }
+
+  :global(body.profile-share-capture) .profile-hero {
+    box-sizing: border-box;
+    height: 630px;
+    margin: 0 !important;
+    overflow: hidden;
+    padding: 42px;
+  }
+
+  :global(body.profile-share-capture) .profile-hero > .portrait-card {
+    max-height: 546px;
   }
 
   .back,
