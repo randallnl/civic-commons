@@ -26,6 +26,7 @@ const {
   embedded = false,
   showPeoplePreview = true,
   fetchMissingPreviews = true,
+  showAnchorLinks = false,
 } = Astro.props;
 
 const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
@@ -43,6 +44,11 @@ function socialLinkHost(update = {}) {
   } catch {
     return "facebook.com";
   }
+}
+
+function communityUpdateAnchorId(update = {}) {
+  const id = Number(update.id);
+  return Number.isSafeInteger(id) && id > 0 ? `community-update-${id}` : "";
 }
 ---
 
@@ -129,7 +135,10 @@ function socialLinkHost(update = {}) {
   {updateCards.length ? (
     <div class="community-update-list">
       {updateCards.map((update) => (
-        <article class:list={["community-update-card", (update.photoUrls?.length || update.linkUrl) && "has-media"]}>
+        <article
+          id={showAnchorLinks ? communityUpdateAnchorId(update) || undefined : undefined}
+          class:list={["community-update-card", (update.photoUrls?.length || update.linkUrl) && "has-media"]}
+        >
           {(update.linkUrl || update.photoUrls?.length > 0) && (
             <div class="community-update-media">
               {update.galleryPhotoUrls?.length > 0 && (
@@ -265,6 +274,13 @@ function socialLinkHost(update = {}) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >View archived copy</a>
+                )}
+                {showAnchorLinks && communityUpdateAnchorId(update) && (
+                  <a
+                    class="community-update-anchor-link"
+                    href={`${Astro.url.pathname}#${communityUpdateAnchorId(update)}`}
+                    aria-label={`Link to ${cleanText(update.displayName || "community member")}'s community update`}
+                  >Link to update</a>
                 )}
               </span>
             </div>
@@ -667,6 +683,12 @@ function socialLinkHost(update = {}) {
     display: grid;
     gap: 14px;
     padding: 16px;
+    scroll-margin-top: 24px;
+  }
+
+  .community-update-card:target {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
   }
 
   .community-update-card.has-media {
@@ -962,6 +984,18 @@ function socialLinkHost(update = {}) {
     color: #1d4ed8;
     font-size: 0.72rem;
     text-decoration: underline;
+  }
+
+  .community-update-meta .community-update-anchor-link {
+    color: #475569;
+    font-size: 0.72rem;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .community-update-meta .community-update-anchor-link:hover,
+  .community-update-meta .community-update-anchor-link:focus-visible {
+    color: #1d4ed8;
   }
 
   .community-update-list p,
