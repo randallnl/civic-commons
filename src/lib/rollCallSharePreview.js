@@ -10,6 +10,7 @@ export const ROLL_CALL_SHARE_FALLBACK = PROFILE_SHARE_FALLBACK;
 export const ROLL_CALL_SHARE_ORIGIN = PROFILE_SHARE_ORIGIN;
 export const ROLL_CALL_SHARE_WIDTH = PROFILE_SHARE_WIDTH;
 export const ROLL_CALL_SHARE_HEIGHT = PROFILE_SHARE_HEIGHT;
+export const ROLL_CALL_SHARE_RENDER_VERSION = "v2";
 
 export function normalizeRollCallBillCode(value = "") {
   return String(value || "").trim().toUpperCase().replace(/\s+/g, "");
@@ -34,7 +35,7 @@ export function validRollCallYear(value) {
 }
 
 export function rollCallShareRevision(value) {
-  return profileShareRevision(value);
+  return `${ROLL_CALL_SHARE_RENDER_VERSION}-${profileShareRevision(value)}`;
 }
 
 export function rollCallShareImageUrl(billCode, sequence, year, revision) {

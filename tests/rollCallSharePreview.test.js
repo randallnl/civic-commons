@@ -14,11 +14,11 @@ test("roll call share previews use canonical bill, sequence, year, and revision 
   assert.equal(normalizeRollCallBillCode("hb 1132"), "HB1132");
   assert.equal(
     rollCallShareImageUrl("hb 1132", "154", "2026", "2026-03-12 10:30:00"),
-    "https://nhdeservesbetter.com/api/roll-call-preview/HB1132/154?year=2026&v=2026-03-12-10-30-00",
+    "https://nhdeservesbetter.com/api/roll-call-preview/HB1132/154?year=2026&v=v2-2026-03-12-10-30-00",
   );
   assert.equal(
     rollCallShareStorageKey("HB1132", 154, 2026, "2026-03-12 10:30:00"),
-    "roll-call-share-previews/2026/HB1132/154/2026-03-12-10-30-00.jpg",
+    "roll-call-share-previews/2026/HB1132/154/v2-2026-03-12-10-30-00.jpg",
   );
 });
 

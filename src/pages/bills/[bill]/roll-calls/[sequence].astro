@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 
-import { billDetailPath, getRollCallVotes } from "../../../../lib/billsApi";
+import { billDetailPath, getRollCallVotes, positionCounts } from "../../../../lib/billsApi";
 import TopNav from "../../../../components/TopNav.astro";
 import SiteFooter from "../../../../components/SiteFooter.astro";
 import FilterBar from "../../../../components/FilterBar.astro";
@@ -51,6 +51,12 @@ const voteFilters = groupedVotes.map((group) => ({
 }));
 const countyFilters = groupByValue(votes, (vote) => cleanText(vote.county || ""));
 const testimonyPosition = testimonyPositionForBill(bill);
+const testimonyCounts = positionCounts(bill || {});
+const testimonyTotal = Math.max(
+  testimonyCounts.total,
+  testimonyCounts.support + testimonyCounts.oppose + testimonyCounts.neutral,
+);
+const testimonySummaryLabel = publicTestimonySummaryLabel(testimonyCounts);
 const shareBillCode = bill?.condensedbillno || billCode;
 const shareYear = String(bill?.sessionyear || year || "");
 const shareRevision =
@@ -182,6 +188,17 @@ function testimonyPositionForBill(bill = {}) {
   if (margin <= 0.1) return "";
 
   return support > oppose ? "support" : "oppose";
+}
+
+function publicTestimonySummaryLabel(counts = {}) {
+  const support = Math.max(0, Number(counts.support || 0));
+  const oppose = Math.max(0, Number(counts.oppose || 0));
+  const neutral = Math.max(0, Number(counts.neutral || 0));
+  if (support + oppose + neutral === 0) return "No public testimony";
+  if (support === oppose) return "Support and opposition are evenly divided";
+  return support > oppose
+    ? "More testimony supports this bill"
+    : "More testimony opposes this bill";
 }
 
 function inferredBillPosition(vote = {}, motion = "") {
@@ -321,24 +338,50 @@ function slugify(value = "") {
             </div>
           </section>
 
-          <section class="count-grid">
-            <article>
-              <span>Yeas</span>
-              <strong>{rollCall.yeas}</strong>
-            </article>
-            <article>
-              <span>Nays</span>
-              <strong>{rollCall.nays}</strong>
-            </article>
-            <article>
-              <span>Present</span>
-              <strong>{rollCall.present}</strong>
-            </article>
-            <article>
-              <span>Absent</span>
-              <strong>{rollCall.absent}</strong>
-            </article>
-          </section>
+          <div class:list={["roll-call-summary-row", sharePreviewCapture && "with-testimony-summary"]}>
+            <section class="count-grid">
+              <article>
+                <span>Yeas</span>
+                <strong>{rollCall.yeas}</strong>
+              </article>
+              <article>
+                <span>Nays</span>
+                <strong>{rollCall.nays}</strong>
+              </article>
+              <article>
+                <span>Present</span>
+                <strong>{rollCall.present}</strong>
+              </article>
+              <article>
+                <span>Absent</span>
+                <strong>{rollCall.absent}</strong>
+              </article>
+            </section>
+
+            {sharePreviewCapture && (
+              <section class="testimony-share-summary" aria-label="Public testimony summary">
+                <div>
+                  <p class="eyebrow">Public Testimony</p>
+                  <strong>{testimonySummaryLabel}</strong>
+                  <small>{testimonyTotal} submitted positions</small>
+                </div>
+                <dl>
+                  <div class="support">
+                    <dt>Support</dt>
+                    <dd>{testimonyCounts.support}</dd>
+                  </div>
+                  <div class="oppose">
+                    <dt>Oppose</dt>
+                    <dd>{testimonyCounts.oppose}</dd>
+                  </div>
+                  <div class="neutral">
+                    <dt>Neutral</dt>
+                    <dd>{testimonyCounts.neutral}</dd>
+                  </div>
+                </dl>
+              </section>
+            )}
+          </div>
 
           <section class:list={["panel", "vote-browser", sharePreviewCapture && "share-preview-hidden"]} data-roll-call-browser>
             <div class="section-heading split-heading">
@@ -583,8 +626,94 @@ function slugify(value = "") {
     margin-bottom: 0;
   }
 
+  :global(body.roll-call-share-capture) .roll-call-summary-row {
+    align-items: stretch;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.9fr);
+  }
+
   :global(body.roll-call-share-capture) .count-grid article {
     padding: 20px;
+  }
+
+  .testimony-share-summary {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 18px;
+  }
+
+  .testimony-share-summary .eyebrow {
+    margin-bottom: 7px;
+  }
+
+  .testimony-share-summary strong,
+  .testimony-share-summary small {
+    display: block;
+  }
+
+  .testimony-share-summary strong {
+    font-size: 1rem;
+    line-height: 1.2;
+    max-width: 230px;
+  }
+
+  .testimony-share-summary small {
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 850;
+    margin-top: 6px;
+  }
+
+  .testimony-share-summary dl {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .testimony-share-summary dl div {
+    align-items: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    min-width: 116px;
+    padding: 5px 9px;
+  }
+
+  .testimony-share-summary dt {
+    font-size: 0.68rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .testimony-share-summary dd {
+    font-size: 0.92rem;
+    font-weight: 950;
+    margin: 0;
+  }
+
+  .testimony-share-summary .support {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+  }
+
+  .testimony-share-summary .oppose {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
+  }
+
+  .testimony-share-summary .neutral {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
   }
 
   .share-brand {
