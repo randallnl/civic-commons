@@ -783,6 +783,21 @@ function slugify(value = "") {
     flex-wrap: wrap;
   }
 
+  @media (min-width: 960px) {
+    .vote-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .vote-list .candidate-heading {
+      display: grid;
+    }
+
+    .vote-list .vote-pill {
+      justify-self: start;
+      max-width: 100%;
+    }
+  }
+
   .hero-meta span {
     background: #f8fafc;
     border: 1px solid #d1d5db;

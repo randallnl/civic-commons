@@ -4,6 +4,7 @@ export const prerender = false;
 import BillPositionSummary from "../../components/BillPositionSummary.astro";
 import ArticleList from "../../components/ArticleList.astro";
 import CommunityUpdates from "../../components/CommunityUpdates.astro";
+import GlobalTheme from "../../components/GlobalTheme.astro";
 import TopNav from "../../components/TopNav.astro";
 import SiteFooter from "../../components/SiteFooter.astro";
 import { ExternalLink } from "@lucide/astro";
@@ -12,9 +13,15 @@ import { getBillDetail, getBillTestimony, positionCounts, rollCallPath } from ".
 import { getOrganizations, organizationPath } from "../../lib/organizationsApi";
 import { cleanText } from "../../lib/text";
 import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
+import {
+  BILL_SHARE_HEIGHT,
+  BILL_SHARE_WIDTH,
+  billShareImageUrl,
+} from "../../lib/billSharePreview";
 
 const billCode = Astro.params.bill || "";
 const year = Astro.url.searchParams.get("year")?.trim() || "";
+const sharePreviewCapture = Astro.url.searchParams.get("share-preview") === "1";
 const adminSession = await currentAdminSession(Astro.request);
 
 let bill = null;
@@ -44,6 +51,11 @@ try {
 }
 
 const testimonyCounts = positionCounts(bill || {});
+const testimonyTotal = Math.max(
+  testimonyCounts.total,
+  testimonyCounts.support + testimonyCounts.oppose + testimonyCounts.neutral,
+);
+const testimonySummaryLabel = publicTestimonySummaryLabel(testimonyCounts);
 const sortedRollCalls = [...rollCalls].sort((first, second) => {
   const firstDate = new Date(first.votedate || first.statusdate || 0).getTime() || 0;
   const secondDate = new Date(second.votedate || second.statusdate || 0).getTime() || 0;
@@ -62,6 +74,27 @@ const billEntityKey = bill
 const billEntityName = bill
   ? `${bill.condensedbillno || billCode}: ${billTitle()}`
   : billCode;
+const shareBillCode = bill?.condensedbillno || billCode;
+const shareYear = String(bill?.sessionyear || year || "");
+const shareRevision =
+  bill?.updated_at ||
+  bill?.last_updated ||
+  bill?.statusdate ||
+  shareYear;
+const billShareImage = billShareImageUrl(shareBillCode, shareYear, shareRevision);
+const billShareUrl = new URL(Astro.url.pathname, "https://nhdeservesbetter.com");
+if (shareYear) billShareUrl.searchParams.set("year", shareYear);
+const shareBillHeading = billTitle();
+const billShareTitle = `${
+  shareBillHeading &&
+  shareBillHeading !== shareBillCode &&
+  !shareBillHeading.toUpperCase().startsWith(`${shareBillCode.toUpperCase()}:`)
+    ? `${shareBillCode}: ${shareBillHeading}`
+    : shareBillHeading || shareBillCode
+} | NH Deserves Better`;
+const billShareDescription = cleanText(
+  bill?.summary || trackedBill?.summary || billTitle() || `Bill details for ${shareBillCode}.`,
+);
 
 function formatDate(value) {
   if (!value) return "";
@@ -127,6 +160,17 @@ function commentsForBill(organizations = [], code = "") {
       .map((comment) => ({ ...comment, organization })),
   );
 }
+
+function publicTestimonySummaryLabel(counts = {}) {
+  const support = Math.max(0, Number(counts.support || 0));
+  const oppose = Math.max(0, Number(counts.oppose || 0));
+  const neutral = Math.max(0, Number(counts.neutral || 0));
+  if (support + oppose + neutral === 0) return "No public testimony";
+  if (support === oppose) return "Support and opposition are evenly divided";
+  return support > oppose
+    ? "More testimony supports this bill"
+    : "More testimony opposes this bill";
+}
 ---
 
 <html lang="en">
@@ -135,28 +179,41 @@ function commentsForBill(organizations = [], code = "") {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="/nhdb-logo-circle.png" />
     <link rel="apple-touch-icon" href="/nhdb-logo-circle.png" />
-    <meta property="og:image" content="https://nhdeservesbetter.com/nhdb-seo-image.png" />
-    <meta property="og:image:width" content="2048" />
-    <meta property="og:image:height" content="1000" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content={billShareTitle} />
+    <meta property="og:description" content={billShareDescription} />
+    <meta property="og:url" content={billShareUrl.toString()} />
+    <meta property="og:image" content={billShareImage} />
+    <meta property="og:image:width" content={BILL_SHARE_WIDTH} />
+    <meta property="og:image:height" content={BILL_SHARE_HEIGHT} />
+    <meta property="og:image:alt" content={`Bill summary for ${shareBillCode}`} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://nhdeservesbetter.com/nhdb-seo-image.png" />
-    <title>{billTitle()} | NH Deserves Better</title>
+    <meta name="twitter:title" content={billShareTitle} />
+    <meta name="twitter:description" content={billShareDescription} />
+    <meta name="twitter:image" content={billShareImage} />
+    <title>{billShareTitle}</title>
     <meta
       name="description"
-      content={`Bill details and testimony for ${bill?.condensedbillno || billCode}.`}
+      content={billShareDescription}
     />
   </head>
 
-  <body>
-    <TopNav />
-    <main class="page">
-      <a class="back" href="/bills">Back to bills</a>
+  <body class:list={[sharePreviewCapture && "bill-share-capture"]}>
+    {sharePreviewCapture ? <GlobalTheme /> : <TopNav />}
+    <main class:list={["page", sharePreviewCapture && "bill-share-shell"]}>
+      {!sharePreviewCapture && <a class="back" href="/bills">Back to bills</a>}
 
       {error ? (
         <p class="status-message">{error}</p>
       ) : bill ? (
         <>
           <section class="hero">
+            {sharePreviewCapture && (
+              <div class="share-brand">
+                <img src="/nhdb-logo-circle.png" alt="" width="46" height="46" />
+                <span>NH Deserves Better</span>
+              </div>
+            )}
             <p class="eyebrow">Bill Detail</p>
             <h1>{bill.condensedbillno}</h1>
             <h2>{billTitle()}</h2>
@@ -178,7 +235,30 @@ function commentsForBill(organizations = [], code = "") {
             )}
           </section>
 
-          {adminSession && (
+          {sharePreviewCapture && (
+            <section class="bill-share-summary-row">
+              <article class="latest-action panel">
+                <p class="eyebrow">Latest Action</p>
+                <h2>{bill.description || "No action returned."}</h2>
+                {bill.statusdate && <span>{formatDate(bill.statusdate)}</span>}
+              </article>
+
+              <article class="testimony-share-summary panel" aria-label="Public testimony summary">
+                <div>
+                  <p class="eyebrow">Public Testimony</p>
+                  <strong>{testimonySummaryLabel}</strong>
+                  <small>{testimonyTotal} submitted positions</small>
+                </div>
+                <dl>
+                  <div class="support"><dt>Support</dt><dd>{testimonyCounts.support}</dd></div>
+                  <div class="oppose"><dt>Oppose</dt><dd>{testimonyCounts.oppose}</dd></div>
+                  <div class="neutral"><dt>Neutral</dt><dd>{testimonyCounts.neutral}</dd></div>
+                </dl>
+              </article>
+            </section>
+          )}
+
+          {!sharePreviewCapture && adminSession && (
             <section class="panel admin-bill-panel">
               <div class="section-heading">
                 <p class="eyebrow">Admin</p>
@@ -224,7 +304,7 @@ function commentsForBill(organizations = [], code = "") {
             </section>
           )}
 
-          <section class="overview-grid">
+          <section class:list={["overview-grid", sharePreviewCapture && "share-preview-hidden"]}>
             <article class="latest-action panel">
               <p class="eyebrow">Latest Action</p>
               <h2>{bill.description || "No action returned."}</h2>
@@ -244,7 +324,7 @@ function commentsForBill(organizations = [], code = "") {
             </article>
           </section>
 
-          <section class="vote-summary-grid">
+          <section class:list={["vote-summary-grid", sharePreviewCapture && "share-preview-hidden"]}>
             <section class="panel roll-panel">
               <div class="section-heading">
                 <p class="eyebrow">Votes</p>
@@ -415,7 +495,7 @@ function commentsForBill(organizations = [], code = "") {
             </section>
           </section>
 
-          <section class="content-grid">
+          <section class:list={["content-grid", sharePreviewCapture && "share-preview-hidden"]}>
             <div class="stack">
               <section class="panel">
                 <div class="section-heading">
@@ -501,22 +581,179 @@ function commentsForBill(organizations = [], code = "") {
             </section>
           </section>
 
-          <CommunityUpdates
-            entityType="bill"
-            entityKey={billEntityKey}
-            entityName={billEntityName}
-            pageUrl={currentPath}
-          />
+          {!sharePreviewCapture && (
+            <CommunityUpdates
+              entityType="bill"
+              entityKey={billEntityKey}
+              entityName={billEntityName}
+              pageUrl={currentPath}
+            />
+          )}
         </>
       ) : (
         <p class="status-message">Bill not found.</p>
       )}
     </main>
-    <SiteFooter />
+    {!sharePreviewCapture && <SiteFooter />}
   </body>
 </html>
 
 <style>
+  :global(body.bill-share-capture) {
+    background: linear-gradient(145deg, #eef4fb, #d5dde7);
+    margin: 0;
+    overflow: hidden;
+  }
+
+  :global(body.bill-share-capture) .bill-share-shell {
+    box-sizing: border-box;
+    height: 630px;
+    margin: 0 auto;
+    max-width: 1200px;
+    overflow: hidden;
+    padding: 28px 38px !important;
+    width: 100%;
+  }
+
+  :global(body.bill-share-capture) .hero {
+    padding: 0 0 18px;
+  }
+
+  :global(body.bill-share-capture) .hero h1 {
+    font-size: 4.25rem;
+    margin-bottom: 9px;
+  }
+
+  :global(body.bill-share-capture) .hero h2 {
+    display: -webkit-box;
+    font-size: 2rem;
+    line-height: 1.08;
+    margin-bottom: 9px;
+    max-width: 1120px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  :global(body.bill-share-capture) .hero > p:not(.eyebrow) {
+    display: -webkit-box;
+    font-size: 0.96rem;
+    line-height: 1.35;
+    margin: 7px 0 10px;
+    max-width: 1080px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .share-brand {
+    align-items: center;
+    display: flex;
+    font-size: 1.05rem;
+    font-weight: 950;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .share-brand img {
+    border-radius: 8px;
+  }
+
+  .bill-share-summary-row {
+    align-items: stretch;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.8fr);
+  }
+
+  .bill-share-summary-row .panel {
+    padding: 18px;
+  }
+
+  .bill-share-summary-row .latest-action h2 {
+    display: -webkit-box;
+    font-size: 1.08rem;
+    line-height: 1.28;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .testimony-share-summary {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .testimony-share-summary strong,
+  .testimony-share-summary small {
+    display: block;
+  }
+
+  .testimony-share-summary strong {
+    font-size: 1rem;
+    line-height: 1.2;
+    max-width: 225px;
+  }
+
+  .testimony-share-summary small {
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 850;
+    margin-top: 6px;
+  }
+
+  .testimony-share-summary dl {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .testimony-share-summary dl div {
+    align-items: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    min-width: 116px;
+    padding: 5px 9px;
+  }
+
+  .testimony-share-summary dt {
+    font-size: 0.68rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .testimony-share-summary dd {
+    font-size: 0.92rem;
+    font-weight: 950;
+    margin: 0;
+  }
+
+  .testimony-share-summary .support {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+  }
+
+  .testimony-share-summary .oppose {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
+  }
+
+  .testimony-share-summary .neutral {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
+  }
+
+  .share-preview-hidden {
+    display: none !important;
+  }
+
   .back,
   a {
     color: #1f2933;
