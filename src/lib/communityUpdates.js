@@ -24,7 +24,8 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_updates (
   archive_status TEXT,
   archive_error TEXT,
   archived_at TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 )`;
 
 const MENTIONS_TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_update_mentions (
@@ -82,6 +83,7 @@ export async function ensureCommunityUpdatesTable(db = communityUpdatesDb()) {
   await addColumnIfMissing(db, "community_updates", "archive_status", "TEXT");
   await addColumnIfMissing(db, "community_updates", "archive_error", "TEXT");
   await addColumnIfMissing(db, "community_updates", "archived_at", "TEXT");
+  await addColumnIfMissing(db, "community_updates", "updated_at", "TEXT");
   await addColumnIfMissing(db, "community_update_mentions", "person_id", "INTEGER");
   await addColumnIfMissing(db, "community_update_mentions", "filer_entity_number", "TEXT");
   await addColumnIfMissing(db, "community_update_mentions", "path", "TEXT");
@@ -118,7 +120,7 @@ export async function getApprovedCommunityUpdates(entityType, entityKey, { limit
       `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
               comment, link_url, photo_url, archive_source_url,
               archive_screenshot_url, archive_status, archive_error, archived_at,
-              created_at
+              created_at, updated_at
        FROM community_updates
        WHERE entity_type = ?
          AND entity_key = ?
@@ -132,11 +134,42 @@ export async function getApprovedCommunityUpdates(entityType, entityKey, { limit
   return hydrateUpdatePhotosAndMentions((result.results || []).map(normalizeUpdate), db);
 }
 
-export async function getRecentApprovedCommunityUpdates({ limit = 6 } = {}) {
+export async function getApprovedCommunityUpdate(
+  entityType,
+  entityKey,
+  updateId,
+  db = communityUpdatesDb(),
+) {
+  const id = Number(updateId);
+  if (!db || !entityType || !entityKey || !Number.isSafeInteger(id) || id < 1) return null;
+
+  await ensureCommunityUpdatesTable(db);
+  const update = await db
+    .prepare(
+      `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
+              comment, link_url, photo_url, archive_source_url,
+              archive_screenshot_url, archive_status, archive_error, archived_at,
+              created_at, updated_at
+       FROM community_updates
+       WHERE id = ?
+         AND entity_type = ?
+         AND entity_key = ?
+         AND status = 'approved'
+       LIMIT 1`,
+    )
+    .bind(id, entityType, String(entityKey))
+    .first();
+
+  if (!update) return null;
+  const [hydrated] = await hydrateUpdatePhotosAndMentions([normalizeUpdate(update)], db);
+  return hydrated || null;
+}
+
+export async function getRecentApprovedCommunityUpdates({ limit = 6, ensureSchema = true } = {}) {
   const db = communityUpdatesDb();
   if (!db) return [];
 
-  await ensureCommunityUpdatesTable(db);
+  if (ensureSchema) await ensureCommunityUpdatesTable(db);
 
   const result = await db
     .prepare(
@@ -168,7 +201,7 @@ export async function getPendingCommunityUpdates({ limit = 25 } = {}) {
               assigned_to, moderator_note, workflow_updated_at, response_status,
               response_note, response_sent_at, archive_source_url,
               archive_screenshot_url, archive_status, archive_error, archived_at,
-              created_at
+              created_at, updated_at
        FROM community_updates
        WHERE status = 'pending'
        ORDER BY created_at ASC
@@ -226,6 +259,7 @@ export function normalizeUpdate(update = {}) {
     archiveError: cleanText(update.archive_error || update.archiveError || ""),
     archivedAt: update.archived_at || update.archivedAt || "",
     createdAt: update.created_at || update.createdAt || "",
+    updatedAt: update.updated_at || update.updatedAt || update.created_at || update.createdAt || "",
     ...normalizeWorkflowFields(update),
   };
 }

@@ -49,7 +49,15 @@ import {
 } from "../../lib/candidatesApi";
 import { isFreeStater, isTpActionAligned } from "../../lib/civicTags";
 import { profilePhotoUrl } from "../../lib/photos";
-import { profileShareImageUrl, PROFILE_SHARE_HEIGHT, PROFILE_SHARE_WIDTH } from "../../lib/profileSharePreview";
+import {
+  communityUpdateShareImageUrl,
+  profileShareImageUrl,
+  PROFILE_SHARE_HEIGHT,
+  PROFILE_SHARE_ORIGIN,
+  PROFILE_SHARE_WIDTH,
+  validCommunityUpdateId,
+} from "../../lib/profileSharePreview";
+import { getApprovedCommunityUpdate } from "../../lib/communityUpdates";
 import { cleanText } from "../../lib/text";
 import { endorsementPillClass } from "../../lib/endorsementPresentation";
 import {
@@ -111,7 +119,8 @@ const formerCandidacyLabel = profileCandidate?.candidacyStatus === "lost_primary
   ? "Lost 2026 primary"
   : "No longer a candidate";
 const canonicalProfileSlug = representative?.slug || profileCandidate?.slug || slug;
-const sharePreviewCapture = Astro.url.searchParams.get("share-preview") === "1";
+const requestedCommunityUpdateId = validCommunityUpdateId(Astro.url.searchParams.get("update"));
+const profileShareCapture = Astro.url.searchParams.get("share-preview") === "1";
 let profileRevision = "original";
 try {
   const profileRow = await env.d1_db?.prepare("SELECT updated_at FROM d1_people WHERE slug = ? LIMIT 1")
@@ -120,7 +129,6 @@ try {
 } catch (error) {
   console.error(error?.message || "Unable to load profile share revision.");
 }
-const profileShareImage = profileShareImageUrl(canonicalProfileSlug, profileRevision);
 const person = {
   id: representative?.personid || representative?.id || profileCandidate?.personId || profileCandidate?.filerEntityNumber || canonicalProfileSlug,
   full_name: representative?.name || candidateName(profileCandidate) || "Civic Profile",
@@ -148,6 +156,40 @@ const profileUrlAliases =
   profileCandidate?.profile_url_aliases ||
   "";
 const representativeEntityKey = representative?.personid || representative?.id || canonicalProfileSlug;
+const communityUpdateEntityType = hasLegislatorProfile ? "representative" : "candidate";
+const communityUpdateEntityKey = hasLegislatorProfile
+  ? representativeEntityKey
+  : profileCandidate?.filerEntityNumber || canonicalProfileSlug;
+let sharedCommunityUpdate = null;
+if (requestedCommunityUpdateId) {
+  try {
+    sharedCommunityUpdate = await getApprovedCommunityUpdate(
+      communityUpdateEntityType,
+      communityUpdateEntityKey,
+      requestedCommunityUpdateId,
+    );
+  } catch (error) {
+    console.error(error?.message || "Unable to load the shared community update.");
+  }
+}
+const communityUpdateShareCapture = Astro.url.searchParams.get("share-preview") === "update" && Boolean(sharedCommunityUpdate);
+const sharePreviewCapture = profileShareCapture || communityUpdateShareCapture;
+const profileShareImage = sharedCommunityUpdate
+  ? communityUpdateShareImageUrl(
+      canonicalProfileSlug,
+      requestedCommunityUpdateId,
+      sharedCommunityUpdate.updatedAt || sharedCommunityUpdate.createdAt,
+    )
+  : profileShareImageUrl(canonicalProfileSlug, profileRevision);
+const profileShareUrl = sharedCommunityUpdate
+  ? `${PROFILE_SHARE_ORIGIN}/people/${canonicalProfileSlug}?update=${requestedCommunityUpdateId}#community-update-${requestedCommunityUpdateId}`
+  : `${PROFILE_SHARE_ORIGIN}/people/${canonicalProfileSlug}`;
+const profileShareTitle = sharedCommunityUpdate
+  ? `Community update about ${person.full_name} | NH Deserves Better`
+  : `${person.full_name} | NH Deserves Better`;
+const profileShareDescription = sharedCommunityUpdate?.comment
+  ? sharedCommunityUpdate.comment.slice(0, 220)
+  : `Profile, offices, links, and tracked votes for ${person.full_name}.`;
 const trackedVotesHref = `/people/${canonicalProfileSlug}/votes`;
 
 const apiTerm = representative
@@ -970,26 +1012,50 @@ function uniqueTowns(towns = []) {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="/nhdb-logo-circle.png" />
     <link rel="apple-touch-icon" href="/nhdb-logo-circle.png" />
-    <meta property="og:type" content="profile" />
-    <meta property="og:title" content={`${person.full_name} | NH Deserves Better`} />
-    <meta property="og:description" content={`Profile, offices, links, and tracked votes for ${person.full_name}.`} />
-    <meta property="og:url" content={`https://nhdeservesbetter.com/people/${canonicalProfileSlug}`} />
+    <meta property="og:type" content={sharedCommunityUpdate ? "article" : "profile"} />
+    <meta property="og:title" content={profileShareTitle} />
+    <meta property="og:description" content={profileShareDescription} />
+    <meta property="og:url" content={profileShareUrl} />
     <meta property="og:image" content={profileShareImage} />
     <meta property="og:image:width" content={PROFILE_SHARE_WIDTH} />
     <meta property="og:image:height" content={PROFILE_SHARE_HEIGHT} />
-    <meta property="og:image:alt" content={`Profile overview for ${person.full_name}`} />
+    <meta property="og:image:alt" content={sharedCommunityUpdate ? `Community update about ${person.full_name}` : `Profile overview for ${person.full_name}`} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content={profileShareImage} />
-    <title>{person.full_name} | NH Deserves Better</title>
+    <title>{profileShareTitle}</title>
     <meta
       name="description"
-      content={`Profile, offices, links, and tracked votes for ${person.full_name}.`}
+      content={profileShareDescription}
     />
   </head>
 
-  <body class:list={["people-profile-page", sharePreviewCapture && "profile-share-capture"]}>
+  <body class:list={["people-profile-page", sharePreviewCapture && "profile-share-capture", communityUpdateShareCapture && "community-update-share-capture"]}>
     {sharePreviewCapture ? <GlobalTheme /> : <TopNav />}
     <main class="page">
+      {communityUpdateShareCapture && (
+        <section class="community-update-share-shell" aria-label={`Community update about ${person.full_name}`}>
+          <header>
+            <div>
+              <span>NH Deserves Better</span>
+              <small>Community update about</small>
+              <h1>{person.full_name}</h1>
+            </div>
+            <strong>Community context</strong>
+          </header>
+          <CommunityUpdates
+            entityType={communityUpdateEntityType}
+            entityKey={communityUpdateEntityKey}
+            entityName={person.full_name}
+            pageUrl={Astro.url.pathname}
+            variant="narrow"
+            embedded={true}
+            showPeoplePreview={false}
+            fetchMissingPreviews={false}
+            showAnchorLinks={false}
+            sharePreviewUpdateId={requestedCommunityUpdateId}
+          />
+        </section>
+      )}
       {!sharePreviewCapture && <a class="back" href="/">Back home</a>}
 
       {error && <p class="status-message error">{error}</p>}
@@ -2348,15 +2414,15 @@ function uniqueTowns(towns = []) {
                 aria-labelledby="context-tab-submissions-label"
               >
                 <CommunityUpdates
-                  entityType={hasLegislatorProfile ? "representative" : "candidate"}
-                  entityKey={hasLegislatorProfile ? representativeEntityKey : profileCandidate?.filerEntityNumber || canonicalProfileSlug}
+                  entityType={communityUpdateEntityType}
+                  entityKey={communityUpdateEntityKey}
                   entityName={person.full_name}
                   pageUrl={Astro.url.pathname}
                   variant="narrow"
                   embedded={true}
                   showPeoplePreview={false}
                   fetchMissingPreviews={false}
-                  showAnchorLinks={true}
+                  showAnchorLinks={!communityUpdateShareCapture}
                 />
               </div>
 
@@ -2538,6 +2604,59 @@ function uniqueTowns(towns = []) {
 
   :global(body.profile-share-capture) .profile-hero > .portrait-card {
     max-height: 546px;
+  }
+
+  :global(body.community-update-share-capture) .page > :not(.community-update-share-shell) {
+    display: none !important;
+  }
+
+  .community-update-share-shell {
+    background: linear-gradient(145deg, #eef4fb, #d5dde7);
+    box-sizing: border-box;
+    display: grid;
+    gap: 18px;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 630px;
+    overflow: hidden;
+    padding: 28px 34px;
+  }
+
+  .community-update-share-shell > header {
+    align-items: end;
+    display: flex;
+    gap: 24px;
+    justify-content: space-between;
+  }
+
+  .community-update-share-shell > header div {
+    display: grid;
+    gap: 2px;
+  }
+
+  .community-update-share-shell > header span,
+  .community-update-share-shell > header > strong {
+    color: #6b4f2a;
+    font-size: 0.78rem;
+    font-weight: 950;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .community-update-share-shell > header small {
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 900;
+  }
+
+  .community-update-share-shell > header h1 {
+    color: #1f2933;
+    font-size: 2rem;
+    line-height: 1;
+    margin: 0;
+  }
+
+  .community-update-share-shell :global(.community-updates-panel) {
+    min-height: 0;
   }
 
   .back,
@@ -4080,6 +4199,12 @@ function uniqueTowns(towns = []) {
     background: #eef2f7;
     border-color: #94a3b8;
     color: #334155;
+  }
+
+  .endorsement-topline span.oppose {
+    border-color: rgba(185, 28, 28, 0.24);
+    background: rgba(254, 226, 226, 0.88);
+    color: #991b1b;
   }
 
   .endorsement-preview {

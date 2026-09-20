@@ -4,16 +4,24 @@ export const prerender = false;
 import { billDetailPath, getRollCallVotes } from "../../../../lib/billsApi";
 import TopNav from "../../../../components/TopNav.astro";
 import SiteFooter from "../../../../components/SiteFooter.astro";
+import FilterBar from "../../../../components/FilterBar.astro";
+import GlobalTheme from "../../../../components/GlobalTheme.astro";
 import profileIcon from "../../../../assets/profile icon.png";
 import { FREE_STATE_ALIGNED_TOOLTIP, TPACTION_ALIGNED_TOOLTIP } from "../../../../lib/alignmentTags";
 import { isFreeStater, isTpActionAligned } from "../../../../lib/civicTags";
 import { profilePhotoUrl } from "../../../../lib/photos";
 import { cleanText } from "../../../../lib/text";
 import { getTrackedBills, normalizeBillCode } from "../../../../lib/trackedBills";
+import {
+  ROLL_CALL_SHARE_HEIGHT,
+  ROLL_CALL_SHARE_WIDTH,
+  rollCallShareImageUrl,
+} from "../../../../lib/rollCallSharePreview";
 
 const billCode = Astro.params.bill || "";
 const sequence = Astro.params.sequence || "";
 const year = Astro.url.searchParams.get("year")?.trim() || "";
+const sharePreviewCapture = Astro.url.searchParams.get("share-preview") === "1";
 
 let bill = null;
 let rollCall = null;
@@ -43,6 +51,26 @@ const voteFilters = groupedVotes.map((group) => ({
 }));
 const countyFilters = groupByValue(votes, (vote) => cleanText(vote.county || ""));
 const testimonyPosition = testimonyPositionForBill(bill);
+const shareBillCode = bill?.condensedbillno || billCode;
+const shareYear = String(bill?.sessionyear || year || "");
+const shareRevision =
+  rollCall?.votedate ||
+  rollCall?.updated_at ||
+  bill?.updated_at ||
+  bill?.last_updated ||
+  shareYear;
+const rollCallShareImage = rollCallShareImageUrl(
+  shareBillCode,
+  sequence,
+  shareYear,
+  shareRevision,
+);
+const rollCallShareUrl = new URL(Astro.url.pathname, "https://nhdeservesbetter.com");
+if (shareYear) rollCallShareUrl.searchParams.set("year", shareYear);
+const rollCallShareTitle = `Roll Call ${sequence} | ${shareBillCode} | NH Deserves Better`;
+const rollCallShareDescription = cleanText(
+  trackedBill?.name || rollCall?.question_motion || `Roll call votes for ${shareBillCode}.`,
+);
 
 function isListedLegislatorVote(vote = {}) {
   return Boolean(
@@ -122,7 +150,6 @@ function bodyLabel(value = "") {
 }
 
 function districtLine(vote = {}) {
-  const party = partyInitial(vote.party);
   const chamber = bodyLabel(vote.legislativebody || vote.chamber);
   const district = vote.district || vote.raw_district || "";
   const districtText =
@@ -134,7 +161,7 @@ function districtLine(vote = {}) {
           ? `${chamber} District ${district}`
           : chamber;
 
-  return [party, districtText].filter(Boolean).join(" - ");
+  return districtText;
 }
 
 function townsLine(vote = {}) {
@@ -241,32 +268,48 @@ function slugify(value = "") {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="/nhdb-logo-circle.png" />
     <link rel="apple-touch-icon" href="/nhdb-logo-circle.png" />
-    <meta property="og:image" content="https://nhdeservesbetter.com/nhdb-seo-image.png" />
-    <meta property="og:image:width" content="2048" />
-    <meta property="og:image:height" content="1000" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content={rollCallShareTitle} />
+    <meta property="og:description" content={rollCallShareDescription} />
+    <meta property="og:url" content={rollCallShareUrl.toString()} />
+    <meta property="og:image" content={rollCallShareImage} />
+    <meta property="og:image:width" content={ROLL_CALL_SHARE_WIDTH} />
+    <meta property="og:image:height" content={ROLL_CALL_SHARE_HEIGHT} />
+    <meta property="og:image:alt" content={`Roll call summary for ${shareBillCode}`} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://nhdeservesbetter.com/nhdb-seo-image.png" />
-    <title>
-      Roll Call {sequence} | {bill?.condensedbillno || billCode} | NH Deserves Better
-    </title>
+    <meta name="twitter:title" content={rollCallShareTitle} />
+    <meta name="twitter:description" content={rollCallShareDescription} />
+    <meta name="twitter:image" content={rollCallShareImage} />
+    <title>{rollCallShareTitle}</title>
     <meta
       name="description"
-      content={`Roll call votes for ${bill?.condensedbillno || billCode}.`}
+      content={rollCallShareDescription}
     />
   </head>
 
-  <body>
-    <TopNav />
-    <main class="page">
-      <a class="back" href={billDetailPath(bill?.condensedbillno || billCode, bill?.sessionyear || year)}>
-        Back to bill
-      </a>
+  <body class:list={[sharePreviewCapture && "roll-call-share-capture"]}>
+    {sharePreviewCapture ? <GlobalTheme /> : <TopNav />}
+    <main
+      class:list={["page", sharePreviewCapture && "roll-call-share-shell"]}
+      x-data="nhdbFuzzyFilter({ itemSelector: '.candidate-card[data-fuzzy-item]', pageSize: 24, syncUrl: false })"
+    >
+      {!sharePreviewCapture && (
+        <a class="back" href={billDetailPath(bill?.condensedbillno || billCode, bill?.sessionyear || year)}>
+          Back to bill
+        </a>
+      )}
 
       {error ? (
         <p class="status-message">{error}</p>
       ) : bill && rollCall ? (
         <>
           <section class="hero">
+            {sharePreviewCapture && (
+              <div class="share-brand">
+                <img src="/nhdb-logo-circle.png" alt="" width="46" height="46" />
+                <span>NH Deserves Better</span>
+              </div>
+            )}
             <p class="eyebrow">Roll Call</p>
             <h1>{bill.condensedbillno}</h1>
             <h2>{trackedBill?.name || rollCall.question_motion || "Roll call vote"}</h2>
@@ -297,28 +340,38 @@ function slugify(value = "") {
             </article>
           </section>
 
-          <section class="panel vote-browser" data-roll-call-browser>
+          <section class:list={["panel", "vote-browser", sharePreviewCapture && "share-preview-hidden"]} data-roll-call-browser>
             <div class="section-heading split-heading">
               <div>
                 <p class="eyebrow">Legislator Votes</p>
                 <h2>How each legislator voted</h2>
               </div>
-              <span class="visible-count" data-visible-count>{votes.length} shown</span>
+              <span class="visible-count"><span data-fuzzy-count>{Math.min(votes.length, 24)}</span> shown</span>
             </div>
 
-            <div class="filters" aria-label="Filter roll call votes">
-              <label>
+            <FilterBar action={Astro.url.pathname} submitLabel="Filter votes" clearHref={`${Astro.url.pathname}${year ? `?year=${encodeURIComponent(year)}` : ""}`} columns="dense" live={true}>
+              {year && <input type="hidden" name="year" value={year} />}
+              <label for="roll-call-search">
                 <span>Search</span>
                 <input
+                  id="roll-call-search"
+                  name="q"
                   type="search"
                   placeholder="Name, party, district..."
-                  data-vote-search
+                  data-fuzzy-search
                 />
               </label>
 
-              <label>
+              <label for="roll-call-vote-filter">
                 <span>Vote</span>
-                <select data-vote-filter>
+                <select
+                  id="roll-call-vote-filter"
+                  name="vote"
+                  data-fuzzy-filter-field
+                  data-fuzzy-field="vote"
+                  data-fuzzy-match="exact"
+                  data-fuzzy-label="Vote"
+                >
                   <option value="">All votes ({votes.length})</option>
                   {voteFilters.map((filter) => (
                     <option value={filter.key}>{filter.label} ({filter.count})</option>
@@ -326,9 +379,16 @@ function slugify(value = "") {
                 </select>
               </label>
 
-              <label>
+              <label for="roll-call-party-filter">
                 <span>Party</span>
-                <select data-party-filter>
+                <select
+                  id="roll-call-party-filter"
+                  name="party"
+                  data-fuzzy-filter-field
+                  data-fuzzy-field="party"
+                  data-fuzzy-match="exact"
+                  data-fuzzy-label="Party"
+                >
                   <option value="">All parties</option>
                   <option value="R">Republican</option>
                   <option value="D">Democrat</option>
@@ -336,16 +396,33 @@ function slugify(value = "") {
                 </select>
               </label>
 
-              <label>
+              <label for="roll-call-county-filter">
                 <span>County</span>
-                <select data-county-filter>
+                <select
+                  id="roll-call-county-filter"
+                  name="county"
+                  data-fuzzy-filter-field
+                  data-fuzzy-field="county"
+                  data-fuzzy-match="exact"
+                  data-fuzzy-label="County"
+                >
                   <option value="">All counties</option>
                   {countyFilters.map((filter) => (
-                    <option value={filter.key}>{filter.label} ({filter.count})</option>
+                    <option value={filter.label}>{filter.label} ({filter.count})</option>
                   ))}
                 </select>
               </label>
-            </div>
+
+              <label for="roll-call-sort">
+                <span>Sort</span>
+                <select id="roll-call-sort" name="sort" data-fuzzy-sort>
+                  <option value="name:asc">Name A-Z</option>
+                  <option value="district:asc">District</option>
+                  <option value="vote:asc">Vote</option>
+                </select>
+              </label>
+            </FilterBar>
+            <div class="filter-chips" data-fuzzy-chips hidden></div>
 
             <div class="vote-list">
               {votes.map((vote) => {
@@ -364,7 +441,8 @@ function slugify(value = "") {
                   voteLabel,
                   voteInterpretation.label,
                   testimonyPosition,
-                  isFreeStater(vote) ? "free stater" : "",
+                  isFreeStater(vote) ? "Free State Aligned" : "",
+                  isTpActionAligned(vote) ? "TPAction Aligned" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")
@@ -374,32 +452,48 @@ function slugify(value = "") {
 
                 return (
                   <article
-                    class="legislator-card"
-                    role="link"
-                    tabindex="0"
-                    data-vote-card
-                    data-vote={filterKey(voteLabel)}
-                    data-party={partyInitial(vote.party)}
-                    data-county={filterKey(vote.county || "")}
-                    data-profile-href={href}
-                    data-search={searchText}
+                    class="candidate-card"
+                    data-fuzzy-item
+                    data-fuzzy-name={cleanText(vote.name || "")}
+                    data-fuzzy-town={towns}
+                    data-fuzzy-county={cleanText(vote.county || "")}
+                    data-fuzzy-district={cleanText(vote.district || vote.raw_district || "")}
+                    data-fuzzy-body={bodyLabel(vote.legislativebody || vote.chamber)}
+                    data-fuzzy-party={partyInitial(vote.party)}
+                    data-fuzzy-vote={filterKey(voteLabel)}
+                    data-fuzzy-sort-name={cleanText(vote.name || "")}
+                    data-fuzzy-sort-district={cleanText(vote.district || vote.raw_district || "")}
+                    data-fuzzy-sort-vote={voteLabel}
+                    data-fuzzy-text={searchText}
                   >
-                    <div class="card-main">
-                      <a class="photo-link" href={href}>
+                      <a class="photo-wrap" href={href}>
                         <img
-                          class:list={["legislator-photo", !photoUrl && "fallback-photo"]}
+                          class:list={[!photoUrl && "photo-fallback"]}
                           src={photoUrl || profileIcon.src}
                           alt={photoUrl ? `Photo of ${vote.name}` : ""}
                           loading="lazy"
                         />
                       </a>
-                      <div class="legislator-info">
-                        <strong>
+                      <div class="candidate-copy">
+                        <div class="candidate-heading">
+                          <h3>
                           <a href={href}>{vote.name || "Legislator not listed"}</a>
-                        </strong>
-                        <p class="district-line">{districtLine(vote)}</p>
-                        {towns && <p class="towns-line"><em>{towns}</em></p>}
-                        <div class="tag-row">
+                          </h3>
+                          <a
+                            class:list={["vote-pill", voteInterpretation.className]}
+                            href="/vote-interpretations"
+                            title="How do we determine this?"
+                            aria-label={`How do we determine this? ${voteInterpretation.label}`}
+                          >
+                            {voteInterpretation.label}
+                          </a>
+                        </div>
+                        <div class="pill-row">
+                          <span class:list={["party-pill", `party-${partyClass(vote.party)}`]} data-party-affiliation>
+                            {partyLabel(vote.party)}
+                          </span>
+                          <span>{bodyLabel(vote.legislativebody || vote.chamber)}</span>
+                          {vote.county && <span>{cleanText(vote.county)} County</span>}
                           {isFreeStater(vote) && (
                             <a
                               class="free-stater-pill"
@@ -421,103 +515,95 @@ function slugify(value = "") {
                             </a>
                           )}
                         </div>
+                        <p class="office-line">{districtLine(vote)}</p>
+                        {towns && (
+                          <p class="towns-line">
+                            <span>Towns represented</span>
+                            {towns}
+                          </p>
+                        )}
                       </div>
-                      <a
-                        class:list={["vote-pill", voteInterpretation.className]}
-                        href="/vote-interpretations"
-                        title="How do we determine this?"
-                        aria-label={`How do we determine this? ${voteInterpretation.label}`}
-                      >
-                        {voteInterpretation.label}
-                      </a>
-                    </div>
-
-                    <div class="card-meta">
-                      <span class:list={["party", partyClass(vote.party)]} data-party-affiliation>
-                        {partyLabel(vote.party)}
-                      </span>
-                      {vote.chamber && <span>{cleanText(vote.chamber)}</span>}
-                      {vote.county && <span>{cleanText(vote.county)} County</span>}
-                      {vote.employeeno && <span>Employee #{vote.employeeno}</span>}
-                      {vote.personid && <span>Person #{vote.personid}</span>}
-                    </div>
                   </article>
                 );
               })}
             </div>
 
-            <p class="empty" data-empty-state hidden>No legislators match those filters.</p>
+            <p class="status-message empty-state" data-fuzzy-empty hidden>No legislators match those filters.</p>
+            <div class="see-more-row">
+              <button type="button" class="see-more-button" data-fuzzy-more hidden>Show more legislators</button>
+            </div>
           </section>
         </>
       ) : (
         <p class="status-message">Roll call not found.</p>
       )}
     </main>
-    <SiteFooter />
+    {!sharePreviewCapture && <SiteFooter />}
   </body>
 </html>
 
-<script>
-  document.querySelectorAll("[data-roll-call-browser]").forEach((browser) => {
-    const searchInput = browser.querySelector("[data-vote-search]");
-    const voteFilter = browser.querySelector("[data-vote-filter]");
-    const partyFilter = browser.querySelector("[data-party-filter]");
-    const countyFilter = browser.querySelector("[data-county-filter]");
-    const cards = Array.from(browser.querySelectorAll("[data-vote-card]"));
-    const count = browser.querySelector("[data-visible-count]");
-    const empty = browser.querySelector("[data-empty-state]");
-
-    function applyFilters() {
-      const search = String(searchInput?.value || "").trim().toLowerCase();
-      const vote = String(voteFilter?.value || "");
-      const party = String(partyFilter?.value || "");
-      const county = String(countyFilter?.value || "");
-      let visible = 0;
-
-      cards.forEach((card) => {
-        const matchesSearch = !search || card.dataset.search?.includes(search);
-        const matchesVote = !vote || card.dataset.vote === vote;
-        const matchesParty = !party || card.dataset.party === party;
-        const matchesCounty = !county || card.dataset.county === county;
-        const show = matchesSearch && matchesVote && matchesParty && matchesCounty;
-
-        card.hidden = !show;
-        if (show) visible += 1;
-      });
-
-      if (count) count.textContent = `${visible} shown`;
-      if (empty) empty.hidden = visible !== 0;
-    }
-
-    searchInput?.addEventListener("input", applyFilters);
-    voteFilter?.addEventListener("change", applyFilters);
-    partyFilter?.addEventListener("change", applyFilters);
-    countyFilter?.addEventListener("change", applyFilters);
-
-    cards.forEach((card) => {
-      function shouldUseCardLink(event) {
-        return !event.target?.closest?.("a, button, input, select, textarea");
-      }
-
-      card.addEventListener("click", (event) => {
-        if (!shouldUseCardLink(event)) return;
-        const href = card.dataset.profileHref;
-        if (href) window.location.href = href;
-      });
-
-      card.addEventListener("keydown", (event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        if (!shouldUseCardLink(event)) return;
-        const href = card.dataset.profileHref;
-        if (!href) return;
-        event.preventDefault();
-        window.location.href = href;
-      });
-    });
-  });
-</script>
-
 <style>
+  :global(body.roll-call-share-capture) {
+    background: linear-gradient(145deg, #eef4fb, #d5dde7);
+    margin: 0;
+    overflow: hidden;
+  }
+
+  :global(body.roll-call-share-capture) .roll-call-share-shell {
+    box-sizing: border-box;
+    height: 630px;
+    margin: 0 auto;
+    max-width: 1200px;
+    overflow: hidden;
+    padding: 30px 38px !important;
+    width: 100%;
+  }
+
+  :global(body.roll-call-share-capture) .hero {
+    padding: 0 0 20px;
+  }
+
+  :global(body.roll-call-share-capture) .hero h1 {
+    font-size: 4.4rem;
+    margin-bottom: 10px;
+  }
+
+  :global(body.roll-call-share-capture) .hero h2 {
+    font-size: 2.15rem;
+    margin-bottom: 10px;
+    max-width: 1080px;
+  }
+
+  :global(body.roll-call-share-capture) .hero p:not(.eyebrow) {
+    line-height: 1.4;
+    margin: 8px 0;
+  }
+
+  :global(body.roll-call-share-capture) .count-grid {
+    margin-bottom: 0;
+  }
+
+  :global(body.roll-call-share-capture) .count-grid article {
+    padding: 20px;
+  }
+
+  .share-brand {
+    align-items: center;
+    display: flex;
+    font-size: 1.05rem;
+    font-weight: 950;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .share-brand img {
+    border-radius: 8px;
+  }
+
+  .share-preview-hidden {
+    display: none !important;
+  }
+
   .back,
   a {
     color: #1f2933;
@@ -619,181 +705,183 @@ function slugify(value = "") {
     padding: 8px 11px;
   }
 
-  .filters {
-    display: grid;
-    gap: 12px;
-    grid-template-columns: minmax(220px, 1fr) 160px 160px 180px;
-    margin-bottom: 18px;
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0 18px;
   }
 
-  .filters label {
-    color: #4b5563;
-    display: grid;
-    font-size: 0.76rem;
-    font-weight: 950;
-    gap: 7px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .filters input,
-  .filters select {
-    background: #f8fafc;
-    border: 1px solid #9ca3af;
-    border-radius: 12px;
-    box-sizing: border-box;
-    color: #1f2933;
-    font: inherit;
-    font-size: 0.95rem;
-    font-weight: 750;
-    letter-spacing: 0;
-    padding: 11px 12px;
-    text-transform: none;
-    width: 100%;
-  }
-
-  .legislator-card {
-    align-items: start;
-    background: #f8fafc;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
+  .filter-chips :global(button) {
+    align-items: center;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    color: #1e40af;
     cursor: pointer;
-    display: grid;
-    gap: 12px;
-    padding: 16px;
-    text-decoration: none;
+    display: inline-flex;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 900;
+    gap: 6px;
+    padding: 6px 10px;
   }
 
-  .legislator-card[hidden] {
+  .filter-chips :global(b) {
+    color: #1f2933;
+    font-size: 0.9rem;
+  }
+
+  .candidate-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: none;
+    color: inherit;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: 92px minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .candidate-card[hidden] {
     display: none;
   }
 
-  .legislator-card a {
-    color: #1f2933;
+  .candidate-card a {
+    color: inherit;
   }
 
-  .legislator-card:hover .legislator-info strong a,
-  .legislator-card:focus-visible .legislator-info strong a,
-  .legislator-info strong a:hover {
-    text-decoration: underline;
+  .photo-wrap,
+  .photo-wrap img,
+  .photo-fallback {
+    width: 92px;
   }
 
-  .legislator-card:focus-visible {
-    outline: 3px solid #2563eb;
-    outline-offset: 3px;
-  }
-
-  .card-main {
-    align-items: start;
-    display: grid;
-    gap: 14px;
-    grid-template-columns: 64px minmax(0, 1fr) auto;
-  }
-
-  .legislator-photo {
-    aspect-ratio: 4 / 5;
-    background: white;
-    border: 1px solid #d1d5db;
-    border-radius: 10px;
-    height: 80px;
-    object-fit: cover;
-    object-position: center top;
-    width: 64px;
-  }
-
-  .photo-link {
+  .photo-wrap {
     display: block;
     line-height: 0;
   }
 
-  .fallback-photo {
+  .photo-wrap img,
+  .photo-fallback {
+    aspect-ratio: 4 / 5;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-sizing: border-box;
+    height: 115px;
     object-fit: cover;
+    object-position: center top;
   }
 
-  .card-main strong {
-    display: block;
-    font-size: 1.15rem;
-    line-height: 1.15;
+  .photo-wrap img.photo-fallback {
+    background: transparent;
+    object-fit: cover;
+    padding: 0;
   }
 
-  .legislator-info {
+  .candidate-copy {
     min-width: 0;
   }
 
-  .legislator-info p {
-    color: #4b5563;
-    line-height: 1.45;
-    margin: 6px 0 0;
+  .candidate-heading {
+    align-items: start;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
   }
 
-  .district-line {
-    font-weight: 850;
+  .candidate-heading h3 {
+    font-size: 1.25rem;
+    line-height: 1.1;
+    margin: 0;
   }
 
-  .towns-line {
-    color: #374151 !important;
-    font-weight: 750;
+  .candidate-card:hover h3 a {
+    text-decoration: underline;
   }
 
-  .tag-row {
+  .pill-row {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin-top: 10px;
   }
 
-  .free-stater-pill {
+  .pill-row span,
+  .pill-row a {
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    color: #1f2933;
+    font-size: 0.78rem;
+    font-weight: 900;
+    padding: 5px 9px;
+    text-decoration: none;
+  }
+
+  .pill-row .party-democrat {
+    background: #dbeafe;
+    border-color: #2563eb;
+  }
+
+  .pill-row .party-republican {
+    background: #fee2e2;
+    border-color: #dc2626;
+  }
+
+  .pill-row .party-independent,
+  .pill-row .party-unknown {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+  }
+
+  .pill-row .free-stater-pill {
     background: #4a2414;
-    border: 2px solid #f97316;
+    border-color: #f97316;
     border-radius: 6px;
     box-shadow: 0 0 0 1px rgba(255, 180, 60, 0.25), 0 0 12px rgba(255, 107, 26, 0.18);
-    color: #fff8ed !important;
-    display: inline-flex;
-    font-size: 0.72rem;
-    font-weight: 950;
-    letter-spacing: 0.04em;
-    padding: 5px 8px;
-    text-decoration: none;
+    color: #fffdf7 !important;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
   }
 
-  .free-stater-pill:hover {
+  .pill-row .free-stater-pill:hover {
     background: #35180d;
-    text-decoration: underline;
+    color: #fffdf7;
   }
 
-  .tpaction-pill,
-  .tpaction-pill:hover {
+  .pill-row .tpaction-pill,
+  .pill-row .tpaction-pill:hover {
     background: #4b3a0b;
     border-color: #facc15;
     box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.25), 0 0 12px rgba(250, 204, 21, 0.16);
-    color: #fff8ed !important;
-    text-decoration: none;
+    color: #fffdf7 !important;
   }
 
-  .card-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .card-meta span,
-  .party {
-    border-radius: 999px;
-    font-size: 0.76rem;
-    font-weight: 900;
-    padding: 5px 8px;
-  }
-
-  .card-meta span {
-    background: white;
-    border: 1px solid #d1d5db;
+  .office-line {
     color: #4b5563;
+    font-weight: 800;
+    line-height: 1.4;
+    margin: 12px 0 0;
   }
 
-  .party {
-    border-color: transparent !important;
-    color: white !important;
+  .towns-line {
+    color: #4b5563;
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1.4;
+    margin: 8px 0 0;
+  }
+
+  .towns-line span {
+    color: #6b4f2a;
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    margin-bottom: 2px;
+    text-transform: uppercase;
   }
 
   .vote-pill {
@@ -830,26 +918,26 @@ function slugify(value = "") {
     color: #1d4ed8;
   }
 
-  .card-meta .party.republican,
-  .republican {
-    background: #b42318;
+  .empty-state {
+    margin: 18px 0 0;
   }
 
-  .card-meta .party.democrat,
-  .democrat {
-    background: #1d4ed8;
+  .see-more-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 18px;
   }
 
-  .card-meta .party.independent,
-  .card-meta .party.unknown,
-  .independent,
-  .unknown {
-    background: #5b616e;
-  }
-
-  small {
-    color: #4b5563;
-    font-weight: 800;
+  .see-more-button {
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #1f2933;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 900;
+    min-height: 44px;
+    padding: 10px 18px;
   }
 
   @media (max-width: 760px) {
@@ -857,29 +945,44 @@ function slugify(value = "") {
       grid-template-columns: repeat(2, 1fr);
     }
 
-    .filters {
-      grid-template-columns: 1fr;
-    }
-
-    .split-heading,
-    .card-main {
+    .split-heading {
       display: grid;
-      grid-template-columns: 56px minmax(0, 1fr);
-    }
-
-    .legislator-photo {
-      height: 70px;
-      width: 56px;
     }
 
     .visible-count {
       justify-self: start;
     }
 
+    .candidate-card {
+      grid-template-columns: 72px minmax(0, 1fr);
+      padding: 14px;
+    }
+
+    .photo-wrap,
+    .photo-wrap img,
+    .photo-fallback {
+      width: 72px;
+    }
+
+    .photo-wrap img,
+    .photo-fallback {
+      height: 90px;
+    }
+
+    .candidate-heading {
+      align-items: start;
+      display: grid;
+    }
+
     .vote-pill {
-      grid-column: 2;
       justify-self: start;
       max-width: 100%;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .candidate-card {
+      grid-template-columns: 1fr;
     }
   }
 </style>

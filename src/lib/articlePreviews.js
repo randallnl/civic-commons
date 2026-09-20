@@ -76,6 +76,46 @@ export async function getCachedArticlePreview(articleUrl) {
   return cachedLinkPreview(normalizePreviewUrl(articleUrl));
 }
 
+export async function getCachedArticlePreviews(articleUrls = [], { ensureSchema = true } = {}) {
+  const db = env.d1_db;
+  const pairs = articleUrls
+    .map((url) => [String(url || "").trim(), normalizePreviewUrl(url)])
+    .filter(([, normalized]) => normalized);
+  const normalizedUrls = [...new Set(pairs.map(([, normalized]) => normalized))];
+  const previewsByUrl = new Map();
+
+  if (!db || !normalizedUrls.length) return new Map();
+
+  try {
+    if (ensureSchema) await ensureLinkPreviewTable(db);
+    for (let index = 0; index < normalizedUrls.length; index += 90) {
+      const chunk = normalizedUrls.slice(index, index + 90);
+      const result = await db
+        .prepare(
+          `SELECT url, preview_title, preview_description, preview_image_url
+           FROM link_previews
+           WHERE url IN (${chunk.map(() => "?").join(", ")})`,
+        )
+        .bind(...chunk)
+        .all();
+
+      for (const row of result.results || []) {
+        previewsByUrl.set(row.url, normalizePreview({
+          title: row.preview_title,
+          description: row.preview_description,
+          imageUrl: row.preview_image_url,
+        }));
+      }
+    }
+  } catch (error) {
+    console.warn("Unable to read cached article previews", error?.message || error);
+  }
+
+  return new Map(
+    pairs.map(([original, normalized]) => [original, previewsByUrl.get(normalized) || null]),
+  );
+}
+
 function normalizePreviewUrl(value = "") {
   try {
     const url = new URL(String(value || "").trim());

@@ -1,6 +1,7 @@
 ---
 import {
   communityUpdateDate,
+  getApprovedCommunityUpdate,
   getApprovedCommunityUpdates,
 } from "../lib/communityUpdates";
 import {
@@ -27,9 +28,18 @@ const {
   showPeoplePreview = true,
   fetchMissingPreviews = true,
   showAnchorLinks = false,
+  sharePreviewUpdateId = 0,
 } = Astro.props;
 
-const updates = await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
+const captureUpdateId = Number.isSafeInteger(Number(sharePreviewUpdateId)) && Number(sharePreviewUpdateId) > 0
+  ? Number(sharePreviewUpdateId)
+  : 0;
+const captureUpdate = captureUpdateId
+  ? await getApprovedCommunityUpdate(entityType, entityKey, captureUpdateId)
+  : null;
+const updates = captureUpdateId
+  ? captureUpdate ? [captureUpdate] : []
+  : await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
 const updateCards = await getCommunityUpdateCards(updates, { fetchMissingPreviews });
 const adminSession = await currentAdminSession(Astro.request);
 const canModerateUpdates = canModerateContent(adminSession);
@@ -50,9 +60,10 @@ function communityUpdateAnchorId(update = {}) {
   const id = Number(update.id);
   return Number.isSafeInteger(id) && id > 0 ? `community-update-${id}` : "";
 }
+
 ---
 
-<Wrapper class:list={[!embedded && "panel", "community-updates-panel", embedded && "community-updates-panel-embedded", variant === "narrow" && "community-updates-panel-narrow"]}>
+<Wrapper class:list={[!embedded && "panel", "community-updates-panel", embedded && "community-updates-panel-embedded", variant === "narrow" && "community-updates-panel-narrow", captureUpdateId && "community-updates-panel-share-capture"]}>
   {!embedded && (
     <div class="section-heading">
       <p class="eyebrow">{isReport ? "Community updates" : "Share Your Thoughts"}</p>
@@ -65,7 +76,7 @@ function communityUpdateAnchorId(update = {}) {
     </div>
   )}
 
-  <details class="community-update-disclosure">
+  {!captureUpdateId && <details class="community-update-disclosure">
     <summary>
       <span class="thought-input-preview">
         <strong>What should neighbors know?</strong>
@@ -130,13 +141,13 @@ function communityUpdateAnchorId(update = {}) {
 
       <button type="submit">Submit for Review</button>
     </form>
-  </details>
+  </details>}
 
   {updateCards.length ? (
     <div class="community-update-list">
       {updateCards.map((update) => (
         <article
-          id={showAnchorLinks ? communityUpdateAnchorId(update) || undefined : undefined}
+          id={(showAnchorLinks || captureUpdateId) ? communityUpdateAnchorId(update) || undefined : undefined}
           class:list={["community-update-card", (update.photoUrls?.length || update.linkUrl) && "has-media"]}
         >
           {(update.linkUrl || update.photoUrls?.length > 0) && (
@@ -278,7 +289,7 @@ function communityUpdateAnchorId(update = {}) {
                 {showAnchorLinks && communityUpdateAnchorId(update) && (
                   <a
                     class="community-update-anchor-link"
-                    href={`${Astro.url.pathname}#${communityUpdateAnchorId(update)}`}
+                    href={`${Astro.url.pathname}?update=${update.id}#${communityUpdateAnchorId(update)}`}
                     aria-label={`Link to ${cleanText(update.displayName || "community member")}'s community update`}
                   >Link to update</a>
                 )}
@@ -409,8 +420,8 @@ function communityUpdateAnchorId(update = {}) {
   </dialog>
 </Wrapper>
 
-{hasInstagramEmbeds && <script async src="https://www.instagram.com/embed.js"></script>}
-{hasTikTokEmbeds && <script async src="https://www.tiktok.com/embed.js"></script>}
+{hasInstagramEmbeds && !captureUpdateId && <script async src="https://www.instagram.com/embed.js"></script>}
+{hasTikTokEmbeds && !captureUpdateId && <script async src="https://www.tiktok.com/embed.js"></script>}
 
 <script>
   document.querySelectorAll(".community-updates-panel").forEach((panel) => {
@@ -672,6 +683,22 @@ function communityUpdateAnchorId(update = {}) {
     display: grid;
     gap: 12px;
     margin-top: 18px;
+  }
+
+  .community-updates-panel-share-capture .community-update-list {
+    margin-top: 0;
+  }
+
+  .community-updates-panel-share-capture .community-update-card {
+    border-radius: 14px;
+    min-height: 430px;
+  }
+
+  .community-updates-panel-share-capture .community-update-admin-editor,
+  .community-updates-panel-share-capture .community-update-anchor-link,
+  .community-updates-panel-share-capture .instagram-media,
+  .community-updates-panel-share-capture .tiktok-embed {
+    display: none !important;
   }
 
   .community-update-card {

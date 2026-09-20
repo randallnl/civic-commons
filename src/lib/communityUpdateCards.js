@@ -1,17 +1,36 @@
-import { getArticlePreview, getCachedArticlePreview } from "./articlePreviews";
+import {
+  getArticlePreview,
+  getCachedArticlePreview,
+  getCachedArticlePreviews,
+} from "./articlePreviews";
 import { profilePhotoUrl } from "./photos";
 import { cleanText } from "./text";
 
 export async function getCommunityUpdateCards(updates = [], options = {}) {
-  return Promise.all(updates.map((update) => updateViewModel(update, options)));
+  const cachedPreviews = options.fetchMissingPreviews === false
+    ? await getCachedArticlePreviews(
+        updates.map((update) => update.linkUrl).filter(Boolean),
+        { ensureSchema: options.ensurePreviewSchema !== false },
+      )
+    : null;
+
+  return Promise.all(updates.map((update) => updateViewModel(update, {
+    ...options,
+    cachedPreviews,
+  })));
 }
 
-export async function updateViewModel(update = {}, { fetchMissingPreviews = true } = {}) {
+export async function updateViewModel(update = {}, {
+  fetchMissingPreviews = true,
+  cachedPreviews = null,
+} = {}) {
   const social = socialPreview(update.linkUrl);
   const fetchedLinkPreview = update.linkUrl
-    ? await (fetchMissingPreviews
-        ? getArticlePreview(update.linkUrl)
-        : getCachedArticlePreview(update.linkUrl))
+    ? cachedPreviews?.has(update.linkUrl)
+      ? cachedPreviews.get(update.linkUrl)
+      : await (fetchMissingPreviews
+          ? getArticlePreview(update.linkUrl)
+          : getCachedArticlePreview(update.linkUrl))
     : null;
   const uploadedPhotoUrl = update.photoUrls?.[0] || update.photoUrl || "";
   const linkPreview = fetchedLinkPreview || genericLinkPreview(update.linkUrl, social);

@@ -17,12 +17,10 @@ import {
 } from "../lib/communityUpdateCards";
 import {
   communityPath,
-  getCountyCommunity,
 } from "../lib/communitiesApi";
 import { countyImageUrl } from "../lib/communityImages";
-import { getOrganizations, organizationPath } from "../lib/organizationsApi";
+import { getRecentOrganizationEndorsements, organizationPath } from "../lib/organizationsApi";
 import { profilePhotoUrl } from "../lib/photos";
-import { repName } from "../lib/repsApi";
 import { cleanText } from "../lib/text";
 import profileIcon from "../assets/profile icon.png";
 
@@ -54,20 +52,19 @@ let countyGroups = [];
 let error = "";
 
 try {
-  const [updates, organizations, countyData] = await Promise.all([
-    getRecentApprovedCommunityUpdates({ limit: 120 }),
-    getOrganizations(),
-    getCountyGroups({ articleLimit: 3 }),
+  const [updates, recentEndorsements, countyData] = await Promise.all([
+    getRecentApprovedCommunityUpdates({ limit: 120, ensureSchema: false }),
+    getRecentOrganizationEndorsements({ limit: 80, ensureSchema: false }),
+    getCountyGroups(),
   ]);
-  const cards = await getCommunityUpdateCards(updates || []);
-  const rawEndorsements = organizations.flatMap((organization) =>
-    (organization.endorsements || []).map((endorsement) => ({ endorsement, organization })),
-  );
-  const endorsementPeople = await peopleForEndorsements(rawEndorsements.map((item) => item.endorsement));
-  const endorsementItems = rawEndorsements
+  const cards = await getCommunityUpdateCards(updates || [], {
+    fetchMissingPreviews: false,
+    ensurePreviewSchema: false,
+  });
+  const endorsementPeople = await peopleForEndorsements(recentEndorsements.map((item) => item.endorsement));
+  const endorsementItems = recentEndorsements
     .map(({ endorsement, organization }) => endorsementFeedItem(endorsement, organization, endorsementPeople))
     .filter((item) => item.title)
-    .slice(0, 80);
 
   mediaItems = [
     ...cards.map((update) => mediaFeedItem(update)),
@@ -75,7 +72,12 @@ try {
   ]
     .sort((a, b) => b.sortDate - a.sortDate);
   recentlyUpdatedPeople = recentPeopleFromUpdates(mediaItems);
-  countyGroups = countyData.counties || [];
+  countyGroups = (countyData.counties || []).map((countyGroup) => ({
+    ...countyGroup,
+    updateCount: mediaItems.filter((item) =>
+      item.counties.some((county) => county.toLowerCase() === countyGroup.county.toLowerCase()),
+    ).length,
+  }));
 } catch (loadError) {
   error = loadError?.message || "Unable to load community updates.";
 }
@@ -440,103 +442,72 @@ function recentPeopleFromUpdates(items = []) {
     .slice(0, 12);
 }
 
-async function getCountyGroups({ articleLimit = 3 } = {}) {
-  const countyResults = await Promise.allSettled(
-    COUNTY_NAMES.map(async (county) => {
-      const data = await getCountyCommunity(county, {
-        body: "house",
-        articleLimit,
-      });
-      return normalizeCountyGroup(data, county, articleLimit);
-    }),
-  );
+async function getCountyGroups() {
+  const db = adminDb();
+  if (!db) return { counties: [] };
 
-  return {
-    counties: countyResults
-      .filter((result) => result.status === "fulfilled")
-      .map((result) => result.value)
-      .filter(Boolean),
-  };
-}
+  const [districtResult, representativeResult] = await db.batch([
+    db.prepare(
+      `SELECT
+         cc.name AS county,
+         dm.district,
+         dm.district_label,
+         dm.communities_represented,
+         dm.seats
+       FROM d1_district_mapping dm
+       JOIN county_codes cc
+         ON cc.source_county_id = dm.county
+       WHERE dm.body = 'H'
+       ORDER BY cc.name COLLATE NOCASE, dm.district`,
+    ),
+    db.prepare(
+      `SELECT cc.name AS county, COUNT(*) AS representative_count
+       FROM d1_legislators r
+       JOIN county_codes cc
+         ON cc.source_county_id = CAST(r.countycode AS INTEGER)
+       WHERE r.active = 1
+         AND r.legislativebody = 'H'
+       GROUP BY cc.name`,
+    ),
+  ]);
 
-function normalizeCountyGroup(data = {}, fallbackCounty = "", articleLimit = 3) {
-  const county =
-    data.counties?.[0] ||
-    data.county ||
-    data.community ||
-    data.result ||
-    data;
-  const rawCommunities =
-    county.communities ||
-    county.districts ||
-    county.results ||
-    data.communities ||
-    data.districts ||
-    [];
-  const communities = rawCommunities.map((community) => ({
-    ...community,
-    county: community.county || county.name || county.county || fallbackCounty,
-  }));
-  const towns =
-    county.townsRepresented ||
-    county.towns ||
-    county.towns_represented ||
-    [];
-  const representatives =
-    county.representatives ||
-    county.reps ||
-    county.legislators ||
-    [];
-  const articles =
-    county.relatedArticles ||
-    county.articles ||
-    data.relatedArticles ||
-    data.articles ||
-    [];
-  const representativesMap = new Map(
-    [
-      ...representatives,
-      ...communities.flatMap((community) => representativesFor(community)),
-    ]
-      .filter(Boolean)
-      .map((rep) => [rep.personid || rep.id || repName(rep), rep])
-      .filter(([key]) => key),
-  );
-  const representativeSummaryCount = Number(
-    county.representativeCount ??
-      county.representativeSummary?.count ??
-      data.representativeCount ??
-      data.representativeSummary?.count ??
-      representativesMap.size ??
-      0,
-  );
-  const updateSummaryCount = Number(
-    county.articleCount ??
-      county.updateCount ??
-      county.relatedArticleCount ??
-      data.articleCount ??
-      data.updateCount ??
-      data.relatedArticleCount ??
-      articles.length ??
-      0,
-  );
-
-  return {
-    county: county.name || county.county || fallbackCounty,
-    slug: county.slug || slugifyLocal(county.name || county.county || fallbackCounty),
-    districtCount: county.districtCount || communities.length,
-    representativeCount: representativeSummaryCount,
-    updateCount: updateSummaryCount,
-    communities,
-    towns: new Set([
-      ...normalizeTowns(towns),
-      ...communities.flatMap((community) => townsFor(community)),
+  const representativeCounts = new Map(
+    (representativeResult.results || []).map((row) => [
+      cleanText(row.county).toLowerCase(),
+      Number(row.representative_count || 0),
     ]),
-    representatives: representativesMap,
-    articles: [...articles, ...communities.flatMap((community) => articlesFor(community))]
-      .filter(Boolean)
-      .slice(0, articleLimit),
-  };
+  );
+  const counties = new Map(
+    COUNTY_NAMES.map((county) => [county.toLowerCase(), {
+      county,
+      slug: slugifyLocal(county),
+      representativeCount: representativeCounts.get(county.toLowerCase()) || 0,
+      updateCount: 0,
+      communities: [],
+      towns: new Set(),
+      articles: [],
+    }]),
+  );
+
+  for (const row of districtResult.results || []) {
+    const countyName = cleanText(row.county);
+    const county = counties.get(countyName.toLowerCase());
+    if (!county) continue;
+
+    const community = {
+      name: cleanText(row.district_label) || `${countyName} ${row.district}`,
+      body: "H",
+      chamber: "House",
+      county: countyName,
+      district: row.district,
+      towns_represented: cleanText(row.communities_represented),
+      seats: Number(row.seats || 0),
+    };
+    county.communities.push(community);
+    townsFor(community).forEach((town) => county.towns.add(town));
+  }
+
+  return { counties: [...counties.values()] };
 }
 
 function townsFor(community = {}) {
@@ -546,15 +517,6 @@ function townsFor(community = {}) {
     community.townsRepresented ||
     community.location_text ||
     "";
-  if (Array.isArray(value)) return value.map(cleanTown).filter(Boolean);
-
-  return String(value)
-    .split(/;|,/)
-    .map(cleanTown)
-    .filter(Boolean);
-}
-
-function normalizeTowns(value = []) {
   if (Array.isArray(value)) return value.map(cleanTown).filter(Boolean);
 
   return String(value)
@@ -583,14 +545,6 @@ function communityName(community = {}) {
 function bodyLabel(value = "") {
   const normalized = String(value).toLowerCase();
   return normalized === "senate" || normalized === "s" ? "Senate" : "House";
-}
-
-function representativesFor(community = {}) {
-  return community.representatives || community.reps || community.legislators || [];
-}
-
-function articlesFor(community = {}) {
-  return community.articles || community.relatedArticles || [];
 }
 
 function countyProfilePath(county = {}) {

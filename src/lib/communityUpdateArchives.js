@@ -88,10 +88,11 @@ export async function captureCommunityUpdateScreenshot({
     await db
       .prepare(
         `UPDATE community_updates
-         SET archive_screenshot_url = ?,
-             archive_status = 'complete',
-             archive_error = NULL,
-             archived_at = CURRENT_TIMESTAMP
+       SET archive_screenshot_url = ?,
+           archive_status = 'complete',
+           archive_error = NULL,
+           archived_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
       )
       .bind(screenshotUrl, updateId)

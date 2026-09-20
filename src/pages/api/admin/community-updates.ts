@@ -63,7 +63,8 @@ export async function POST({ request }) {
           `UPDATE community_updates
            SET status = 'deleted',
                reviewed_by = ?,
-               reviewed_at = CURRENT_TIMESTAMP
+               reviewed_at = CURRENT_TIMESTAMP,
+               updated_at = CURRENT_TIMESTAMP
            WHERE id = ?`,
         )
         .bind(auth.session.email, id)
@@ -122,7 +123,8 @@ export async function POST({ request }) {
                link_url = ?,
                response_status = COALESCE(NULLIF(?, ''), response_status),
                response_note = COALESCE(NULLIF(?, ''), response_note),
-               response_sent_at = CASE WHEN ? != '' THEN CURRENT_TIMESTAMP ELSE response_sent_at END
+               response_sent_at = CASE WHEN ? != '' THEN CURRENT_TIMESTAMP ELSE response_sent_at END,
+               updated_at = CURRENT_TIMESTAMP
            WHERE id = ?`,
         )
         .bind(displayName, comment, linkUrl, responseStatus, responseNote, responseNote, id)
@@ -173,7 +175,8 @@ export async function POST({ request }) {
              reviewed_at = CURRENT_TIMESTAMP,
              response_status = COALESCE(NULLIF(?, ''), response_status),
              response_note = COALESCE(NULLIF(?, ''), response_note),
-             response_sent_at = CASE WHEN ? != '' THEN CURRENT_TIMESTAMP ELSE response_sent_at END
+             response_sent_at = CASE WHEN ? != '' THEN CURRENT_TIMESTAMP ELSE response_sent_at END,
+             updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
       )
       .bind(status, auth.session.email, responseStatus, responseNote, responseNote, id)

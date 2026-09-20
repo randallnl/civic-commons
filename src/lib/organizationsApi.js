@@ -224,6 +224,41 @@ export async function getRecentOrganizationComments({ limit = 50 } = {}) {
   return (result.results || []).map(normalizeCommentRow);
 }
 
+export async function getRecentOrganizationEndorsements({
+  db = organizationsDb(),
+  limit = 80,
+  ensureSchema = true,
+} = {}) {
+  if (!db) return [];
+  if (ensureSchema) await ensureOrganizationTables(db);
+
+  const result = await db
+    .prepare(
+      `SELECT
+         e.*,
+         o.slug AS profile_slug,
+         o.name AS profile_name,
+         o.logo_url AS organization_logo_url
+       FROM organization_endorsements e
+       LEFT JOIN organizations o
+         ON o.slug = e.organization_slug
+       WHERE e.status = 'published'
+       ORDER BY COALESCE(NULLIF(e.date, ''), e.updated_at, e.created_at) DESC, e.id DESC
+       LIMIT ?`,
+    )
+    .bind(Number(limit) || 80)
+    .all();
+
+  return (result.results || []).map((row) => ({
+    endorsement: normalizeEndorsementRow(row),
+    organization: {
+      name: cleanText(row.profile_name || row.organization_name),
+      slug: row.profile_slug || row.organization_slug || "",
+      logoUrl: organizationAssetUrl(row.organization_logo_url || ""),
+    },
+  }));
+}
+
 export async function saveOrganizationProfile(data = {}, db = organizationsDb()) {
   if (!db) throw new Error("D1 database binding is not configured.");
   await ensureOrganizationTables(db);
