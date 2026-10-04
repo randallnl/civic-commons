@@ -296,6 +296,12 @@ const keyPeople = [
 ];
 
 const relationshipCategories = [...new Set(relationshipRoster.map((entry) => entry.category))];
+const featuredPeople = keyPeople.filter((person) => [
+  "jason-sorens",
+  "carla-gericke",
+  "mark-warden",
+  "eric-brakey",
+].includes(person.id));
 
 const relationshipGraphData = {
   nodes: [
@@ -379,10 +385,7 @@ function organizationAssetUrl(filename = "") {
           <p class="eyebrow">Research guide · New Hampshire</p>
           <h1>Free State Project: Timeline &amp; Relationship Map</h1>
           <p class="lede">
-            A visual starting point for understanding the Free State Project’s
-            history, the people and organizations around it, and the evidence
-            behind each connection. Follow the dots for a quick overview, then
-            jump to the sourced record below.
+            A quick, sourced guide to the Project’s history, key figures, and documented connections.
           </p>
           <div class="hero-actions" aria-label="Explore this guide">
             <a class="primary-action" href="#timeline">Explore the timeline</a>
@@ -425,11 +428,7 @@ function organizationAssetUrl(filename = "") {
           <h2 id="reading-note-title">A connection is not automatically an affiliation.</h2>
         </div>
         <p>
-          This guide separates direct project leadership and project-run events from
-          person-specific connections, parallel advocacy, and distinct organizations.
-          A source may show a shared speaker, a directory listing, or a person’s role;
-          it does not by itself prove shared funding, control, membership, or responsibility
-          for a policy outcome.
+          Direct roles, documented bridges, and separate entities are shown differently. A connection alone does not prove affiliation, funding, control, or responsibility.
         </p>
       </section>
 
@@ -440,8 +439,7 @@ function organizationAssetUrl(filename = "") {
             <h2 id="timeline-title">A timeline you can scan in a minute</h2>
           </div>
           <p>
-            Select an era to narrow the view. Each milestone links to a short explanation
-            and its source farther down the page.
+            Use a filter, then scroll sideways to move through the milestones.
           </p>
         </div>
 
@@ -453,18 +451,28 @@ function organizationAssetUrl(filename = "") {
           <button type="button" data-timeline-filter="current" aria-pressed="false">Current landscape</button>
         </div>
 
-        <ol class="visual-timeline" data-timeline-list>
-          {timelineMilestones.map((milestone) => (
-            <li data-timeline-item data-era={milestone.era}>
-              <a href={`#milestone-${milestone.year.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}>
-                <span class="timeline-year">{milestone.year}</span>
-                <strong>{milestone.title}</strong>
-                <span>{milestone.summary}</span>
-                <small>Read the record ↓</small>
-              </a>
-            </li>
-          ))}
-        </ol>
+        <div class="timeline-scroll-shell">
+          <div class="timeline-scroll-guide">
+            <span>Scroll timeline</span>
+            <b>← Swipe, trackpad, or use arrows →</b>
+            <div class="timeline-scroll-actions" aria-label="Move through the timeline">
+              <button type="button" data-timeline-previous aria-label="Show earlier milestones">←</button>
+              <button type="button" data-timeline-next aria-label="Show later milestones">→</button>
+            </div>
+          </div>
+          <ol class="visual-timeline" data-timeline-list>
+            {timelineMilestones.map((milestone) => (
+              <li data-timeline-item data-era={milestone.era}>
+                <a href={`#milestone-${milestone.year.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}>
+                  <span class="timeline-year">{milestone.year}</span>
+                  <strong>{milestone.title}</strong>
+                  <span>{milestone.summary}</span>
+                  <small>Open the evidence ↓</small>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </div>
       </section>
 
       <section class="relationship-section" id="relationship-map" aria-labelledby="relationship-map-title">
@@ -563,12 +571,12 @@ function organizationAssetUrl(filename = "") {
         <div class="section-intro compact-intro">
           <div>
             <p class="eyebrow">Key people</p>
-            <h2 id="people-callouts-title">Who appears in this record?</h2>
+            <h2 id="people-callouts-title">Four figures to know</h2>
           </div>
-          <p>These callouts are shortcuts to a fuller, sourced explanation below—not a complete member list.</p>
+          <p>Start here, then open the full record for all eight people included in this guide.</p>
         </div>
         <div class="people-callout-grid">
-          {keyPeople.map((person) => (
+          {featuredPeople.map((person) => (
             <a href={`#${person.id}`}>
               <span class="person-callout-photo" aria-hidden="true">
                 {person.imageUrl ? (
@@ -592,11 +600,10 @@ function organizationAssetUrl(filename = "") {
         <div class="section-intro">
           <div>
             <p class="eyebrow">Detailed record</p>
-            <h2 id="record-title">Milestones, people, and organizations</h2>
+            <h2 id="record-title">Explore the evidence</h2>
           </div>
           <p>
-            Each card states what the cited record supports, and where the evidence stops.
-            External sources open in a new tab.
+            Open a card for the full context and its cited source.
           </p>
         </div>
 
@@ -608,14 +615,22 @@ function organizationAssetUrl(filename = "") {
           <div class="milestone-records">
             {timelineMilestones.map((milestone) => (
               <article id={`milestone-${milestone.year.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`}>
-                <span class="record-year">{milestone.year}</span>
-                <div>
-                  <h4>{milestone.title}</h4>
-                  <p>{milestone.detail}</p>
-                  <a class="source-link" href={milestone.sourceUrl} target="_blank" rel="noreferrer">
-                    {milestone.sourceLabel} <span aria-hidden="true">↗</span>
-                  </a>
-                </div>
+                <details>
+                  <summary class="milestone-record-summary">
+                    <span class="record-year">{milestone.year}</span>
+                    <span class="record-summary-copy">
+                      <strong>{milestone.title}</strong>
+                      <span>{milestone.summary}</span>
+                    </span>
+                    <span class="record-disclosure">Evidence + source</span>
+                  </summary>
+                  <div class="record-detail-body">
+                    <p>{milestone.detail}</p>
+                    <a class="source-link" href={milestone.sourceUrl} target="_blank" rel="noreferrer">
+                      {milestone.sourceLabel} <span aria-hidden="true">↗</span>
+                    </a>
+                  </div>
+                </details>
               </article>
             ))}
           </div>
@@ -630,33 +645,34 @@ function organizationAssetUrl(filename = "") {
           <div class="person-records">
             {keyPeople.map((person) => (
               <article id={person.id}>
-                {person.imageUrl ? (
-                  <a
-                    class="person-photo"
-                    href={person.imageSourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`View the source for ${person.name}'s portrait`}
-                  >
-                    <img src={person.imageUrl} alt={`Portrait of ${person.name}`} loading="lazy" />
-                  </a>
-                ) : (
-                  <span class="person-monogram" aria-hidden="true">{person.name.split(" ").map((part) => part[0]).join("")}</span>
-                )}
-                <div>
-                  <p class="relationship-label">{person.relationship}</p>
-                  <h4>{person.name}</h4>
-                  <h5>{person.role}</h5>
-                  <p>{person.summary}</p>
-                  {person.imageUrl && (
-                    <a class="image-source-link" href={person.imageSourceUrl} target="_blank" rel="noreferrer">
-                      Image: {person.imageSourceLabel} <span aria-hidden="true">↗</span>
+                <details>
+                  <summary class="person-record-summary">
+                    {person.imageUrl ? (
+                      <span class="person-photo">
+                        <img src={person.imageUrl} alt={`Portrait of ${person.name}`} loading="lazy" />
+                      </span>
+                    ) : (
+                      <span class="person-monogram" aria-hidden="true">{person.name.split(" ").map((part) => part[0]).join("")}</span>
+                    )}
+                    <span class="record-summary-copy">
+                      <span class="relationship-label">{person.relationship}</span>
+                      <strong>{person.name}</strong>
+                      <small>{person.role}</small>
+                    </span>
+                    <span class="record-disclosure">Evidence</span>
+                  </summary>
+                  <div class="record-detail-body">
+                    <p>{person.summary}</p>
+                    {person.imageUrl && (
+                      <a class="image-source-link" href={person.imageSourceUrl} target="_blank" rel="noreferrer">
+                        Image: {person.imageSourceLabel} <span aria-hidden="true">↗</span>
+                      </a>
+                    )}
+                    <a class="source-link" href={person.sourceUrl} target="_blank" rel="noreferrer">
+                      {person.sourceLabel} <span aria-hidden="true">↗</span>
                     </a>
-                  )}
-                  <a class="source-link" href={person.sourceUrl} target="_blank" rel="noreferrer">
-                    {person.sourceLabel} <span aria-hidden="true">↗</span>
-                  </a>
-                </div>
+                  </div>
+                </details>
               </article>
             ))}
           </div>
@@ -674,20 +690,27 @@ function organizationAssetUrl(filename = "") {
               <div class="organization-records">
                 {relationshipRoster.filter((entry) => entry.category === category).map((entry) => (
                   <article id={entry.id}>
-                    {entry.logoUrl ? (
-                      <img class="organization-mark organization-logo" src={entry.logoUrl} alt="" aria-hidden="true" loading="lazy" />
-                    ) : (
-                      <div class="organization-mark" aria-hidden="true">{entry.name.slice(0, 1)}</div>
-                    )}
-                    <div>
-                      <p class="relationship-label">{entry.relationship}</p>
-                      <h5>{entry.name}</h5>
-                      <span class="organization-type">{entry.type}</span>
-                      <p>{entry.description}</p>
-                      <a class="source-link" href={entry.sourceUrl} target="_blank" rel="noreferrer">
-                        {entry.sourceLabel} <span aria-hidden="true">↗</span>
-                      </a>
-                    </div>
+                    <details>
+                      <summary class="organization-record-summary">
+                        {entry.logoUrl ? (
+                          <img class="organization-mark organization-logo" src={entry.logoUrl} alt="" aria-hidden="true" loading="lazy" />
+                        ) : (
+                          <span class="organization-mark" aria-hidden="true">{entry.name.slice(0, 1)}</span>
+                        )}
+                        <span class="record-summary-copy">
+                          <span class="relationship-label">{entry.relationship}</span>
+                          <strong>{entry.name}</strong>
+                          <small>{entry.type}</small>
+                        </span>
+                        <span class="record-disclosure">Evidence</span>
+                      </summary>
+                      <div class="record-detail-body">
+                        <p>{entry.description}</p>
+                        <a class="source-link" href={entry.sourceUrl} target="_blank" rel="noreferrer">
+                          {entry.sourceLabel} <span aria-hidden="true">↗</span>
+                        </a>
+                      </div>
+                    </details>
                   </article>
                 ))}
               </div>
@@ -999,6 +1022,25 @@ function organizationAssetUrl(filename = "") {
 
   const timelineFilters = Array.from(document.querySelectorAll("[data-timeline-filter]"));
   const timelineItems = Array.from(document.querySelectorAll("[data-timeline-item]"));
+  const timelineList = document.querySelector("[data-timeline-list]");
+  const previousTimelineButton = document.querySelector("[data-timeline-previous]");
+  const nextTimelineButton = document.querySelector("[data-timeline-next]");
+
+  function moveTimeline(direction) {
+    if (!(timelineList instanceof HTMLElement)) return;
+    timelineList.scrollBy({
+      behavior: "smooth",
+      left: direction * Math.max(timelineList.clientWidth * 0.72, 280),
+    });
+  }
+
+  if (previousTimelineButton instanceof HTMLButtonElement) {
+    previousTimelineButton.addEventListener("click", () => moveTimeline(-1));
+  }
+
+  if (nextTimelineButton instanceof HTMLButtonElement) {
+    nextTimelineButton.addEventListener("click", () => moveTimeline(1));
+  }
 
   timelineFilters.forEach((filter) => {
     filter.addEventListener("click", () => {
@@ -1014,8 +1056,23 @@ function organizationAssetUrl(filename = "") {
         const isVisible = selectedEra === "all" || item.dataset.era === selectedEra;
         item.toggleAttribute("hidden", !isVisible);
       });
+
+      if (timelineList instanceof HTMLElement) {
+        timelineList.scrollTo({ behavior: "smooth", left: 0 });
+      }
     });
   });
+
+  function revealRecordFromHash() {
+    const recordId = window.location.hash.slice(1);
+    if (!recordId) return;
+    const record = document.getElementById(recordId);
+    const details = record?.querySelector(":scope > details");
+    if (details instanceof HTMLDetailsElement) details.open = true;
+  }
+
+  revealRecordFromHash();
+  window.addEventListener("hashchange", revealRecordFromHash);
 
   document.querySelectorAll("[data-fsp-logo]").forEach((image) => {
     const showFallback = () => image.parentElement?.classList.add("logo-unavailable");
@@ -1221,6 +1278,63 @@ function organizationAssetUrl(filename = "") {
     color: #ffffff;
   }
 
+  .timeline-scroll-shell {
+    position: relative;
+  }
+
+  .timeline-scroll-guide {
+    align-items: center;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    border-radius: 10px;
+    color: #7c2d12;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.8rem;
+    font-weight: 900;
+    gap: 8px 12px;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 9px 11px;
+  }
+
+  .timeline-scroll-guide > span {
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  .timeline-scroll-guide b {
+    font-size: 0.78rem;
+  }
+
+  .timeline-scroll-actions {
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  .timeline-scroll-actions button {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #fdba74;
+    border-radius: 999px;
+    color: #9a3412;
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 950;
+    height: 28px;
+    justify-content: center;
+    width: 28px;
+  }
+
+  .timeline-scroll-actions button:hover,
+  .timeline-scroll-actions button:focus-visible {
+    background: #9a3412;
+    border-color: #9a3412;
+    color: #ffffff;
+  }
+
   .visual-timeline {
     display: grid;
     gap: 14px;
@@ -1231,6 +1345,8 @@ function organizationAssetUrl(filename = "") {
     margin: 0;
     overflow-x: auto;
     padding: 4px 3px 18px;
+    scrollbar-color: #dc4d09 #fff7ed;
+    scrollbar-width: thin;
     scroll-snap-type: x mandatory;
   }
 
@@ -1764,14 +1880,85 @@ function organizationAssetUrl(filename = "") {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    display: grid;
-    gap: 16px;
-    padding: 18px;
+    display: block;
+    overflow: hidden;
+    padding: 0;
     scroll-margin-top: 90px;
   }
 
-  .milestone-records article {
-    grid-template-columns: 92px minmax(0, 1fr);
+  .milestone-records details,
+  .person-records details,
+  .organization-records details {
+    height: 100%;
+  }
+
+  .milestone-records summary,
+  .person-records summary,
+  .organization-records summary {
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .milestone-records summary::-webkit-details-marker,
+  .person-records summary::-webkit-details-marker,
+  .organization-records summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .milestone-record-summary,
+  .person-record-summary,
+  .organization-record-summary {
+    align-items: center;
+    display: grid;
+    gap: 14px;
+    padding: 16px 18px;
+  }
+
+  .milestone-record-summary {
+    grid-template-columns: 78px minmax(0, 1fr) auto;
+  }
+
+  .person-record-summary,
+  .organization-record-summary {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+  }
+
+  .record-summary-copy {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .record-summary-copy > strong {
+    color: #1f2933;
+    font-size: 1.04rem;
+    line-height: 1.2;
+  }
+
+  .record-summary-copy > span:not(.relationship-label),
+  .record-summary-copy > small {
+    color: #64748b;
+    font-size: 0.79rem;
+    font-weight: 720;
+    line-height: 1.38;
+  }
+
+  .record-disclosure {
+    color: #9a3412;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.04em;
+    text-align: right;
+    text-transform: uppercase;
+  }
+
+  details[open] .record-disclosure {
+    color: #64748b;
+  }
+
+  .record-detail-body {
+    border-top: 1px solid #e2e8f0;
+    padding: 16px 18px 18px;
   }
 
   .record-year {
@@ -2255,6 +2442,20 @@ function organizationAssetUrl(filename = "") {
       padding: 28px 18px;
     }
 
+    .timeline-scroll-guide {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .timeline-scroll-guide b {
+      grid-column: 1 / -1;
+    }
+
+    .timeline-scroll-actions {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
     .graph-toolbar {
       align-items: flex-start;
       flex-direction: column;
@@ -2297,6 +2498,21 @@ function organizationAssetUrl(filename = "") {
     .person-records article,
     .organization-records article {
       grid-template-columns: 1fr;
+    }
+
+    .milestone-record-summary,
+    .person-record-summary,
+    .organization-record-summary {
+      grid-template-columns: 38px minmax(0, 1fr);
+    }
+
+    .milestone-record-summary .record-year {
+      font-size: 0.8rem;
+    }
+
+    .record-disclosure {
+      grid-column: 2;
+      text-align: left;
     }
 
     .milestone-records article {
