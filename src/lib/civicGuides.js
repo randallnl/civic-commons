@@ -23,12 +23,12 @@ export const civicGuides = [
   },
   {
     href: "/free-staters",
-    title: "What Free State Aligned Means",
-    kicker: "Political Context",
+    title: "Free State Project: Timeline & Relationship Map",
+    kicker: "Research Guide",
     category: "Accountability",
     description:
-      "Learn how NH Deserves Better identifies Free State aligned candidates and legislators, and why that context matters.",
-    readTime: "5 min read",
+      "Trace key Free State Project milestones and examine sourced relationships among people, organizations, businesses, and public policy.",
+    readTime: "Interactive",
     image: organizationAssetUrl("freestateprojectlogo.png"),
     featured: true,
   },
