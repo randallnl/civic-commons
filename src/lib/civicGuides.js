@@ -22,7 +22,7 @@ export const civicGuides = [
     featured: true,
   },
   {
-    href: "/free-staters",
+    href: "/free-state-project",
     title: "Free State Project: Timeline & Relationship Map",
     kicker: "Research Guide",
     category: "Accountability",
