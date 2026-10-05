@@ -1,0 +1,11 @@
+action,canonical_person_id,source_person_id,person,field_or_record,before,after,notes
+updated,259,259,Katelyn Kuttab,person party,Republican,Republican,Confirmed against the 2026-09-17 Secretary of State general-election candidate list
+updated,259,259,Katelyn Kuttab,2026 State Representative role party,,Republican Party,Rockingham District 17
+confirmed,826,826,Robert Jones,name alias,Bob Jones,Bob Jones,Alias already present in production and migration keeps it idempotently
+preserved,96,96,Brian Cole,2024 State Representative role,elected,elected,Hillsborough District 26
+preserved,96,96,Brian Cole,2026 State Representative role,active,active,Hillsborough District 26
+created,96,965,Brian Cole,2026 Representative in Congress role,duplicate profile only,archived role,United States House District 1 role retained on canonical profile
+created,96,1394,Brian Cole,2026 Delegate to State Convention role,duplicate profile only,archived role,Hillsborough District 41 role retained on canonical profile
+consolidated,96,965,Brian Cole,person profile,brian-d-cole,brian-cole-7267,Old slug retained as a URL alias
+consolidated,96,1394,Brian Cole,person profile,brian-d-cole-delegate-to-state-convention-hillsborough-41-rep,brian-cole-7267,Old slug retained as a URL alias
+repointed,96,965|1394,Brian Cole,organization positions and ratings,duplicate profile slugs,brian-cole-7267,Role-specific endorsement keys remain distinct

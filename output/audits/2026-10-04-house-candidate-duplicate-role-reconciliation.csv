@@ -1,0 +1,31 @@
+action,role_id,person_id,display_name,county,district,filer_entity_number,pdf_name,retained_role_id,reason
+archived,696,170,Tom Ploszaj,Belknap,1,180526394,Tom Ploszaj,287,Duplicate active role; canonical Thomas Ploszaj role retained
+archived,25,438,Michael Bordes,Belknap,5,165822,Mike Bordes,1484,Duplicate active role; canonical Mike Bordes role retained
+archived,351,709,Meredith Bultman,Carroll,5,766458303,Morgan Bultman,1459,Duplicate active role; canonical Morgan Bultman role retained
+archived,195,573,James Pittman,Carroll,8,242268,Jim Pittman,354,Duplicate active role; canonical Jim Pittman role retained
+archived,730,216,Sly Karasinski,Cheshire,10,911108566,Sly Karasinski,111,Duplicate active role; canonical Sylvester Karasinski role retained
+archived,738,1030,Max Santonastaso,Cheshire,17,908509169,Matthew Santonastaso,1489,Stale duplicate role; canonical Matthew Santonastaso role retained in Cheshire District 13
+archived,203,179,James Qualey,Cheshire,18,242027,Jim Qualey,740,Duplicate active role; canonical Jim Qualey role retained
+archived,108,510,Rita Jedrey-Mattson,Cheshire,18,242601,Rita Mattson,739,Duplicate active role; canonical Rita Mattson role retained
+archived,245,614,George Spahr,Grafton,12,243557,Terry Spahr,393,Duplicate active role; canonical Terry Spahr role retained
+archived,404,754,Jeff Kerr,Hillsborough,2,879512518,Jeff Kerr,24,Duplicate active role; canonical Jeffrey Kerr role retained
+archived,112,513,Thomas Trost,Hillsborough,13,244205,Tom Trost,784,Duplicate active role; canonical Tom Trost role retained
+archived,114,514,Merton Kesselring,Hillsborough,18,242112,Steven Kesselring,794,Duplicate active role; canonical Steven Kesselring role retained
+archived,796,381,Matt Drew,Hillsborough,19,584333542,Matt Drew,115,Duplicate active role; canonical Matthew Drew role retained
+archived,448,791,Greg Erskine,Hillsborough,22,360231348,Greg Erskine,117,Duplicate active role; canonical Gregory Erskine role retained
+archived,182,562,Elizabeth Barbour,Hillsborough,35,242345,Liz Barbour,819,Duplicate active role; canonical Liz Barbour role retained
+archived,824,1095,Ted Trost,Hillsborough,38,945923367,Ted Trost,201,Duplicate active role; canonical Theodore Trost role retained
+archived,492,825,Chris Conroy,Hillsborough,44,286658658,Chris Conroy,264,Duplicate active role; canonical Christopher Conroy role retained
+archived,233,606,G BRIAN Seaworth,Merrimack,12,242693,Brian Seaworth,852,Duplicate active role; canonical Brian Seaworth role retained
+archived,521,850,Hal Rafter,Rockingham,1,746081041,Hal Rafter,206,Duplicate active role; canonical Harold Rafter role retained
+archived,523,852,Charles Heuer,Rockingham,3,482065450,Chuck Heuer,1471,Duplicate active role; canonical Chuck Heuer role retained
+archived,527,856,JJ DeFeo,Rockingham,7,849162425,JJ DeFeo,50,Duplicate active role; canonical John DeFeo role retained
+archived,148,538,James Marshall,Rockingham,13,244364,Jim Marshall,540,Duplicate active role; canonical Jim Marshall role retained
+archived,927,108,Jess Edwards,Rockingham,31,665447601,Jess Edwards,64,Duplicate active role; canonical Jesse Edwards role retained
+archived,222,595,Yasamin Safarzadeh,Rockingham,31,243659,Yaz Safarzadeh,567,Duplicate active role; canonical Yaz Safarzadeh role retained
+archived,20,434,J Bernardy,Rockingham,36,242489,JD Bernardy,933,Duplicate active role; canonical JD Bernardy role retained
+archived,575,892,Ginna Schonwald,Strafford,4,142867426,Ginna Schonwald,231,Duplicate active role; canonical Virginia Schonwald role retained
+archived,586,897,Will Hurley,Strafford,12,903435806,Will Hurley,105,Duplicate active role; canonical William Hurley role retained
+restored,493,826,Robert Jones,Hillsborough,44,922919890,Bob Jones,493,Nickname match confirmed; Bob Jones alias added and role restored
+preserved,271,188,Daniel Veilleux,Hillsborough,34,242053,Daniel T. Veilleux,271,Explicitly preserved at user direction
+preserved,1468,1702,Daniel T. Veilleux,Hillsborough,34,sos-2026-house-hillsborough-34-daniel-t-veilleux,Daniel T. Veilleux,271,Explicitly preserved at user direction despite duplicate active role

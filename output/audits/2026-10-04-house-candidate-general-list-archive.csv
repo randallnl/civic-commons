@@ -1,0 +1,27 @@
+role_id,person_id,display_name,county,district,political_party,filer_entity_number,previous_status,new_status,reason,source_file
+337,695,Charlie Clair,Belknap,5,Democratic Party,677923078,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+720,175,Jonathan Smith,Carroll,5,Republican,627542530,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+723,368,Brian Taylor,Carroll,8,Republican Party,380864274,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+735,1028,Jerry Sickels,Cheshire,15,Republican Party,912384859,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+230,603,Paul Schirduan,Grafton,3,Republican Party,242700,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+758,1048,Andrew Cavanagh,Hillsborough,1,Republican Party,541106099,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+759,1049,Henry Golec,Hillsborough,1,Republican Party,290457330,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+39,452,Michael Aksten,Hillsborough,3,Democratic Party,243741,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+453,793,Anthony Carideo,Hillsborough,24,Democratic Party,894039223,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+2624,2534,Amanda Allen,Hillsborough,33,Undeclared,sos-2026-house-hillsborough-33-amanda-allen,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+478,815,Joshua Holmes,Hillsborough,40,Democratic Party,606794979,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+477,814,Leo Bernier,Hillsborough,40,Democratic Party,212652881,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+493,826,Robert Jones,Hillsborough,44,Democratic Party,922919890,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+840,387,Ernesto Gonzalez,Merrimack,3,Republican Party,310952183,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+886,46,David Milz,Rockingham,13,Republican Party,422391147,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+882,1143,James Dietzel,Rockingham,13,Republican Party,937163704,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+884,1144,Stephen Langelier,Rockingham,13,Republican Party,903560424,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+888,156,Stephen Pearson,Rockingham,13,Republican Party,170195406,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+902,1149,Moira Ryan,Rockingham,16,Republican Party,867405028,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+911,1154,Jeremy Guilbeault,Rockingham,25,Republican Party,540603264,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+1507,1741,Susan DeLemus,Strafford,1,Republican Party,sos-2026-house-strafford-1-sue-delemus,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+1481,1715,Paige C. Dunleavy,Strafford,6,Democratic Party,sos-2026-house-strafford-6-paige-c-dunleavy,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+959,1187,Catherine Peschke,Sullivan,8,Republican Party,950825542,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+607,318,Hope Damon,Sullivan,8,Democrat,208593589,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+250,619,Jonathan Stone,Sullivan,8,Republican Party,242430,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
+608,912,Samuel Deering,Sullivan,8,Democratic Party,833819058,active,archived,Absent from updated general-election candidate list,2026-ge-candidate-list.pdf
