@@ -352,6 +352,14 @@ export function representativeOnlineTestimonyVotePreviews(
 export function representativeOnlineTestimonyVoteStance(vote = {}, bill = {}) {
   const analysis = representativeOnlineTestimonyAnalysis(vote, bill);
   const rawVote = displayVoteLabel(vote) || titleCase(String(vote.vote || vote.vote_code || ""));
+  const votePosition = testimonyVotePositionLabel(analysis.billPosition) || rawVote || "Not listed";
+
+  if (["Divided", "Neutral"].includes(analysis.testimonyStrength)) {
+    return {
+      label: `Voted: ${votePosition} - online testimony was ${analysis.testimonyStrength.toLowerCase()}`,
+      className: "legislator-neutral",
+    };
+  }
 
   if (analysis.alignment === "partial" && analysis.testimonyPosition) {
     return {
@@ -361,7 +369,6 @@ export function representativeOnlineTestimonyVoteStance(vote = {}, bill = {}) {
   }
 
   if (!analysis.billPosition || !analysis.testimonyPosition) {
-    const votePosition = testimonyVotePositionLabel(analysis.billPosition) || rawVote || "Not listed";
     return {
       label: `Voted: ${votePosition} - no clear online testimony position`,
       className: "legislator-neutral",
