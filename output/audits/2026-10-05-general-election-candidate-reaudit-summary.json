@@ -1,0 +1,70 @@
+{
+  "audit_date": "2026-10-05",
+  "source_pdf": "/Users/randallnielsen/Documents/YDBNH/2026-ge-candidate-list.pdf",
+  "source_list_date": "2026-09-17",
+  "source_nomination_rows": {
+    "State Senate": 47,
+    "State Representative": 715
+  },
+  "source_unique_candidates": {
+    "State Senate": 47,
+    "State Representative": 711
+  },
+  "production_active_roles": {
+    "State Representative": 708,
+    "State Senate": 47
+  },
+  "matched_unique_candidates": 754,
+  "finding_counts": {
+    "active_role_candidate_flag_off": 12,
+    "intentional_duplicate_active_role": 1,
+    "source_candidate_role_not_active": 4
+  },
+  "severity_counts": {
+    "action": 16,
+    "exception": 1
+  },
+  "party_nomination_duplicates": [
+    {
+      "office": "State Representative",
+      "county": "Carroll",
+      "district": "8",
+      "name": "George Randell",
+      "parties": [
+        "DEM",
+        "IND"
+      ]
+    },
+    {
+      "office": "State Representative",
+      "county": "Rockingham",
+      "district": "9",
+      "name": "Kevin M. Major",
+      "parties": [
+        "DEM",
+        "REP"
+      ]
+    },
+    {
+      "office": "State Representative",
+      "county": "Rockingham",
+      "district": "32",
+      "name": "Kaley Dvorak",
+      "parties": [
+        "DEM",
+        "UND"
+      ]
+    },
+    {
+      "office": "State Representative",
+      "county": "Strafford",
+      "district": "5",
+      "name": "William F. Fessenden",
+      "parties": [
+        "DEM",
+        "IND"
+      ]
+    }
+  ],
+  "detail_csv": "/Users/randallnielsen/civic-commons/output/audits/2026-10-05-general-election-candidate-reaudit.csv"
+}

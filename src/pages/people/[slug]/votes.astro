@@ -16,7 +16,6 @@ import {
   isVotingAction,
   normalizeBillCode,
   representativeOnlineTestimonyAnalysis,
-  representativeOnlineTestimonyGrade,
   representativeOnlineTestimonyVoteStance,
   representativeVoteImpact,
   representativeVoteStance,
@@ -252,44 +251,34 @@ function voteImpactFor(vote = {}) {
   return representativeVoteImpact(vote, vote.trackedBill);
 }
 
-function voteGradeContributionFor(vote = {}) {
+function voteAlignmentContributionFor(vote = {}) {
   const analysis = representativeOnlineTestimonyAnalysis(vote, vote.billSummary || {});
-  const score = Number(analysis.score);
 
-  if (!Number.isFinite(score)) {
+  if (!Number.isFinite(analysis.score)) {
     return {
-      label: "Not included in grade",
+      label: "Not scored",
       className: "grade-impact-neutral",
       tooltip:
-        "This vote does not change the grade because the bill does not have a clear online testimony position or enough testimony data.",
+        "This action is excluded because the bill does not have a clear online testimony position or an interpretable voting action.",
     };
   }
 
-  const formattedScore = formatSignedScore(score);
-  const strength = analysis.testimonyStrength ? ` Online testimony was ${analysis.testimonyStrength.toLowerCase()}.` : "";
-  const action =
-    analysis.alignment === "aligned"
-      ? "This vote increases the grade because it aligned with online testimony."
-      : analysis.alignment === "partial"
-        ? "This nonvote lowers the grade by a smaller accountability penalty."
-        : "This vote lowers the grade because it did not align with online testimony.";
+  const aligned = analysis.alignment === "aligned";
+  const documentedNonvote = analysis.alignment === "partial";
 
   return {
-    label: `Grade impact: ${formattedScore}`,
-    className:
-      score > 0 ? "grade-impact-positive" : score < 0 ? "grade-impact-negative" : "grade-impact-neutral",
-    tooltip: `${action}${strength}`,
+    label: aligned ? "Counts as aligned" : "Counts as not aligned",
+    className: aligned ? "grade-impact-positive" : "grade-impact-negative",
+    tooltip: aligned
+      ? "This action contributes once to both the aligned count and the scored-action count."
+      : documentedNonvote
+        ? "This documented nonvote contributes once to the scored-action count but not the aligned count."
+        : "This action contributes once to the scored-action count but not the aligned count.",
   };
 }
 
 function buildVoteDataSummary(votes = [], trackedCount = 0, rep = {}) {
   const cachedGrade = gradeFromCachedOnlineTestimony(rep);
-  const computedGrade = representativeOnlineTestimonyGrade(votes, {
-    get: (code) => votes.find((vote) => normalizeBillCode(vote.bill_number) === code)?.billSummary || null,
-  });
-  const grade = cachedGrade || computedGrade;
-  const weightedNetScore = computedGrade?.netScore ?? cachedGrade?.netScore ?? 0;
-  const totalTestimonyWeight = computedGrade?.totalWeight ?? cachedGrade?.totalWeight ?? 0;
   const summary = {
     total: votes.length,
     tracked: trackedCount,
@@ -301,10 +290,7 @@ function buildVoteDataSummary(votes = [], trackedCount = 0, rep = {}) {
     scoreAligned: 0,
     scoreMisaligned: 0,
     scoreNonVotes: 0,
-    totalTestimonyWeight,
-    weightedNetScore,
-    weightedAverageScore: grade?.percent ?? null,
-    gradeLetter: grade?.letter || "N/A",
+    testimonyAlignmentPercent: null,
     withPublicTestimony: 0,
   };
 
@@ -356,23 +342,14 @@ function buildVoteDataSummary(votes = [], trackedCount = 0, rep = {}) {
   summary.alignmentRate = summary.aligned + summary.misaligned
     ? Math.round((summary.aligned / (summary.aligned + summary.misaligned)) * 100)
     : null;
-  summary.weightedScoreLabel = summary.weightedAverageScore === null
-    ? "No vote grade yet"
-    : `${summary.gradeLetter} vote grade`;
+  summary.testimonyAlignmentPercent = summary.scoredVotes
+    ? Math.round((summary.scoreAligned / summary.scoredVotes) * 100)
+    : null;
+  summary.alignmentLabel = summary.testimonyAlignmentPercent === null
+    ? "No testimony alignment yet"
+    : `${summary.testimonyAlignmentPercent}% testimony aligned`;
 
   return summary;
-}
-
-function formatScore(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return "N/A";
-  return number.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
-}
-
-function formatSignedScore(value) {
-  const score = formatScore(value);
-  if (score === "N/A") return score;
-  return Number(value) > 0 ? `+${score}` : score;
 }
 
 function formatDate(value) {
@@ -516,25 +493,29 @@ function listText(value = "") {
             <div class="summary-intro">
               <p class="eyebrow">Vote Data Summary</p>
               <h2>
-                {voteDataSummary.weightedScoreLabel}
+                {voteDataSummary.alignmentLabel}
               </h2>
               <p>
-                This grade compares voting records with online public testimony.
-                Votes that match public testimony help the score, votes that do
-                not match lower it, and nonvotes count as a smaller penalty.
+                Testimony alignment is the share of scored voting actions that
+                matched the clear position in online public testimony. Every
+                eligible action counts once. Misaligned votes and documented
+                nonvotes remain in the scored total, while neutral, divided, or
+                missing testimony is excluded.
               </p>
             </div>
 
             <div class="summary-stats">
-              <span class:list={["summary-grade", `grade-${voteDataSummary.gradeLetter.toLowerCase()}`]}>
-                <strong>{voteDataSummary.gradeLetter}</strong>
-                Grade
+              <span class="summary-good">
+                <strong>
+                  {voteDataSummary.testimonyAlignmentPercent === null
+                    ? "N/A"
+                    : `${voteDataSummary.testimonyAlignmentPercent}%`}
+                </strong>
+                Testimony aligned
               </span>
-              <span
-                title="Net score adds this legislator's scored votes after testimony strength is applied. Positive votes matched online testimony, negative votes did not, and nonvotes count as a smaller penalty."
-              >
-                <strong>{formatScore(voteDataSummary.weightedNetScore)}</strong>
-                Net score
+              <span>
+                <strong>{voteDataSummary.scoredVotes}</strong>
+                Scored actions
               </span>
               <span>
                 <strong>{voteDataSummary.total}</strong>
@@ -558,7 +539,7 @@ function listText(value = "") {
               </span>
               <span>
                 <strong>{voteDataSummary.withPublicTestimony}</strong>
-                With public testimony
+                With clear testimony
               </span>
             </div>
           </section>
@@ -644,7 +625,7 @@ function listText(value = "") {
                 {votes.map((vote) => {
                   const stance = voteStanceFor(vote);
                   const voteImpact = voteImpactFor(vote);
-                  const gradeContribution = voteGradeContributionFor(vote);
+                  const alignmentContribution = voteAlignmentContributionFor(vote);
                   const billYear = vote.billSummary?.sessionyear || vote.sessionyear;
                   const summary =
                     vote.billSummary?.summary ||
@@ -745,11 +726,11 @@ function listText(value = "") {
 
                       <div class="vote-card-footer">
                         <span
-                          class:list={["vote-grade-impact", gradeContribution.className]}
-                          title={gradeContribution.tooltip}
-                          aria-label={gradeContribution.tooltip}
+                          class:list={["vote-grade-impact", alignmentContribution.className]}
+                          title={alignmentContribution.tooltip}
+                          aria-label={alignmentContribution.tooltip}
                         >
-                          {gradeContribution.label}
+                          {alignmentContribution.label}
                         </span>
                       </div>
                     </article>
@@ -1136,40 +1117,6 @@ function listText(value = "") {
   .summary-stats .summary-bad {
     border-color: rgba(180, 35, 24, 0.32);
     background: #fff1ee;
-  }
-
-  .summary-stats .summary-grade {
-    color: #fff7ed;
-  }
-
-  .summary-stats .summary-grade strong {
-    color: #fff7ed;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
-  }
-
-  .summary-stats .summary-grade.grade-a {
-    background: #166534;
-    border-color: #14532d;
-  }
-
-  .summary-stats .summary-grade.grade-b {
-    background: #65a30d;
-    border-color: #4d7c0f;
-  }
-
-  .summary-stats .summary-grade.grade-c {
-    background: #ca8a04;
-    border-color: #a16207;
-  }
-
-  .summary-stats .summary-grade.grade-d {
-    background: #ea580c;
-    border-color: #c2410c;
-  }
-
-  .summary-stats .summary-grade.grade-f {
-    background: #b42318;
-    border-color: #991b1b;
   }
 
   .vote-color-legend {

@@ -543,10 +543,10 @@ function cleanName(value = "") {
                 x-data="nhdbFuzzyFilter({ itemSelector: '.endorsement-person-card[data-fuzzy-item]', syncUrl: false })"
               >
                 <div class="section-heading">
-                  <p class="eyebrow">Endorsements</p>
+                  <p class="eyebrow">Positions and Ratings</p>
                   <h2>
                     <span data-fuzzy-count>{enrichedEndorsements.length}</span>
-                    Candidate Endorsements
+                    Candidate Positions and Ratings
                   </h2>
                 </div>
 
@@ -558,15 +558,15 @@ function cleanName(value = "") {
                         <input
                           name="q"
                           type="search"
-                          placeholder="Candidate, office, note..."
+                          placeholder="Candidate, office, position..."
                           data-fuzzy-search
                         />
                       </label>
 
                       <label>
-                        Position
+                        Position or rating
                         <select name="position" data-fuzzy-filter-field data-fuzzy-field="position">
-                          <option value="">All positions</option>
+                          <option value="">All positions and ratings</option>
                           <option value="Endorsed">Endorsed</option>
                           <option value="Recommended">Recommended</option>
                           <option value="Supported">Supported</option>
@@ -681,12 +681,12 @@ function cleanName(value = "") {
                     </div>
 
                     <div class="status-message empty-state" data-fuzzy-empty hidden>
-                      <strong>No endorsements match those filters.</strong>
-                      <span>Try searching by candidate name, office, or endorsement note.</span>
+                      <strong>No positions or ratings match those filters.</strong>
+                      <span>Try searching by candidate name, office, position, or rating details.</span>
                     </div>
                   </>
                 ) : (
-                  <p class="empty">No candidate endorsements have been published yet.</p>
+                  <p class="empty">No candidate positions or ratings have been published yet.</p>
                 )}
               </section>
             </div>
