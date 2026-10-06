@@ -355,19 +355,20 @@ export function representativeOnlineTestimonyVoteStance(vote = {}, bill = {}) {
 
   if (analysis.alignment === "partial" && analysis.testimonyPosition) {
     return {
-      label: `Voted: ${rawVote}: documented nonvote - accountability penalty`,
+      label: `Voted: ${rawVote || "Not voting"} - not aligned with online testimony`,
       className: "legislator-neutral",
     };
   }
 
   if (!analysis.billPosition || !analysis.testimonyPosition) {
+    const votePosition = testimonyVotePositionLabel(analysis.billPosition) || rawVote || "Not listed";
     return {
-      label: `Voted: ${rawVote || "Not listed"}: no clear online testimony position`,
+      label: `Voted: ${votePosition} - no clear online testimony position`,
       className: "legislator-neutral",
     };
   }
 
-  const position = titleCase(analysis.billPosition);
+  const position = testimonyVotePositionLabel(analysis.billPosition);
   const suffix =
     analysis.alignment === "aligned"
       ? "aligned with online testimony"
@@ -376,7 +377,7 @@ export function representativeOnlineTestimonyVoteStance(vote = {}, bill = {}) {
         : "not aligned with online testimony";
 
   return {
-    label: `Voted: ${rawVote}: ${position} - ${suffix}`,
+    label: `Voted: ${position} - ${suffix}`,
     className:
       analysis.alignment === "aligned"
         ? "legislator-support"
@@ -384,6 +385,12 @@ export function representativeOnlineTestimonyVoteStance(vote = {}, bill = {}) {
           ? "legislator-oppose"
           : "legislator-neutral",
   };
+}
+
+function testimonyVotePositionLabel(position = "") {
+  if (position === "support") return "In Support";
+  if (position === "oppose") return "Opposed";
+  return "";
 }
 
 export function representativeOnlineTestimonyAnalysis(vote = {}, bill = {}) {

@@ -2297,12 +2297,9 @@ function uniqueTowns(towns = []) {
                       vote.bill_number ||
                       vote.billSummary?.condensedbillno ||
                       "";
-                    const stance = vote.trackedBill
-                      ? representativeVoteStance(vote, {
-                          ...vote.billSummary,
-                          ...vote.trackedBill,
-                        })
-                      : representativeOnlineTestimonyVoteStance(vote, vote.billSummary);
+                    const stance = vote.billSummary
+                      ? representativeOnlineTestimonyVoteStance(vote, vote.billSummary)
+                      : representativeVoteStance(vote, vote.trackedBill);
                     const voteImpact = vote.trackedBill
                       ? representativeVoteImpact(vote, {
                           ...vote.billSummary,
@@ -2352,7 +2349,7 @@ function uniqueTowns(towns = []) {
                           </div>
                           <div class="vote-pill-stack">
                             {vote.billSummary && (
-                              <BillPositionSummary bill={vote.billSummary} compact sentimentOnly />
+                              <BillPositionSummary bill={vote.billSummary} compact />
                             )}
                           </div>
                         </div>
