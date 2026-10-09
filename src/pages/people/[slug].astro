@@ -68,6 +68,7 @@ import {
 import { getRepresentative, getRepresentatives, repName } from "../../lib/repsApi";
 import {
   getTrackedBills,
+  isRecordedYesNoVote,
   isVotingAction,
   normalizeBillCode,
   representativeGradeFor,
@@ -620,6 +621,7 @@ function votePreviewSelection(primaryVotes = [], allVotes = [], { limit = 5 } = 
 
   for (const vote of primaryVotes) {
     if (selected.length >= limit) break;
+    if (!isRecordedYesNoVote(vote)) continue;
     const key = votePreviewKey(vote);
     if (!key || seen.has(key)) continue;
     selected.push({ ...vote, previewSource: "tracked" });
@@ -631,7 +633,11 @@ function votePreviewSelection(primaryVotes = [], allVotes = [], { limit = 5 } = 
   const backfill = allVotes
     .filter((vote) => {
       const key = votePreviewKey(vote);
-      return key && !seen.has(key) && vote.billSummary && testimonyTotal(vote.billSummary) > 0;
+      return isRecordedYesNoVote(vote) &&
+        key &&
+        !seen.has(key) &&
+        vote.billSummary &&
+        testimonyTotal(vote.billSummary) > 0;
     })
     .sort((a, b) => {
       const testimonyDelta = testimonyTotal(b.billSummary) - testimonyTotal(a.billSummary);

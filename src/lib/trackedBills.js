@@ -114,6 +114,10 @@ export function isKnownVote(vote = {}) {
   return Boolean(value && !["unknown", "not listed"].includes(value));
 }
 
+export function isRecordedYesNoVote(vote = {}) {
+  return Boolean(normalizeVoteStance(vote));
+}
+
 export function representativeVoteAttendance(votes = []) {
   const votingActions = votes.filter(isVotingAction);
   const recorded = votingActions.filter((vote) => normalizeVoteStance(vote)).length;
