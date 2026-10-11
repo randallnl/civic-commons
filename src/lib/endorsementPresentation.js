@@ -22,5 +22,14 @@ export function endorsementPillClass(endorsement = {}, organizationName = "") {
     return "warning";
   }
 
+  if (
+    text.includes("critical") ||
+    text.includes("criticized") ||
+    text.includes("opposes") ||
+    text.includes("opposed")
+  ) {
+    return "oppose";
+  }
+
   return "endorse";
 }

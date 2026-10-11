@@ -4,6 +4,7 @@ import {
   profileReviewMap,
   RECENT_REVIEW_DAYS,
 } from "./adminProfileReviews";
+import { hasReviewWebsite, MISSING_REVIEW_WEBSITE_SQL } from "./profileReviewWebsite";
 import { cleanText } from "./text";
 
 const PHOTO_BASE_PATTERNS = [
@@ -199,6 +200,7 @@ async function getCandidateGaps(db, { missing, office, limit }) {
            COALESCE(NULLIF(cr.political_party, ''), c.political_party, p.party, '') AS political_party,
            COALESCE(NULLIF(p.email, ''), c.candidate_email, '') AS candidate_email,
            COALESCE(NULLIF(p.website_url, ''), c.candidate_website, '') AS candidate_website,
+           COALESCE(p.facebook_url, '') AS facebook_url,
            COALESCE(NULLIF(p.photo_url, ''), c.photo_url, '') AS photo_url,
            COALESCE(NULLIF(p.slug, ''), c.slug, CAST(p.id AS TEXT)) AS slug
          FROM d1_people p
@@ -226,8 +228,7 @@ async function getCandidateGaps(db, { missing, office, limit }) {
            photo_url IS NULL
            OR TRIM(photo_url) = ''
            OR TRIM(photo_url) IN (?, ?)
-           OR candidate_website IS NULL
-           OR TRIM(candidate_website) = ''
+           OR ${MISSING_REVIEW_WEBSITE_SQL}
          ))
          OR (? = 'photo' AND (
            photo_url IS NULL
@@ -235,7 +236,7 @@ async function getCandidateGaps(db, { missing, office, limit }) {
            OR TRIM(photo_url) IN (?, ?)
          ))
          OR (? = 'email' AND (candidate_email IS NULL OR TRIM(candidate_email) = ''))
-         OR (? = 'website' AND (candidate_website IS NULL OR TRIM(candidate_website) = ''))
+         OR (? = 'website' AND ${MISSING_REVIEW_WEBSITE_SQL})
        )
        AND (
          photo_url IS NULL
@@ -243,8 +244,7 @@ async function getCandidateGaps(db, { missing, office, limit }) {
          OR TRIM(photo_url) IN (?, ?)
          OR candidate_email IS NULL
          OR TRIM(candidate_email) = ''
-         OR candidate_website IS NULL
-         OR TRIM(candidate_website) = ''
+         OR ${MISSING_REVIEW_WEBSITE_SQL}
        )
        ORDER BY candidate_last_name, candidate_first_name
        LIMIT ?`,
@@ -291,7 +291,7 @@ async function getCandidateGaps(db, { missing, office, limit }) {
       missing: {
         photo: !hasUsefulPhoto(row.photo_url),
         email: !String(row.candidate_email || "").trim(),
-        website: !String(row.candidate_website || "").trim(),
+        website: !hasReviewWebsite(row),
       },
     };
   });

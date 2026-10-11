@@ -4,6 +4,10 @@ const sourceFiles = [
   new URL("../audits/NHLA-Ratings-2026/House-Table 1.csv", import.meta.url),
   new URL("../audits/NHLA-Ratings-2026/Senate-Table 1.csv", import.meta.url),
 ];
+const endorsementAuditFile = new URL(
+  "../output/nhla-2026-candidate-endorsements/audit.csv",
+  import.meta.url,
+);
 
 const qualifyingGrades = new Set(["A+", "A", "A-", "B+"]);
 
@@ -58,6 +62,11 @@ function parseCsv(text) {
 }
 
 const ratings = sourceFiles.flatMap((file) => parseCsv(readFileSync(file, "utf8")));
+// Candidates explicitly endorsed by NHLA for 2026 are also labeled Free State
+// Aligned even when they do not have a qualifying incumbent scorecard grade.
+const endorsedCandidateSlugs = parseCsv(readFileSync(endorsementAuditFile, "utf8"))
+  .map((candidate) => candidate.candidate_slug.trim())
+  .filter(Boolean);
 const qualifyingEmployeeNos = ratings
   .filter((rating) => qualifyingGrades.has((rating.CombinedGrade || "").trim()))
   .map((rating) => Number(rating.EmployeeNo))
@@ -72,6 +81,11 @@ UPDATE d1_people
 SET is_free_state_aligned_2026 = 1,
     updated_at = CURRENT_TIMESTAMP
 WHERE employeeno IN (${qualifyingEmployeeNos.join(", ")});
+
+UPDATE d1_people
+SET is_free_state_aligned_2026 = 1,
+    updated_at = CURRENT_TIMESTAMP
+WHERE slug IN (${endorsedCandidateSlugs.map((slug) => `'${slug}'`).join(", ")});
 
 DELETE FROM organization_endorsements
 WHERE organization_slug = 'new-hampshire-liberty-alliance'
@@ -91,7 +105,9 @@ const gradeCounts = ratings.reduce((counts, rating) => {
   return counts;
 }, new Map());
 
-console.log(`Wrote ${qualifyingEmployeeNos.length} qualifying NHLA aligned employee numbers.`);
+console.log(
+  `Wrote ${qualifyingEmployeeNos.length} qualifying NHLA aligned employee numbers and ${endorsedCandidateSlugs.length} explicitly endorsed candidate slugs.`
+);
 console.log(
   [...gradeCounts.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
