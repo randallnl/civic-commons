@@ -28,7 +28,6 @@ import {
 } from "../lib/trackedBills";
 
 const API_BASE = civicApiBase();
-const INITIAL_REP_PREVIEW_LIMIT = 36;
 const FILTERED_REP_LIMIT = 600;
 const REP_OPTION_LIMIT = 600;
 const searchFilters = normalizeLegislativeSearchFilters(Astro.url.searchParams);
@@ -178,10 +177,6 @@ if (!address && hasDirectoryFilters) {
   }
 }
 
-if (!address && !hasDirectoryFilters) {
-  directoryReps = allCurrentReps.slice(0, INITIAL_REP_PREVIEW_LIMIT);
-}
-
 if (!embedTrackerError && (lookupData || (hasDirectoryFilters && directoryReps.length > 0))) {
   try {
     trackedBills = await getTrackedBills(isEmbed ? embedTrackerUrl : "");
@@ -240,7 +235,7 @@ if (lookupData && trackedBills.size) {
 
 if (!lookupData && directoryReps.length > 0 && trackedBills.size) {
   await hydrateMissingBillSummaries(directoryReps, billSummaries, {
-    limit: hasDirectoryFilters ? 400 : 220,
+    limit: 400,
   });
 }
 
@@ -631,7 +626,7 @@ function embedRepresentativeKey(rep = {}) {
               name="address"
               type="text"
               value={address}
-              placeholder="72 Concord St, Manchester, NH"
+              placeholder="Enter Address Here..."
               autocomplete="street-address"
               required
             />
@@ -672,17 +667,17 @@ function embedRepresentativeKey(rep = {}) {
         </div>
       )}
 
-      {!address && (!isEmbed || hasDirectoryFilters) && (
+      {!address && hasDirectoryFilters && (
         <section class="filtered-directory">
           <div class="results-heading">
             <div>
-              <p class="eyebrow">{hasDirectoryFilters ? "Filtered Current Legislators" : "Current Legislator Directory"}</p>
+              <p class="eyebrow">Filtered Current Legislators</p>
               <h2><span data-fuzzy-count>{Math.min(directoryReps.length, 12)}</span> Representatives and Senators Shown</h2>
               <p class="result-note">
                 <span data-fuzzy-matched-count>{directoryReps.length}</span> loaded matches
               </p>
             </div>
-            {hasDirectoryFilters && <a class="secondary-link" href={legislatorClearHref}>Clear filters</a>}
+            <a class="secondary-link" href={legislatorClearHref}>Clear filters</a>
           </div>
 
           {directoryError ? (

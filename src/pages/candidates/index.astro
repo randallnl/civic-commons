@@ -33,7 +33,6 @@ const searchFilters = normalizeLegislativeSearchFilters(Astro.url.searchParams);
 const { address, county, district, name, office, town, sort } = searchFilters;
 const selectedWard = searchFilters.ward;
 const electionYear = "2026";
-const INITIAL_CANDIDATE_PREVIEW_LIMIT = 12;
 const selectedOffice = office;
 
 let candidates = [];
@@ -123,14 +122,7 @@ try {
     meta = townData.meta || directoryData.meta || {};
     resultContext = townData.town?.name || townData.community?.name || town;
   } else {
-    if (!name && !county && !district && !selectedOffice) {
-      const data = await getDirectoryCandidates({
-        electionYear,
-        limit: INITIAL_CANDIDATE_PREVIEW_LIMIT,
-      });
-      candidates = data.candidates || [];
-      meta = data.meta || {};
-    } else {
+    if (name || county || district || selectedOffice) {
       const data = await getDirectoryCandidates({
         q: name || town,
         county,
@@ -790,7 +782,7 @@ function uniqueOptions(values = []) {
               type="text"
               name="address"
               value={address}
-              placeholder="72 Concord St, Manchester, NH"
+              placeholder="Enter Address Here..."
               autocomplete="street-address"
             />
             <button type="submit">Find Legislative Candidates</button>
@@ -818,20 +810,18 @@ function uniqueOptions(values = []) {
         >
           {error}
         </p>
-      ) : (
+      ) : hasFilters ? (
         <section class="results" id="candidate-results" data-results-region>
           <div class="results-heading">
             <div>
               <h2><span data-fuzzy-count>{Math.min(resultCount, 12)}</span> House and Senate Candidates Shown</h2>
               {resultContext ? (
                 <p>Showing matches for {resultContext}</p>
-              ) : hasFilters ? (
-                <p>Showing candidates that match the active filters.</p>
               ) : (
-                <p>Showing a preview. Use the filters to reveal matching candidate profiles.</p>
+                <p>Showing candidates that match the active filters.</p>
               )}
             </div>
-            {hasFilters && <a href="/candidates">Clear filters</a>}
+            <a href="/candidates">Clear filters</a>
           </div>
 
           {candidates.length ? (
@@ -965,7 +955,7 @@ function uniqueOptions(values = []) {
             <p class="status-message">No State House or State Senate candidates found.</p>
           )}
         </section>
-      )}
+      ) : null}
     </main>
     <SiteFooter />
   </body>

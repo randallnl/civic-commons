@@ -895,7 +895,7 @@ function handleVotingWidgetScript(request) {
       <section class="nhcc-widget" data-version="\${escapeHtml(config.widgetVersion)}">
         \${config.widgetVersion === "full" ? \`<h2>Find your districts and state legislators</h2><p class="nhcc-intro">Enter your full address to see your New Hampshire State Senator and House Representatives, then jump straight to their voting record.</p>\` : ""}
         <form class="nhcc-form">
-          <input name="address" autocomplete="street-address" placeholder="Enter your NH address" required>
+          <input name="address" autocomplete="street-address" placeholder="Enter Address Here..." required>
           <button type="submit">\${escapeHtml(config.buttonText)}</button>
         </form>
         <div class="nhcc-ward" data-ward-wrap hidden>

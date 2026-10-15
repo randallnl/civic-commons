@@ -4,10 +4,18 @@ export const prerender = false;
 import { env } from "cloudflare:workers";
 import FilterBar from "../components/FilterBar.astro";
 import FreeStaterPersonCard from "../components/FreeStaterPersonCard.astro";
+import GlobalTheme from "../components/GlobalTheme.astro";
 import TopNav from "../components/TopNav.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import { getFreeStateAlignedPeople } from "../lib/freeStaterDirectory";
+import {
+  PAGE_SHARE_HEIGHT,
+  PAGE_SHARE_WIDTH,
+  pageShareImageUrl,
+} from "../lib/pageSharePreview";
 
+const sharePreviewCapture = Astro.url.searchParams.get("share-preview") === "1";
+const freeStaterShareImage = pageShareImageUrl("free-staters");
 const filterName = cleanFilter(Astro.url.searchParams.get("q"));
 const filterType = cleanFilter(Astro.url.searchParams.get("type")) || "all";
 const filterBody = cleanFilter(Astro.url.searchParams.get("body")) || "all";
@@ -18,11 +26,13 @@ const sort = cleanFilter(Astro.url.searchParams.get("sort"));
 let people = [];
 let directoryError = "";
 
-try {
-  people = await getFreeStateAlignedPeople(env.d1_db);
-} catch (error) {
-  console.error("Unable to load Free State Aligned directory", error);
-  directoryError = "The Free State Aligned directory is temporarily unavailable.";
+if (!sharePreviewCapture) {
+  try {
+    people = await getFreeStateAlignedPeople(env.d1_db);
+  } catch (error) {
+    console.error("Unable to load Free State Aligned directory", error);
+    directoryError = "The Free State Aligned directory is temporarily unavailable.";
+  }
 }
 
 const countyOptions = uniqueOptions(people.flatMap((person) => person.counties));
@@ -53,11 +63,12 @@ function uniqueOptions(values = []) {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="/nhdb-logo-circle.png" />
     <link rel="apple-touch-icon" href="/nhdb-logo-circle.png" />
-    <meta property="og:image" content="https://nhdeservesbetter.com/nhdb-seo-image.png" />
-    <meta property="og:image:width" content="2048" />
-    <meta property="og:image:height" content="1000" />
+    <meta property="og:image" content={freeStaterShareImage} />
+    <meta property="og:image:width" content={PAGE_SHARE_WIDTH} />
+    <meta property="og:image:height" content={PAGE_SHARE_HEIGHT} />
+    <meta property="og:image:alt" content="Free State Aligned People and the historical connection between the Free State Project and NH Liberty Alliance" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://nhdeservesbetter.com/nhdb-seo-image.png" />
+    <meta name="twitter:image" content={freeStaterShareImage} />
     <title>Free State Aligned People | NH Deserves Better</title>
     <meta
       name="description"
@@ -65,9 +76,9 @@ function uniqueOptions(values = []) {
     />
   </head>
 
-  <body>
-    <TopNav />
-    <main class="page">
+  <body class:list={[sharePreviewCapture && "free-staters-share-capture"]}>
+    {sharePreviewCapture ? <GlobalTheme /> : <TopNav />}
+    <main class:list={["page", sharePreviewCapture && "free-staters-share-shell"]}>
       <section class="hero" aria-labelledby="page-title">
         <div>
           <p class="eyebrow">New Hampshire legislators and candidates</p>
@@ -106,7 +117,7 @@ function uniqueOptions(values = []) {
               <img
                 src="/images/free-staters/nhla-free-staters-pac-2003.jpeg"
                 alt="Newspaper clipping titled Free Staters form PAC from The Telegraph, November 1, 2003"
-                loading="lazy"
+                loading={sharePreviewCapture ? "eager" : "lazy"}
                 width="576"
                 height="593"
               />
@@ -352,7 +363,7 @@ function uniqueOptions(values = []) {
         )}
       </section>
     </main>
-    <SiteFooter />
+    {!sharePreviewCapture && <SiteFooter />}
   </body>
 </html>
 
@@ -645,6 +656,80 @@ function uniqueOptions(values = []) {
     font: inherit;
     font-weight: 900;
     padding: 12px 18px;
+  }
+
+  :global(body.free-staters-share-capture) {
+    background: #f1f5f9;
+    height: 630px;
+    margin: 0;
+    overflow: hidden;
+    width: 1200px;
+  }
+
+  :global(body.free-staters-share-capture) .free-staters-share-shell {
+    box-sizing: border-box;
+    height: 630px;
+    padding: 28px 44px;
+    width: 1200px;
+  }
+
+  :global(body.free-staters-share-capture) .hero {
+    padding: 0 0 18px;
+  }
+
+  :global(body.free-staters-share-capture) .hero h1 {
+    font-size: 3.5rem;
+  }
+
+  :global(body.free-staters-share-capture) .hero .lede {
+    font-size: 1.08rem;
+    line-height: 1.38;
+    margin-top: 12px;
+    max-width: 1080px;
+  }
+
+  :global(body.free-staters-share-capture) .research-link,
+  :global(body.free-staters-share-capture) :global(.party-blind-launcher),
+  :global(body.free-staters-share-capture) :global(.party-blind-panel),
+  :global(body.free-staters-share-capture) .content-panel > section:not(.history-evidence),
+  :global(body.free-staters-share-capture) .directory-section {
+    display: none;
+  }
+
+  :global(body.free-staters-share-capture) .content-panel {
+    background: transparent;
+    border: 0;
+    display: block;
+    padding: 0;
+  }
+
+  :global(body.free-staters-share-capture) .history-evidence {
+    box-sizing: border-box;
+    gap: 28px;
+    grid-template-columns: 290px minmax(0, 1fr);
+    height: 386px;
+    padding: 18px;
+  }
+
+  :global(body.free-staters-share-capture) .history-evidence img {
+    height: 286px;
+    object-fit: contain;
+  }
+
+  :global(body.free-staters-share-capture) .history-evidence figcaption {
+    font-size: 0.68rem;
+    line-height: 1.3;
+    margin-top: 7px;
+  }
+
+  :global(body.free-staters-share-capture) .history-evidence h2 {
+    font-size: 2rem;
+    line-height: 1.05;
+  }
+
+  :global(body.free-staters-share-capture) .history-evidence p {
+    font-size: 0.94rem;
+    line-height: 1.38;
   }
 
   @media (max-width: 760px) {
