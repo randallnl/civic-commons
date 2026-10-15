@@ -95,6 +95,46 @@ function uniqueOptions(values = []) {
           </p>
         </section>
 
+        <section class="history-evidence" aria-labelledby="nhla-history-heading">
+          <figure>
+            <a
+              href="/images/free-staters/nhla-free-staters-pac-2003.jpeg"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open the 2003 newspaper clipping at full size"
+            >
+              <img
+                src="/images/free-staters/nhla-free-staters-pac-2003.jpeg"
+                alt="Newspaper clipping titled Free Staters form PAC from The Telegraph, November 1, 2003"
+                loading="lazy"
+                width="576"
+                height="593"
+              />
+            </a>
+            <figcaption>
+              “Free Staters form PAC,” <cite>The Telegraph</cite>, November 1, 2003.
+              Select the clipping to view it at full size.
+            </figcaption>
+          </figure>
+
+          <div>
+            <p class="eyebrow">Historical connection</p>
+            <h2 id="nhla-history-heading">The Free State Project and NH Liberty Alliance</h2>
+            <p>
+              This 2003 Associated Press report described the newly organized New
+              Hampshire Liberty Alliance as a project of Free State Project members
+              living in New Hampshire. It reported that the alliance planned to
+              support “pro-liberty” candidates and publish legislators’ voting
+              records on pro- and anti-liberty legislation.
+            </p>
+            <p>
+              The clipping documents an early organizational connection between
+              Free State participants and NHLA. It does not mean that every person
+              endorsed or rated by NHLA is a formal member of the Free State Project.
+            </p>
+          </div>
+        </section>
+
         <section>
           <h2>Why Are Free Staters Controversial?</h2>
           <p>
@@ -389,6 +429,46 @@ function uniqueOptions(values = []) {
     margin-top: 14px;
   }
 
+  .history-evidence {
+    align-items: start;
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    display: grid;
+    gap: clamp(22px, 4vw, 38px);
+    grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1.28fr);
+    padding: clamp(18px, 3vw, 28px);
+  }
+
+  .history-evidence figure {
+    margin: 0;
+  }
+
+  .history-evidence figure a {
+    display: block;
+  }
+
+  .history-evidence img {
+    aspect-ratio: 576 / 593;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    display: block;
+    height: auto;
+    width: 100%;
+  }
+
+  .history-evidence figcaption {
+    color: #6b7280;
+    font-size: 0.82rem;
+    font-weight: 720;
+    line-height: 1.45;
+    margin-top: 10px;
+  }
+
+  .history-evidence .eyebrow {
+    margin-bottom: 10px;
+  }
+
   .content-panel ul {
     display: grid;
     gap: 10px;
@@ -569,7 +649,8 @@ function uniqueOptions(values = []) {
 
   @media (max-width: 760px) {
     .directory-summary,
-    .person-card-list {
+    .person-card-list,
+    .history-evidence {
       grid-template-columns: 1fr;
     }
 

@@ -1,0 +1,759 @@
+status,office,county,district,source_name,source_parties,database_names,database_parties,person_ids,role_ids,slugs,is_2026_candidate
+pass,State Representative,Belknap,1,Amber Schaefer,DEM,Amber Schaefer,Democratic Party,600,227,243637-amber-schaefer,1
+pass,State Representative,Belknap,1,Tom Ploszaj,REP,Tom Ploszaj,Republican Party,170,287,tom-ploszaj-9860,1
+pass,State Representative,Belknap,2,Dean S.T. Cascadden,DEM,Dean Cascadden,Democratic Party,448,35,243684-dean-cascadden,1
+pass,State Representative,Belknap,2,Matt Coker,REP,Matthew Coker,Republican Party,272,697,matthew-coker-10733,1
+pass,State Representative,Belknap,2,Scott Wallace,REP,Scott Wallace,Republican Party,995,700,scott-wallace,1
+pass,State Representative,Belknap,2,Seth Wheeler,DEM,SETH WHEELER,Democratic Party,638,274,243702-seth-wheeler,1
+pass,State Representative,Belknap,3,Steven Bunce,REP,Steven Bunce,Republican Party,996,701,steven-bunce,1
+pass,State Representative,Belknap,3,"William Lawrence, Jr.",DEM,"William Lawrence, Jr.",Democratic Party,690,332,william-lawrence-jr,1
+pass,State Representative,Belknap,4,"Kevin M. Nugent, Jr.",REP,"Kevin Nugent, Jr",Republican Party,997,702,kevin-m-nugent-jr,1
+pass,State Representative,Belknap,4,Liz Charlwood,DEM,Liz Charlwood,Democratic Party,691,333,liz-charlwood,1
+pass,State Representative,Belknap,5,Cody Pfaff,REP,Cody Pfaff,Republican Party,1720,1486,sos-2026-house-belknap-5-cody-pfaff,1
+pass,State Representative,Belknap,5,Denise Riley,DEM,Denise Riley,Democratic Party,694,336,denise-riley,1
+pass,State Representative,Belknap,5,Eric Hoffman,DEM,Eric Hoffman,Democratic Party,2648,2729,sos-2026-house-belknap-5-eric-hoffman,1
+pass,State Representative,Belknap,5,Lois A. Kessin,DEM,Lois Kessin,Democratic Party,693,335,lois-a-kessin,1
+pass,State Representative,Belknap,5,Marcia Hayward,DEM,Marcia Hayward,Democratic Party,692,334,marcia-hayward,1
+pass,State Representative,Belknap,5,Mike Bordes,REP,Mike Bordes,Republican Party,171,1484,mike-bordes,1
+pass,State Representative,Belknap,5,Paul Rossi,REP,Paul Rossi,Republican Party,999,704,paul-rossi,1
+pass,State Representative,Belknap,5,Timothy Minor,REP,Timothy Minor,Republican Party,1719,1485,sos-2026-house-belknap-5-timothy-minor,1
+pass,State Representative,Belknap,6,Allan Frank,DEM,Allan Frank,Democratic Party,696,338,allan-frank,1
+pass,State Representative,Belknap,6,Bob McLean,DEM,Bob McLean,Democratic Party,697,339,bob-mclean,1
+pass,State Representative,Belknap,6,Colleen M. Harkey,REP,Colleen Harkey,Republican Party,498,91,244369-colleen-harkey,1
+pass,State Representative,Belknap,6,David Nagel,DEM,David Nagel,Democratic Party,224,340,david-nagel,1
+pass,State Representative,Belknap,6,Glen Aldrich,REP,Glen Aldrich,Republican Party,55,705,glen-aldrich,1
+pass,State Representative,Belknap,6,Jade Wood,REP,Jade Wood,Republican Party,1004,709,jade-wood,1
+pass,State Representative,Belknap,6,Lisa Rivard,DEM,Lisa Rivard,Democratic Party,587,213,243706-lisa-rivard,1
+pass,State Representative,Belknap,6,Priscilla M. Bean,REP,Priscilla Bean,Republican Party,1001,706,priscilla-m-bean,1
+pass,State Representative,Belknap,7,Barbara Comtois,REP,Barbara Comtois,Republican Party,99,710,barbara-comtois,1
+pass,State Representative,Belknap,7,Laura Dunham,DEM,Laura Dunham,Democratic Party,700,342,laura-dunham,1
+pass,State Representative,Belknap,7,Nancy Mitchell,DEM,Nancy Mitchell,Democratic Party,701,343,nancy-mitchell,1
+pass,State Representative,Belknap,7,Paul A. Terry,REP,Paul Terry,Republican Party,173,711,paul-terry,1
+pass,State Representative,Belknap,7,Peter R. Varney,REP,Peter Varney,Republican Party,57,712,peter-varney,1
+pass,State Representative,Belknap,7,Stephen Copithorne,DEM,Stephen Copithorne,Democratic Party,699,341,stephen-copithorne,1
+pass,State Representative,Belknap,8,Cameron Thompson,REP,Cameron Thompson,Republican Party,1008,713,cameron-thompson,1
+pass,State Representative,Belknap,8,Don House,DEM,Don House,Democratic Party,507,102,242117-don-house,1
+pass,State Representative,Belknap,8,Donald J. Giguere,DEM,Donald Giguere,Democratic Party,702,344,donald-j-giguere,1
+pass,State Representative,Belknap,8,Lisa M. Freeman,REP,Lisa Freeman,Republican Party,102,71,lisa-freeman,1
+pass,State Representative,Carroll,1,Benjamin Colbath,DEM,Benjamin Colbath,Democratic Party,703,345,benjamin-colbath,1
+pass,State Representative,Carroll,1,David Paige,DEM,David Paige,Democratic Party,273,347,david-paige-10741,1
+pass,State Representative,Carroll,1,Ellin M. Leonard,DEM,Ellin Leonard,Democratic Party,704,346,ellin-m-leonard,1
+pass,State Representative,Carroll,1,Gregory T. Corrigan,REP,Gregory Corrigan,Republican Party,1009,714,gregory-t-corrigan,1
+pass,State Representative,Carroll,1,Karen C. Umberger,REP,Karen Umberger,Republican Party,1010,715,karen-c-umberger,1
+pass,State Representative,Carroll,1,Robert W. Nelson,REP,Robert Nelson,Republican Party,557,173,244374-robert-nelson,1
+pass,State Representative,Carroll,2,Adam Heard,DEM,Adam Heard,Democratic Party,501,95,244345-adam-heard,1
+pass,State Representative,Carroll,2,Anita Burroughs,DEM,Anita Burroughs,Democratic Party,130,348,anita-burroughs,1
+pass,State Representative,Carroll,2,Erlon Jones,REP,Erlon Jones,Republican Party,1721,1487,sos-2026-house-carroll-2-erlon-jones,1
+pass,State Representative,Carroll,2,Jennifer LePla,REP,Jennifer LePla,Republican Party,523,128,244315-jennifer-lepla,1
+pass,State Representative,Carroll,3,Bryan Randolph,DEM,Bryan Randolph,Democratic Party,582,208,243693-bryan-randolph,1
+pass,State Representative,Carroll,3,Karel A. Crawford,REP,Karel Crawford,Republican,39,45,karel-crawford,1
+pass,State Representative,Carroll,3,Richard R. Brown,REP,Richard Brown,Republican Party,225,716,richard-brown,1
+pass,State Representative,Carroll,3,Todd Milliken,DEM,Todd Milliken,Democratic Party,707,349,todd-milliken,1
+pass,State Representative,Carroll,4,Annie Gehring,DEM,Annie Gehring,Democratic Party,708,350,annie-gehring,1
+pass,State Representative,Carroll,4,Lino M. Avellani,REP,Lino Avellani,Republican,58,10,lino-avellani,1
+pass,State Representative,Carroll,4,Mike Belcher,REP,Mike Belcher,Republican Party,226,718,mike-belcher,1
+pass,State Representative,Carroll,5,Morgan Bultman,DEM,Morgan Bultman,Democratic Party,1693,1459,sos-2026-house-carroll-5-morgan-bultman,1
+pass,State Representative,Carroll,5,Steven Brown,REP,Steven Brown,Republican Party,1014,719,steven-brown,1
+pass,State Representative,Carroll,6,Deirdre McEachern,DEM,Deirdre McEachern,Democratic Party,710,352,deirdre-mceachern,1
+pass,State Representative,Carroll,6,John T. MacDonald,REP,John MacDonald,Republican Party,162,141,john-macdonald,1
+pass,State Representative,Carroll,6,Phoebe VanScoy-Giessler,DEM,Phoebe VanScoy-Giessler,Democratic Party,634,269,244323-phoebe-vanscoy-giessler,1
+pass,State Representative,Carroll,6,Tim Bauman,REP,Tim Bauman,Republican Party,430,15,244371-tim-bauman,1
+pass,State Representative,Carroll,7,Dale Fincher,REP,Dale Fincher,Republican Party,1017,722,dale-fincher,1
+pass,State Representative,Carroll,7,Karen Burnett-Kurie,DEM,Karen Burnett-Kurie,Democratic Party,711,353,karen-burnett-kurie,1
+pass,State Representative,Carroll,8,Colin Mitchell,REP,Colin Mitchell,Republican Party,547,160,244337-colin-mitchell,1
+pass,State Representative,Carroll,8,George Randell,DEM|IND,George Randell,Independent,2649,2730,sos-2026-house-carroll-8-george-randell,1
+pass,State Representative,Carroll,8,Jim Pittman,DEM,Jim Pittman,Democratic Party,712,354,jim-pittman,1
+pass,State Representative,Carroll,8,Tammy Garthwaite,REP,Tammy Simmons Garthwaite,Republican Party,483,72,243675-tammy-garthwaite,1
+pass,State Representative,Cheshire,1,Dylan Germana,DEM,Dylan Germana,Democratic Party,713,355,dylan-germana,1
+pass,State Representative,Cheshire,1,Timothy J. Donovan,REP,Timothy Donovan,Republican Party,1019,724,timothy-j-donovan,1
+pass,State Representative,Cheshire,2,Dru Fox,DEM,Dru Fox,Democratic Party,177,356,dru-fox,1
+pass,State Representative,Cheshire,3,Marissa W. Salisbury,REP,Marissa Salisbury,Republican Party,1722,1488,sos-2026-house-cheshire-3-marissa-w-salisbury,1
+pass,State Representative,Cheshire,3,Philip Jones,DEM,Philip Jones,Democratic Party,276,357,philip-jones,1
+pass,State Representative,Cheshire,4,Jodi Newell,DEM,Jodi Newell,Democrat,277,359,jodi-newell,1
+pass,State Representative,Cheshire,4,Robert Johnson,REP,Robert Johnson,Republican Party,1020,725,robert-johnson,1
+pass,State Representative,Cheshire,5,Lucy McVitty Weber,DEM,Lucy Weber,Democratic Party,21,360,lucy-weber,1
+pass,State Representative,Cheshire,5,William J. Sommer,REP,William Sommer,Republican Party,1021,726,william-j-sommer,1
+pass,State Representative,Cheshire,6,Cathryn A. Harvey,DEM,Cathryn Harvey,Democratic Party,114,93,cathryn-harvey,1
+pass,State Representative,Cheshire,6,Paul Berch,DEM,Paul Berch,Democratic Party,35,18,paul-berch,1
+pass,State Representative,Cheshire,6,Sean Graves,REP,Sean Graves,Republican Party,2650,2731,sos-2026-house-cheshire-6-sean-graves,1
+pass,State Representative,Cheshire,6,Zachary Nutting,REP,Zachary Nutting,Republican Party,1022,727,zachary-nutting,1
+pass,State Representative,Cheshire,7,Jonathan Liptak,REP,Jonathan Liptak,Republican Party,1023,728,jonathan-liptak,1
+pass,State Representative,Cheshire,7,Terri O'Rorke,DEM,Terri O'Rorke,Democratic Party,328,361,terri-ororke,1
+pass,State Representative,Cheshire,8,Christine L. Parshall,DEM,Christine Parshall,Democratic Party,720,362,christine-l-parshall,1
+pass,State Representative,Cheshire,9,Jim Gruber,DEM,James Gruber,Democratic Party,721,363,jim-gruber,1
+pass,State Representative,Cheshire,9,Rich Nalevanko,REP,Rich Nalevanko,Republican Party,214,729,rich-nalevanko,1
+pass,State Representative,Cheshire,10,Alan Gross,DEM,Alan Gross,Democratic Party,722,364,alan-gross,1
+pass,State Representative,Cheshire,10,Michael Ralph York,REP,Michael York,Republican Party,1025,731,michael-ralph-york,1
+pass,State Representative,Cheshire,10,Sly Karasinski,REP,Sly Karasinski,Republican Party,216,111,sly-karasinski-10037,1
+pass,State Representative,Cheshire,10,Steve Russell,DEM,Steve Russell,Democratic Party,723,365,steve-russell,1
+pass,State Representative,Cheshire,11,Denis Vincent Murphy II,REP,Denis Murphy,Republican Party,410,732,denis-murphy-11452,1
+pass,State Representative,Cheshire,11,Lindseigh Picard,DEM,Lindseigh Picard,Democratic Party,724,366,lindseigh-picard,1
+pass,State Representative,Cheshire,12,Dick Thackston,REP,Dick Thackston,Republican Party,93,255,dick-thackston-6938,1
+pass,State Representative,Cheshire,12,Kristan Tilton,DEM,Kristan Tilton,Democratic Party,725,367,kristan-tilton,1
+pass,State Representative,Cheshire,13,Matthew Santonastaso,REP,Matthew Santonastaso,Republican Party,1723,1489,sos-2026-house-cheshire-13-matthew-santonastaso,1
+pass,State Representative,Cheshire,13,Tom Ahlborn-Hsu,DEM,Tom Ahlborn-Hsu,Democratic Party,726,368,tom-ahlborn-hsu,1
+pass,State Representative,Cheshire,14,Gene F. Andersen,DEM,Gene Andersen,Democratic Party,727,369,gene-f-andersen,1
+pass,State Representative,Cheshire,14,John B. Hunt,REP,John Hunt,Republican,4,104,john-hunt-414,1
+pass,State Representative,Cheshire,15,Becky Shields,REP,Becky Shields,Republican Party,1027,734,becky-shields,1
+pass,State Representative,Cheshire,15,Matthew Roach,REP,Matthew Roach,Republican Party,1026,733,matthew-roach,1
+pass,State Representative,Cheshire,15,Nicholas Germana,DEM,Nicholas Germana,Democratic Party,275,370,nicholas-germana-10748,1
+pass,State Representative,Cheshire,15,Samantha Jacobs,DEM,Samantha Jacobs,Democratic Party,329,107,samantha-jacobs-11170,1
+pass,State Representative,Cheshire,16,Alexander Nalevanko,REP,Alexander Nalevanko,Republican Party,1029,736,alexander-nalevanko,1
+pass,State Representative,Cheshire,16,Lucius Parshall,DEM,Lucius Parshall,Democratic Party,178,371,lucius-parshall-9874,1
+pass,State Representative,Cheshire,17,Jennie Gomarlo,DEM,Jennie Gomarlo,Democratic Party,729,372,jennie-gomarlo,1
+pass,State Representative,Cheshire,17,Jennifer Rhodes,REP,Jennifer Rhodes,Republican,180,737,jennifer-rhodes-9878,1
+pass,State Representative,Cheshire,18,Allen Davis,DEM,Allen Davis,Democratic Party,462,49,244329-allen-davis,1
+pass,State Representative,Cheshire,18,Jim Qualey,REP,James Qualey,Republican Party,179,740,james-qualey-9875,1
+pass,State Representative,Cheshire,18,Rita Mattson,REP,Rita Mattson,Republican Party,215,739,rita-mattson-10034,1
+pass,State Representative,Cheshire,18,Rory Lovett Sherman,DEM,Rory Lovett Sherman,Democratic Party,530,136,rory-lovett-sherman,1
+pass,State Representative,Coos,1,Amy Norris,REP,Amy Norris,Republican Party,1033,742,amy-norris,1
+pass,State Representative,Coos,1,Jay Ennis,DEM,Jay Ennis,Democratic Party,2651,2732,sos-2026-house-coos-1-jay-ennis,1
+pass,State Representative,Coos,1,Lee Ann Potter,DEM,Lee Potter,Democratic Party,731,374,lee-ann-potter,1
+pass,State Representative,Coos,1,Sam Hoehn,REP,Sam Hoehn,Republican Party,1032,741,sam-hoehn,1
+pass,State Representative,Coos,2,Arnold G. Davis,REP,Arnold Davis,Republican Party,181,743,arnold-davis,1
+pass,State Representative,Coos,2,Lincoln Robertson,DEM,Lincoln Robertson,Democratic Party,732,375,lincoln-robertson,1
+pass,State Representative,Coos,3,Mike Ouellet,REP,Mike Ouellet,Republican Party,233,744,mike-ouellet,1
+pass,State Representative,Coos,4,Dave Holmander,DEM,Dave Holmander,Democratic Party,2652,2733,sos-2026-house-coos-4-dave-holmander,1
+pass,State Representative,Coos,4,Scott McKinnon Black,IND,Scott Black,Independent,2518,2607,sos-2026-house-coos-4-scott-mckinnon-black,1
+pass,State Representative,Coos,4,Seth King,REP,Seth King,Republican Party,234,116,seth-king,1
+pass,State Representative,Coos,5,Cassie Mason,IND,Cassie Mason,Independent,2366,2061,sos-2026-house-coos-5-cassie-mason,1
+pass,State Representative,Coos,5,Mark Evans,REP,Mark Evans,Republican Party,1036,745,mark-evans,1
+pass,State Representative,Coos,5,Peter Morency,REP,Pete Morency,Republican Party,109,746,pete-morency-8401,1
+pass,State Representative,Coos,6,Richard Umiker,DEM,Richard Umiker,Democratic Party,733,376,richard-umiker,1
+pass,State Representative,Coos,6,Robert Gargano,REP,Robert Gargano,Republican Party,1038,747,robert-gargano,1
+pass,State Representative,Coos,7,Corinne Cascadden,DEM,Corinne Cascadden,Democratic Party,447,2734,242608-corinne-cascadden,1
+pass,State Representative,Coos,7,Lori Korzen,REP,Lori Korzen,Republican Party,235,119,lori-korzen,1
+pass,State Representative,Grafton,1,Andrew Dorsett,REP,Andrew Dorsett,Republican Party,1724,1490,sos-2026-house-grafton-1-andrew-dorsett,1
+pass,State Representative,Grafton,1,Calvin Beaulier,REP,Calvin Beaulier,Republican Party,146,748,calvin-beaulier,1
+pass,State Representative,Grafton,1,Joseph Barton,REP,Joseph Barton,Republican,369,14,joseph-barton,1
+pass,State Representative,Grafton,1,Joseph Goderic Beaulieu,DEM,Joseph Beaulieu,Democratic Party,734,377,joseph-goderic-beaulieu,1
+pass,State Representative,Grafton,1,Linda Massimilla,DEM,Linda Massimilla,Democratic Party,736,379,linda-massimilla,1
+pass,State Representative,Grafton,1,Timothy T. Egan,DEM,Timothy Egan,Democratic Party,735,378,timothy-t-egan,1
+pass,State Representative,Grafton,2,Jared Sullivan,DEM,Jared Sullivan,Democrat,278,380,jared-sullivan,1
+pass,State Representative,Grafton,3,Bonnie Ham,REP,Bonnie Ham,Republican Party,1040,749,bonnie-ham,1
+pass,State Representative,Grafton,3,Jerry M. Stringham,DEM,Jerry Stringham,Democrat,132,381,jerry-stringham,1
+pass,State Representative,Grafton,4,David Adams Rardin,REP,David Rardin,Republican Party,583,209,244335-david-rardin,1
+pass,State Representative,Grafton,4,Heather P. Baldwin,DEM,Heather Baldwin,Democrat,279,382,heather-baldwin,1
+pass,State Representative,Grafton,5,Dustin Vigneault,DEM,Dustin Vigneault,Democratic Party,740,383,dustin-vigneault,1
+pass,State Representative,Grafton,5,Greg Mathieson,REP,Greg Mathieson,Republican Party,1042,751,greg-mathieson,1
+pass,State Representative,Grafton,5,Marie Louise Bjelobrk,REP,Marie Louise Bjelobrk,Republican Party,371,750,marie-louise-bjelobrk-11326,1
+pass,State Representative,Grafton,6,Linda Franz,REP,Linda Franz,Republican,372,752,linda-franz,1
+pass,State Representative,Grafton,6,Paul J. Goundrey,DEM,Paul Goundrey,Democratic Party,741,384,paul-j-goundrey,1
+pass,State Representative,Grafton,7,Janet Marie Lucas,DEM,Janet Lucas,Democrat,332,385,janet-lucas,1
+pass,State Representative,Grafton,7,Jon A. Gablinske,REP,Jon Gablinske,Republican Party,1044,753,jon-a-gablinske,1
+pass,State Representative,Grafton,8,Bill Bolton,DEM,Bill Bolton,Democratic Party,280,386,bill-bolton,1
+pass,State Representative,Grafton,8,George Kirk,REP,George Kirk,Republican Party,1045,754,george-kirk,1
+pass,State Representative,Grafton,8,Peter Lovett,DEM,Peter Lovett,Democratic Party,281,387,peter-lovett,1
+pass,State Representative,Grafton,8,Sallie Fellows,DEM,Sallie Fellows,Democratic Party,133,68,sallie-fellows,1
+pass,State Representative,Grafton,9,Bradley Macrae,REP,Bradley Macrae,Republican Party,536,143,243740-bradley-macrae,1
+pass,State Representative,Grafton,9,Ella V. Barrett,DEM,Ella Barrett,Democratic Party,428,13,244319-ella-barrett,1
+pass,State Representative,Grafton,10,Marc E. Bourassa,DEM,Marc Bourassa,Democratic Party,745,388,marc-e-bourassa,1
+pass,State Representative,Grafton,10,Steven Pihl Coffill,REP,Steven Coffill,Republican Party,1046,755,steven-pihl-coffill,1
+pass,State Representative,Grafton,11,Jake Abuhav,REP,Jake Abuhav,Republican Party,1047,756,jake-abuhav,1
+pass,State Representative,Grafton,11,"Roger B. Larochelle, Jr.",DEM,"Roger Larochelle, Jr.",Democratic Party,746,389,roger-b-larochelle-jr,1
+pass,State Representative,Grafton,12,Ellen Rockmore,DEM,Ellen Rockmore,Democratic Party,334,392,ellen-rockmore-11183,1
+pass,State Representative,Grafton,12,Mary Hakken-Phillips,DEM,Mary Hakken-Phillips,Democratic Party,183,390,mary-hakken-phillips-9889,1
+pass,State Representative,Grafton,12,Russell Muirhead,DEM,Russell Muirhead,Democratic Party,184,391,russell-muirhead-9890,1
+pass,State Representative,Grafton,12,Terry Spahr,DEM,Terry Spahr,Democratic Party,335,393,terry-spahr-11184,1
+pass,State Representative,Grafton,13,Laurel Stavis,DEM,Laurel Stavis,Democratic Party,134,394,laurel-stavis-9063,1
+pass,State Representative,Grafton,14,Kathryn Brennan,DEM,Kathryn Brennan,Democratic Party,747,395,kathryn-brennan,1
+pass,State Representative,Grafton,15,Zoe Hill,DEM,Zoe Hill,Democratic Party,748,396,zoe-hill,1
+pass,State Representative,Grafton,16,David Fracht,DEM,David Fracht,Democratic Party,322,397,david-fracht-11041,1
+pass,State Representative,Grafton,17,Thomas Cormen,DEM,Thomas Cormen,Democratic Party,282,398,thomas-cormen-10769,1
+pass,State Representative,Grafton,18,Donald McFarlane,REP,Donald McFarlane,Republican Party,319,757,donald-mcfarlane-10913,1
+pass,State Representative,Grafton,18,Marko Kloos,DEM,Marko Kloos,Democratic Party,749,399,marko-kloos,1
+pass,State Representative,Hillsborough,1,Debbie Ryan,DEM,Debbie Ryan,Democratic Party,751,401,debbie-ryan,1
+pass,State Representative,Hillsborough,1,Deborah Kruzel,REP,Deborah Kruzel,Republican Party,1050,760,deborah-kruzel,1
+pass,State Representative,Hillsborough,1,Diane Rogers,REP,Diane Rogers,Republican Party,1052,762,diane-rogers,1
+pass,State Representative,Hillsborough,1,Jeffrey F. Tenczar,REP,Jeffrey Tenczar,Republican,238,763,jeffrey-tenczar,1
+pass,State Representative,Hillsborough,1,Lisa Brown,DEM,Lisa Brown,Democratic Party,750,400,lisa-brown,1
+pass,State Representative,Hillsborough,1,Noah Lamoureaux,DEM,Noah Lamoureaux,Democratic Party,2653,2735,sos-2026-house-hillsborough-1-noah-lamoureaux,1
+pass,State Representative,Hillsborough,1,Tom Mannion,REP,Tom Mannion,Republican Party,237,761,tom-mannion,1
+pass,State Representative,Hillsborough,2,Brian Labrie,REP,Brian Labrie,Republican Party,374,765,brian-labrie,1
+pass,State Representative,Hillsborough,2,Catherine A. Rombeau,DEM,Catherine Rombeau,Democratic Party,221,38,catherine-rombeau,1
+pass,State Representative,Hillsborough,2,Geoffrey Wellington,DEM,Geoffrey Wellington,Democratic Party,756,406,geoffrey-wellington,1
+pass,State Representative,Hillsborough,2,Jeff Kerr,DEM,Jeffrey Kerr,Democratic Party,437,24,242632-jeffrey-kerr,1
+pass,State Representative,Hillsborough,2,John K. Fitzgerald,DEM,John Fitzgerald,Democratic Party,753,403,john-k-fitzgerald,1
+pass,State Representative,Hillsborough,2,John Schneller,REP,John Schneller,Republican,88,766,john-schneller,1
+pass,State Representative,Hillsborough,2,Kristin Noble,REP,Kristin Noble,Republican Party,239,29,kristin-noble,1
+pass,State Representative,Hillsborough,2,Matthew Castanien,REP,Matthew Castanien,Republican Party,1054,764,matthew-castanien,1
+pass,State Representative,Hillsborough,2,Pat MacMonagle,REP,Pat MacMonagle,Republican Party,1726,1492,sos-2026-house-hillsborough-2-pat-macmonagle,1
+pass,State Representative,Hillsborough,2,Peter M. Kujawski,REP,Peter Kujawski,Republican Party,440,27,242221-peter-kujawski,1
+pass,State Representative,Hillsborough,2,Phil Greazzo,REP,Phil Greazzo,Republican Party,1725,1491,sos-2026-house-hillsborough-2-phil-greazzo,1
+pass,State Representative,Hillsborough,2,Ryan Nugent,DEM,Ryan Nugent,Democratic Party,755,405,ryan-nugent,1
+pass,State Representative,Hillsborough,2,Sheila Quick,DEM,Sheila Quick,Democratic Party,1695,1461,sos-2026-house-hillsborough-2-sheila-quick,1
+pass,State Representative,Hillsborough,2,Todd C. Fahey,DEM,Todd Fahey,Democratic Party,752,402,todd-c-fahey,1
+pass,State Representative,Hillsborough,3,Fred Davis,DEM,Fred Davis,Democratic Party,143,408,fred-davis,1
+pass,State Representative,Hillsborough,3,John Menyhard,REP,John Menyhard,Republican Party,1057,767,john-menyhard,1
+pass,State Representative,Hillsborough,3,Michael Joseph,DEM,Michael Joseph,Democratic Party,2654,2736,sos-2026-house-hillsborough-3-michael-joseph,1
+pass,State Representative,Hillsborough,3,Suzanne A. Beaulieu,DEM,Suzanne Beaulieu,Democratic Party,757,407,suzanne-a-beaulieu,1
+pass,State Representative,Hillsborough,4,Camille Pattison,DEM,Camille Pattison,Democratic Party,760,410,camille-pattison,1
+pass,State Representative,Hillsborough,4,Linda Vandecar Ryan,DEM,Linda Ryan,Democratic Party,284,411,linda-ryan,1
+pass,State Representative,Hillsborough,4,Renae Lias,DEM,Renae Lias,Democratic Party,759,409,renae-lias,1
+pass,State Representative,Hillsborough,4,Shawn Martin,REP,Shawn Martin,Republican Party,1058,768,shawn-martin,1
+pass,State Representative,Hillsborough,5,Dale Swanson,DEM,Dale Swanson,Democratic Party,336,44,dale-swanson,1
+pass,State Representative,Hillsborough,5,Heather Raymond,DEM,Heather Raymond,Democrat,286,413,heather-raymond,1
+pass,State Representative,Hillsborough,5,Paul Schibbelhute,REP,Paul Schibbelhute,Republican Party,1727,1493,sos-2026-house-hillsborough-5-paul-schibbelhute,1
+pass,State Representative,Hillsborough,5,Susan A. Elberger,DEM,Susan Elberger,Democratic Party,285,412,susan-elberger,1
+pass,State Representative,Hillsborough,6,Adam R. Thompson,DEM,Adam Thompson,Democratic Party,468,56,243632-adam-thompson,1
+pass,State Representative,Hillsborough,6,Daniel Richardson,REP,Daniel Richardson,Republican Party,1061,771,daniel-richardson,1
+pass,State Representative,Hillsborough,6,Doris Hohensee,REP,Doris Hohensee,Republican Party,1059,769,doris-hohensee,1
+pass,State Representative,Hillsborough,6,Elena Pavlou,REP,Elena Pavlou,Republican Party,1060,770,elena-pavlou,1
+pass,State Representative,Hillsborough,6,Lee Ann Kluger,DEM,Lee Ann Kluger,Democrat,337,47,lee-ann-kluger-11191,1
+pass,State Representative,Hillsborough,6,Michele Roussel Buckley,DEM,Michele Buckley,Democratic Party,764,414,michele-roussel-buckley,1
+pass,State Representative,Hillsborough,7,Avalon Lewis,REP,Avalon Lewis,Republican Party,1062,772,avalon-lewis,1
+pass,State Representative,Hillsborough,7,Charlene Bangs Pedersen,DEM,Charlene Pedersen,Democratic Party,766,416,charlene-bangs-pedersen,1
+pass,State Representative,Hillsborough,7,Jim Mahoney,DEM,Jim Mahoney,Democratic Party,767,417,jim-mahoney,1
+pass,State Representative,Hillsborough,7,Louis C. Juris,DEM,Louis Juris,Democratic Party,289,66,louis-juris,1
+pass,State Representative,Hillsborough,7,Roy H. Parker,REP,Roy Parker,Republican Party,1063,773,roy-h-parker,1
+pass,State Representative,Hillsborough,8,Christal Lloyd,DEM,Christal Lloyd,Democratic Party,290,418,christal-lloyd-10783,1
+pass,State Representative,Hillsborough,8,Efstathia C. Booras,DEM,Efstathia Booras,Democratic Party,37,67,efstathia-booras-679,1
+pass,State Representative,Hillsborough,8,Frances Nutter-Upham,DEM,Frances Nutter-Upham,Democratic Party,769,419,frances-nutter-upham,1
+pass,State Representative,Hillsborough,8,Travis Tripodi,REP,Travis Tripodi,Republican Party,481,70,244343-travis-tripodi,1
+pass,State Representative,Hillsborough,9,Joseph Cole,REP,Joseph Cole,Republican Party,1064,774,joseph-cole,1
+pass,State Representative,Hillsborough,9,Rich Green,DEM,Rich Green,Democratic Party,770,420,rich-green,1
+pass,State Representative,Hillsborough,9,Sanjeev K. Manohar,DEM,Sanjeev Manohar,Democratic Party,338,421,sanjeev-manohar,1
+pass,State Representative,Hillsborough,9,Santosh D. Salvi,DEM,Santosh Salvi,Democratic Party,339,422,santosh-salvi,1
+pass,State Representative,Hillsborough,10,Bill Ohm,REP,Bill Ohm,Republican Party,84,775,bill-ohm-968,1
+pass,State Representative,Hillsborough,10,Linda Harriott-Gathright,DEM,Linda Harriott-Gathright,Democrat,42,423,linda-harriott-gathright-720,1
+pass,State Representative,Hillsborough,10,Marty Jack,DEM,Martin Jack,Democratic Party,43,424,martin-jack-733,1
+pass,State Representative,Hillsborough,10,Samantha O'Loughlin,DEM,Samantha O'Loughlin,Democratic Party,774,425,samantha-o-loughlin,1
+pass,State Representative,Hillsborough,11,Arya Shams,DEM,Arya Shams,Democratic Party,484,73,244267-arya-shams,1
+pass,State Representative,Hillsborough,11,Kristie Hart,REP,Kristie Hart,Republican Party,1065,776,kristie-hart,1
+pass,State Representative,Hillsborough,11,Manoj Chourasia,DEM,Manoj Chourasia,Democratic Party,340,426,manoj-chourasia-11194,1
+pass,State Representative,Hillsborough,11,Will Darby,DEM,Will Darby,Democratic Party,292,427,will-darby-10785,1
+pass,State Representative,Hillsborough,12,Adam Presa,REP,Adam Presa,Republican,376,94,adam-presa-11346,1
+pass,State Representative,Hillsborough,12,Bill Boyd,REP,Bill Boyd,Republican Party,219,778,bill-boyd-10347,1
+pass,State Representative,Hillsborough,12,Heather Robitaille,DEM,Heather Robitaille,Democratic Party,777,431,heather-robitaille,1
+pass,State Representative,Hillsborough,12,Jeanine Notter,REP,Jeanine Notter,Republican,31,84,jeanine-notter-639,1
+pass,State Representative,Hillsborough,12,Julie Miles,REP,Julie Miles,Republican,375,779,julie-miles-11345,1
+pass,State Representative,Hillsborough,12,Kevin Francis Ballantine,REP,Kevin Ballantine,Republican Party,1066,777,kevin-francis-ballantine,1
+pass,State Representative,Hillsborough,12,Kevin Southwick,REP,Kevin Southwick,Republican Party,1067,780,kevin-southwick,1
+pass,State Representative,Hillsborough,12,Kyle Haines,IND,Kyle Haines,Independent,491,2062,244275-kyle-haines,1
+pass,State Representative,Hillsborough,12,Marc Nozell,DEM,Marc Nozell,Democratic Party,496,88,242141-marc-nozell,1
+pass,State Representative,Hillsborough,12,Mary Beth Raven,DEM,Mary Raven,Democratic Party,776,430,mary-beth-raven,1
+pass,State Representative,Hillsborough,12,Matthew Brown,DEM,Matthew Brown,Democratic Party,489,78,243697-matthew-brown,1
+pass,State Representative,Hillsborough,12,Maureen Mooney,REP,Maureen Mooney,Republican Party,91,82,maureen-mooney-5772,1
+pass,State Representative,Hillsborough,12,Nancy A. Murphy,DEM,Nancy Murphy,Democrat,136,429,nancy-murphy-9089,1
+pass,State Representative,Hillsborough,12,Rebecca Boutin,DEM,Rebecca Boutin,Democratic Party,775,428,rebecca-boutin,1
+pass,State Representative,Hillsborough,12,Rosemarie L. Rung,DEM,Rosemarie Rung,Democratic Party,137,432,rosemarie-rung-9090,1
+pass,State Representative,Hillsborough,12,Wendy E. N Thomas,DEM,Wendy Thomas,Democratic Party,138,101,wendy-thomas-9093,1
+pass,State Representative,Hillsborough,12,Wolfram von Schoen,REP,Wolfram Schoen,Republican Party,1068,781,wolfram-von-schoen,1
+pass,State Representative,Hillsborough,13,Andrew Prout,REP,Andrew Prout,Republican Party,105,783,andrew-prout-8359,1
+pass,State Representative,Hillsborough,13,Bob Wherry,REP,Robert Wherry,Republican Party,241,786,robert-wherry-10641,1
+pass,State Representative,Hillsborough,13,C. Mark DelSesto,IND,C. DelSesto,Independent,2519,2608,sos-2026-house-hillsborough-13-c-mark-delsesto,1
+pass,State Representative,Hillsborough,13,Cathy Kenny,REP,Catherine Kenny,Republican Party,240,782,catherine-kenny-10640,1
+pass,State Representative,Hillsborough,13,Dillon Dumont,REP,Dillon Dumont,Republican Party,377,103,dillon-dumont-11348,1
+pass,State Representative,Hillsborough,13,Don Staveley,DEM,Don Staveley,Democratic Party,2655,2737,sos-2026-house-hillsborough-13-don-staveley,1
+pass,State Representative,Hillsborough,13,James Battis,DEM,James Battis,Democratic Party,779,434,james-battis,1
+pass,State Representative,Hillsborough,13,James M. Caron,DEM,James Caron,Democratic Party,780,435,james-m-caron,1
+pass,State Representative,Hillsborough,13,Jordan Ulery,REP,Jordan Ulery,Republican,18,785,jordan-ulery-520,1
+pass,State Representative,Hillsborough,13,Kate Messner,DEM,Kate Messner,Democratic Party,781,436,kate-messner,1
+pass,State Representative,Hillsborough,13,Luan Baci,DEM,Luan Baci,Democratic Party,778,433,luan-baci,1
+pass,State Representative,Hillsborough,13,Tom Trost,REP,Tom Trost,Republican Party,1070,784,tom-trost,1
+pass,State Representative,Hillsborough,14,Paula Paciulan,DEM,Paula Paciulan,Democratic Party,783,438,paula-paciulan,1
+pass,State Representative,Hillsborough,14,Ray Ealy,DEM,Ray Ealy,Democratic Party,782,437,ray-ealy,1
+pass,State Representative,Hillsborough,14,"Raymond C. Peeples, Jr.",REP,Raymond Peeples,Republican Party,379,788,raymond-peeples,1
+pass,State Representative,Hillsborough,14,Rich Lascelles,REP,Richard Lascelles,Republican Party,103,787,richard-lascelles-8331,1
+pass,State Representative,Hillsborough,15,Mark McLean,REP,Mark McLean,Republican Party,63,789,mark-mclean-859,1
+pass,State Representative,Hillsborough,15,Mark Proulx,REP,Mark Proulx,Republican Party,78,790,mark-proulx-932,1
+pass,State Representative,Hillsborough,15,Michael Farley,DEM,Michael Farley,Democratic Party,784,439,michael-farley,1
+pass,State Representative,Hillsborough,15,Michael Fitzell,DEM,Michael Fitzell,Democratic Party,785,440,michael-fitzell,1
+pass,State Representative,Hillsborough,16,Ben Baroody,DEM,Ben Baroody,Democratic Party,1697,1463,sos-2026-house-hillsborough-16-ben-baroody,1
+pass,State Representative,Hillsborough,16,David A. Smith,REP,David Smith,Republican Party,1074,791,david-a-smith,1
+pass,State Representative,Hillsborough,16,Maxine Mosley,DEM,Maxine Mosley,Democratic Party,2656,2738,sos-2026-house-hillsborough-16-maxine-mosley,1
+pass,State Representative,Hillsborough,16,Michael J. Tkacz,REP,Michael Tkacz,Republican Party,1075,792,michael-j-tkacz,1
+pass,State Representative,Hillsborough,17,Ben Prescott,REP,Ben Prescott,Republican Party,1076,793,ben-prescott,1
+pass,State Representative,Hillsborough,17,Rob Fox,DEM,Rob Fox,Democratic Party,786,441,rob-fox,1
+pass,State Representative,Hillsborough,17,Sean Parr,DEM,Sean Parr,Democratic Party,787,442,sean-parr,1
+pass,State Representative,Hillsborough,18,James Normand,DEM,James Normand,Democratic Party,1698,1464,sos-2026-house-hillsborough-18-james-normand,1
+pass,State Representative,Hillsborough,18,Jessica Grill,DEM,Jessica Grill,Democrat,293,113,jessica-grill-10797,1
+pass,State Representative,Hillsborough,18,Steven Kesselring,REP,Steven Kesselring,Republican Party,380,794,steven-kesselring-11354,1
+pass,State Representative,Hillsborough,19,Chrissy Simonds,DEM,Chrissy Simonds,Democratic Party,789,444,chrissy-simonds,1
+pass,State Representative,Hillsborough,19,Jane Beaulieu,DEM,Jane Beaulieu,Democratic Party,788,443,jane-beaulieu,1
+pass,State Representative,Hillsborough,19,Matt Drew,REP,Matt Drew,Republican Party,381,115,matt-drew-11355,1
+pass,State Representative,Hillsborough,19,Mickey Mullin,REP,Mickey Mullin,Republican Party,1078,797,mickey-mullin,1
+pass,State Representative,Hillsborough,20,Alissandra Murray,DEM,Alissandra Murray,Democratic Party,294,445,alissandra-murray-10799,1
+pass,State Representative,Hillsborough,20,Jose R. Marte,REP,Jose Marte,Republican Party,1079,799,jose-r-marte,1
+pass,State Representative,Hillsborough,20,Pauline Martineau,DEM,Pauline Martineau,Democratic Party,1699,1465,sos-2026-house-hillsborough-20-pauline-martineau,1
+pass,State Representative,Hillsborough,20,Pierre M. Dupont,REP,Pierre Dupont,Republican Party,242,798,pierre-dupont-10644,1
+pass,State Representative,Hillsborough,21,Chris Morgan,REP,Chris Morgan,Republican Party,1080,800,chris-morgan,1
+pass,State Representative,Hillsborough,21,Christine Seibert,DEM,Christine Seibert,Democratic Party,135,447,christine-seibert-9077,1
+pass,State Representative,Hillsborough,21,Jeff Goley,DEM,Jeff Goley,Democratic Party,790,446,jeff-goley,1
+pass,State Representative,Hillsborough,22,Brittany Ping,REP,Brittany Ping,Republican Party,592,802,brittany-ping,1
+pass,State Representative,Hillsborough,22,Greg Erskine,DEM,Gregory Erskine,Democratic Party,517,117,244334-gregory-erskine,1
+pass,State Representative,Hillsborough,22,Max Abramson,REP,Max Abramson,Republican Party,1081,801,max-abramson,1
+pass,State Representative,Hillsborough,22,Nicole Leapley,DEM,Nicole Leapley,Democratic Party,295,449,nicole-leapley-10800,1
+pass,State Representative,Hillsborough,23,Jean Jeudy,DEM,Jean Jeudy,Democrat,20,451,jean-jeudy-527,1
+pass,State Representative,Hillsborough,23,Mary Ngwanda Georges,DEM,Mary Georges,Democratic Party,343,450,mary-georges-11206,1
+pass,State Representative,Hillsborough,24,Frank Anthony,DEM,Frank Anthony,Democratic Party,792,452,frank-anthony,1
+pass,State Representative,Hillsborough,24,Jessica Margeson,DEM,Jessica Margeson,Democratic Party,2657,2739,sos-2026-house-hillsborough-24-jessica-margeson,1
+pass,State Representative,Hillsborough,24,Paul LaFerriere,REP,Paul LaFerriere,Republican Party,1084,804,paul-laferriere,1
+pass,State Representative,Hillsborough,24,Shuvom Ghose,REP,Shuvom Ghose,Republican Party,1083,803,shuvom-ghose,1
+pass,State Representative,Hillsborough,25,Heather Deiner,DEM,Heather Deiner,Democratic Party,795,455,heather-deiner,1
+pass,State Representative,Hillsborough,25,Kathleen Paquette,REP,Kathleen Paquette,Republican Party,243,805,kathleen-paquette-10648,1
+pass,State Representative,Hillsborough,25,Kathy Staub,DEM,Kathy Staub,Democratic Party,296,118,kathy-staub-10801,1
+pass,State Representative,Hillsborough,26,Brian Cole,REP,Brian Cole,Republican Party,96,2740,brian-cole-7267,1
+pass,State Representative,Hillsborough,26,Henry Emele,REP,Henry Emele,Republican Party,1085,806,henry-emele,1
+pass,State Representative,Hillsborough,26,Mary Freitas,DEM,Mary Freitas,Democratic Party,797,457,mary-freitas,1
+pass,State Representative,Hillsborough,26,Patrick N. Long,DEM,Patrick Long,Democrat,331,459,patrick-long-11177,1
+pass,State Representative,Hillsborough,27,Mary Murphy,REP,Mary Murphy,Republican Party,382,126,mary-murphy-11360,1
+pass,State Representative,Hillsborough,27,Timothy J. Coffin,IND,Timothy J. Coffin,Independent,519,2063,244341-timothy-coffin,1
+pass,State Representative,Hillsborough,28,Benson H. Goodwin,DEM,Benson Goodwin,Democratic Party,801,462,benson-h-goodwin,1
+pass,State Representative,Hillsborough,28,David Erikson,DEM,David Erikson,Democratic Party,800,461,david-erikson,1
+pass,State Representative,Hillsborough,28,Keith Erf,REP,Keith Erf,Republican Party,163,145,keith-erf-9416,1
+pass,State Representative,Hillsborough,28,Travis Corcoran,REP,Travis Corcoran,Republican Party,246,807,travis-corcoran-10666,1
+pass,State Representative,Hillsborough,29,Christopher Calhoun,DEM,Christopher Calhoun,Democratic Party,803,464,christopher-calhoun,1
+pass,State Representative,Hillsborough,29,Henry R. Giasson III,REP,Henry Giasson,Republican,383,809,henry-giasson-11363,1
+pass,State Representative,Hillsborough,29,Joe Alexander,REP,Joe Alexander,Republican,148,808,joe-alexander-9165,1
+pass,State Representative,Hillsborough,29,Judi L. Lanza,DEM,Judi Lanza,Democratic Party,804,465,judi-l-lanza,1
+pass,State Representative,Hillsborough,29,Karyn Battey,DEM,Karyn Battey,Democratic Party,802,463,karyn-battey,1
+pass,State Representative,Hillsborough,29,Marie B. Morgan,DEM,Marie Morgan,Democratic Party,805,466,marie-b-morgan,1
+pass,State Representative,Hillsborough,29,Shanun R. Carey,REP,Shanun Carey,Republican Party,542,153,244352-shanun-carey,1
+pass,State Representative,Hillsborough,29,Sherri Reinfurt,REP,Sherri Reinfurt,Republican Party,384,162,sherri-reinfurt-11364,1
+pass,State Representative,Hillsborough,30,Austin Cottle,REP,Austin Cottle,Republican Party,1087,811,austin-cottle,1
+pass,State Representative,Hillsborough,30,Janet McEwen,DEM,Janet McEwen,Democratic Party,552,166,244234-janet-mcewen,1
+pass,State Representative,Hillsborough,30,Larry Baker,REP,Larry Baker,Republican Party,1086,810,larry-baker,1
+pass,State Representative,Hillsborough,30,Tim Morehouse,REP,Tim Morehouse,Republican Party,1088,812,tim-morehouse,1
+pass,State Representative,Hillsborough,30,W. Gordon Allen,DEM,W. Gordon Allen,Democratic Party,1700,1466,sos-2026-house-hillsborough-30-w-gordon-allen,1
+pass,State Representative,Hillsborough,30,William Bryk,DEM,William Bryk,Democratic Party,806,467,william-bryk,1
+pass,State Representative,Hillsborough,31,Jarvis M. Adams IV,REP,Jarvis Adams,Republican Party,1089,813,jarvis-m-adams-iv,1
+pass,State Representative,Hillsborough,31,Molly C. Howard,DEM,Molly Howard,Democratic Party,297,169,molly-howard-10810,1
+pass,State Representative,Hillsborough,32,Diane Kelley,REP,Diane Kelley,Republican Party,190,814,diane-kelley-9909,1
+pass,State Representative,Hillsborough,32,Jim Kofalt,REP,Jim Kofalt,Republican,185,174,jim-kofalt-9895,1
+pass,State Representative,Hillsborough,32,Kermit Williams,DEM,Kermit Williams,Democratic Party,1701,1467,sos-2026-house-hillsborough-32-kermit-williams,1
+pass,State Representative,Hillsborough,32,Richard Swanson,DEM,Richard Swanson,Democratic Party,807,468,richard-swanson,1
+pass,State Representative,Hillsborough,32,Shane Sirois,REP,Shane Sirois,Republican Party,244,815,shane-sirois-10653,1
+pass,State Representative,Hillsborough,33,Jonah Orion Wheeler,DEM,Jonah Wheeler,Democratic Party,298,175,jonah-wheeler-10813,1
+pass,State Representative,Hillsborough,33,Kimberly Thomas,REP,Kimberly Thomas,Republican Party,1090,816,kimberly-thomas,1
+pass,State Representative,Hillsborough,33,Peter R. Leishman,DEM,Peter Leishman,Democratic Party,13,469,peter-leishman-450,1
+pass,State Representative,Hillsborough,34,Daniel LeClerc,DEM,Daniel LeClerc,Democratic Party,299,181,daniel-leclerc-10814,1
+pass,State Representative,Hillsborough,34,Daniel T. Veilleux,DEM,Daniel Veilleux,Democratic Party,188,271,daniel-veilleux-9905,1
+pass,State Representative,Hillsborough,34,Diane Layton,REP,Diane Layton,Republican Party,560,179,242365-diane-layton,1
+pass,State Representative,Hillsborough,34,Jason Hennessey,REP,Jason Hennessey,Republican Party,1091,817,jason-hennessey,1
+pass,State Representative,Hillsborough,34,Russ Hodgkins,REP,Russ Hodgkins,Republican Party,1092,818,russ-hodgkins,1
+pass,State Representative,Hillsborough,34,Stephanie Grund,DEM,Stephanie Grund,Democratic Party,344,176,stephanie-grund-11212,1
+pass,State Representative,Hillsborough,35,Ben Ming,DEM,Ben Ming,Democratic Party,808,471,ben-ming,1
+pass,State Representative,Hillsborough,35,Jim Kelly,REP,Jim Kelly,Republican Party,1093,820,jim-kelly,1
+pass,State Representative,Hillsborough,35,Kat McGhee,DEM,Kat McGhee,Democrat,94,470,kat-mcghee-6966,1
+pass,State Representative,Hillsborough,35,Liz Barbour,REP,Liz Barbour,Republican,245,819,liz-barbour-10659,1
+pass,State Representative,Hillsborough,36,Diane Pauer,REP,Diane Pauer,Republican Party,191,185,diane-pauer-9910,1
+pass,State Representative,Hillsborough,36,John W. Suiter,REP,John Suiter,Republican Party,385,821,john-suiter-11369,1
+pass,State Representative,Hillsborough,36,Michael Pellerito,DEM,Michael Pellerito,Democratic Party,809,472,michael-pellerito,1
+pass,State Representative,Hillsborough,36,Stephen Spratt,DEM,Stephen Spratt,Democratic Party,810,473,stephen-spratt,1
+pass,State Representative,Hillsborough,37,Daryl D'Angelo,CLA,Daryl D'Angelo,Classic Liberal,568,2613,244314-daryl-d-angelo,1
+pass,State Representative,Hillsborough,37,Megan A. Murray,DEM,Megan Murray,Democratic Party,139,193,megan-murray-9095,1
+pass,State Representative,Hillsborough,37,Michael E. Thornton,REP,Michael Thornton,Republican Party,1094,822,michael-e-thornton,1
+pass,State Representative,Hillsborough,38,Adam Haverstock,REP,Adam Haverstock,Republican Party,574,199,243738-adam-haverstock,1
+pass,State Representative,Hillsborough,38,Heidi P. Jakoby,DEM,Heidi P. Jakoby,Democratic Party,2658,2741,sos-2026-house-hillsborough-38-heidi-p-jakoby,1
+pass,State Representative,Hillsborough,38,Mahendra Bakshi,DEM,Mahendra Bakshi,Democratic Party,811,474,mahendra-bakshi,1
+pass,State Representative,Hillsborough,38,Ted Trost,REP,Ted Trost,Republican Party,1095,201,ted-trost,1
+pass,State Representative,Hillsborough,39,Ellen A. Boudreau,DEM,Ellen Boudreau,Democratic Party,812,475,ellen-a-boudreau,1
+pass,State Representative,Hillsborough,39,Jon DiPietro,REP,Jon DiPietro,Republican Party,2659,2742,sos-2026-house-hillsborough-39-jon-dipietro,1
+pass,State Representative,Hillsborough,39,Tommy Katsiantonis,DEM,Tommy Katsiantonis,Democratic Party,813,476,tommy-katsiantonis,1
+pass,State Representative,Hillsborough,39,William Infantine,REP,William Infantine,Republican Party,1096,825,william-infantine,1
+pass,State Representative,Hillsborough,40,Bill O'Brien,REP,Bill O'Brien,Republican Party,1728,1494,sos-2026-house-hillsborough-40-bill-o-brien,1
+pass,State Representative,Hillsborough,40,Carlos Gonzalez,REP,Carlos Gonzalez,Republican Party,1098,828,carlos-gonzalez,1
+pass,State Representative,Hillsborough,40,Erin Kerwin,DEM,Erin Kerwin,Democratic Party,346,218,erin-kerwin-11218,1
+pass,State Representative,Hillsborough,40,Lynne M. Cumming,REP,Lynne Cumming,Republican Party,1097,827,lynne-m-cumming,1
+pass,State Representative,Hillsborough,40,Mark S. Mackenzie,DEM,Mark MacKenzie,Democratic Party,115,479,mark-mackenzie-8516,1
+pass,State Representative,Hillsborough,40,Robert Richard-Snipes,DEM,Robert Richard-Snipes,Democratic Party,816,480,robert-richard-snipes,1
+pass,State Representative,Hillsborough,40,Robert Rivera,REP,Robert Rivera,Republican Party,1729,1495,sos-2026-house-hillsborough-40-robert-rivera,1
+pass,State Representative,Hillsborough,40,Trinidad Tellez,DEM,Trinidad Tellez,Democratic Party,300,481,trinidad-tellez-10820,1
+pass,State Representative,Hillsborough,41,Bishwa Bahadur Shah,DEM,Bishwa Shah,Democratic Party,817,483,bishwa-bahadur-shah,1
+pass,State Representative,Hillsborough,41,Jason Hodgdon,REP,Jason Hodgdon,Republican Party,1730,1496,sos-2026-house-hillsborough-41-jason-hodgdon,1
+pass,State Representative,Hillsborough,41,Joseph Skinner,REP,Joseph Skinner,Republican Party,1100,830,joseph-skinner,1
+pass,State Representative,Hillsborough,41,Lily M. Foss,DEM,Lily Foss,Democrat,347,482,lily-foss-11219,1
+pass,State Representative,Hillsborough,41,Ryan Hebert,REP,Ryan Hebert,Republican Party,1099,829,ryan-hebert,1
+pass,State Representative,Hillsborough,41,Tom Stewart,DEM,Tom Stewart,Democratic Party,819,485,tom-stewart,1
+pass,State Representative,Hillsborough,42,Gerald Griffin,REP,Gerald Griffin,Republican Party,101,831,gerald-griffin-8314,1
+pass,State Representative,Hillsborough,42,Lee C. Nyquist,DEM,Lee Nyquist,Democratic Party,607,235,244268-lee-nyquist,1
+pass,State Representative,Hillsborough,42,Lisa C. M. Post,REP,Lisa Post,Republican,186,239,lisa-post-9896,1
+pass,State Representative,Hillsborough,42,Peter Ryder,DEM,Peter Ryder,Democratic Party,821,487,peter-ryder,1
+pass,State Representative,Hillsborough,42,Rob Lovett,REP,Rob Lovett,Republican Party,1101,832,rob-lovett,1
+pass,State Representative,Hillsborough,42,Teri Harkins,DEM,Teri Harkins,Democratic Party,820,486,teri-harkins,1
+pass,State Representative,Hillsborough,43,Claire Holston,DEM,Claire Holston,Democratic Party,823,490,claire-holston,1
+pass,State Representative,Hillsborough,43,Elizabeth Keenan,REP,Elizabeth Keenan,Republican Party,616,247,242092-elizabeth-keenan,1
+pass,State Representative,Hillsborough,43,Ethan Aho,DEM,Ethan Aho,Democratic Party,822,488,ethan-aho,1
+pass,State Representative,Hillsborough,43,Gary Daniels,REP,Gary Daniels,Republican Party,7,834,gary-daniels-423,1
+pass,State Representative,Hillsborough,43,Maria Elizabeth Perez,DEM,Maria Perez,Democratic Party,824,491,maria-elizabeth-perez,1
+pass,State Representative,Hillsborough,43,Paul Dargie,DEM,Paul Dargie,Democratic Party,140,489,paul-dargie-9097,1
+pass,State Representative,Hillsborough,43,Vanessa L. Sheehan,REP,Vanessa Sheehan,Republican Party,189,258,vanessa-sheehan-9907,1
+pass,State Representative,Hillsborough,43,William J. Bieschke,REP,William Bieschke,Republican Party,1102,833,william-j-bieschke,1
+pass,State Representative,Hillsborough,44,Bob Jones,DEM,Robert Jones,Democratic Party,826,493,robert-jones,1
+pass,State Representative,Hillsborough,44,Chris Conroy,DEM,Chris Conroy,Democratic Party,825,264,chris-conroy,1
+pass,State Representative,Hillsborough,44,Lisa Mazur,REP,Lisa Mazur,Republican Party,247,151,lisa-mazur-10667,1
+pass,State Representative,Hillsborough,44,Ross Berry,REP,Ross Berry,Republican Party,193,835,ross-berry-9919,1
+pass,State Representative,Hillsborough,45,Jack Flanagan,REP,Jack Flanagan,Republican,28,836,jack-flanagan-623,1
+pass,State Representative,Hillsborough,45,Jerry Roche,DEM,Jerry Roche,Democratic Party,827,494,jerry-roche,1
+pass,State Representative,Merrimack,1,Lorrie J. Carey,DEM,Lorrie Carey,Democratic Party,828,495,lorrie-j-carey,1
+pass,State Representative,Merrimack,1,Rick Devoid,REP,Ricky Devoid,Republican Party,248,837,ricky-devoid-10669,1
+pass,State Representative,Merrimack,2,Gregory Hill,REP,Gregory Hill,Republican Party,80,838,gregory-hill,1
+pass,State Representative,Merrimack,2,Joyce May Fulweiler,DEM,Joyce Fulweiler,Democratic Party,829,496,joyce-may-fulweiler,1
+pass,State Representative,Merrimack,3,Michael Visconti,REP,Michael Visconti,Republican Party,1732,1498,sos-2026-house-merrimack-3-michael-visconti,1
+pass,State Representative,Merrimack,3,Scott A. Burns,DEM,Scott Burns,Democratic Party,830,497,scott-a-burns,1
+pass,State Representative,Merrimack,3,Vivian Marie Hall,DEM,Vivian Hall,Democratic Party,831,498,vivian-marie-hall,1
+pass,State Representative,Merrimack,3,Werner D. Horn,REP,Werner Horn,Republican Party,1107,841,werner-d-horn,1
+pass,State Representative,Merrimack,4,Cody York,DEM,Cody York,Democratic Party,832,499,cody-york,1
+pass,State Representative,Merrimack,4,Jose Eduardo Cambrils,REP,Jose Cambrils,Republican,196,842,jose-cambrils-9925,1
+pass,State Representative,Merrimack,4,Michael Moffett,REP,Michael Moffett,Republican Party,95,844,michael-moffett,1
+pass,State Representative,Merrimack,5,Deborah Aylward,REP,Deborah Aylward,Republican Party,249,845,deborah-aylward-10670,1
+pass,State Representative,Merrimack,5,Lorna Carlisle,DEM,Lorna Carlisle,Democratic Party,833,500,lorna-carlisle,1
+pass,State Representative,Merrimack,5,Louise Andrus,REP,Louise Andrus,Republican,194,4,louise-andrus,1
+pass,State Representative,Merrimack,5,Thomas Ware,DEM,Thomas Ware,Democratic Party,834,501,thomas-ware,1
+pass,State Representative,Merrimack,6,Paul M. Little,REP,Paul Little,Republican Party,1733,1499,sos-2026-house-merrimack-6-paul-m-little,1
+pass,State Representative,Merrimack,6,Tom Schamberg,DEM,Thomas Schamberg,Democratic Party,49,229,thomas-schamberg-771,1
+pass,State Representative,Merrimack,7,Dorothy L. Hitchmoth,REP,Dorothy Hitchmoth,Republican Party,506,100,242258-dorothy-hitchmoth,1
+pass,State Representative,Merrimack,7,Gregory M. Sargent,DEM,Gregory Sargent,Democratic Party,301,225,gregory-sargent,1
+pass,State Representative,Merrimack,7,Karen Elizabeth Ebel,DEM,Karen Ebel,Democrat,41,502,karen-ebel,1
+pass,State Representative,Merrimack,8,Eileen Kelly,DEM,Eileen Kelly,Democratic Party,166,504,eileen-kelly,1
+pass,State Representative,Merrimack,8,Matt Center,REP,Matt Center,Republican Party,1112,846,matt-center,1
+pass,State Representative,Merrimack,8,Natalie J. Wells,REP,Natalie Wells,Republican Party,644,281,242273-natalie-wells,1
+pass,State Representative,Merrimack,8,Stephanie Payeur,DEM,Stephanie Payeur,Democratic Party,302,190,stephanie-payeur,1
+pass,State Representative,Merrimack,8,Stephen Craig Pierce,REP,Stephen Pierce,Republican Party,1114,848,stephen-craig-pierce,1
+pass,State Representative,Merrimack,8,Tony Caplan,DEM,Tony Caplan,Democratic Party,195,503,tony-caplan,1
+pass,State Representative,Merrimack,9,David Luneau,DEM,David Luneau,Democratic Party,65,137,david-luneau,1
+pass,State Representative,Merrimack,9,Eleana M. Colby,DEM,Eleana  Colby,Democratic Party,350,505,eleana--colby-11230,1
+pass,State Representative,Merrimack,9,James Newsom,DEM,James Newsom,Democrat,351,177,james-newsom,1
+pass,State Representative,Merrimack,9,John F. Martin,REP,John F. Martin,Republican Party,2660,2743,sos-2026-house-merrimack-9-john-f-martin,1
+pass,State Representative,Merrimack,9,Matthew Poulin,REP,Matthew Poulin,Republican Party,2661,2744,sos-2026-house-merrimack-9-matthew-poulin,1
+pass,State Representative,Merrimack,9,Muriel Hall,DEM,Muriel Hall,Democratic Party,220,89,muriel-hall,1
+pass,State Representative,Merrimack,10,Germano Mendes Martins,DEM,Germano Martins,Democratic Party,840,507,germano-mendes-martins,1
+pass,State Representative,Merrimack,10,Lucas J. Coriaty,DEM,Lucas Coriaty,Democratic Party,456,43,243719-lucas-coriaty,1
+pass,State Representative,Merrimack,10,Pamela McMahon,REP,PAMELA MCMAHON,Republican Party,532,138,244270-pamela-mcmahon,1
+pass,State Representative,Merrimack,10,Ricky Gurung,DEM,Ricky Gurung,Democratic Party,1703,1469,sos-2026-house-merrimack-10-ricky-gurung,1
+pass,State Representative,Merrimack,10,Stephen Boyd,REP,Stephen Boyd,Republican Party,199,849,stephen-boyd-9929,1
+pass,State Representative,Merrimack,10,Thomas C. Walsh,REP,Thomas Walsh,Republican Party,53,850,thomas-walsh-791,1
+pass,State Representative,Merrimack,10,William Lynch,DEM,William Lynch,Democratic Party,839,506,william-lynch,1
+pass,State Representative,Merrimack,10,Yury Polozov,REP,Yury Polozov,Republican Party,250,197,yury-polozov-10676,1
+pass,State Representative,Merrimack,11,Al Turcotte,DEM,Al Turcotte,Democratic Party,841,508,al-turcotte,1
+pass,State Representative,Merrimack,11,Matthew Pitaro,REP,Matthew Pitaro,Republican Party,198,851,matthew-pitaro-9928,1
+pass,State Representative,Merrimack,12,Brian Seaworth,REP,Brian Seaworth,Republican Party,81,852,brian-seaworth-944,1
+pass,State Representative,Merrimack,12,Kenneth Nivison,DEM,Kenneth Nivison,Democratic Party,843,510,kenneth-nivison,1
+pass,State Representative,Merrimack,12,Mariana R. Beer,DEM,Mariana Beer,Democratic Party,431,17,243710-mariana-beer,1
+pass,State Representative,Merrimack,12,Peter L. Mehegan,REP,Peter Mehegan,Republican Party,389,157,peter-mehegan-11382,1
+pass,State Representative,Merrimack,13,Becky Berk,IND,Becky Berk,Independent,2520,2609,sos-2026-house-merrimack-13-becky-berk,1
+pass,State Representative,Merrimack,13,Clayton Wood,REP,Clayton Wood,Republican Party,252,284,clayton-wood-10678,1
+pass,State Representative,Merrimack,13,Cyril Aures,REP,Cyril Aures,Republican Party,251,9,cyril-aures-10677,1
+pass,State Representative,Merrimack,13,Paul Twomey,IND,Paul Twomey,Independent,2521,2610,sos-2026-house-merrimack-13-paul-twomey,1
+pass,State Representative,Merrimack,14,Gary Matteson,REP,Gary Matteson,Republican Party,540,150,244264-gary-matteson,1
+pass,State Representative,Merrimack,14,Glenn Horner,DEM,Glenn Horner,Democratic Party,844,511,glenn-horner,1
+pass,State Representative,Merrimack,15,Tracy Bricchi,DEM,Tracy Bricchi,Democratic Party,352,512,tracy-bricchi-11235,1
+pass,State Representative,Merrimack,16,Connie Lane,DEM,Connie Lane,Democratic Party,147,124,connie-lane-9156,1
+pass,State Representative,Merrimack,16,Laurence Weissbrot,REP,Laurence Weissbrot,Republican Party,1116,854,laurence-weissbrot,1
+pass,State Representative,Merrimack,17,Beth Richards,DEM,Beth Richards,Democratic Party,118,513,beth-richards-8564,1
+pass,State Representative,Merrimack,18,Elijah J. Wilson,REP,Elijah Wilson,Republican Party,1118,856,elijah-j-wilson,1
+pass,State Representative,Merrimack,18,Lisa D. Beaudoin,DEM,Lisa Beaudoin,Democratic Party,845,514,lisa-d-beaudoin,1
+pass,State Representative,Merrimack,19,Mary Jane Wallner,DEM,Mary Jane Wallner,Democratic Party,3,278,mary-jane-wallner-411,1
+pass,State Representative,Merrimack,20,Jonathan Clark,REP,Jonathan Clark,Republican Party,1119,857,jonathan-clark,1
+pass,State Representative,Merrimack,20,Nathan Giffard,DEM,Nathan Giffard,Democratic Party,485,74,244280-nathan-giffard,1
+pass,State Representative,Merrimack,21,Darryl Berleth,REP,Darryl Berleth,Republican Party,1120,858,darryl-berleth,1
+pass,State Representative,Merrimack,21,Timothy Soucy,DEM,Timothy Soucy,Democratic Party,27,243,timothy-soucy-599,1
+pass,State Representative,Merrimack,22,Alison Murphy,DEM,Alison Murphy,Democratic Party,846,515,alison-murphy,1
+pass,State Representative,Merrimack,22,Jonathan R. Cate,REP,Jonathan R. Cate,Republican Party,1735,1501,sos-2026-house-merrimack-22-jonathan-r-cate,1
+pass,State Representative,Merrimack,23,Andrew Georgevits,REP,Andrew Georgevits,Republican Party,1121,859,andrew-georgevits,1
+pass,State Representative,Merrimack,23,Kristopher Levesque,DEM,Kristopher Levesque,Democratic Party,526,131,243633-kristopher-levesque,1
+pass,State Representative,Merrimack,24,Matthew Hicks,DEM,Matthew Hicks,Democratic Party,305,516,matthew-hicks-10844,1
+pass,State Representative,Merrimack,25,Erica Russell,DEM,Erica Russell,Democratic Party,593,220,244317-erica-russell,1
+pass,State Representative,Merrimack,25,James Thibault,REP,James Thibault,Republican,320,860,james-thibault-10980,1
+pass,State Representative,Merrimack,26,Alvin B. See,REP,Alvin See,Republican,253,234,alvin-see-10682,1
+pass,State Representative,Merrimack,26,Harold D. Tuttle,DEM,Harold D. Tuttle,Democratic Party,1704,1470,sos-2026-house-merrimack-26-harold-d-tuttle,1
+pass,State Representative,Merrimack,27,Harold Kozlowski,DEM,Harold Kozlowski,Democratic Party,847,517,harold-kozlowski,1
+pass,State Representative,Merrimack,27,Phillip James Walker,DEM,Phillip Walker,Democratic Party,640,277,243160-phillip-walker,1
+pass,State Representative,Merrimack,27,Ray Plante,REP,Ray Plante,Republican Party,218,861,raymond-plante-10121,1
+pass,State Representative,Merrimack,27,Vanessa Poulin,REP,Vanessa Poulin,Republican Party,1123,862,vanessa-poulin,1
+pass,State Representative,Merrimack,28,Lisa Brown,DEM,Lisa Brown,Democratic Party,848,518,lisa-brown-state-representative-merrimack-28-dem,1
+pass,State Representative,Merrimack,29,Kris Schultz,DEM,Kris Schultz,Democratic Party,127,519,kris-schultz-8858,1
+pass,State Representative,Merrimack,30,Jason Quinno,DEM,Jason Quinno,Democratic Party,578,204,244333-jason-quinno,1
+pass,State Representative,Merrimack,30,Robert C. Washburn,REP,Robert Washburn,Republican Party,1124,863,robert-c-washburn,1
+pass,State Representative,Rockingham,1,Donna Danis,DEM,Donna Danis,Democratic Party,461,48,243676-donna-danis,1
+pass,State Representative,Rockingham,1,Hal Rafter,DEM,Harold Rafter,Democratic Party,580,206,242358-harold-rafter,1
+pass,State Representative,Rockingham,1,James Guzofski,REP,James Guzofski,Republican Party,391,85,james-guzofski,1
+pass,State Representative,Rockingham,1,Pamela Sanderson,DEM,Pamela Sanderson,Democratic Party,851,522,pamela-sanderson,1
+pass,State Representative,Rockingham,1,Paul Tudor,REP,Paul Tudor,Republican Party,200,288,paul-tudor,1
+pass,State Representative,Rockingham,1,Scott Bryer,REP,Scott Bryer,Republican Party,390,864,scott-bryer,1
+pass,State Representative,Rockingham,2,James Spillane,REP,James Spillane,Republican Party,70,246,james-spillane,1
+pass,State Representative,Rockingham,2,Jason Osborne,REP,Jason Osborne,Republican,66,867,jason-osborne,1
+pass,State Representative,Rockingham,2,Judith Lindsey,DEM,Judith Lindsey,Democratic Party,528,133,242473-judith-lindsey,1
+pass,State Representative,Rockingham,2,Kendra Cohen,DEM,Kendra Cohen,Democratic Party,2662,2745,sos-2026-house-rockingham-2-kendra-cohen,1
+pass,State Representative,Rockingham,2,Robert Prieto,DEM,Robert Prieto,Democratic Party,2663,2746,sos-2026-house-rockingham-2-robert-prieto,1
+pass,State Representative,Rockingham,2,Will Huebner,REP,Will Huebner,Republican Party,1127,866,will-huebner,1
+pass,State Representative,Rockingham,3,Chuck Heuer,DEM,Chuck Heuer,Democratic Party,1705,1471,sos-2026-house-rockingham-3-chuck-heuer,1
+pass,State Representative,Rockingham,3,Mary J. Ford,REP,Mary Ford,Republican Party,392,868,mary-ford,1
+pass,State Representative,Rockingham,4,Art Hunt,DEM,Art Hunt,Democratic Party,1706,1472,sos-2026-house-rockingham-4-art-hunt,1
+pass,State Representative,Rockingham,4,Brian Nadeau,REP,Brian Nadeau,Republican Party,394,171,brian-nadeau,1
+pass,State Representative,Rockingham,4,Christine Pierce,DEM,Christine Pierce,Democratic Party,1707,1473,sos-2026-house-rockingham-4-christine-pierce,1
+pass,State Representative,Rockingham,4,Cindy Bennett,REP,Cindy Bennett,Republican Party,393,869,cindy-bennett,1
+pass,State Representative,Rockingham,4,Michael Drago,REP,Mike Drago,Republican Party,254,870,mike-drago-10686,1
+pass,State Representative,Rockingham,5,John Scully,REP,John Scully,Republican Party,1738,1504,sos-2026-house-rockingham-5-john-scully,1
+pass,State Representative,Rockingham,5,Joseph Perry,DEM,Joseph Perry,Democratic Party,853,524,joseph-perry,1
+pass,State Representative,Rockingham,5,Mark Vallone,DEM,Mark Vallone,Democratic Party,150,525,mark-vallone,1
+pass,State Representative,Rockingham,5,Trevor Morse,REP,Trevor Morse,Republican Party,551,165,244348-trevor-morse,1
+pass,State Representative,Rockingham,6,Allen Cook,REP,Allen Cook,Republican Party,1132,871,allen-cook,1
+pass,State Representative,Rockingham,6,Eric S. Turer,DEM,Eric Turer,Democratic Party,212,526,eric-turer,1
+pass,State Representative,Rockingham,7,JJ DeFeo,DEM,John DeFeo,Democratic Party,463,50,244283-john-defeo,1
+pass,State Representative,Rockingham,7,Laurence A. Miner,REP,Laurence Miner,Republican Party,395,872,laurence-miner,1
+pass,State Representative,Rockingham,8,Sayra Lynn DeVito,REP,Sayra DeVito,Republican,396,54,sayra-devito,1
+pass,State Representative,Rockingham,9,Kevin M. Major,DEM|REP,Kevin Major,Republican Party,1135,874,kevin-m-major,1
+pass,State Representative,Rockingham,9,Matthew Brooks,REP,Matthew Brooks,Republican Party,441,28,244265-matthew--brooks,1
+pass,State Representative,Rockingham,10,Charlotte DiLorenzo,DEM,Charlotte DiLorenzo,Democratic Party,857,529,charlotte-dilorenzo,1
+pass,State Representative,Rockingham,10,Ellen Read,DEM,Ellen Read,Democratic Party,119,530,ellen-read-8613,1
+pass,State Representative,Rockingham,10,Michael Cahill,DEM,Michael Cahill,Democratic Party,38,528,michael-cahill-687,1
+pass,State Representative,Rockingham,11,Enna Grazier,DEM,Enna Grazier,Democratic Party,1708,1474,sos-2026-house-rockingham-11-enna-grazier,1
+pass,State Representative,Rockingham,11,Julie Gilman,DEM,Julie Gilman,Democrat,120,531,julie-gilman-8615,1
+pass,State Representative,Rockingham,11,Mark Paige,DEM,Mark Paige,Democratic Party,207,533,mark-paige-9942,1
+pass,State Representative,Rockingham,11,Robert Goeman,REP,Robert Goeman,Republican Party,1137,876,robert-goeman,1
+pass,State Representative,Rockingham,11,Steven C. Jones,DEM,Steven Jones,Democratic Party,858,532,steven-c-jones,1
+pass,State Representative,Rockingham,12,Allison Knab,DEM,Allison Knab,Democratic Party,307,534,allison-knab-10856,1
+pass,State Representative,Rockingham,12,James Scamman,REP,James Scamman,Republican Party,1139,878,james-scamman,1
+pass,State Representative,Rockingham,12,Patrick Abrami,REP,Patrick Abrami,Republican Party,1138,877,patrick-abrami,1
+pass,State Representative,Rockingham,12,Zoe Manos,DEM,Zoe Manos,Democratic Party,308,535,zoe-manos-10857,1
+pass,State Representative,Rockingham,13,Anthony Henry,REP,Anthony Henry,Republican Party,504,98,243714-anthony-henry,1
+pass,State Representative,Rockingham,13,Brandon Bach,REP,Brandon Bach,Republican Party,1141,880,brandon-bach,1
+pass,State Representative,Rockingham,13,Brian K. Chirichiello,REP,Brian Chirichiello,Republican Party,1142,881,brian-k-chirichiello,1
+pass,State Representative,Rockingham,13,Charles Foote,REP,Charles Foote,Republican,255,883,charles-foote-10691,1
+pass,State Representative,Rockingham,13,David C. Love,REP,David Love,Republican Party,110,135,david-love-8407,1
+pass,State Representative,Rockingham,13,David Provencher,DEM,David Provencher,Democratic Party,864,541,david-provencher,1
+pass,State Representative,Rockingham,13,Erica Layon,REP,Erica Layon,Republican Party,201,885,erica-layon-9935,1
+pass,State Representative,Rockingham,13,Haley Carreau,DEM,Haley Carreau,Democratic Party,859,536,haley-carreau,1
+pass,State Representative,Rockingham,13,Hollie Hesse,DEM,Hollie Hesse,Democratic Party,862,539,hollie-hesse,1
+pass,State Representative,Rockingham,13,Jamie Carreau,DEM,Jamie Carreau,Democratic Party,860,537,jamie-carreau,1
+pass,State Representative,Rockingham,13,Jim Marshall,DEM,Jim Marshall,Democratic Party,863,540,jim-marshall,1
+pass,State Representative,Rockingham,13,Jodi Nelson,REP,Jodi Nelson,Republican,222,887,jodi-nelson-10440,1
+pass,State Representative,Rockingham,13,John Potucek,REP,John Potucek,Republican,67,889,john-potucek-902,1
+pass,State Representative,Rockingham,13,Kristine Trow,DEM,Kristine Trow,Democratic Party,865,542,kristine-trow,1
+pass,State Representative,Rockingham,13,Matthew Glavin,DEM,Matthew Glavin,Democratic Party,488,77,244260-matthew-glavin,1
+pass,State Representative,Rockingham,13,Michael Appleton,REP,Michael Appleton,Republican Party,1140,879,michael-appleton,1
+pass,State Representative,Rockingham,13,Paula Mahon d'Entremont,DEM,Paula d'Entremont,Democratic Party,861,538,paula-mahon-d-entremont,1
+pass,State Representative,Rockingham,13,Richard Tripp,REP,Richard Tripp,Republican Party,111,890,richard-tripp-8408,1
+pass,State Representative,Rockingham,13,Thomas Bosia,DEM,Thomas Bosia,Democratic Party,1709,1475,sos-2026-house-rockingham-13-thomas-bosia,1
+pass,State Representative,Rockingham,13,Thomas C. Wood,DEM,Thomas Wood,Democratic Party,866,543,thomas-c-wood,1
+pass,State Representative,Rockingham,14,Kenneth L. Weyler,REP,Kenneth Weyler,Republican Party,6,892,kenneth-weyler-422,1
+pass,State Representative,Rockingham,14,Pam Brown,REP,Pam Brown,Republican Party,399,891,pam-brown-11407,1
+pass,State Representative,Rockingham,14,Paul C. Paone,DEM,Paul Paone,Democratic Party,867,544,paul-c-paone,1
+pass,State Representative,Rockingham,15,Joe A. Guthrie,REP,Joseph Guthrie,Republican Party,79,893,joseph-guthrie-936,1
+pass,State Representative,Rockingham,15,Laurie A. Warnock,DEM,Laurie Warnock,Democratic Party,643,280,242524-laurie-warnock,1
+pass,State Representative,Rockingham,15,Lilli Walsh,REP,Lilli Walsh,Republican,256,895,lilli-walsh-10692,1
+pass,State Representative,Rockingham,15,Lisa DeMio,DEM,Lisa DeMio,Democratic Party,1710,1476,sos-2026-house-rockingham-15-lisa-demio,1
+pass,State Representative,Rockingham,16,Bob Cote,DEM,Bob Cote,Democratic Party,870,547,bob-cote,1
+pass,State Representative,Rockingham,16,David Lundgren,REP,David Lundgren,Republican Party,29,898,david-lundgren-635,1
+pass,State Representative,Rockingham,16,Gregory G. Carson,REP,Gregory Carson,Republican Party,1147,896,gregory-g-carson,1
+pass,State Representative,Rockingham,16,Isaac Fernandez,DEM,Isaac Fernandez,Democratic Party,871,548,isaac-fernandez,1
+pass,State Representative,Rockingham,16,Jane Cooper,DEM,Jane Cooper,Democratic Party,869,546,jane-cooper,1
+pass,State Representative,Rockingham,16,Jeffrey McGraw,REP,Jeffrey McGraw,Republican Party,1148,899,jeffrey-mcgraw,1
+pass,State Representative,Rockingham,16,Kristine Perez,REP,Kristine Perez,Republican Party,258,901,kristine-perez-10694,1
+pass,State Representative,Rockingham,16,Michela Hites,DEM,Michela Hites,Democratic Party,872,549,michela-hites,1
+pass,State Representative,Rockingham,16,Neil Marceau,DEM,Neil Marceau,Democratic Party,2664,2747,sos-2026-house-rockingham-16-neil-marceau,1
+pass,State Representative,Rockingham,16,Paul Skudlarek,DEM,Paul Skudlarek,Democratic Party,873,550,paul-skudlarek,1
+pass,State Representative,Rockingham,16,Ron Dunn,REP,Ron Dunn,Republican Party,257,897,ron-dunn-10693,1
+pass,State Representative,Rockingham,16,Sherman Packard,REP,Sherman Packard,Republican Party,8,900,sherman-packard-425,1
+pass,State Representative,Rockingham,16,Ted Combes,DEM,Ted Combes,Democratic Party,868,545,ted-combes,1
+pass,State Representative,Rockingham,16,Wayne D. MacDonald,REP,Wayne MacDonald,Republican Party,211,142,wayne-macdonald-9951,1
+pass,State Representative,Rockingham,17,Bob Lynn,REP,Bob Lynn,Republican Party,203,904,bob-lynn-9937,1
+pass,State Representative,Rockingham,17,Charles E. McMahon,REP,Charles McMahon,Republican Party,15,905,charles-mcmahon-489,1
+pass,State Representative,Rockingham,17,Daniel Popovici-Muller,REP,Daniel Popovici-Muller,Republican Party,260,198,daniel-popovici-muller-10697,1
+pass,State Representative,Rockingham,17,Darryn E. Remillard,DEM,Darryn Remillard,Democratic Party,875,552,darryn-e-remillard,1
+pass,State Representative,Rockingham,17,David Martsolf,DEM,David Martsolf,Democratic Party,539,149,242209-david-martsolf,1
+pass,State Representative,Rockingham,17,Irene L. Harnden,DEM,Irene Harnden,Democratic Party,874,551,irene-l-harnden,1
+pass,State Representative,Rockingham,17,Katelyn Kuttab,REP,Katelyn Kuttab,Republican Party,259,122,katelyn-kuttab,1
+pass,State Representative,Rockingham,17,Matthew Swoboda,DEM,Matthew Swoboda,Democratic Party,876,553,matthew-swoboda,1
+pass,State Representative,Rockingham,18,Beth Cacciotti,DEM,Beth Cacciotti,Democratic Party,2665,2748,sos-2026-house-rockingham-18-beth-cacciotti,1
+pass,State Representative,Rockingham,18,Christine Duerr,DEM,Christine Duerr,Democratic Party,877,554,christine-duerr,1
+pass,State Representative,Rockingham,18,Debra L. DeSimone,REP,Debra DeSimone,Republican Party,22,53,debra-desimone-570,1
+pass,State Representative,Rockingham,18,Jay Markell,REP,Jay Markell,Republican Party,400,147,jay-markell-11413,1
+pass,State Representative,Rockingham,19,Susan M. Porcelli,REP,Susan Porcelli,Republican Party,262,906,susan-porcelli-10700,1
+pass,State Representative,Rockingham,19,Wendy Larson,DEM,Wendy Larson,Democratic Party,878,555,wendy-larson,1
+pass,State Representative,Rockingham,20,"Charles R. Melvin, Sr.",REP,"Charles Melvin, Sr.",Republican Party,113,907,charles-melvin-8419,1
+pass,State Representative,Rockingham,20,James Summers,REP,James Summers,Republican,160,908,james-summers-9294,1
+pass,State Representative,Rockingham,20,Rick A. Faulconer,DEM,Rick Faulconer,Democratic Party,879,556,rick-a-faulconer,1
+pass,State Representative,Rockingham,20,Robert Harb,REP,Robert Harb,Republican Party,159,90,robert-harb-9293,1
+pass,State Representative,Rockingham,21,Anna Howard,DEM,ANNA HOWARD,Democratic Party,494,86,244375-anna-howard,1
+pass,State Representative,Rockingham,22,Rebecca Audet,DEM,Rebecca Audet,Democratic Party,425,8,244365-rebecca-audet,1
+pass,State Representative,Rockingham,23,Jim Maggiore,DEM,Jim Maggiore,Democrat,152,144,jim-maggiore-9224,1
+pass,State Representative,Rockingham,23,Kirsten Larsen Schultz,IND,Kirsten Larsen Schultz,Independent,2522,2611,sos-2026-house-rockingham-23-kirsten-larsen-schultz,1
+pass,State Representative,Rockingham,24,Dennis Malloy,DEM,Dennis Malloy,Democratic Party,45,557,dennis-malloy-742,1
+pass,State Representative,Rockingham,24,Kevin Szmyd,REP,Kevin Szmyd,Republican Party,1153,910,kevin-szmyd,1
+pass,State Representative,Rockingham,24,Marilyn Page,REP,Marilyn Page,Republican Party,1152,909,marilyn-page,1
+pass,State Representative,Rockingham,24,Michael J. Moody,DEM,Michael Moody,Democratic Party,548,161,244366-michael-moody,1
+pass,State Representative,Rockingham,25,Claudia DeFuria,DEM,Claudia DeFuria,Democratic Party,464,51,244330-claudia-defuria,1
+pass,State Representative,Rockingham,25,Dennis Mannion,REP,Dennis Mannion,Republican Party,265,915,dennis-mannion-10705,1
+pass,State Representative,Rockingham,25,Donna Loranger,DEM,Donna Loranger,Democratic Party,880,558,donna-loranger,1
+pass,State Representative,Rockingham,25,Edward W. Huminick,REP,Edward Huminick,Republican Party,1155,912,edward-w-huminick,1
+pass,State Representative,Rockingham,25,George I. Kassas,REP,George Kassas,Republican Party,1156,914,george-i-kassas,1
+pass,State Representative,Rockingham,25,Joe Sweeney,REP,Joe Sweeney,Republican,50,917,joe-sweeney-779,1
+pass,State Representative,Rockingham,25,John Janigian,REP,John Janigian,Republican,112,913,john-janigian-8412,1
+pass,State Representative,Rockingham,25,John Sytek,REP,John Sytek,Republican Party,9,918,john-sytek-426,1
+pass,State Representative,Rockingham,25,Kienen Dyer,DEM,Kienen Dyer,Democratic Party,472,60,244237-kienen-dyer,1
+pass,State Representative,Rockingham,25,Lorie Ball,REP,Lorie Ball,Republican Party,263,11,lorie-ball-10702,1
+pass,State Representative,Rockingham,25,Susan J. Vandecasteele,REP,Susan Vandecasteele,Republican Party,204,919,susan-vandecasteele-9938,1
+pass,State Representative,Rockingham,25,Valerie McDonnell,REP,Valerie McDonnell,Republican Party,266,916,valerie-mcdonnell-10706,1
+pass,State Representative,Rockingham,26,Buzz Scherr,DEM,Buzz Scherr,Democrat,355,559,buzz-scherr-11267,1
+pass,State Representative,Rockingham,27,Gerald W. R. Ward,DEM,Gerald Ward,Democratic Party,54,560,gerald-ward-792,1
+pass,State Representative,Rockingham,28,Carrie Sorensen,DEM,Carrie Sorensen,Democratic Party,356,561,carrie-sorensen-11268,1
+pass,State Representative,Rockingham,29,Bruce Theriault,REP,Bruce Theriault,Republican Party,1158,922,bruce-theriault,1
+pass,State Representative,Rockingham,29,Kenneth Sheffert,REP,Kenneth Sheffert,Republican Party,1157,921,kenneth-sheffert,1
+pass,State Representative,Rockingham,29,Molly McCoy,DEM,Molly McCoy,Democratic Party,883,564,molly-mccoy,1
+pass,State Representative,Rockingham,29,Nathan Andrew Riggs,DEM,Nathan Riggs,Democratic Party,884,565,nathan-andrew-riggs,1
+pass,State Representative,Rockingham,29,Nicholas D. Bridle,REP,Nicholas Bridle,Republican Party,401,920,nicholas-bridle-11419,1
+pass,State Representative,Rockingham,29,Rebecca LaPierre,DEM,Rebecca LaPierre,Democratic Party,882,563,rebecca-lapierre,1
+pass,State Representative,Rockingham,29,"Richard Wickson, Jr.",REP,"Richard Wickson,",Republican Party,1159,923,richard-wickson-jr,1
+pass,State Representative,Rockingham,29,Ward Galanis,DEM,Ward Galanis,Democratic Party,881,562,ward-galanis,1
+pass,State Representative,Rockingham,30,Aboul B. Khan,REP,Aboul Khan,Republican Party,44,925,aboul-khan-736,1
+pass,State Representative,Rockingham,30,Diana Labrecque Chapman,DEM,Diana Chapman,Democratic Party,885,566,diana-labrecque-chapman,1
+pass,State Representative,Rockingham,30,Jason A. Janvrin,REP,Jason Janvrin,Republican Party,1160,924,jason-a-janvrin,1
+pass,State Representative,Rockingham,31,Jess Edwards,REP,Jess Edwards,Republican Party,108,64,jess-edwards-8392,1
+pass,State Representative,Rockingham,31,Peter Boudreau,DEM,Peter Boudreau,Democratic Party,439,26,244246-peter-boudreau,1
+pass,State Representative,Rockingham,31,Terry Roy,REP,Terry Roy,Republican Party,157,928,terry-roy-9272,1
+pass,State Representative,Rockingham,31,Yaz Safarzadeh,DEM,Yaz Safarzadeh,Democratic Party,886,567,yaz-safarzadeh,1
+pass,State Representative,Rockingham,32,Kaley Dvorak,DEM|UND,Kaley Dvorak,Undeclared,2523,2612,sos-2026-house-rockingham-32-kaley-dvorak,1
+pass,State Representative,Rockingham,32,Melissa A. Litchfield,REP,Melissa Litchfield,Republican Party,205,929,melissa-litchfield-9940,1
+pass,State Representative,Rockingham,33,Alexis Simpson,DEM,Alexis Simpson,Democratic Party,69,568,alexis-simpson-904,1
+pass,State Representative,Rockingham,34,Jade DeMio,DEM,Jade DeMio,Democratic Party,1711,1477,sos-2026-house-rockingham-34-jade-demio,1
+pass,State Representative,Rockingham,34,Mark A. Pearson,REP,Mark Pearson,Republican Party,126,931,mark-pearson-8749,1
+pass,State Representative,Rockingham,35,Julius F. Soti,REP,Julius Soti,Republican,202,932,julius-soti-9936,1
+pass,State Representative,Rockingham,35,Michelle Stith,DEM,Michelle Stith,Democratic Party,618,249,242235-michelle-stith,1
+pass,State Representative,Rockingham,36,JD Bernardy,REP,JD Bernardy,Republican,206,933,jd-bernardy-9941,1
+pass,State Representative,Rockingham,36,Paul Bonzani,DEM,Paul Bonzani,Democratic Party,436,23,244318-paul-bonzani,1
+pass,State Representative,Rockingham,37,Kate Cook,DEM,Kate Cook,Democratic Party,887,569,kate-cook,1
+pass,State Representative,Rockingham,38,Paul Martino,REP,Paul Martino,Republican Party,1163,934,paul-martino,1
+pass,State Representative,Rockingham,38,Peggy Balboni,DEM,Peggy Balboni,Democratic Party,309,570,peggy-balboni-10885,1
+pass,State Representative,Rockingham,39,Barbara M. Ward,DEM,Barbara Ward,Democratic Party,888,571,barbara-m-ward,1
+pass,State Representative,Rockingham,39,Sue Polidura,REP,Sue Polidura,Republican Party,1164,935,sue-polidura,1
+pass,State Representative,Rockingham,40,Justin G. Packard,DEM,Justin Packard,Democratic Party,889,572,justin-g-packard,1
+pass,State Representative,Rockingham,40,Linda McGrath,REP,Linda McGrath,Republican Party,403,154,linda-mcgrath-11421,1
+pass,State Representative,Strafford,1,Andy Dow,REP,Andy Dow,Republican Party,1165,936,andy-dow,1
+pass,State Representative,Strafford,1,Brian Beaverstock,DEM,Brian Beaverstock,Democratic Party,1712,1478,sos-2026-house-strafford-1-brian-beaverstock,1
+pass,State Representative,Strafford,1,Jimmy Bourque,DEM,Jimmy Bourque,Democratic Party,1713,1479,sos-2026-house-strafford-1-jimmy-bourque,1
+pass,State Representative,Strafford,1,W. Packy Campbell,REP,"W. ""Packy"" Campbell",Republican Party,1740,1506,sos-2026-house-strafford-1-w-packy-campbell,1
+pass,State Representative,Strafford,2,Glenn Bailey,REP,Glenn Bailey,Republican Party,208,937,glenn-bailey,1
+pass,State Representative,Strafford,2,Larry Brown,DEM,Larry Brown,Democratic Party,890,573,larry-brown,1
+pass,State Representative,Strafford,2,Mark F. Racic,REP,Mark Racic,Republican Party,1168,939,mark-f-racic,1
+pass,State Representative,Strafford,2,Michael Granger,REP,Michael Granger,Republican Party,268,938,michael-granger,1
+pass,State Representative,Strafford,3,Linda R. Adamo,DEM,Linda Adamo,Democratic Party,1714,1480,sos-2026-house-strafford-3-linda-r-adamo,1
+pass,State Representative,Strafford,3,Susan G. DeRoy,REP,Susan DeRoy,Republican Party,405,52,susan-deroy,1
+pass,State Representative,Strafford,4,Ginna Schonwald,DEM,Virginia Schonwald,Democratic Party,604,231,243669-virginia-schonwald,1
+pass,State Representative,Strafford,4,JoAnne Hack,REP,JoAnne Hack,Republican Party,1169,940,joanne-hack,1
+pass,State Representative,Strafford,4,Kimberly S. McGlinchey,DEM,Kimberly McGlinchey,Democratic Party,891,574,kimberly-s-mcglinchey,1
+pass,State Representative,Strafford,4,Kurt Wuelper,REP,Kurt Wuelper,Republican Party,647,285,242731-kurt-wuelper,1
+pass,State Representative,Strafford,4,Scott Shepard,DEM,Scott Shepard,Democratic Party,609,237,244272-scott-shepard,1
+pass,State Representative,Strafford,4,Tanya Rich,REP,Tanya Rich,Republican Party,1742,1508,sos-2026-house-strafford-4-tanya-rich,1
+pass,State Representative,Strafford,5,Jenny Wilson,REP,Jenny Wilson,Republican Party,1743,1509,sos-2026-house-strafford-5-jenny-wilson,1
+pass,State Representative,Strafford,5,William F. Fessenden,DEM|IND,William F. Fessenden,Independent,2666,2749,sos-2026-house-strafford-5-william-f-fessenden,1
+pass,State Representative,Strafford,6,Daniel Fitzpatrick,DEM,Daniel Fitzpatrick,Democratic Party,893,576,daniel-fitzpatrick,1
+pass,State Representative,Strafford,6,Denise DeDe-Poulin,REP,Denise DeDe-Poulin,Republican Party,406,941,denise-dede-poulin,1
+pass,State Representative,Strafford,7,Eric Bourgeois,REP,Eric Bourgeois,Republican Party,1744,1510,sos-2026-house-strafford-7-eric-bourgeois,1
+pass,State Representative,Strafford,7,John H. Larochelle,DEM,John Larochelle,Democrat,362,577,john-larochelle,1
+pass,State Representative,Strafford,8,David Walker,REP,David Walker,Republican Party,269,942,david-walker-10716,1
+pass,State Representative,Strafford,8,Ty Wyman,DEM,Ty Wyman,Democratic Party,648,286,243718-ty-wyman,1
+pass,State Representative,Strafford,9,Nevin Dexter,DEM,Nevin Dexter,Democratic Party,1716,1482,sos-2026-house-strafford-9-nevin-dexter,1
+pass,State Representative,Strafford,9,Robert Qua,REP,Robert Qua,Republican Party,577,202,244358-robert-qua,1
+pass,State Representative,Strafford,10,Loren Selig,DEM,Loren Selig,Democratic Party,312,581,loren-selig-10896,1
+pass,State Representative,Strafford,10,Siena R. Schaier,DEM,Siena Schaier,Democratic Party,601,228,243602-siena-schaier,1
+pass,State Representative,Strafford,10,Timothy Horrigan,DEM,Timothy Horrigan,Democratic Party,24,580,timothy-horrigan-579,1
+pass,State Representative,Strafford,10,Wayne M. Burton,DEM,Wayne Burton,Democratic Party,85,579,wayne-burton-974,1
+pass,State Representative,Strafford,11,Erik Johnson,DEM,Erik Johnson,Democratic Party,326,583,erik-johnson-11134,1
+pass,State Representative,Strafford,11,Janet G. Wall,DEM,Janet Wall,Democrat,5,584,janet-wall-415,1
+pass,State Representative,Strafford,11,Monique Meadows,REP,Monique Meadows,Republican Party,1172,943,monique-meadows,1
+pass,State Representative,Strafford,11,Thomas Southworth,DEM,Thomas Southworth,Democratic Party,74,244,thomas-southworth-918,1
+pass,State Representative,Strafford,12,Billie Butler,DEM,Billie Butler,Democratic Party,417,585,billie-butler-11524,1
+pass,State Representative,Strafford,12,David Hilton,REP,David Hilton,Republican Party,1173,944,david-hilton,1
+pass,State Representative,Strafford,12,Myles England,DEM,Myles England,Democratic Party,358,65,myles-england-11281,1
+pass,State Representative,Strafford,12,Omero Ambriz,REP,Omero Ambriz,Republican Party,2667,2750,sos-2026-house-strafford-12-omero-ambriz,1
+pass,State Representative,Strafford,12,Paul T. Edgar,REP,Paul T. Edgar,Republican Party,1745,1511,sos-2026-house-strafford-12-paul-t-edgar,1
+pass,State Representative,Strafford,12,Philip Houde,REP,Philip Houde,Republican Party,1746,1512,sos-2026-house-strafford-12-philip-houde,1
+pass,State Representative,Strafford,12,Wayne Pearson,DEM,Wayne Pearson,Democratic Party,359,587,wayne-pearson-11283,1
+pass,State Representative,Strafford,12,Will Hurley,DEM,William Hurley,Democratic Party,508,105,244215-william-hurley,1
+pass,State Representative,Strafford,13,Daniel A. Furman,REP,Daniel Furman,Republican Party,1174,945,daniel-a-furman,1
+pass,State Representative,Strafford,13,Peter W. Bixby,DEM,Peter Bixby,Democratic Party,36,22,peter-bixby-678,1
+pass,State Representative,Strafford,14,Peter B. Schmidt,DEM,Peter Schmidt,Democratic Party,16,589,peter-schmidt-496,1
+pass,State Representative,Strafford,15,Samuel Chouinard,DEM,Samuel Chouinard,Democratic Party,898,590,samuel-chouinard,1
+pass,State Representative,Strafford,16,Gary Gilmore,DEM,Gary Gilmore,Democratic Party,89,591,gary-gilmore-4998,1
+pass,State Representative,Strafford,17,Jessica LaMontagne,DEM,Jessica LaMontagne,Democrat,313,592,jessica-lamontagne-10900,1
+pass,State Representative,Strafford,17,Matthew D. Albion,REP,Matthew Albion,Republican Party,1175,946,matthew-d-albion,1
+pass,State Representative,Strafford,18,Michael Harrington,REP,Michael Harrington,Republican Party,90,947,michael-harrington-5122,1
+pass,State Representative,Strafford,18,Thom Flynn,DEM,Thom Flynn,Democratic Party,899,593,thom-flynn,1
+pass,State Representative,Strafford,19,James Higginbottom,REP,James Higginbottom,Republican Party,1747,1513,sos-2026-house-strafford-19-james-higginbottom,1
+pass,State Representative,Strafford,19,Jonathan J. King,DEM,Jonathan King,Democratic Party,900,594,jonathan-j-king,1
+pass,State Representative,Strafford,19,Jonathan Verbicky,REP,Jonathan Verbicky,Republican Party,1177,949,jonathan-verbicky,1
+pass,State Representative,Strafford,19,Justin McIsaac,DEM,Justin McIsaac,Democratic Party,543,155,244353-justin-mcisaac,1
+pass,State Representative,Strafford,19,Nick Paul,DEM,Nick Paul,Democratic Party,901,595,nick-paul,1
+pass,State Representative,Strafford,19,Samuel Farrington,REP,Samuel Farrington,Republican Party,407,948,samuel-farrington,1
+pass,State Representative,Strafford,20,Allan Howland,DEM,Allan Howland,Democratic Party,314,596,allan-howland-10903,1
+pass,State Representative,Strafford,20,John Colford,REP,John Colford,Republican Party,1178,950,john-colford,1
+pass,State Representative,Strafford,21,Alice Wade,DEM,Alice Wade,Democratic Party,361,599,alice-wade,1
+pass,State Representative,Strafford,21,Geoff Smith,DEM,Geoff Smith,Democratic Party,902,598,geoff-smith,1
+pass,State Representative,Strafford,21,Joseph D. Morganella,REP,Joseph Morganella,Republican Party,1179,951,joseph-d-morganella,1
+pass,State Representative,Strafford,21,Seth Miller,DEM,Seth Miller,Democratic Party,363,597,seth-miller-11291,1
+pass,State Representative,Sullivan,1,Brian Sullivan,DEM,Brian Sullivan,Democratic Party,129,600,brian-sullivan,1
+pass,State Representative,Sullivan,1,Joel T. Hutchins,REP,Joel Hutchins,Republican Party,1180,952,joel-t-hutchins,1
+pass,State Representative,Sullivan,2,Jenny Ramsey,DEM,Jenny Ramsey,Democratic Party,905,601,jenny-ramsey,1
+pass,State Representative,Sullivan,2,Michael Belanger,REP,Michael Belanger,Republican Party,1181,953,michael-belanger,1
+pass,State Representative,Sullivan,3,Jeffrey F. Kessler,DEM,Jeffrey Kessler,Democratic Party,907,603,jeffrey-f-kessler,1
+pass,State Representative,Sullivan,3,Lisa DeBartolomao,DEM,LISA DEBARTOLOMAO,Democratic Party,459,46,244373-lisa-debartolomao,1
+pass,State Representative,Sullivan,3,Skip Rollins,REP,Skip Rollins,Republican Party,48,954,skip-rollins,1
+pass,State Representative,Sullivan,3,Steven Smith,REP,Steven Smith,Republican Party,32,241,steven-smith,1
+pass,State Representative,Sullivan,3,Timothy Fitzpatrick,DEM,Timothy Fitzpatrick,Democratic Party,906,602,timothy-fitzpatrick,1
+pass,State Representative,Sullivan,3,Walter Spilsbury,REP,Walter Spilsbury,Republican Party,210,955,walter-spilsbury,1
+pass,State Representative,Sullivan,4,Christopher J. Salmon,DEM,Christopher Salmon,Democratic Party,596,223,244322-christopher-salmon,1
+pass,State Representative,Sullivan,4,Ron Rule,REP,Ron Rule,Republican Party,1184,956,ron-rule,1
+pass,State Representative,Sullivan,5,George C. Grant,REP,George Grant,Republican Party,271,957,george-grant,1
+pass,State Representative,Sullivan,5,Judith M. Thackaberry,DEM,Judith Thackaberry,Democratic Party,622,254,244247-judith-thackaberry,1
+pass,State Representative,Sullivan,6,Chris Cogswell,DEM,Chris Cogswell,Democratic Party,908,604,chris-cogswell,1
+pass,State Representative,Sullivan,6,Dale Girard,REP,Dale Girard,Republican Party,364,76,dale-girard-11293,1
+pass,State Representative,Sullivan,6,Emily Sandblade,REP,Emily Sandblade,Republican Party,1186,958,emily-sandblade,1
+pass,State Representative,Sullivan,6,John R. Cloutier,DEM,John Cloutier,Democrat,10,37,john-cloutier,1
+pass,State Representative,Sullivan,6,Lisa R. Gosselin,DEM,Lisa Gosselin,Democratic Party,909,605,lisa-r-gosselin,1
+pass,State Representative,Sullivan,6,Wayne J. Hemingway,REP,Wayne Hemingway,Republican,408,97,wayne-hemingway,1
+pass,State Representative,Sullivan,7,Lawrence A. Schissel,DEM,Lawrence Schissel,Democratic Party,910,606,lawrence-a-schissel,1
+pass,State Representative,Sullivan,7,Margaret M. Drye,REP,Margaret Drye,Republican,158,58,margaret-drye,1
+pass,State Representative,Sullivan,8,Catherine Peschke,REP,Catherine Peschke,Republican Party,1187,959,catherine-peschke,1
+pass,State Representative,Sullivan,8,Hope Damon,DEM,Hope Damon,Democrat,318,607,hope-damon,1
+pass,State Representative,Sullivan,8,Jonathan F. Stone,REP,Jonathan Stone,Republican Party,619,250,242430-jonathan-stone,1
+pass,State Representative,Sullivan,8,Samuel Deering,DEM,Samuel Deering,Democratic Party,912,608,samuel-deering,1
+pass,State Senate,,1,Cathleen A. Fountain,DEM,Cathleen Fountain,Democratic Party,435,21,242336-cathleen-fountain,1
+pass,State Senate,,1,David Rochefort,REP,David Rochefort,Republican Party,411,226,david-rochefort-11458,1
+pass,State Senate,,2,Kurt Webber,DEM,Kurt Webber,Democratic Party,672,310,kurt-webber,1
+pass,State Senate,,2,Timothy P. Lang,REP,Timothy Lang,Republican,228,675,timothy-lang,1
+pass,State Senate,,3,Bobbi Boudman,DEM,Bobbi Boudman,Democratic Party,274,311,bobbi-boudman,1
+pass,State Senate,,3,Mark McConkey,REP,Mark McConkey,Republican Party,412,216,mark-mcconkey,1
+pass,State Senate,,4,David H. Watters,DEM,David Watters,Democratic Party,2,312,david-watters,1
+pass,State Senate,,4,Shawn Mickelonis,REP,Shawn Mickelonis,Republican Party,572,194,243665-shawn-mickelonis,1
+pass,State Senate,,5,Conrad Schoeffter,REP,Conrad Schoeffter,Republican Party,980,676,conrad-schoeffter,1
+pass,State Senate,,5,Suzanne M. Prentiss,DEM,Suzanne Prentiss,Democratic Party,167,313,suzanne-prentiss,1
+pass,State Senate,,6,Cecil Abels,DEM,Cecil Abels,Democratic Party,676,314,cecil-abels,1
+pass,State Senate,,6,James P. Gray,REP,James Gray,Republican,122,677,james-gray,1
+pass,State Senate,,7,Daniel E. Innis,REP,Daniel Innis,Republican Party,125,678,daniel-innis-8747,1
+pass,State Senate,,7,Rebecca Harned,DEM,Rebecca Harned,Democratic Party,480,69,243715-rebecca-harned,1
+pass,State Senate,,8,David Trumble,DEM,David Trumble,Democratic Party,677,315,david-trumble,1
+pass,State Senate,,8,Jim Creighton,REP,James Creighton,Republican Party,192,679,james-creighton-9917,1
+pass,State Senate,,9,Denise Ricciardi,REP,Denise Ricciardi,Republican Party,168,680,denise-ricciardi,1
+pass,State Senate,,9,Matthew McLaughlin,DEM,Matthew McLaughlin,Democratic Party,678,316,matthew-mclaughlin,1
+pass,State Senate,,10,Donovan Fenton,DEM,Donovan Fenton,Democratic Party,229,317,donovan-fenton-10599,1
+pass,State Senate,,11,Shannon E. Chandley,DEM,Shannon Chandley,Democratic Party,679,318,shannon-e-chandley,1
+pass,State Senate,,11,Tim McGough,REP,Tim McGough,Republican Party,413,681,tim-mcgough-11460,1
+pass,State Senate,,12,Carryl L. Roy,DEM,Carryl Roy,Democratic Party,537,146,243692-carryl-roy,1
+pass,State Senate,,12,Kevin Avard,REP,Kevin Avard,Republican,77,682,kevin-avard-928,1
+pass,State Senate,,13,Daniel J. Paul,REP,Daniel Paul,Republican Party,985,683,daniel-j-paul,1
+pass,State Senate,,13,Laura Telerski,DEM,Laura Telerski,Democratic Party,144,319,laura-telerski,1
+pass,State Senate,,14,Sharon M. Carson,REP,Sharon Carson,Republican Party,1,684,sharon-carson-35,1
+pass,State Senate,,14,Timothy T. Wyatt,DEM,Timothy Wyatt,Democratic Party,681,320,timothy-t-wyatt,1
+pass,State Senate,,15,Dennis Blankenbeker,REP,Dennis Blankenbeker,Republican Party,986,685,dennis-blankenbeker,1
+pass,State Senate,,15,Tara Reardon,DEM,Tara Reardon,Democratic Party,414,321,tara-reardon-11461,1
+pass,State Senate,,16,Dian McCarthy,DEM,Dian McCarthy,Democratic Party,683,323,dian-mccarthy,1
+pass,State Senate,,16,Keith Murphy,REP,Keith Murphy,Republican,261,687,keith-murphy-10698,1
+pass,State Senate,,17,Howard Pearl,REP,Howard Pearl,Republican,231,688,howard-pearl-10604,1
+pass,State Senate,,17,Robert Lawliss,DEM,Robert Lawliss,Democratic Party,684,324,robert-lawliss,1
+pass,State Senate,,18,Leonard Bell,DEM,Leonard Bell,Democratic Party,685,325,leonard-bell,1
+pass,State Senate,,18,Victoria Sullivan,REP,Victoria Sullivan,Republican Party,415,690,victoria-sullivan-11462,1
+pass,State Senate,,19,Michelle Moge,DEM,Michelle Moge,Democratic Party,686,326,michelle-moge,1
+pass,State Senate,,19,Regina Birdsell,REP,Regina Birdsell,Republican Party,76,691,regina-birdsell-926,1
+pass,State Senate,,20,Pat T. Long,DEM,Pat Long,Democratic Party,416,327,pat-long-11463,1
+pass,State Senate,,20,Patrick Binder,REP,Patrick Binder,Republican Party,989,692,patrick-binder,1
+pass,State Senate,,21,Jeffrey Berlin,REP,Jeffrey Berlin,Republican Party,1717,1483,sos-2026-senate-state-21-jeffrey-berlin,1
+pass,State Senate,,21,Rebecca Perkins Kwoka,DEM,Rebecca Perkins Kwoka,Democratic Party,169,329,rebecca-perkins-kwoka-9856,1
+pass,State Senate,,22,Chris Tardif,DEM,Chris Tardif,Democratic Party,541,152,244269-chris-tardif,1
+pass,State Senate,,22,Daryl Abbas,REP,Daryl Abbas,Republican Party,232,693,daryl-abbas-10607,1
+pass,State Senate,,23,Bill Gannon,REP,Bill Gannon,Republican,124,694,bill-gannon-8745,1
+pass,State Senate,,23,David Childs,DEM,David Childs,Democratic Party,689,330,david-childs,1
+pass,State Senate,,24,Debra Altschiller,DEM,Debra Altschiller,Democratic Party,230,331,debra-altschiller-10600,1
+pass,State Senate,,24,Lou Gargiulo,REP,Lou Gargiulo,Republican Party,990,695,lou-gargiulo,1
