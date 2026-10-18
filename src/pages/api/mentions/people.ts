@@ -65,6 +65,8 @@ function renderPersonOption(person = {}) {
       type="button"
       role="option"
       data-mention="${escapeAttribute(`@${name}`)}"
+      data-person-id="${escapeAttribute(person.id)}"
+      data-person-name="${escapeAttribute(name)}"
     >
       <strong>${escapeHtml(name)}</strong>
       ${meta ? `<span>${escapeHtml(meta)}</span>` : ""}

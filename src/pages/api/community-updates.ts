@@ -10,6 +10,9 @@ import {
 import {
   ensureCommunityUpdatesTable,
   communityUpdatesDb,
+  normalizeBillPosition,
+  normalizeCommunityUpdateContentType,
+  normalizeStatementFormat,
   saveCommunityUpdatePhotos,
   saveCommunityUpdateMentions,
 } from "../../lib/communityUpdates";
@@ -28,6 +31,20 @@ export async function POST({ request }) {
     const email = String(form.get("email") || "").trim();
     const comment = String(form.get("comment") || "").trim();
     const linkUrl = normalizeLinkUrl(form.get("linkUrl"));
+    const contentType = entityType === "bill"
+      ? normalizeCommunityUpdateContentType(form.get("contentType"))
+      : "community_comment";
+    const billPosition = entityType === "bill"
+      ? normalizeBillPosition(form.get("billPosition"))
+      : "";
+    const statementFormat = entityType === "bill" && contentType === "public_statement"
+      ? normalizeStatementFormat(form.get("statementFormat"))
+      : "";
+    const taggedPersonIds = form
+      .getAll("taggedPersonIds")
+      .map(Number)
+      .filter((id) => Number.isSafeInteger(id) && id > 0)
+      .slice(0, 20);
     const files = form
       .getAll("photos")
       .concat(form.getAll("photo"))
@@ -40,6 +57,18 @@ export async function POST({ request }) {
     if (!entityKey) throw new Error("Page identifier is required.");
     if (!comment && !linkUrl && !files.length) {
       throw new Error("Add a comment, link, or photo.");
+    }
+    if (entityType === "bill" && contentType === "public_statement" && !linkUrl) {
+      throw new Error("Add a source link for a candidate or legislator statement.");
+    }
+    if (entityType === "bill" && contentType === "public_statement" && !comment) {
+      throw new Error("Add the quoted statement or a clear summary of it.");
+    }
+    if (entityType === "bill" && contentType === "public_statement" && !taggedPersonIds.length) {
+      throw new Error("Select the candidate or legislator who made the statement using the @ suggestions.");
+    }
+    if (entityType === "bill" && contentType === "public_statement" && !statementFormat) {
+      throw new Error("Choose whether the statement is a direct quote or a summary.");
     }
 
     const photoUrls = await Promise.all(
@@ -57,9 +86,10 @@ export async function POST({ request }) {
       .prepare(
         `INSERT INTO community_updates (
           entity_type, entity_key, entity_name, page_url, display_name,
-          email, comment, link_url, photo_url, status, created_at
+          email, comment, link_url, photo_url, content_type, bill_position,
+          statement_format, status, created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)`,
       )
       .bind(
         entityType,
@@ -71,11 +101,14 @@ export async function POST({ request }) {
         comment,
         linkUrl,
         photoUrl,
+        contentType,
+        billPosition,
+        statementFormat,
       )
       .run();
     const updateId = result.meta?.last_row_id || result.meta?.lastRowId || result.lastRowId;
-    if (updateId && comment) {
-      await saveCommunityUpdateMentions(updateId, comment, db);
+    if (updateId && (comment || taggedPersonIds.length)) {
+      await saveCommunityUpdateMentions(updateId, comment, db, taggedPersonIds);
     }
     if (updateId && photoUrls.length) {
       await saveCommunityUpdatePhotos(updateId, photoUrls, db);
@@ -100,6 +133,9 @@ export async function POST({ request }) {
             entityName,
             comment,
             linkUrl,
+            contentType,
+            billPosition,
+            statementFormat,
             photoCount: photoUrls.length,
           }),
         });
@@ -124,18 +160,50 @@ function communityUpdateEmailDetails({
   entityName = "",
   comment = "",
   linkUrl = "",
+  contentType = "",
+  billPosition = "",
+  statementFormat = "",
   photoCount = 0,
 } = {}) {
   const subject = entityName || [entityType, entityKey].filter(Boolean).join(": ");
   return [
     { label: "Submitted about", value: subject },
     { label: "Update text", value: comment },
+    { label: "Contribution type", value: contentTypeLabel(contentType) },
+    { label: "Bill position", value: billPositionLabel(billPosition) },
+    { label: "Statement wording", value: statementFormatLabel(statementFormat) },
     { label: "Source link", value: linkUrl, href: linkUrl },
     {
       label: "Photos",
       value: photoCount ? `${photoCount} photo${photoCount === 1 ? "" : "s"} uploaded` : "",
     },
   ];
+}
+
+function contentTypeLabel(value = "") {
+  return {
+    community_comment: "Community opinion",
+    public_statement: "Candidate or legislator statement",
+    correction: "Correction",
+    additional_source: "Additional source",
+  }[value] || "";
+}
+
+function billPositionLabel(value = "") {
+  return {
+    support: "Support",
+    oppose: "Oppose",
+    mixed: "Mixed or conditional",
+    neutral: "Neutral",
+    unclear: "Unclear",
+  }[value] || "";
+}
+
+function statementFormatLabel(value = "") {
+  return {
+    direct_quote: "Direct quote",
+    summary: "Summary or paraphrase",
+  }[value] || "";
 }
 
 async function uploadCommunityPhoto(file, entityType, entityKey, index = 0) {

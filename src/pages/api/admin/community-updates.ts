@@ -11,6 +11,9 @@ import { sendSubmissionResponseEmail } from "../../../lib/adminEmail";
 import {
   ensureCommunityUpdatesTable,
   communityUpdatesDb,
+  normalizeBillPosition,
+  normalizeCommunityUpdateContentType,
+  normalizeStatementFormat,
   replaceCommunityUpdatePhotos,
   saveCommunityUpdateMentions,
 } from "../../../lib/communityUpdates";
@@ -30,6 +33,16 @@ export async function POST({ request }) {
     const comment = cleanText(form.get("comment") || "");
     const displayName = cleanText(form.get("displayName") || "") || "Community member";
     const linkUrl = cleanText(form.get("linkUrl") || "");
+    const contentType = normalizeCommunityUpdateContentType(form.get("contentType"));
+    const billPosition = normalizeBillPosition(form.get("billPosition"));
+    const statementFormat = contentType === "public_statement"
+      ? normalizeStatementFormat(form.get("statementFormat"))
+      : "";
+    const taggedPersonIds = form
+      .getAll("taggedPersonIds")
+      .map(Number)
+      .filter((personId) => Number.isSafeInteger(personId) && personId > 0)
+      .slice(0, 20);
     const responseStatus = normalizeResponseStatus(form.get("responseStatus"));
     const responseNote = cleanText(form.get("responseNote") || "");
     const files = form
@@ -83,6 +96,18 @@ export async function POST({ request }) {
         .bind(id)
         .first();
       if (!existing) throw new Error("No matching community update was found.");
+      if (existing.entity_type === "bill" && contentType === "public_statement" && !linkUrl) {
+        throw new Error("Add a source link for a candidate or legislator statement.");
+      }
+      if (existing.entity_type === "bill" && contentType === "public_statement" && !comment) {
+        throw new Error("Add the quoted statement or a clear summary of it.");
+      }
+      if (existing.entity_type === "bill" && contentType === "public_statement" && !taggedPersonIds.length) {
+        throw new Error("Tag the candidate or legislator who made the statement.");
+      }
+      if (existing.entity_type === "bill" && contentType === "public_statement" && !statementFormat) {
+        throw new Error("Choose whether the statement is a direct quote or a summary.");
+      }
 
       const existingPhotoRows = await db
         .prepare(
@@ -121,13 +146,27 @@ export async function POST({ request }) {
            SET display_name = ?,
                comment = ?,
                link_url = ?,
+               content_type = ?,
+               bill_position = ?,
+               statement_format = ?,
                response_status = COALESCE(NULLIF(?, ''), response_status),
                response_note = COALESCE(NULLIF(?, ''), response_note),
                response_sent_at = CASE WHEN ? != '' THEN CURRENT_TIMESTAMP ELSE response_sent_at END,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = ?`,
         )
-        .bind(displayName, comment, linkUrl, responseStatus, responseNote, responseNote, id)
+        .bind(
+          displayName,
+          comment,
+          linkUrl,
+          existing.entity_type === "bill" ? contentType : "community_comment",
+          existing.entity_type === "bill" ? billPosition : "",
+          existing.entity_type === "bill" ? statementFormat : "",
+          responseStatus,
+          responseNote,
+          responseNote,
+          id,
+        )
         .run();
 
       await replaceCommunityUpdatePhotos(id, finalPhotoUrls, db);
@@ -137,8 +176,8 @@ export async function POST({ request }) {
         .bind(id)
         .run();
 
-      if (comment) {
-        await saveCommunityUpdateMentions(id, comment, db);
+      if (comment || taggedPersonIds.length) {
+        await saveCommunityUpdateMentions(id, comment, db, taggedPersonIds);
       }
 
     }
@@ -216,7 +255,7 @@ async function communityUpdateEmailContext(db, id) {
   return db
     .prepare(
       `SELECT entity_type, entity_key, entity_name, email, page_url, comment,
-              link_url,
+              link_url, content_type, bill_position, statement_format,
               (SELECT COUNT(*) FROM community_update_photos WHERE update_id = community_updates.id) AS photo_count
        FROM community_updates
        WHERE id = ?`,
@@ -235,6 +274,9 @@ function communityUpdateEmailDetails(update = {}) {
   return [
     { label: "Submitted about", value: subject },
     { label: "Update text", value: cleanText(update.comment || "") },
+    { label: "Contribution type", value: cleanText(update.content_type || "").replace(/_/g, " ") },
+    { label: "Bill position", value: cleanText(update.bill_position || "") },
+    { label: "Statement wording", value: cleanText(update.statement_format || "").replace(/_/g, " ") },
     { label: "Source link", value: linkUrl, href: linkUrl },
     {
       label: "Photos",

@@ -1070,6 +1070,9 @@ function profileTrafficDate(value = "") {
                     >
                       <input type="hidden" name="id" value={update.id} />
                       <input type="hidden" name="redirectTo" value="/admin" />
+                      {(update.mentions || []).map((mention) => mention.personId && (
+                        <input type="hidden" name="taggedPersonIds" value={mention.personId} />
+                      ))}
                       <label>
                         Submitted by
                         <input name="displayName" value={cleanText(update.displayName)} />
@@ -1082,6 +1085,38 @@ function profileTrafficDate(value = "") {
                         Link
                         <input name="linkUrl" type="url" value={update.linkUrl || ""} placeholder="https://example.com/context" />
                       </label>
+                      {update.entityType === "bill" && (
+                        <div class="form-grid">
+                          <label>
+                            Contribution type
+                            <select name="contentType">
+                              <option value="community_comment" selected={update.contentType === "community_comment"}>Community opinion</option>
+                              <option value="public_statement" selected={update.contentType === "public_statement"}>Candidate or legislator statement</option>
+                              <option value="correction" selected={update.contentType === "correction"}>Correction</option>
+                              <option value="additional_source" selected={update.contentType === "additional_source"}>Additional source</option>
+                            </select>
+                          </label>
+                          <label>
+                            Position on bill
+                            <select name="billPosition">
+                              <option value="" selected={!update.billPosition}>Not specified</option>
+                              <option value="support" selected={update.billPosition === "support"}>Support</option>
+                              <option value="oppose" selected={update.billPosition === "oppose"}>Oppose</option>
+                              <option value="mixed" selected={update.billPosition === "mixed"}>Mixed or conditional</option>
+                              <option value="neutral" selected={update.billPosition === "neutral"}>Neutral</option>
+                              <option value="unclear" selected={update.billPosition === "unclear"}>Unclear</option>
+                            </select>
+                          </label>
+                          <label>
+                            Statement wording
+                            <select name="statementFormat">
+                              <option value="" selected={!update.statementFormat}>Not applicable</option>
+                              <option value="direct_quote" selected={update.statementFormat === "direct_quote"}>Direct quote</option>
+                              <option value="summary" selected={update.statementFormat === "summary"}>Summary or paraphrase</option>
+                            </select>
+                          </label>
+                        </div>
+                      )}
                       <label class="moderation-file-field">
                         Add photos
                         <input name="photos" type="file" accept="image/*" multiple />

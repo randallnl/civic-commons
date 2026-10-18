@@ -3,6 +3,7 @@ import {
   communityUpdateDate,
   getApprovedCommunityUpdate,
   getApprovedCommunityUpdates,
+  getApprovedCommunityUpdatesForPerson,
 } from "../lib/communityUpdates";
 import {
   canModerateContent,
@@ -29,6 +30,7 @@ const {
   fetchMissingPreviews = true,
   showAnchorLinks = false,
   sharePreviewUpdateId = 0,
+  relatedPersonId = 0,
 } = Astro.props;
 
 const captureUpdateId = Number.isSafeInteger(Number(sharePreviewUpdateId)) && Number(sharePreviewUpdateId) > 0
@@ -37,16 +39,56 @@ const captureUpdateId = Number.isSafeInteger(Number(sharePreviewUpdateId)) && Nu
 const captureUpdate = captureUpdateId
   ? await getApprovedCommunityUpdate(entityType, entityKey, captureUpdateId)
   : null;
-const updates = captureUpdateId
+const directUpdates = captureUpdateId
   ? captureUpdate ? [captureUpdate] : []
   : await getApprovedCommunityUpdates(entityType, entityKey, { limit: 12 });
+const relatedUpdates = !captureUpdateId && relatedPersonId
+  ? await getApprovedCommunityUpdatesForPerson(relatedPersonId, { limit: 12 })
+  : [];
+const updates = [...directUpdates, ...relatedUpdates]
+  .filter((update, index, all) => all.findIndex((item) => item.id === update.id) === index)
+  .sort((first, second) => new Date(second.createdAt || 0).getTime() - new Date(first.createdAt || 0).getTime())
+  .slice(0, 12);
 const updateCards = await getCommunityUpdateCards(updates, { fetchMissingPreviews });
 const adminSession = await currentAdminSession(Astro.request);
 const canModerateUpdates = canModerateContent(adminSession);
 const hasInstagramEmbeds = updateCards.some((card) => card.social?.type === "instagram");
 const hasTikTokEmbeds = updateCards.some((card) => card.social?.type === "tiktok" && card.social.videoId);
 const isReport = entityType === "report";
+const isBill = entityType === "bill";
 const Wrapper = embedded ? "div" : "section";
+const filterPeople = [...new Map(
+  updateCards
+    .flatMap((update) => update.mentions || [])
+    .filter((mention) => mention.personId && mention.name)
+    .map((mention) => [String(mention.personId), mention]),
+).values()];
+
+function contentTypeLabel(value = "") {
+  return {
+    community_comment: "Community opinion",
+    public_statement: "Candidate or legislator statement",
+    correction: "Correction",
+    additional_source: "Additional source",
+  }[value] || "Community opinion";
+}
+
+function billPositionLabel(value = "") {
+  return {
+    support: "Support",
+    oppose: "Oppose",
+    mixed: "Mixed or conditional",
+    neutral: "Neutral",
+    unclear: "Position unclear",
+  }[value] || "";
+}
+
+function statementFormatLabel(value = "") {
+  return {
+    direct_quote: "Direct quote",
+    summary: "Summary or paraphrase",
+  }[value] || "";
+}
 
 function socialLinkHost(update = {}) {
   try {
@@ -61,17 +103,27 @@ function communityUpdateAnchorId(update = {}) {
   return Number.isSafeInteger(id) && id > 0 ? `community-update-${id}` : "";
 }
 
+function updatePermalink(update = {}) {
+  const anchor = communityUpdateAnchorId(update);
+  if (!anchor) return "";
+  const base = update.pageUrl || Astro.url.pathname;
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}update=${update.id}#${anchor}`;
+}
+
 ---
 
 <Wrapper class:list={[!embedded && "panel", "community-updates-panel", embedded && "community-updates-panel-embedded", variant === "narrow" && "community-updates-panel-narrow", captureUpdateId && "community-updates-panel-share-capture"]}>
   {!embedded && (
     <div class="section-heading">
-      <p class="eyebrow">{isReport ? "Community updates" : "Share Your Thoughts"}</p>
-      <h2>{isReport ? "Help improve this public analysis" : "Community context"}</h2>
+      <p class="eyebrow">{isReport ? "Community updates" : isBill ? "Community discussion" : "Share Your Thoughts"}</p>
+      <h2>{isReport ? "Help improve this public analysis" : isBill ? "Community Comments on This Bill" : "Community context"}</h2>
       <p>
         {isReport
           ? "Share a source, correction, alternate calculation, or local context connected to this report. Submissions are reviewed before they appear publicly."
-          : "Share a local note, article, social post, image, or correction connected to this profile. These updates help neighbors understand how public decisions affect people and communities. Submissions are reviewed before they appear publicly."}
+          : isBill
+            ? "Share an opinion, source, correction, or sourced public statement about this bill. Tag candidates or legislators with @ when they are discussed. Submissions are reviewed before they appear publicly."
+            : "Share a local note, article, social post, image, or correction connected to this profile. These updates help neighbors understand how public decisions affect people and communities. Submissions are reviewed before they appear publicly."}
       </p>
     </div>
   )}
@@ -113,9 +165,43 @@ function communityUpdateAnchorId(update = {}) {
             hx-target="next .mention-suggestions"
           />
           <div class="mention-suggestions" data-mention-suggestions aria-live="polite"></div>
+          <div class="selected-mentions" data-selected-mentions aria-live="polite"></div>
           <p class="mention-help">Type <strong>@</strong> plus a candidate or legislator name to tag them for moderation.</p>
         </div>
       </label>
+
+      {isBill && (
+        <div class="bill-comment-fields">
+          <label>
+            Contribution type
+            <select name="contentType" data-content-type>
+              <option value="community_comment">Community opinion</option>
+              <option value="public_statement">Candidate or legislator statement</option>
+              <option value="correction">Correction</option>
+              <option value="additional_source">Additional source</option>
+            </select>
+          </label>
+          <label>
+            Position on the bill
+            <select name="billPosition">
+              <option value="">Not specified</option>
+              <option value="support">Support</option>
+              <option value="oppose">Oppose</option>
+              <option value="mixed">Mixed or conditional</option>
+              <option value="neutral">Neutral</option>
+              <option value="unclear">Unclear</option>
+            </select>
+          </label>
+          <label data-statement-format-field hidden>
+            Statement wording
+            <select name="statementFormat">
+              <option value="">Choose one</option>
+              <option value="direct_quote">Direct quote</option>
+              <option value="summary">Summary or paraphrase</option>
+            </select>
+          </label>
+        </div>
+      )}
 
       <div class="form-grid">
         <label>
@@ -135,13 +221,41 @@ function communityUpdateAnchorId(update = {}) {
       </label>
 
       <label>
-        Link
+        {isBill ? "Source link" : "Link"}
         <input name="linkUrl" type="url" placeholder="https://example.com/context" />
+        {isBill && <small>A source link is required for a candidate or legislator statement.</small>}
       </label>
 
       <button type="submit">Submit for Review</button>
     </form>
   </details>}
+
+  {isBill && updateCards.length > 1 && (
+    <div class="bill-comment-filters" data-bill-comment-filters>
+      <label>
+        Position
+        <select data-position-filter>
+          <option value="">All positions</option>
+          <option value="support">Support</option>
+          <option value="oppose">Oppose</option>
+          <option value="mixed">Mixed or conditional</option>
+          <option value="neutral">Neutral</option>
+          <option value="unclear">Unclear</option>
+        </select>
+      </label>
+      {filterPeople.length > 1 && (
+        <label>
+          Tagged person
+          <select data-person-filter>
+            <option value="">All people</option>
+            {filterPeople.map((mention) => (
+              <option value={mention.personId}>{mention.name}</option>
+            ))}
+          </select>
+        </label>
+      )}
+    </div>
+  )}
 
   {updateCards.length ? (
     <div class="community-update-list">
@@ -149,6 +263,8 @@ function communityUpdateAnchorId(update = {}) {
         <article
           id={(showAnchorLinks || captureUpdateId) ? communityUpdateAnchorId(update) || undefined : undefined}
           class:list={["community-update-card", (update.photoUrls?.length || update.linkUrl) && "has-media"]}
+          data-bill-position={update.billPosition || ""}
+          data-person-ids={(update.mentions || []).map((mention) => mention.personId).filter(Boolean).join(",")}
         >
           {(update.linkUrl || update.photoUrls?.length > 0) && (
             <div class="community-update-media">
@@ -289,22 +405,52 @@ function communityUpdateAnchorId(update = {}) {
                 {showAnchorLinks && communityUpdateAnchorId(update) && (
                   <a
                     class="community-update-anchor-link"
-                    href={`${Astro.url.pathname}?update=${update.id}#${communityUpdateAnchorId(update)}`}
+                    href={updatePermalink(update)}
                     aria-label={`Link to ${cleanText(update.displayName || "community member")}'s community update`}
                   >Link to update</a>
                 )}
               </span>
             </div>
-            {update.comment && (
-              <p>
-                {mentionParts(update.comment, update.mentions).map((part) =>
-                  part.href ? (
-                    <a class="comment-mention-link" href={part.href}>{part.text}</a>
-                  ) : (
-                    part.text
-                  ),
+            {(isBill || update.entityType === "bill") && (
+              <div class="bill-comment-badges">
+                <span class="content-type-badge">{contentTypeLabel(update.contentType)}</span>
+                {update.billPosition && (
+                  <span class:list={["bill-position-badge", `bill-position-${update.billPosition}`]}>
+                    {billPositionLabel(update.billPosition)}
+                  </span>
                 )}
-              </p>
+                {update.statementFormat && (
+                  <span class="statement-format-badge">{statementFormatLabel(update.statementFormat)}</span>
+                )}
+              </div>
+            )}
+            {!isBill && update.entityType === "bill" && update.pageUrl && (
+              <a class="bill-context-link" href={update.pageUrl}>
+                {cleanText(update.entityName || "View the related bill")}
+              </a>
+            )}
+            {update.comment && (
+              update.statementFormat === "direct_quote" ? (
+                <blockquote class="bill-direct-quote">
+                  {mentionParts(update.comment, update.mentions).map((part) =>
+                    part.href ? (
+                      <a class="comment-mention-link" href={part.href}>{part.text}</a>
+                    ) : (
+                      part.text
+                    ),
+                  )}
+                </blockquote>
+              ) : (
+                <p>
+                  {mentionParts(update.comment, update.mentions).map((part) =>
+                    part.href ? (
+                      <a class="comment-mention-link" href={part.href}>{part.text}</a>
+                    ) : (
+                      part.text
+                    ),
+                  )}
+                </p>
+              )
             )}
             {update.mentions?.length > 0 && (
               <div class="mention-list" aria-label="Tagged people">
@@ -352,6 +498,9 @@ function communityUpdateAnchorId(update = {}) {
                 >
                   <input type="hidden" name="id" value={update.id} />
                   <input type="hidden" name="redirectTo" value={Astro.url.pathname} />
+                  {(update.mentions || []).map((mention) => mention.personId && (
+                    <input type="hidden" name="taggedPersonIds" value={mention.personId} />
+                  ))}
                   <label>
                     Submitted by
                     <input name="displayName" value={cleanText(update.displayName || "Community member")} />
@@ -364,6 +513,38 @@ function communityUpdateAnchorId(update = {}) {
                     Link
                     <input name="linkUrl" type="url" value={update.linkUrl || ""} placeholder="https://example.com/context" />
                   </label>
+                  {(isBill || update.entityType === "bill") && (
+                    <div class="bill-comment-fields">
+                      <label>
+                        Contribution type
+                        <select name="contentType">
+                          <option value="community_comment" selected={update.contentType === "community_comment"}>Community opinion</option>
+                          <option value="public_statement" selected={update.contentType === "public_statement"}>Candidate or legislator statement</option>
+                          <option value="correction" selected={update.contentType === "correction"}>Correction</option>
+                          <option value="additional_source" selected={update.contentType === "additional_source"}>Additional source</option>
+                        </select>
+                      </label>
+                      <label>
+                        Position
+                        <select name="billPosition">
+                          <option value="" selected={!update.billPosition}>Not specified</option>
+                          <option value="support" selected={update.billPosition === "support"}>Support</option>
+                          <option value="oppose" selected={update.billPosition === "oppose"}>Oppose</option>
+                          <option value="mixed" selected={update.billPosition === "mixed"}>Mixed or conditional</option>
+                          <option value="neutral" selected={update.billPosition === "neutral"}>Neutral</option>
+                          <option value="unclear" selected={update.billPosition === "unclear"}>Unclear</option>
+                        </select>
+                      </label>
+                      <label>
+                        Statement wording
+                        <select name="statementFormat">
+                          <option value="" selected={!update.statementFormat}>Not applicable</option>
+                          <option value="direct_quote" selected={update.statementFormat === "direct_quote"}>Direct quote</option>
+                          <option value="summary" selected={update.statementFormat === "summary"}>Summary or paraphrase</option>
+                        </select>
+                      </label>
+                    </div>
+                  )}
                   <label class="community-update-admin-file">
                     Add photos
                     <input name="photos" type="file" accept="image/*" multiple />
@@ -515,6 +696,7 @@ function communityUpdateAnchorId(update = {}) {
     const textarea = field.querySelector("[data-mention-textarea]");
     const queryInput = field.querySelector(".mention-query-input");
     const suggestions = field.querySelector("[data-mention-suggestions]");
+    const selectedMentions = field.querySelector("[data-selected-mentions]");
 
     if (!(textarea instanceof HTMLTextAreaElement) || !(queryInput instanceof HTMLInputElement)) {
       return;
@@ -561,6 +743,8 @@ function communityUpdateAnchorId(update = {}) {
       if (!(button instanceof HTMLButtonElement)) return;
 
       const mentionText = button.getAttribute("data-mention");
+      const personId = button.getAttribute("data-person-id");
+      const personName = button.getAttribute("data-person-name") || mentionText?.replace(/^@/, "");
       const start = Number(field.getAttribute("data-mention-start"));
       const end = Number(field.getAttribute("data-mention-end"));
       if (!mentionText || !Number.isFinite(start) || !Number.isFinite(end)) return;
@@ -577,7 +761,73 @@ function communityUpdateAnchorId(update = {}) {
       if (suggestions) suggestions.innerHTML = "";
       field.removeAttribute("data-mention-start");
       field.removeAttribute("data-mention-end");
+
+      if (personId && selectedMentions && !selectedMentions.querySelector(`[data-selected-person-id="${CSS.escape(personId)}"]`)) {
+        const chip = document.createElement("span");
+        chip.className = "selected-mention-chip";
+        chip.setAttribute("data-selected-person-id", personId);
+
+        const hiddenInput = document.createElement("input");
+        hiddenInput.type = "hidden";
+        hiddenInput.name = "taggedPersonIds";
+        hiddenInput.value = personId;
+
+        const label = document.createElement("span");
+        label.textContent = personName ? `@${personName}` : mentionText;
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.setAttribute("aria-label", `Remove ${personName || "tagged person"}`);
+        remove.textContent = "×";
+        remove.addEventListener("click", () => chip.remove());
+
+        chip.append(hiddenInput, label, remove);
+        selectedMentions.append(chip);
+      }
     });
+  });
+
+  document.querySelectorAll(".community-update-form").forEach((form) => {
+    const contentType = form.querySelector("[data-content-type]");
+    const statementField = form.querySelector("[data-statement-format-field]");
+    if (!(contentType instanceof HTMLSelectElement) || !(statementField instanceof HTMLElement)) return;
+
+    const statementFormat = statementField.querySelector("select");
+    function syncStatementField() {
+      const isStatement = contentType.value === "public_statement";
+      statementField.hidden = !isStatement;
+      if (statementFormat instanceof HTMLSelectElement) {
+        statementFormat.required = isStatement;
+        if (!isStatement) statementFormat.value = "";
+      }
+    }
+
+    contentType.addEventListener("change", syncStatementField);
+    syncStatementField();
+  });
+
+  document.querySelectorAll("[data-bill-comment-filters]").forEach((filters) => {
+    const panel = filters.closest(".community-updates-panel");
+    const positionFilter = filters.querySelector("[data-position-filter]");
+    const personFilter = filters.querySelector("[data-person-filter]");
+    if (!panel || !(positionFilter instanceof HTMLSelectElement)) return;
+
+    function applyFilters() {
+      const position = positionFilter.value;
+      const personId = personFilter instanceof HTMLSelectElement ? personFilter.value : "";
+      panel.querySelectorAll(".community-update-card").forEach((card) => {
+        if (!(card instanceof HTMLElement)) return;
+        const people = (card.dataset.personIds || "").split(",").filter(Boolean);
+        const positionMatches = !position || card.dataset.billPosition === position;
+        const personMatches = !personId || people.includes(personId);
+        card.hidden = !(positionMatches && personMatches);
+      });
+    }
+
+    positionFilter.addEventListener("change", applyFilters);
+    if (personFilter instanceof HTMLSelectElement) {
+      personFilter.addEventListener("change", applyFilters);
+    }
   });
 </script>
 
@@ -1406,6 +1656,102 @@ function communityUpdateAnchorId(update = {}) {
     padding: 16px;
   }
 
+  .bill-comment-fields,
+  .bill-comment-filters {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .bill-comment-filters {
+    background: #f8fafc;
+    border: 1px solid #bfdbfe;
+    border-radius: 14px;
+    grid-template-columns: repeat(2, minmax(0, 240px));
+    margin: 14px 0;
+    padding: 12px;
+  }
+
+  .bill-comment-badges,
+  .selected-mentions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 9px;
+  }
+
+  .content-type-badge,
+  .bill-position-badge,
+  .statement-format-badge,
+  .selected-mention-chip {
+    align-items: center;
+    background: #eff6ff;
+    border: 1px solid #93c5fd;
+    border-radius: 999px;
+    color: #1e3a8a;
+    display: inline-flex;
+    font-size: 0.72rem;
+    font-weight: 950;
+    gap: 5px;
+    padding: 5px 8px;
+  }
+
+  .bill-position-support {
+    background: #ecfdf5;
+    border-color: #86efac;
+    color: #166534;
+  }
+
+  .bill-position-oppose {
+    background: #fff1f2;
+    border-color: #fda4af;
+    color: #9f1239;
+  }
+
+  .bill-position-mixed,
+  .bill-position-unclear {
+    background: #fffbeb;
+    border-color: #fcd34d;
+    color: #92400e;
+  }
+
+  .statement-format-badge {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #475569;
+  }
+
+  .bill-context-link {
+    color: #1d4ed8;
+    font-size: 0.9rem;
+    font-weight: 900;
+    margin-top: 10px;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  .bill-direct-quote {
+    border-left: 4px solid #93c5fd;
+    color: #334155;
+    font-weight: 800;
+    line-height: 1.55;
+    margin: 12px 0 0;
+    padding: 4px 0 4px 14px;
+  }
+
+  .selected-mention-chip button {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 2px;
+  }
+
+  .community-update-card[hidden] {
+    display: none;
+  }
+
   .form-grid {
     display: grid;
     gap: 12px;
@@ -1496,6 +1842,7 @@ function communityUpdateAnchorId(update = {}) {
   }
 
   input,
+  select,
   textarea {
     background: #ffffff;
     border: 1px solid rgba(37, 99, 235, 0.35);
@@ -1511,6 +1858,7 @@ function communityUpdateAnchorId(update = {}) {
   }
 
   input:focus,
+  select:focus,
   textarea:focus {
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
@@ -1565,6 +1913,11 @@ function communityUpdateAnchorId(update = {}) {
     }
 
     .form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .bill-comment-fields,
+    .bill-comment-filters {
       grid-template-columns: 1fr;
     }
   }

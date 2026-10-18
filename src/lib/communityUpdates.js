@@ -13,6 +13,9 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS community_updates (
   comment TEXT,
   link_url TEXT,
   photo_url TEXT,
+  content_type TEXT NOT NULL DEFAULT 'community_comment',
+  bill_position TEXT,
+  statement_format TEXT,
   status TEXT NOT NULL DEFAULT 'pending',
   reviewed_by TEXT,
   reviewed_at TEXT,
@@ -84,6 +87,9 @@ export async function ensureCommunityUpdatesTable(db = communityUpdatesDb()) {
   await addColumnIfMissing(db, "community_updates", "archive_error", "TEXT");
   await addColumnIfMissing(db, "community_updates", "archived_at", "TEXT");
   await addColumnIfMissing(db, "community_updates", "updated_at", "TEXT");
+  await addColumnIfMissing(db, "community_updates", "content_type", "TEXT NOT NULL DEFAULT 'community_comment'");
+  await addColumnIfMissing(db, "community_updates", "bill_position", "TEXT");
+  await addColumnIfMissing(db, "community_updates", "statement_format", "TEXT");
   await addColumnIfMissing(db, "community_update_mentions", "person_id", "INTEGER");
   await addColumnIfMissing(db, "community_update_mentions", "filer_entity_number", "TEXT");
   await addColumnIfMissing(db, "community_update_mentions", "path", "TEXT");
@@ -103,6 +109,12 @@ export async function ensureCommunityUpdatesTable(db = communityUpdatesDb()) {
     .run();
   await db
     .prepare(
+      `CREATE INDEX IF NOT EXISTS idx_community_update_mentions_person
+       ON community_update_mentions(person_id, update_id)`,
+    )
+    .run();
+  await db
+    .prepare(
       `CREATE INDEX IF NOT EXISTS idx_community_update_photos_update
        ON community_update_photos(update_id, sort_order)`,
     )
@@ -118,7 +130,8 @@ export async function getApprovedCommunityUpdates(entityType, entityKey, { limit
   const result = await db
     .prepare(
       `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
-              comment, link_url, photo_url, archive_source_url,
+              comment, link_url, photo_url, content_type, bill_position,
+              statement_format, archive_source_url,
               archive_screenshot_url, archive_status, archive_error, archived_at,
               created_at, updated_at
        FROM community_updates
@@ -147,7 +160,8 @@ export async function getApprovedCommunityUpdate(
   const update = await db
     .prepare(
       `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
-              comment, link_url, photo_url, archive_source_url,
+              comment, link_url, photo_url, content_type, bill_position,
+              statement_format, archive_source_url,
               archive_screenshot_url, archive_status, archive_error, archived_at,
               created_at, updated_at
        FROM community_updates
@@ -174,7 +188,8 @@ export async function getRecentApprovedCommunityUpdates({ limit = 6, ensureSchem
   const result = await db
     .prepare(
       `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
-              comment, link_url, photo_url, archive_source_url,
+              comment, link_url, photo_url, content_type, bill_position,
+              statement_format, archive_source_url,
               archive_screenshot_url, archive_status, archive_error, archived_at,
               created_at
        FROM community_updates
@@ -183,6 +198,34 @@ export async function getRecentApprovedCommunityUpdates({ limit = 6, ensureSchem
        LIMIT ?`,
     )
     .bind(limit)
+    .all();
+
+  return hydrateUpdatePhotosAndMentions((result.results || []).map(normalizeUpdate), db);
+}
+
+export async function getApprovedCommunityUpdatesForPerson(personId, { limit = 12 } = {}) {
+  const id = Number(personId);
+  const db = communityUpdatesDb();
+  if (!db || !Number.isSafeInteger(id) || id < 1) return [];
+
+  await ensureCommunityUpdatesTable(db);
+
+  const result = await db
+    .prepare(
+      `SELECT DISTINCT
+              u.id, u.entity_type, u.entity_key, u.entity_name, u.page_url,
+              u.display_name, u.comment, u.link_url, u.photo_url,
+              u.content_type, u.bill_position, u.statement_format,
+              u.archive_source_url, u.archive_screenshot_url, u.archive_status,
+              u.archive_error, u.archived_at, u.created_at, u.updated_at
+       FROM community_updates u
+       INNER JOIN community_update_mentions m ON m.update_id = u.id
+       WHERE m.person_id = ?
+         AND u.status = 'approved'
+       ORDER BY u.created_at DESC
+       LIMIT ?`,
+    )
+    .bind(id, Number(limit) || 12)
     .all();
 
   return hydrateUpdatePhotosAndMentions((result.results || []).map(normalizeUpdate), db);
@@ -197,7 +240,8 @@ export async function getPendingCommunityUpdates({ limit = 25 } = {}) {
   const result = await db
     .prepare(
       `SELECT id, entity_type, entity_key, entity_name, page_url, display_name,
-              email, comment, link_url, photo_url, status, workflow_status,
+              email, comment, link_url, photo_url, content_type, bill_position,
+              statement_format, status, workflow_status,
               assigned_to, moderator_note, workflow_updated_at, response_status,
               response_note, response_sent_at, archive_source_url,
               archive_screenshot_url, archive_status, archive_error, archived_at,
@@ -247,6 +291,9 @@ export function normalizeUpdate(update = {}) {
     displayName: cleanText(update.display_name || update.displayName || "Community member"),
     comment: cleanText(update.comment || ""),
     linkUrl: update.link_url || update.linkUrl || "",
+    contentType: normalizeCommunityUpdateContentType(update.content_type || update.contentType),
+    billPosition: normalizeBillPosition(update.bill_position || update.billPosition),
+    statementFormat: normalizeStatementFormat(update.statement_format || update.statementFormat),
     photoUrl: primaryPhoto,
     photoUrls: photoUrls.length ? photoUrls : primaryPhoto ? [primaryPhoto] : [],
     mentions: Array.isArray(update.mentions) ? update.mentions : [],
@@ -311,11 +358,16 @@ export async function replaceCommunityUpdatePhotos(updateId, photoUrls = [], db 
   return urls;
 }
 
-export async function saveCommunityUpdateMentions(updateId, comment = "", db = communityUpdatesDb()) {
-  if (!db || !updateId || !comment) return [];
+export async function saveCommunityUpdateMentions(
+  updateId,
+  comment = "",
+  db = communityUpdatesDb(),
+  selectedPersonIds = [],
+) {
+  if (!db || !updateId || (!comment && !selectedPersonIds.length)) return [];
 
   await ensureCommunityUpdatesTable(db);
-  const mentions = await findPeopleMentions(comment, db);
+  const mentions = await findPeopleMentions(comment, db, selectedPersonIds);
 
   if (!mentions.length) return [];
 
@@ -347,9 +399,15 @@ export async function saveCommunityUpdateMentions(updateId, comment = "", db = c
   return mentions;
 }
 
-async function findPeopleMentions(comment = "", db) {
+async function findPeopleMentions(comment = "", db, selectedPersonIds = []) {
   const cleanComment = cleanText(comment);
-  if (!cleanComment.includes("@")) return [];
+  const selected = new Set(
+    selectedPersonIds
+      .map(Number)
+      .filter((id) => Number.isSafeInteger(id) && id > 0)
+      .slice(0, 20),
+  );
+  if (!cleanComment.includes("@") && !selected.size) return [];
 
   const result = await db
     .prepare(
@@ -372,7 +430,8 @@ async function findPeopleMentions(comment = "", db) {
         [person.firstname, person.lastname].filter(Boolean).join(" "),
     );
     const aliases = aliasList(person.name_aliases);
-    if (!name || (!hasMention(cleanComment, name) && !aliases.some((alias) => hasMention(cleanComment, alias)))) continue;
+    const explicitlySelected = selected.has(Number(person.id));
+    if (!name || (!explicitlySelected && !hasMention(cleanComment, name) && !aliases.some((alias) => hasMention(cleanComment, alias)))) continue;
     const mentionKey = Number(person.gc_personid || person.id);
     if (!mentionKey || seen.has(mentionKey)) continue;
 
@@ -392,6 +451,30 @@ async function findPeopleMentions(comment = "", db) {
   }
 
   return mentions;
+}
+
+const CONTENT_TYPES = new Set([
+  "community_comment",
+  "public_statement",
+  "correction",
+  "additional_source",
+]);
+const BILL_POSITIONS = new Set(["support", "oppose", "mixed", "neutral", "unclear"]);
+const STATEMENT_FORMATS = new Set(["direct_quote", "summary"]);
+
+export function normalizeCommunityUpdateContentType(value = "") {
+  const normalized = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return CONTENT_TYPES.has(normalized) ? normalized : "community_comment";
+}
+
+export function normalizeBillPosition(value = "") {
+  const normalized = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return BILL_POSITIONS.has(normalized) ? normalized : "";
+}
+
+export function normalizeStatementFormat(value = "") {
+  const normalized = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return STATEMENT_FORMATS.has(normalized) ? normalized : "";
 }
 
 function aliasList(value = "") {

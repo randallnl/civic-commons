@@ -123,9 +123,11 @@ const canonicalProfileSlug = representative?.slug || profileCandidate?.slug || s
 const requestedCommunityUpdateId = validCommunityUpdateId(Astro.url.searchParams.get("update"));
 const profileShareCapture = Astro.url.searchParams.get("share-preview") === "1";
 let profileRevision = "original";
+let canonicalPersonId = Number(profileCandidate?.personId || 0) || 0;
 try {
-  const profileRow = await env.d1_db?.prepare("SELECT updated_at FROM d1_people WHERE slug = ? LIMIT 1")
+  const profileRow = await env.d1_db?.prepare("SELECT id, updated_at FROM d1_people WHERE slug = ? LIMIT 1")
     .bind(canonicalProfileSlug).first();
+  canonicalPersonId = Number(profileRow?.id || canonicalPersonId) || 0;
   profileRevision = profileRow?.updated_at || profileRevision;
 } catch (error) {
   console.error(error?.message || "Unable to load profile share revision.");
@@ -2426,6 +2428,7 @@ function uniqueTowns(towns = []) {
                   showPeoplePreview={false}
                   fetchMissingPreviews={false}
                   showAnchorLinks={!communityUpdateShareCapture}
+                  relatedPersonId={canonicalPersonId}
                 />
               </div>
 
