@@ -3,6 +3,11 @@
 import { ensureArticlePreviewColumns } from "./articlePreviews";
 import { ensureGradeCacheColumns } from "./gradeCache";
 import { candidateRoleVisibilitySql } from "./candidateVisibility";
+import {
+  getCivicData,
+  hasUsableCivicLocation,
+  matchPlaceNameInAddress,
+} from "./civicLookupReliability";
 import { normalizeWardNumber, wardOptionsFor } from "./legislativeSearch";
 import { voteVisibilityCaseExpression } from "./voteVisibility";
 
@@ -3908,7 +3913,12 @@ async function handleAddressLookup(request, env) {
       return json({ error: "Missing CIVIC_API_KEY secret." }, 500);
     }
 
-    const civicData = await getCivicData(address, civicApiKey);
+    const civicLookup = await getCivicDataWithLocalFallback(
+      env,
+      address,
+      civicApiKey
+    );
+    const civicData = civicLookup.data;
     const parsed = parseCivicDivisions(civicData.divisions || {});
     if (!parsed.place?.name && civicData.normalizedInput?.city) {
       parsed.place = {
@@ -3996,6 +4006,8 @@ async function handleAddressLookup(request, env) {
         wardNumber: effectiveWard,
         wardOptions,
         wardRequired: wardOptions.length > 0 && !effectiveWard,
+        lookupSource: civicLookup.source,
+        lookupWarning: civicLookup.warning,
       },
       meta: {
         voteLimit,
@@ -4563,21 +4575,63 @@ async function handleBillTestimony(request, env) {
   });
 }
 
-async function getCivicData(address, apiKey) {
-  const civicUrl =
-    "https://civicinfo.googleapis.com/civicinfo/v2/divisionsByAddress?address=" +
-    encodeURIComponent(address) +
-    "&key=" +
-    encodeURIComponent(apiKey);
+async function getCivicDataWithLocalFallback(env, address, apiKey) {
+  try {
+    const data = await getCivicData(address, apiKey);
+    if (!hasUsableCivicLocation(data)) {
+      const error = new Error("Google Civic returned no usable district or town information.");
+      error.retryable = true;
+      throw error;
+    }
+    return {
+      data,
+      source: "google-civic",
+      warning: "",
+    };
+  } catch (error) {
+    const placeName = await inferPlaceNameFromAddress(env, address);
+    if (!placeName) throw error;
 
-  const response = await fetch(civicUrl);
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error?.message || "Google Civic lookup failed.");
+    return {
+      data: {
+        divisions: {},
+        normalizedInput: fallbackNormalizedInput(address, placeName),
+      },
+      source: "local-district-mapping",
+      warning:
+        "We could not verify the exact address, so these are town-wide results from our district records. Select a ward if prompted to narrow the results.",
+    };
   }
+}
 
-  return data;
+async function inferPlaceNameFromAddress(env, address) {
+  const result = await env.DB.prepare(`
+    SELECT communities_represented
+    FROM d1_district_mapping
+    WHERE communities_represented IS NOT NULL
+      AND TRIM(communities_represented) != ''
+  `).all();
+  const townNames = (result.results || [])
+    .flatMap((row) => splitDistrictCommunities(row.communities_represented))
+    .map(getCountyTownName)
+    .filter(Boolean);
+
+  return matchPlaceNameInAddress(address, townNames);
+}
+
+function fallbackNormalizedInput(address, placeName) {
+  const escapedPlace = String(placeName).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const suffix = new RegExp(
+    `[,\\s]+${escapedPlace}(?:[,\\s]+(?:new hampshire|nh))?(?:[,\\s]+\\d{5}(?:-\\d{4})?)?[,\\s]*$`,
+    "i"
+  );
+  const line1 = String(address || "").replace(suffix, "").trim().replace(/,$/, "");
+
+  return {
+    line1: normalizeCommunityText(line1) === normalizeCommunityText(placeName) ? "" : line1,
+    city: placeName,
+    state: "NH",
+  };
 }
 
 function parseCivicDivisions(divisions) {

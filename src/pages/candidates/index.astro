@@ -166,6 +166,7 @@ const matchedDistricts = lookupData?.matchedDistricts || [];
 const normalizedInput = lookupData?.normalizedInput || {};
 const place = civic.place?.name || normalizedInput.city || "";
 const wardOptions = lookupData?.search?.wardOptions || wardOptionsFor(place);
+const lookupWarning = lookupData?.search?.lookupWarning || "";
 const isWardedCommunity = wardOptions.length > 0;
 const wardNumber = isWardedCommunity
   ? selectedWard || normalizeWardNumber(civic.ward?.number || "")
@@ -812,6 +813,11 @@ function uniqueOptions(values = []) {
         </p>
       ) : hasFilters ? (
         <section class="results" id="candidate-results" data-results-region>
+          {lookupWarning && (
+            <p class="status-message lookup-warning" role="status">
+              {lookupWarning}
+            </p>
+          )}
           <div class="results-heading">
             <div>
               <h2><span data-fuzzy-count>{Math.min(resultCount, 12)}</span> House and Senate Candidates Shown</h2>

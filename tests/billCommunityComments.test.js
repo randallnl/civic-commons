@@ -40,3 +40,22 @@ test("bill pages present specialized comment controls and filters", async () => 
   assert.match(billPage, /showAnchorLinks=\{true\}/);
   assert.match(peoplePage, /relatedPersonId=\{canonicalPersonId\}/);
 });
+
+test("bill pages combine comments and articles beneath the vote rail", async () => {
+  const billPage = await source("src/pages/bills/[bill].astro");
+
+  const rollCalls = billPage.indexOf('<section class="panel roll-panel">');
+  const contextFeed = billPage.indexOf('<section class="panel bill-context-panel">');
+  const testimonySummary = billPage.indexOf('<section class="panel position-panel">');
+
+  assert.ok(rollCalls >= 0);
+  assert.ok(contextFeed > rollCalls);
+  assert.ok(testimonySummary > contextFeed);
+  assert.match(billPage, /id="bill-context-tab-all" checked/);
+  assert.match(billPage, /Community comments/);
+  assert.match(billPage, /<ArticleList/);
+  assert.match(billPage, /embedded=\{true\}/);
+  assert.match(billPage, /\.bill-detail-rail \{/);
+  assert.doesNotMatch(billPage, /vote-summary-grid/);
+  assert.doesNotMatch(billPage, /content-grid/);
+});

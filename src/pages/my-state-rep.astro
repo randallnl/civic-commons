@@ -195,6 +195,7 @@ const normalizedInput = lookupData?.normalizedInput || {};
 const prettyAddress = formatAddress(normalizedInput);
 const place = civic.place?.name || normalizedInput.city || "";
 const wardOptions = lookupData?.search?.wardOptions || wardOptionsFor(place);
+const lookupWarning = lookupData?.search?.lookupWarning || "";
 const isWardedCommunity = wardOptions.length > 0;
 const wardNumber = isWardedCommunity
   ? selectedWard || normalizeWardNumber(civic.ward?.number || "")
@@ -658,6 +659,12 @@ function embedRepresentativeKey(rep = {}) {
       {lookupError && (
         <div class="status-message" aria-live="polite">
           {lookupError}
+        </div>
+      )}
+
+      {lookupWarning && (
+        <div class="status-message lookup-warning" role="status">
+          {lookupWarning}
         </div>
       )}
 

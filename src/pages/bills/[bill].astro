@@ -324,8 +324,9 @@ function publicTestimonySummaryLabel(counts = {}) {
             </article>
           </section>
 
-          <section class:list={["vote-summary-grid", sharePreviewCapture && "share-preview-hidden"]}>
-            <section class="panel roll-panel">
+          <section class:list={["bill-detail-grid", sharePreviewCapture && "share-preview-hidden"]}>
+            <div class="bill-detail-rail bill-detail-rail-left">
+              <section class="panel roll-panel">
               <div class="section-heading">
                 <p class="eyebrow">Votes</p>
                 <h2>Roll Calls</h2>
@@ -411,9 +412,102 @@ function publicTestimonySummaryLabel(counts = {}) {
               ) : (
                 <p class="empty">No roll calls returned.</p>
               )}
-            </section>
+              </section>
 
-            <section class="panel position-panel">
+              <section class="panel bill-context-panel">
+                <div class="section-heading">
+                  <p class="eyebrow">Community context</p>
+                  <h2>What Your Neighbors and the Media Say...</h2>
+                  <p>
+                    Community comments and related articles provide public context about this bill.
+                  </p>
+                </div>
+
+                <div class="context-tabs">
+                  <input type="radio" name="bill-context-tabs" id="bill-context-tab-all" checked />
+                  <input type="radio" name="bill-context-tabs" id="bill-context-tab-comments" />
+                  <input type="radio" name="bill-context-tabs" id="bill-context-tab-articles" />
+
+                  <div class="context-filter-control">
+                    <span>Filter feed</span>
+                    <div class="context-tab-list" role="tablist" aria-label="Bill context filters">
+                      <label
+                        for="bill-context-tab-all"
+                        id="bill-context-tab-all-label"
+                        role="tab"
+                        aria-controls="bill-context-panel-comments bill-context-panel-articles"
+                      >
+                        All context
+                      </label>
+                      <label
+                        for="bill-context-tab-comments"
+                        id="bill-context-tab-comments-label"
+                        role="tab"
+                        aria-controls="bill-context-panel-comments"
+                      >
+                        Community comments
+                      </label>
+                      <label
+                        for="bill-context-tab-articles"
+                        id="bill-context-tab-articles-label"
+                        role="tab"
+                        aria-controls="bill-context-panel-articles"
+                      >
+                        Articles
+                        {relatedArticles.length > 0 && <span>{relatedArticles.length}</span>}
+                      </label>
+                    </div>
+                  </div>
+
+                  <div
+                    class="context-tab-panel context-tab-panel-comments"
+                    id="bill-context-panel-comments"
+                    role="tabpanel"
+                    aria-labelledby="bill-context-tab-comments-label"
+                  >
+                    <CommunityUpdates
+                      entityType="bill"
+                      entityKey={billEntityKey}
+                      entityName={billEntityName}
+                      pageUrl={currentPath}
+                      variant="narrow"
+                      embedded={true}
+                      showPeoplePreview={false}
+                      fetchMissingPreviews={false}
+                      showAnchorLinks={true}
+                    />
+                  </div>
+
+                  <div
+                    class="context-tab-panel context-tab-panel-articles"
+                    id="bill-context-panel-articles"
+                    role="tabpanel"
+                    aria-labelledby="bill-context-tab-articles-label"
+                  >
+                    <div class="context-feed-section-heading">
+                      <p class="eyebrow">Related coverage</p>
+                      <h3>Articles</h3>
+                    </div>
+                    <ArticleList
+                      articles={relatedArticles}
+                      compact={true}
+                      emptyText="No related articles returned."
+                    />
+
+                    <a
+                      class="text-link"
+                      href={`/articles?bill=${encodeURIComponent(bill.condensedbillno)}&include=relations`}
+                    >
+                      Browse all bill articles
+                    </a>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div class="bill-detail-rail bill-detail-rail-right">
+
+              <section class="panel position-panel">
               <div class="section-heading">
                 <p class="eyebrow">Position Count</p>
                 <h2>Public Testimony Summary</h2>
@@ -492,104 +586,71 @@ function publicTestimonySummaryLabel(counts = {}) {
                   <p class="empty">No organizational comments have been published yet.</p>
                 )}
               </section>
-            </section>
-          </section>
+              </section>
 
-          <section class:list={["content-grid", sharePreviewCapture && "share-preview-hidden"]}>
-            <div class="stack">
-              <section class="panel">
+              <section class="panel testimony-panel">
                 <div class="section-heading">
-                  <p class="eyebrow">Articles</p>
-                  <h2>Related Coverage</h2>
+                  <p class="eyebrow">Public Input</p>
+                  <h2>Testimony</h2>
                 </div>
 
-                <ArticleList
-                  articles={relatedArticles}
-                  compact={true}
-                  emptyText="No related articles returned."
-                />
+                {testimony.length ? (
+                  <div class="testimony-list">
+                    {visibleTestimony.map((item) => (
+                      <article>
+                        <div class="testimony-topline">
+                          <strong>{personName(item) || cleanText(item.whoisname) || "Submitted testimony"}</strong>
+                          <span class={positionClass(item.expr1)}>{cleanText(item.expr1 || "neutral")}</span>
+                        </div>
+                        <p class="testimony-meta">
+                          {[item.representing, item.town, item.state].map(cleanText)
+                            .filter(Boolean)
+                            .join(" - ")}
+                        </p>
+                        {item.committeename && <p>{cleanText(item.committeename)}</p>}
+                        {item.committeedate && <small>{formatDate(item.committeedate)}</small>}
+                        {item.testimonytext && (
+                          <blockquote>{cleanText(item.testimonytext)}</blockquote>
+                        )}
+                      </article>
+                    ))}
 
-                <a
-                  class="text-link"
-                  href={`/articles?bill=${encodeURIComponent(bill.condensedbillno)}&include=relations`}
-                >
-                  Browse all bill articles
-                </a>
+                    {remainingTestimony.length > 0 && (
+                      <details class="testimony-more">
+                        <summary>
+                          <span>Show more testimony</span>
+                          <small>{remainingTestimony.length} more submission{remainingTestimony.length === 1 ? "" : "s"}</small>
+                        </summary>
+
+                        <div class="testimony-list">
+                          {remainingTestimony.map((item) => (
+                            <article>
+                              <div class="testimony-topline">
+                                <strong>{personName(item) || cleanText(item.whoisname) || "Submitted testimony"}</strong>
+                                <span class={positionClass(item.expr1)}>{cleanText(item.expr1 || "neutral")}</span>
+                              </div>
+                              <p class="testimony-meta">
+                                {[item.representing, item.town, item.state].map(cleanText)
+                                  .filter(Boolean)
+                                  .join(" - ")}
+                              </p>
+                              {item.committeename && <p>{cleanText(item.committeename)}</p>}
+                              {item.committeedate && <small>{formatDate(item.committeedate)}</small>}
+                              {item.testimonytext && (
+                                <blockquote>{cleanText(item.testimonytext)}</blockquote>
+                              )}
+                            </article>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                ) : (
+                  <p class="empty">No testimony returned.</p>
+                )}
               </section>
             </div>
-
-            <section class="panel">
-              <div class="section-heading">
-                <p class="eyebrow">Public Input</p>
-                <h2>Testimony</h2>
-              </div>
-
-              {testimony.length ? (
-                <div class="testimony-list">
-                  {visibleTestimony.map((item) => (
-                    <article>
-                      <div class="testimony-topline">
-                        <strong>{personName(item) || cleanText(item.whoisname) || "Submitted testimony"}</strong>
-                        <span class={positionClass(item.expr1)}>{cleanText(item.expr1 || "neutral")}</span>
-                      </div>
-                      <p class="testimony-meta">
-                        {[item.representing, item.town, item.state].map(cleanText)
-                          .filter(Boolean)
-                          .join(" - ")}
-                      </p>
-                      {item.committeename && <p>{cleanText(item.committeename)}</p>}
-                      {item.committeedate && <small>{formatDate(item.committeedate)}</small>}
-                      {item.testimonytext && (
-                        <blockquote>{cleanText(item.testimonytext)}</blockquote>
-                      )}
-                    </article>
-                  ))}
-
-                  {remainingTestimony.length > 0 && (
-                    <details class="testimony-more">
-                      <summary>
-                        <span>Show more testimony</span>
-                        <small>{remainingTestimony.length} more submission{remainingTestimony.length === 1 ? "" : "s"}</small>
-                      </summary>
-
-                      <div class="testimony-list">
-                        {remainingTestimony.map((item) => (
-                          <article>
-                            <div class="testimony-topline">
-                              <strong>{personName(item) || cleanText(item.whoisname) || "Submitted testimony"}</strong>
-                              <span class={positionClass(item.expr1)}>{cleanText(item.expr1 || "neutral")}</span>
-                            </div>
-                            <p class="testimony-meta">
-                              {[item.representing, item.town, item.state].map(cleanText)
-                                .filter(Boolean)
-                                .join(" - ")}
-                            </p>
-                            {item.committeename && <p>{cleanText(item.committeename)}</p>}
-                            {item.committeedate && <small>{formatDate(item.committeedate)}</small>}
-                            {item.testimonytext && (
-                              <blockquote>{cleanText(item.testimonytext)}</blockquote>
-                            )}
-                          </article>
-                        ))}
-                      </div>
-                    </details>
-                  )}
-                </div>
-              ) : (
-                <p class="empty">No testimony returned.</p>
-              )}
-            </section>
           </section>
-
-          {!sharePreviewCapture && (
-            <CommunityUpdates
-              entityType="bill"
-              entityKey={billEntityKey}
-              entityName={billEntityName}
-              pageUrl={currentPath}
-              showAnchorLinks={true}
-            />
-          )}
         </>
       ) : (
         <p class="status-message">Bill not found.</p>
@@ -840,8 +901,7 @@ function publicTestimonySummaryLabel(counts = {}) {
   }
 
   .overview-grid,
-  .vote-summary-grid,
-  .content-grid {
+  .bill-detail-grid {
     display: grid;
     gap: 18px;
   }
@@ -852,15 +912,17 @@ function publicTestimonySummaryLabel(counts = {}) {
     margin-bottom: 22px;
   }
 
-  .content-grid {
+  .bill-detail-grid {
+    align-items: start;
     grid-template-columns: minmax(420px, 0.48fr) minmax(0, 0.52fr);
     margin-top: 22px;
   }
 
-  .vote-summary-grid {
-    align-items: stretch;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: 22px;
+  .bill-detail-rail {
+    align-content: start;
+    display: grid;
+    gap: 18px;
+    min-width: 0;
   }
 
   .panel,
@@ -1034,7 +1096,6 @@ function publicTestimonySummaryLabel(counts = {}) {
     border-color: #60a5fa;
   }
 
-  .stack,
   .roll-summary,
   .roll-list,
   .testimony-list,
@@ -1045,6 +1106,123 @@ function publicTestimonySummaryLabel(counts = {}) {
 
   .roll-panel {
     align-content: start;
+  }
+
+  .bill-context-panel {
+    display: grid;
+    gap: 16px;
+  }
+
+  .bill-context-panel > .section-heading > p:last-child {
+    color: #4b5563;
+    line-height: 1.5;
+    margin: 8px 0 0;
+  }
+
+  .context-tabs {
+    display: grid;
+    gap: 16px;
+  }
+
+  .context-tabs > input {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+  }
+
+  .context-filter-control {
+    align-items: stretch;
+    display: grid;
+    gap: 10px 12px;
+    grid-template-columns: 1fr;
+    justify-content: start;
+  }
+
+  .context-filter-control > span {
+    color: #6b4f2a;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .context-tab-list {
+    background: #f8fafc;
+    border: 1px solid #dbe4ef;
+    border-radius: 999px;
+    display: inline-grid;
+    gap: 4px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-self: stretch;
+    padding: 4px;
+  }
+
+  .context-tab-list label {
+    align-items: center;
+    border-radius: 999px;
+    color: #475569;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.84rem;
+    font-weight: 950;
+    gap: 7px;
+    justify-content: center;
+    line-height: 1;
+    padding: 10px 14px;
+    text-align: center;
+    transition:
+      background 140ms ease,
+      color 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  .context-tab-list span {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+    display: inline-flex;
+    font-size: 0.72rem;
+    min-height: 18px;
+    padding: 2px 6px;
+  }
+
+  #bill-context-tab-all:checked ~ .context-filter-control label[for="bill-context-tab-all"],
+  #bill-context-tab-comments:checked ~ .context-filter-control label[for="bill-context-tab-comments"],
+  #bill-context-tab-articles:checked ~ .context-filter-control label[for="bill-context-tab-articles"] {
+    background: #e8f0ff;
+    box-shadow: inset 0 0 0 1px #9db9ff;
+    color: #1f3f8f;
+  }
+
+  .context-tab-panel {
+    display: none;
+    min-width: 0;
+  }
+
+  #bill-context-tab-all:checked ~ .context-tab-panel-comments,
+  #bill-context-tab-all:checked ~ .context-tab-panel-articles,
+  #bill-context-tab-comments:checked ~ .context-tab-panel-comments,
+  #bill-context-tab-articles:checked ~ .context-tab-panel-articles {
+    display: block;
+  }
+
+  #bill-context-tab-all:checked ~ .context-tab-panel-articles {
+    border-top: 1px solid #dbeafe;
+    padding-top: 18px;
+  }
+
+  .context-feed-section-heading {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  .context-feed-section-heading h3 {
+    margin: 0;
   }
 
   .roll-details {
@@ -1363,8 +1541,7 @@ function publicTestimonySummaryLabel(counts = {}) {
 
   @media (max-width: 860px) {
     .overview-grid,
-    .vote-summary-grid,
-    .content-grid {
+    .bill-detail-grid {
       grid-template-columns: 1fr;
     }
 
@@ -1382,6 +1559,12 @@ function publicTestimonySummaryLabel(counts = {}) {
   }
 
   @media (max-width: 520px) {
+    .context-tab-list {
+      border-radius: 12px;
+      grid-template-columns: 1fr;
+      justify-self: stretch;
+    }
+
     .organization-comment-topline {
       align-items: start;
       grid-template-columns: 48px minmax(0, 1fr);
