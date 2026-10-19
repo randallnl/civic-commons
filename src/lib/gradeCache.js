@@ -5,6 +5,7 @@ import {
   selectVotesForAlignmentGrade,
 } from "./trackedBills";
 import { ensureVoteVisibilityTable, voteVisibilityCaseExpression } from "./voteVisibility";
+import { ensureGradeVoteSelectionOverrideTable } from "./gradeVoteOverrides";
 
 const GRADE_COLUMNS = [
   ["online_testimony_alignment_pct", "REAL"],
@@ -81,6 +82,38 @@ export async function rebuildGradeCacheForVoteKey(db, key = {}) {
       Number(key.sessionyear || 0),
       String(key.legislativebody || "").toUpperCase(),
       Number(key.votesequencenumber || 0),
+      String(key.condensedbillno || "").toUpperCase(),
+    )
+    .all();
+
+  const summaries = await loadBillSummaryMap(db);
+  let rebuilt = 0;
+
+  for (const person of result.results || []) {
+    const updated = await rebuildGradeCacheForPerson(db, person, { summaries, ensureColumns: false });
+    if (updated?.updated) rebuilt += 1;
+  }
+
+  return { affected: (result.results || []).length, rebuilt };
+}
+
+export async function rebuildGradeCacheForBillKey(db, key = {}) {
+  await ensureGradeCacheColumns(db);
+
+  const result = await db
+    .prepare(
+      `SELECT DISTINCT p.id, p.gc_personid, p.employeeno
+       FROM d1_rollcallhistory h
+       JOIN d1_people p
+         ON p.employeeno = h.employeenumber
+       WHERE h.sessionyear = ?
+         AND h.legislativebody = ?
+         AND UPPER(h.condensedbillno) = UPPER(?)
+         AND p.is_current_legislator = 1`,
+    )
+    .bind(
+      Number(key.sessionyear || 0),
+      String(key.legislativebody || "").toUpperCase(),
       String(key.condensedbillno || "").toUpperCase(),
     )
     .all();
@@ -232,6 +265,7 @@ async function ensureBillOverrideTable(db) {
 
 async function loadVotesForEmployee(db, employeeno) {
   await ensureVoteVisibilityTable(db);
+  await ensureGradeVoteSelectionOverrideTable(db);
 
   const actionSql = `COALESCE(
     NULLIF(TRIM(rs.question_motion), ''),
@@ -264,7 +298,9 @@ async function loadVotesForEmployee(db, employeeno) {
          rs.votedate AS vote_date,
          ${actionSql} AS action_text,
          COALESCE(vvo.include_in_display, ${defaultVisibilitySql}) AS include_in_display,
-         COALESCE(vvo.include_in_grades, ${defaultVisibilitySql}) AS include_in_grades
+         COALESCE(vvo.include_in_grades, ${defaultVisibilitySql}) AS include_in_grades,
+         CASE WHEN gvso.votesequencenumber = h.votesequencenumber THEN 1 ELSE 0 END
+           AS selected_for_grade_override
        FROM d1_rollcallhistory h
        LEFT JOIN d1_rollcallsummary rs
          ON rs.sessionyear = h.sessionyear
@@ -275,6 +311,10 @@ async function loadVotesForEmployee(db, employeeno) {
         AND vvo.legislativebody = h.legislativebody
         AND vvo.votesequencenumber = h.votesequencenumber
         AND UPPER(vvo.condensedbillno) = UPPER(h.condensedbillno)
+       LEFT JOIN d1_grade_vote_selection_overrides gvso
+         ON gvso.sessionyear = h.sessionyear
+        AND gvso.legislativebody = h.legislativebody
+        AND UPPER(gvso.condensedbillno) = UPPER(h.condensedbillno)
        WHERE h.employeenumber = ?
          AND rs.votesequencenumber IS NOT NULL
          AND TRIM(CAST(h.vote AS TEXT)) IN ('0', '1', '2', '3', '4', '5', '6', '7')

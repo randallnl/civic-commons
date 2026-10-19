@@ -49,6 +49,18 @@ test("falls back to the latest eligible motion when no preferred disposition exi
   assert.equal(gradeVoteSelectionReason(selected[0]), "Latest eligible motion");
 });
 
+test("an admin-selected sequence overrides the automatic disposition choice", () => {
+  const selected = selectOneGradeVotePerBill([
+    vote(10, "Ought to Pass"),
+    vote(11, "Inexpedient to Legislate", { selected_for_grade_override: 1 }),
+    vote(12, "Ought to Pass as Amended"),
+  ]);
+
+  assert.equal(selected.length, 1);
+  assert.equal(selected[0].votesequencenumber, 11);
+  assert.equal(gradeVoteSelectionReason(selected[0]), "Admin-selected vote sequence");
+});
+
 test("uses one bill vote per person but shows separate chamber selections to admins", () => {
   const votes = [
     vote(10, "Ought to Pass"),
@@ -93,4 +105,20 @@ test("admin vote review exposes allowlisted server-side sorting", async () => {
   assert.match(admin, /name="direction"/);
   assert.match(admin, /const allowed = new Set\(\["date", "bill", "body", "sequence", "yeas", "nays", "status"\]\)/);
   assert.match(admin, /ORDER BY \$\{orderBy\}/);
+});
+
+test("admin vote review can override and rebuild an alignment vote", async () => {
+  const [admin, endpoint, cache] = await Promise.all([
+    readFile(new URL("../src/pages/admin/votes.astro", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/api/admin/grade-vote-selection.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/lib/gradeCache.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(admin, /action="\/api\/admin\/grade-vote-selection"/);
+  assert.match(admin, /Use sequence \{vote\.votesequencenumber\} for alignment/);
+  assert.match(admin, /Use automatic selection/);
+  assert.match(endpoint, /requireAdmin\(request\)/);
+  assert.match(endpoint, /d1_grade_vote_selection_overrides/);
+  assert.match(endpoint, /rebuildGradeCacheForBillKey/);
+  assert.match(cache, /selected_for_grade_override/);
 });

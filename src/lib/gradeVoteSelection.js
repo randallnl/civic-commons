@@ -15,6 +15,7 @@ export function gradeMotionCategory(vote = {}) {
 }
 
 export function gradeVoteSelectionReason(vote = {}) {
+  if (isGradeVoteOverride(vote)) return "Admin-selected vote sequence";
   const category = gradeMotionCategory(vote);
   return category ? `${category} motion` : "Latest eligible motion";
 }
@@ -48,10 +49,17 @@ export function selectOneGradeVotePerBill(votes = [], { groupByChamber = false }
   }
 
   return [...grouped.values()].map((group) => {
+    const overrides = group.filter(isGradeVoteOverride);
+    if (overrides.length) return [...overrides].sort(compareGradeVoteRecency)[0];
     const preferred = group.filter((vote) => Boolean(gradeMotionCategory(vote)));
     const candidates = preferred.length ? preferred : group;
     return [...candidates].sort(compareGradeVoteRecency)[0];
   });
+}
+
+function isGradeVoteOverride(vote = {}) {
+  const value = vote.selected_for_grade_override ?? vote.selectedForGradeOverride;
+  return value === true || value === 1 || value === "1" || value === "true";
 }
 
 function voteAction(vote = {}) {

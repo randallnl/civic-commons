@@ -20,6 +20,7 @@ import {
   ensureVoteVisibilityTable,
   voteVisibilityCaseExpression,
 } from "../../lib/voteVisibility";
+import { ensureGradeVoteSelectionOverrideTable } from "../../lib/gradeVoteOverrides";
 
 const session = await currentAdminSession(Astro.request);
 const canReviewVotes = session ? canUseSourceDataTools(session) : false;
@@ -42,6 +43,7 @@ if (session && canReviewVotes) {
   try {
     const db = adminDb();
     await ensureVoteVisibilityTable(db);
+    await ensureGradeVoteSelectionOverrideTable(db);
     await ensureBillOverrideTable(db);
     const selectionRows = await getGradeSelectionRows(db, filters.year);
     const selectedKeys = new Set(
@@ -187,6 +189,11 @@ async function getVoteRows(db, filters) {
       COALESCE(NULLIF(bo.title, ''), NULLIF(b.description, ''), '') AS bill_title,
       COALESCE(vvo.include_in_display, ${defaultVisibility}) AS include_in_display,
       COALESCE(vvo.include_in_grades, ${defaultVisibility}) AS include_in_grades,
+      gvso.votesequencenumber AS grade_override_sequence,
+      CASE WHEN gvso.votesequencenumber = rs.votesequencenumber THEN 1 ELSE 0 END
+        AS selected_for_grade_override,
+      gvso.updated_by AS grade_override_updated_by,
+      gvso.updated_at AS grade_override_updated_at,
       vvo.notes,
       vvo.updated_by,
       vvo.updated_at
@@ -203,6 +210,10 @@ async function getVoteRows(db, filters) {
       AND vvo.legislativebody = rs.legislativebody
       AND vvo.votesequencenumber = rs.votesequencenumber
       AND UPPER(vvo.condensedbillno) = UPPER(rs.condensedbillno)
+    LEFT JOIN d1_grade_vote_selection_overrides gvso
+      ON gvso.sessionyear = rs.sessionyear
+      AND gvso.legislativebody = rs.legislativebody
+      AND UPPER(gvso.condensedbillno) = UPPER(rs.condensedbillno)
     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
     ORDER BY ${orderBy}
     LIMIT ${filters.visibility === "selected" ? 2000 : 250}
@@ -241,13 +252,19 @@ async function getGradeSelectionRows(db, year) {
         rs.title1,
         rs.title2,
         ${actionExpression} AS action_text,
-        COALESCE(vvo.include_in_grades, ${defaultVisibility}) AS include_in_grades
+        COALESCE(vvo.include_in_grades, ${defaultVisibility}) AS include_in_grades,
+        CASE WHEN gvso.votesequencenumber = rs.votesequencenumber THEN 1 ELSE 0 END
+          AS selected_for_grade_override
       FROM d1_rollcallsummary rs
       LEFT JOIN d1_vote_visibility_overrides vvo
         ON vvo.sessionyear = rs.sessionyear
         AND vvo.legislativebody = rs.legislativebody
         AND vvo.votesequencenumber = rs.votesequencenumber
         AND UPPER(vvo.condensedbillno) = UPPER(rs.condensedbillno)
+      LEFT JOIN d1_grade_vote_selection_overrides gvso
+        ON gvso.sessionyear = rs.sessionyear
+        AND gvso.legislativebody = rs.legislativebody
+        AND UPPER(gvso.condensedbillno) = UPPER(rs.condensedbillno)
       ${yearFilter}
       ORDER BY rs.votedate DESC, rs.votesequencenumber DESC`,
     )
@@ -347,8 +364,9 @@ async function getVoteSummary(db, year) {
                 Each legislator receives at most one scored vote per bill. The
                 selector prefers the latest OTP, OTPA, ITL, table, or interim-study
                 motion in each chamber, then falls back to the latest eligible
-                motion. Amendment, special-order, and reconsideration actions
-                remain excluded by default.
+                motion. You can manually choose another grade-eligible sequence
+                below or restore automatic selection. Amendment, special-order,
+                and reconsideration actions remain excluded by default.
               </p>
             </div>
             <a href="/admin/data">Back to data tools</a>
@@ -471,10 +489,37 @@ async function getVoteSummary(db, year) {
                         <span class:list={["grade-choice-note", vote.selected_for_grade && "selected"]}>
                           {vote.selected_for_grade
                             ? `Used for alignment: ${vote.grade_selection_reason}`
-                            : "Not used: another eligible sequence was selected"}
+                            : vote.grade_override_sequence
+                              ? `Not used: sequence ${vote.grade_override_sequence} was selected by an admin`
+                              : "Not used: another eligible sequence was selected"}
                         </span>
                       )}
                     </div>
+                    {vote.include_in_grades && (
+                      <form class="grade-selection-form" action="/api/admin/grade-vote-selection" method="post">
+                        <input type="hidden" name="sessionyear" value={vote.sessionyear} />
+                        <input type="hidden" name="legislativebody" value={vote.legislativebody} />
+                        <input type="hidden" name="votesequencenumber" value={vote.votesequencenumber} />
+                        <input type="hidden" name="condensedbillno" value={vote.condensedbillno} />
+                        <input type="hidden" name="returnTo" value={`${Astro.url.pathname}${Astro.url.search}`} />
+                        {vote.selected_for_grade_override ? (
+                          <>
+                            <input type="hidden" name="action" value="automatic" />
+                            <button type="submit" class="automatic">Use automatic selection</button>
+                            <span>
+                              Manually selected{vote.grade_override_updated_by ? ` by ${vote.grade_override_updated_by}` : ""}
+                            </span>
+                          </>
+                        ) : !vote.selected_for_grade ? (
+                          <>
+                            <input type="hidden" name="action" value="select" />
+                            <button type="submit">Use sequence {vote.votesequencenumber} for alignment</button>
+                          </>
+                        ) : (
+                          <span>Automatically selected by the alignment methodology</span>
+                        )}
+                      </form>
+                    )}
                   </div>
 
                   <form
@@ -772,6 +817,37 @@ async function getVoteSummary(db, year) {
   .vote-main p {
     margin: 0 0 0.8rem;
     color: #566279;
+  }
+
+  .grade-selection-form {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .grade-selection-form button {
+    border: 1px solid #245ae8;
+    border-radius: 999px;
+    background: #245ae8;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 900;
+    padding: 0.6rem 0.9rem;
+  }
+
+  .grade-selection-form button.automatic {
+    background: #fff;
+    color: #245ae8;
+  }
+
+  .grade-selection-form span {
+    color: #66758d;
+    font-size: 0.82rem;
+    font-weight: 800;
   }
 
   .visibility-form {

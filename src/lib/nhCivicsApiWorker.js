@@ -2,6 +2,7 @@
 // against its bound D1/R2 resources without calling a separate Worker.
 import { ensureArticlePreviewColumns } from "./articlePreviews";
 import { ensureGradeCacheColumns } from "./gradeCache";
+import { ensureGradeVoteSelectionOverrideTable } from "./gradeVoteOverrides";
 import { candidateRoleVisibilitySql } from "./candidateVisibility";
 import {
   getCivicData,
@@ -5502,6 +5503,7 @@ async function handleArticleDetail(request, env) {
 
 async function getVoteHistoryForRep(env, employeeno, limit = 50) {
   await ensureVoteVisibilityOverridesTable(env.DB);
+  await ensureGradeVoteSelectionOverrideTable(env.DB);
   const actionSql = `COALESCE(
         NULLIF(TRIM(rs.question_motion), ''),
         NULLIF(TRIM(rs.title1), ''),
@@ -5544,6 +5546,8 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
       ) AS action_text,
       COALESCE(vvo.include_in_display, ${defaultVisibilitySql}) AS include_in_display,
       COALESCE(vvo.include_in_grades, ${defaultVisibilitySql}) AS include_in_grades,
+      CASE WHEN gvso.votesequencenumber = h.votesequencenumber THEN 1 ELSE 0 END
+        AS selected_for_grade_override,
       vvo.notes AS visibility_notes,
 
       CASE
@@ -5603,6 +5607,10 @@ async function getVoteHistoryForRep(env, employeeno, limit = 50) {
       AND vvo.legislativebody = h.legislativebody
       AND vvo.votesequencenumber = h.votesequencenumber
       AND UPPER(vvo.condensedbillno) = UPPER(h.condensedbillno)
+    LEFT JOIN d1_grade_vote_selection_overrides gvso
+      ON gvso.sessionyear = h.sessionyear
+      AND gvso.legislativebody = h.legislativebody
+      AND UPPER(gvso.condensedbillno) = UPPER(h.condensedbillno)
     WHERE h.employeenumber = ?
       AND rs.votesequencenumber IS NOT NULL
       AND TRIM(CAST(h.vote AS TEXT)) IN ('0', '1', '2', '3', '4', '5', '6', '7')

@@ -7,6 +7,7 @@ import {
   requireAdmin,
 } from "../../../lib/adminAuth";
 import { rebuildGradeCacheForVoteKey } from "../../../lib/gradeCache";
+import { clearGradeVoteOverrideForSequence } from "../../../lib/gradeVoteOverrides";
 import { ensureVoteVisibilityTable } from "../../../lib/voteVisibility";
 
 export async function POST({ request }) {
@@ -59,6 +60,8 @@ export async function POST({ request }) {
         auth.session?.email || "",
       )
       .run();
+
+    if (!includeInGrades) await clearGradeVoteOverrideForSequence(db, key);
 
     const rebuild = await rebuildGradeCacheForVoteKey(db, key);
     const message = includeInDisplay
