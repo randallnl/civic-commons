@@ -264,7 +264,7 @@
       if (!sort) return;
 
       const [key, direction = "asc"] = sort.split(":");
-      const numeric = ["grade", "updated", "missing"].includes(key);
+      const numeric = ["grade", "updated", "missing", "testimony"].includes(key);
       const sorted = [...this.items].sort((a, b) => {
         const result = compareValues(sortValue(a, key), sortValue(b, key), numeric);
         return direction === "desc" ? -result : result;

@@ -65,8 +65,10 @@ const sortedRollCalls = [...rollCalls].sort((first, second) => {
 });
 const latestRollCall = sortedRollCalls[0];
 const previousRollCalls = sortedRollCalls.slice(1);
-const visibleTestimony = testimony.slice(0, 15);
-const remainingTestimony = testimony.slice(15);
+const visibleTestimony = testimony.slice(0, 5);
+const remainingTestimony = testimony.slice(5);
+const billProgressSteps = ["Introduced", "Committee review", "Chamber votes", "Governor", "Outcome"];
+const billProgressIndex = progressIndexFor(bill?.description);
 const currentPath = `${Astro.url.pathname}${Astro.url.search}`;
 const billEntityKey = bill
   ? `${bill.sessionyear || year || ""}:${normalizeBillCode(bill.condensedbillno || billCode)}`
@@ -124,6 +126,18 @@ function cleanNamePart(value = "") {
   return String(value).replace(/^[^a-z0-9]+/i, "").trim();
 }
 
+function testimonySearchText(item = {}) {
+  return [
+    personName(item),
+    item.whoisname,
+    item.representing,
+    item.town,
+    item.state,
+    item.committeename,
+    item.testimonytext,
+  ].map(cleanText).filter(Boolean).join(" ").toLowerCase();
+}
+
 function billTitle() {
   return bill?.name || bill?.title || trackedBill?.name || bill?.condensedbillno || billCode;
 }
@@ -170,6 +184,56 @@ function publicTestimonySummaryLabel(counts = {}) {
   return support > oppose
     ? "More testimony supports this bill"
     : "More testimony opposes this bill";
+}
+
+function billStatusLabel(description = "") {
+  const value = cleanText(description).toLowerCase();
+  if (/signed|chapter\s+\d+|became law|effective\s+[a-z]+\s+\d+/i.test(value)) {
+    return "Signed into law";
+  }
+  if (/veto(?:ed)?/i.test(value)) return "Vetoed";
+  if (/passed|adopted|enrolled/i.test(value)) return "Passed by the Legislature";
+  if (/retained|interim study|re-referred|rereferred/i.test(value)) return "Still under review";
+  if (/inexpedient to legislate|\bitl\b/i.test(value)) return "Recommended not to pass";
+  if (/committee|hearing|referred/i.test(value)) return "In committee";
+  if (/introduced/i.test(value)) return "Introduced";
+  return "Latest recorded action";
+}
+
+function rollCallOutcome(rollCall = {}) {
+  const yeas = Number(rollCall.yeas || 0);
+  const nays = Number(rollCall.nays || 0);
+  if (!yeas && !nays) return "Vote recorded";
+  if (yeas === nays) return "Tie vote";
+  const margin = Math.abs(yeas - nays);
+  return yeas > nays
+    ? `Yeas led by ${margin}`
+    : `Nays led by ${margin}`;
+}
+
+function rollCallShare(rollCall = {}) {
+  const yeas = Math.max(0, Number(rollCall.yeas || 0));
+  const nays = Math.max(0, Number(rollCall.nays || 0));
+  const total = yeas + nays;
+  return total ? Math.round((yeas / total) * 100) : 0;
+}
+
+function testimonyFilterHref(position = "all") {
+  const url = new URL(Astro.url);
+  url.searchParams.delete("share-preview");
+  if (position === "all") url.searchParams.delete("testimony");
+  else url.searchParams.set("testimony", position);
+  url.hash = "testimony";
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function progressIndexFor(description = "") {
+  const value = cleanText(description).toLowerCase();
+  if (/signed|chapter\s+\d+|became law|effective\s+[a-z]+\s+\d+|veto(?:ed)?/i.test(value)) return 4;
+  if (/passed|adopted|enrolled/i.test(value)) return 3;
+  if (/committee|hearing|referred|retained|interim study|re-referred|rereferred/i.test(value)) return 1;
+  if (/introduced/i.test(value)) return 0;
+  return -1;
 }
 ---
 
@@ -258,6 +322,31 @@ function publicTestimonySummaryLabel(counts = {}) {
             </section>
           )}
 
+          {!sharePreviewCapture && (
+            <nav class="bill-section-nav" aria-label="On this bill page" data-bill-section-nav>
+              <span>On this page</span>
+              <label class="bill-section-select">
+                <span>Jump to section</span>
+                <select data-bill-section-select aria-label="Jump to a section on this bill page">
+                  <option value="overview">Overview</option>
+                  <option value="public-input">Public input</option>
+                  <option value="votes">Votes</option>
+                  <option value="organization-positions">Organizations</option>
+                  <option value="community-context">Community context</option>
+                  <option value="testimony">Testimony</option>
+                </select>
+              </label>
+              <div class="bill-section-links">
+                <a href="#overview" data-bill-section-link="overview" aria-current="location">Overview</a>
+                <a href="#public-input" data-bill-section-link="public-input">Public input</a>
+                <a href="#votes" data-bill-section-link="votes">Votes</a>
+                <a href="#organization-positions" data-bill-section-link="organization-positions">Organizations</a>
+                <a href="#community-context" data-bill-section-link="community-context">Community context</a>
+                <a href="#testimony" data-bill-section-link="testimony">Testimony</a>
+              </div>
+            </nav>
+          )}
+
           {!sharePreviewCapture && adminSession && (
             <section class="panel admin-bill-panel">
               <div class="section-heading">
@@ -304,32 +393,77 @@ function publicTestimonySummaryLabel(counts = {}) {
             </section>
           )}
 
-          <section class:list={["overview-grid", sharePreviewCapture && "share-preview-hidden"]}>
-            <article class="latest-action panel">
-              <p class="eyebrow">Latest Action</p>
-              <h2>{bill.description || "No action returned."}</h2>
-              {bill.statusdate && <span>{formatDate(bill.statusdate)}</span>}
-            </article>
-
-            <article class="testimony-total panel">
-              <div>
-                <span>Testimony</span>
-                <strong>{bill.testimony_count || 0}</strong>
+          <section
+            class:list={["at-a-glance panel", sharePreviewCapture && "share-preview-hidden"]}
+            id="overview"
+          >
+            <div class="section-heading at-a-glance-heading">
+              <p class="eyebrow">At a glance</p>
+              <div class="section-title-row">
+                <h2>{billStatusLabel(bill.description)}</h2>
+                <button type="button" data-copy-section-link="overview" aria-label="Copy link to bill overview">#</button>
               </div>
+            </div>
 
-              <div class="germane-box">
-                <span>Germane {bill.germane_count || 0}</span>
-                <span>Non-Germane {bill.nongermane_count || 0}</span>
-              </div>
-            </article>
+            {billProgressIndex >= 0 && (
+              <ol class="bill-progress" aria-label="Bill progress based on the latest recorded action">
+                {billProgressSteps.map((step, index) => (
+                  <li class:list={[index < billProgressIndex && "complete", index === billProgressIndex && "current"]}>
+                    <span aria-hidden="true">{index + 1}</span>
+                    <strong>{step}</strong>
+                  </li>
+                ))}
+              </ol>
+            )}
+
+            <div class="at-a-glance-grid">
+              <article class="glance-action">
+                <span>Latest action</span>
+                <p>{bill.description || "No action returned."}</p>
+                {bill.statusdate && <small>Record date: {formatDate(bill.statusdate)}</small>}
+              </article>
+
+              <a class="glance-stat" href="#public-input">
+                <span>Public input</span>
+                <strong>{testimonySummaryLabel}</strong>
+                <small>
+                  {testimonyCounts.support} support · {testimonyCounts.oppose} oppose · {testimonyCounts.neutral} neutral
+                </small>
+              </a>
+
+              {latestRollCall ? (
+                <a class="glance-stat" href="#votes">
+                  <span>Latest vote</span>
+                  <strong>{rollCallOutcome(latestRollCall)}</strong>
+                  <small>{latestRollCall.yeas} yeas · {latestRollCall.nays} nays</small>
+                </a>
+              ) : (
+                <div class="glance-stat">
+                  <span>Votes</span>
+                  <strong>No roll calls</strong>
+                  <small>No recorded floor vote is available.</small>
+                </div>
+              )}
+
+              <a class="glance-stat" href="#community-context">
+                <span>Related coverage</span>
+                <strong>
+                  {relatedArticles.length} article{relatedArticles.length === 1 ? "" : "s"}
+                </strong>
+                <small>Community comments and media coverage about this bill.</small>
+              </a>
+            </div>
           </section>
 
           <section class:list={["bill-detail-grid", sharePreviewCapture && "share-preview-hidden"]}>
             <div class="bill-detail-rail bill-detail-rail-left">
-              <section class="panel roll-panel">
+              <section class="panel roll-panel" id="votes">
               <div class="section-heading">
                 <p class="eyebrow">Votes</p>
-                <h2>Roll Calls</h2>
+                <div class="section-title-row">
+                  <h2>Roll Calls</h2>
+                  <button type="button" data-copy-section-link="votes" aria-label="Copy link to roll calls">#</button>
+                </div>
               </div>
 
               {rollCalls.length ? (
@@ -361,6 +495,10 @@ function publicTestimonySummaryLabel(counts = {}) {
                       <span>Nays {latestRollCall.nays}</span>
                       <span>Present {latestRollCall.present}</span>
                       <span>Absent {latestRollCall.absent}</span>
+                    </div>
+                    <div class="roll-balance" aria-label={`${rollCallShare(latestRollCall)} percent yea among yea and nay votes`}>
+                      <span style={`--yea-share: ${rollCallShare(latestRollCall)}%`}></span>
+                      <small>{rollCallOutcome(latestRollCall)} · {rollCallShare(latestRollCall)}% yea</small>
                     </div>
                     <span class="roll-cta">View roll call history</span>
                   </a>
@@ -402,6 +540,10 @@ function publicTestimonySummaryLabel(counts = {}) {
                                 <span>Present {rollCall.present}</span>
                                 <span>Absent {rollCall.absent}</span>
                               </div>
+                              <div class="roll-balance" aria-label={`${rollCallShare(rollCall)} percent yea among yea and nay votes`}>
+                                <span style={`--yea-share: ${rollCallShare(rollCall)}%`}></span>
+                                <small>{rollCallOutcome(rollCall)} · {rollCallShare(rollCall)}% yea</small>
+                              </div>
                               <span class="roll-cta">View roll call history</span>
                           </a>
                         ))}
@@ -414,10 +556,13 @@ function publicTestimonySummaryLabel(counts = {}) {
               )}
               </section>
 
-              <section class="panel bill-context-panel">
+              <section class="panel bill-context-panel" id="community-context">
                 <div class="section-heading">
                   <p class="eyebrow">Community context</p>
-                  <h2>What Your Neighbors and the Media Say...</h2>
+                  <div class="section-title-row">
+                    <h2>What Your Neighbors and the Media Say...</h2>
+                    <button type="button" data-copy-section-link="community-context" aria-label="Copy link to community context">#</button>
+                  </div>
                   <p>
                     Community comments and related articles provide public context about this bill.
                   </p>
@@ -507,35 +652,41 @@ function publicTestimonySummaryLabel(counts = {}) {
 
             <div class="bill-detail-rail bill-detail-rail-right">
 
-              <section class="panel position-panel">
+              <section class="panel position-panel" id="public-input">
               <div class="section-heading">
                 <p class="eyebrow">Position Count</p>
-                <h2>Public Testimony Summary</h2>
+                <div class="section-title-row">
+                  <h2>Public Testimony Summary</h2>
+                  <button type="button" data-copy-section-link="public-input" aria-label="Copy link to public input summary">#</button>
+                </div>
               </div>
               <BillPositionSummary bill={bill} />
               <div class="testimony-breakdown" aria-label="Public testimony counts">
-                <span class="support">
+                <a class="support" href={testimonyFilterHref("support")} data-testimony-jump-filter="support">
                   <strong>{testimonyCounts.support}</strong>
                   Support
-                </span>
-                <span class="oppose">
+                </a>
+                <a class="oppose" href={testimonyFilterHref("oppose")} data-testimony-jump-filter="oppose">
                   <strong>{testimonyCounts.oppose}</strong>
                   Oppose
-                </span>
-                <span class="neutral">
+                </a>
+                <a class="neutral" href={testimonyFilterHref("neutral")} data-testimony-jump-filter="neutral">
                   <strong>{testimonyCounts.neutral}</strong>
                   Neutral
-                </span>
-                <span>
+                </a>
+                <a href={testimonyFilterHref("all")} data-testimony-jump-filter="all">
                   <strong>{testimonyCounts.total}</strong>
                   Total
-                </span>
+                </a>
               </div>
 
-              <section class="organization-comments-inline">
+              <section class="organization-comments-inline" id="organization-positions">
                 <div class="section-heading compact">
                   <p class="eyebrow">Organizations</p>
-                  <h2>Organizational Comments</h2>
+                  <div class="section-title-row">
+                    <h2>Organizational Comments</h2>
+                    <button type="button" data-copy-section-link="organization-positions" aria-label="Copy link to organization positions">#</button>
+                  </div>
                 </div>
 
                 {organizationComments.length ? (
@@ -588,16 +739,50 @@ function publicTestimonySummaryLabel(counts = {}) {
               </section>
               </section>
 
-              <section class="panel testimony-panel">
+              <section class="panel testimony-panel" id="testimony">
                 <div class="section-heading">
                   <p class="eyebrow">Public Input</p>
-                  <h2>Testimony</h2>
+                  <div class="section-title-row">
+                    <h2>Testimony</h2>
+                    <button type="button" data-copy-section-link="testimony" aria-label="Copy link to testimony">#</button>
+                  </div>
+                  <p class="testimony-loaded-note">
+                    Showing {testimony.length} loaded submission{testimony.length === 1 ? "" : "s"}
+                    {testimonyTotal > testimony.length && ` of ${testimonyTotal} recorded positions`}.
+                  </p>
                 </div>
 
                 {testimony.length ? (
-                  <div class="testimony-list">
+                  <div class="testimony-browser" data-testimony-browser>
+                    <div class="testimony-controls">
+                      <div class="testimony-position-filters" aria-label="Filter testimony by position">
+                        <button type="button" class="active" data-testimony-position="all" aria-pressed="true">All</button>
+                        <button type="button" data-testimony-position="support" aria-pressed="false">Support</button>
+                        <button type="button" data-testimony-position="oppose" aria-pressed="false">Oppose</button>
+                        <button type="button" data-testimony-position="neutral" aria-pressed="false">Neutral</button>
+                      </div>
+                      <label class="testimony-search">
+                        <span>Search loaded testimony</span>
+                        <input
+                          type="search"
+                          placeholder="Name, town, organization, or comment"
+                          autocomplete="off"
+                          data-testimony-search
+                        />
+                      </label>
+                    </div>
+
+                    <p class="testimony-results-note" aria-live="polite">
+                      <strong data-testimony-result-count>{testimony.length}</strong> loaded submissions match
+                    </p>
+
+                    <div class="testimony-list">
                     {visibleTestimony.map((item) => (
-                      <article>
+                      <article
+                        data-testimony-entry
+                        data-testimony-position={positionClass(item.expr1)}
+                        data-testimony-search-text={testimonySearchText(item)}
+                      >
                         <div class="testimony-topline">
                           <strong>{personName(item) || cleanText(item.whoisname) || "Submitted testimony"}</strong>
                           <span class={positionClass(item.expr1)}>{cleanText(item.expr1 || "neutral")}</span>
@@ -616,7 +801,7 @@ function publicTestimonySummaryLabel(counts = {}) {
                     ))}
 
                     {remainingTestimony.length > 0 && (
-                      <details class="testimony-more">
+                      <details class="testimony-more" data-testimony-more>
                         <summary>
                           <span>Show more testimony</span>
                           <small>{remainingTestimony.length} more submission{remainingTestimony.length === 1 ? "" : "s"}</small>
@@ -624,7 +809,11 @@ function publicTestimonySummaryLabel(counts = {}) {
 
                         <div class="testimony-list">
                           {remainingTestimony.map((item) => (
-                            <article>
+                            <article
+                              data-testimony-entry
+                              data-testimony-position={positionClass(item.expr1)}
+                              data-testimony-search-text={testimonySearchText(item)}
+                            >
                               <div class="testimony-topline">
                                 <strong>{personName(item) || cleanText(item.whoisname) || "Submitted testimony"}</strong>
                                 <span class={positionClass(item.expr1)}>{cleanText(item.expr1 || "neutral")}</span>
@@ -644,6 +833,10 @@ function publicTestimonySummaryLabel(counts = {}) {
                         </div>
                       </details>
                     )}
+                    <p class="empty testimony-filter-empty" data-testimony-empty hidden>
+                      No loaded testimony matches those filters.
+                    </p>
+                  </div>
                   </div>
                 ) : (
                   <p class="empty">No testimony returned.</p>
@@ -651,12 +844,161 @@ function publicTestimonySummaryLabel(counts = {}) {
               </section>
             </div>
           </section>
+
+          {!sharePreviewCapture && (
+            <a class="bill-back-to-top" href="#overview">Back to bill overview</a>
+          )}
         </>
       ) : (
         <p class="status-message">Bill not found.</p>
       )}
     </main>
     {!sharePreviewCapture && <SiteFooter />}
+    <script>
+      const normalizeTestimonySearch = (value) => String(value || "")
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+
+      document.querySelectorAll("[data-testimony-browser]").forEach((browser) => {
+        const entries = [...browser.querySelectorAll("[data-testimony-entry]")];
+        const positionButtons = [...browser.querySelectorAll("[data-testimony-position]")];
+        const searchInput = browser.querySelector("[data-testimony-search]");
+        const resultCount = browser.querySelector("[data-testimony-result-count]");
+        const emptyState = browser.querySelector("[data-testimony-empty]");
+        const more = browser.querySelector("[data-testimony-more]");
+        let selectedPosition = "all";
+        const validPositions = new Set(["all", "support", "oppose", "neutral"]);
+
+        const applyTestimonyFilters = () => {
+          const query = normalizeTestimonySearch(searchInput?.value);
+          const filtering = selectedPosition !== "all" || Boolean(query);
+          let matches = 0;
+
+          entries.forEach((entry) => {
+            const matchesPosition = selectedPosition === "all" ||
+              entry.dataset.testimonyPosition === selectedPosition;
+            const matchesSearch = !query || normalizeTestimonySearch(
+              entry.dataset.testimonySearchText,
+            ).includes(query);
+            const visible = matchesPosition && matchesSearch;
+            entry.hidden = !visible;
+            if (visible) matches += 1;
+          });
+
+          if (more instanceof HTMLDetailsElement) {
+            if (filtering) more.open = true;
+            if (!filtering) more.open = false;
+          }
+          browser.classList.toggle("is-filtering", filtering);
+          if (resultCount) resultCount.textContent = String(matches);
+          if (emptyState instanceof HTMLElement) emptyState.hidden = matches !== 0;
+        };
+
+        const setTestimonyPosition = (position, { updateUrl = false, scroll = false } = {}) => {
+          selectedPosition = validPositions.has(position) ? position : "all";
+          positionButtons.forEach((current) => {
+            const active = current.dataset.testimonyPosition === selectedPosition;
+            current.classList.toggle("active", active);
+            current.setAttribute("aria-pressed", active ? "true" : "false");
+          });
+          applyTestimonyFilters();
+
+          if (updateUrl) {
+            const url = new URL(window.location.href);
+            if (selectedPosition === "all") url.searchParams.delete("testimony");
+            else url.searchParams.set("testimony", selectedPosition);
+            url.hash = "testimony";
+            window.history.replaceState({}, "", url);
+          }
+          if (scroll) {
+            document.getElementById("testimony")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        };
+
+        positionButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            setTestimonyPosition(button.dataset.testimonyPosition || "all", { updateUrl: true });
+          });
+        });
+
+        document.querySelectorAll("[data-testimony-jump-filter]").forEach((link) => {
+          link.addEventListener("click", (event) => {
+            event.preventDefault();
+            setTestimonyPosition(
+              link.getAttribute("data-testimony-jump-filter") || "all",
+              { updateUrl: true, scroll: true },
+            );
+          });
+        });
+
+        searchInput?.addEventListener("input", applyTestimonyFilters);
+
+        const requestedPosition = new URL(window.location.href).searchParams.get("testimony") || "all";
+        setTestimonyPosition(requestedPosition);
+      });
+
+      document.querySelectorAll("[data-copy-section-link]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const section = button.getAttribute("data-copy-section-link");
+          if (!section) return;
+          const url = new URL(window.location.href);
+          url.hash = section;
+
+          try {
+            await navigator.clipboard.writeText(url.toString());
+            button.textContent = "Copied";
+            window.setTimeout(() => { button.textContent = "#"; }, 1400);
+          } catch {
+            window.location.hash = section;
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-bill-section-nav]").forEach((navigation) => {
+        const links = [...navigation.querySelectorAll("[data-bill-section-link]")];
+        const select = navigation.querySelector("[data-bill-section-select]");
+        const sections = links
+          .map((link) => document.getElementById(link.getAttribute("data-bill-section-link") || ""))
+          .filter(Boolean);
+
+        const setActiveSection = (sectionId) => {
+          links.forEach((link) => {
+            const active = link.getAttribute("data-bill-section-link") === sectionId;
+            if (active) link.setAttribute("aria-current", "location");
+            else link.removeAttribute("aria-current");
+          });
+          if (select instanceof HTMLSelectElement && select.value !== sectionId) {
+            select.value = sectionId;
+          }
+        };
+
+        if (select instanceof HTMLSelectElement) {
+          select.addEventListener("change", () => {
+            const target = document.getElementById(select.value);
+            target?.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        }
+
+        if ("IntersectionObserver" in window && sections.length) {
+          const visibleSections = new Map();
+          const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) visibleSections.set(entry.target.id, entry.boundingClientRect.top);
+              else visibleSections.delete(entry.target.id);
+            });
+
+            const active = [...visibleSections.entries()]
+              .sort((first, second) => Math.abs(first[1]) - Math.abs(second[1]))[0];
+            if (active) setActiveSection(active[0]);
+          }, { rootMargin: "-28% 0px -58% 0px", threshold: [0, 0.01] });
+
+          sections.forEach((section) => observer.observe(section));
+        }
+      });
+    </script>
   </body>
 </html>
 
@@ -900,6 +1242,229 @@ function publicTestimonySummaryLabel(counts = {}) {
     border-color: #b6390a;
   }
 
+  .bill-section-nav {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid #dbe4ef;
+    border-radius: 8px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: auto minmax(0, 1fr);
+    margin: 0 0 22px;
+    padding: 9px 10px;
+    position: sticky;
+    top: 72px;
+    z-index: 15;
+    backdrop-filter: blur(10px);
+  }
+
+  .bill-section-nav > span {
+    color: #6b4f2a;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.09em;
+    padding-left: 6px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .bill-section-links {
+    display: flex;
+    gap: 5px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .bill-section-nav a {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    color: #475569;
+    flex: 0 0 auto;
+    font-size: 0.82rem;
+    font-weight: 900;
+    padding: 8px 10px;
+    text-decoration: none;
+  }
+
+  .bill-section-nav a:hover,
+  .bill-section-nav a:focus-visible,
+  .bill-section-nav a[aria-current="location"] {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #b6390a;
+  }
+
+  .bill-section-select {
+    display: none;
+  }
+
+  .at-a-glance {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+
+  .at-a-glance-heading h2 {
+    margin-bottom: 0;
+  }
+
+  .bill-progress {
+    display: grid;
+    gap: 0;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .bill-progress li {
+    align-items: center;
+    color: #94a3b8;
+    display: grid;
+    font-size: 0.72rem;
+    font-weight: 900;
+    gap: 7px;
+    grid-template-columns: auto minmax(0, 1fr);
+    min-width: 0;
+    position: relative;
+  }
+
+  .bill-progress li:not(:last-child)::after {
+    background: #dbe4ef;
+    content: "";
+    height: 3px;
+    left: 29px;
+    position: absolute;
+    right: 6px;
+    top: 13px;
+    z-index: 0;
+  }
+
+  .bill-progress li.complete:not(:last-child)::after,
+  .bill-progress li.current:not(:last-child)::after {
+    background: #1f3f8f;
+  }
+
+  .bill-progress li > span {
+    align-items: center;
+    background: #eef2f7;
+    border: 2px solid #cbd5e1;
+    border-radius: 999px;
+    display: inline-flex;
+    height: 28px;
+    justify-content: center;
+    position: relative;
+    width: 28px;
+    z-index: 1;
+  }
+
+  .bill-progress li.complete,
+  .bill-progress li.current {
+    color: #1f2933;
+  }
+
+  .bill-progress li.complete > span {
+    background: #1f3f8f;
+    border-color: #1f3f8f;
+    color: white;
+  }
+
+  .bill-progress li.current > span {
+    background: #fff7ed;
+    border-color: #dc4d09;
+    color: #b6390a;
+  }
+
+  .at-a-glance-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(260px, 1.55fr) repeat(3, minmax(145px, 1fr));
+  }
+
+  .glance-action,
+  .glance-stat {
+    background: #f8fafc;
+    border: 1px solid #dbe4ef;
+    border-radius: 8px;
+    color: #1f2933;
+    display: grid;
+    gap: 7px;
+    padding: 14px;
+    text-decoration: none;
+  }
+
+  .glance-action > span,
+  .glance-stat > span {
+    color: #6b4f2a;
+    font-size: 0.7rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .glance-action p {
+    color: #334155;
+    font-size: 0.93rem;
+    font-weight: 700;
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  .glance-action small,
+  .glance-stat small {
+    color: #64748b;
+    font-size: 0.76rem;
+    line-height: 1.35;
+    margin: 0;
+  }
+
+  .glance-stat {
+    align-content: start;
+    transition: border-color 140ms ease, transform 140ms ease;
+  }
+
+  .glance-stat strong {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  a.glance-stat:hover,
+  a.glance-stat:focus-visible {
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+  }
+
+  #overview,
+  #public-input,
+  #votes,
+  #organization-positions,
+  #community-context,
+  #testimony {
+    scroll-margin-top: 140px;
+  }
+
+  .bill-back-to-top {
+    align-items: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #475569;
+    display: inline-flex;
+    font-size: 0.84rem;
+    font-weight: 900;
+    justify-content: center;
+    margin-top: 4px;
+    padding: 9px 13px;
+    text-decoration: none;
+  }
+
+  .bill-back-to-top:hover,
+  .bill-back-to-top:focus-visible {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #b6390a;
+  }
+
   .overview-grid,
   .bill-detail-grid {
     display: grid;
@@ -982,8 +1547,46 @@ function publicTestimonySummaryLabel(counts = {}) {
     margin: 0 0 16px;
   }
 
+  .section-title-row {
+    align-items: start;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .section-title-row h2,
+  .section-heading.compact .section-title-row h2 {
+    margin: 0;
+  }
+
+  .section-title-row button {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #64748b;
+    cursor: pointer;
+    flex: 0 0 auto;
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 950;
+    min-width: 31px;
+    padding: 6px 8px;
+  }
+
+  .section-title-row button:hover,
+  .section-title-row button:focus-visible {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    color: #b6390a;
+  }
+
   .section-heading.compact h2 {
     font-size: 1.15rem;
+    margin-bottom: 12px;
+  }
+
+  .section-heading.compact .section-title-row {
     margin-bottom: 12px;
   }
 
@@ -1061,7 +1664,7 @@ function publicTestimonySummaryLabel(counts = {}) {
     margin-top: 10px;
   }
 
-  .testimony-breakdown span {
+  .testimony-breakdown a {
     background: #f8fafc;
     border: 1px solid #d1d5db;
     border-radius: 8px;
@@ -1072,7 +1675,15 @@ function publicTestimonySummaryLabel(counts = {}) {
     gap: 2px;
     padding: 8px;
     text-align: center;
+    text-decoration: none;
     text-transform: uppercase;
+    transition: border-color 140ms ease, transform 140ms ease;
+  }
+
+  .testimony-breakdown a:hover,
+  .testimony-breakdown a:focus-visible {
+    border-color: currentColor;
+    transform: translateY(-1px);
   }
 
   .testimony-breakdown strong {
@@ -1094,6 +1705,84 @@ function publicTestimonySummaryLabel(counts = {}) {
   .testimony-breakdown .neutral {
     background: #dbeafe;
     border-color: #60a5fa;
+  }
+
+  .testimony-loaded-note {
+    color: #64748b;
+    font-size: 0.84rem;
+    font-weight: 750;
+    line-height: 1.45;
+    margin: -7px 0 16px;
+  }
+
+  .testimony-browser,
+  .testimony-controls {
+    display: grid;
+    gap: 12px;
+  }
+
+  .testimony-position-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .testimony-position-filters button {
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    color: #475569;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 900;
+    padding: 8px 11px;
+  }
+
+  .testimony-position-filters button:hover,
+  .testimony-position-filters button:focus-visible,
+  .testimony-position-filters button.active {
+    background: #1f2933;
+    border-color: #1f2933;
+    color: white;
+  }
+
+  .testimony-search {
+    color: #475569;
+    display: grid;
+    font-size: 0.72rem;
+    font-weight: 900;
+    gap: 6px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .testimony-search input {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    color: #1f2933;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    min-height: 44px;
+    padding: 10px 12px;
+    text-transform: none;
+    width: 100%;
+  }
+
+  .testimony-results-note {
+    color: #64748b;
+    font-size: 0.8rem;
+    margin: 0;
+  }
+
+  .testimony-browser.is-filtering .testimony-more > summary {
+    display: none;
+  }
+
+  .testimony-filter-empty {
+    margin: 0;
   }
 
   .roll-summary,
@@ -1339,6 +2028,31 @@ function publicTestimonySummaryLabel(counts = {}) {
     transform: translate(-1px, -1px);
   }
 
+  .roll-balance {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .roll-balance > span {
+    background:
+      linear-gradient(
+        90deg,
+        #1d4ed8 0 var(--yea-share),
+        #b91c1c var(--yea-share) 100%
+      );
+    border-radius: 999px;
+    display: block;
+    height: 7px;
+    overflow: hidden;
+  }
+
+  .roll-balance small {
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 850;
+  }
+
   .roll-label-row {
     align-items: center;
     display: flex;
@@ -1540,9 +2254,37 @@ function publicTestimonySummaryLabel(counts = {}) {
   }
 
   @media (max-width: 860px) {
-    .overview-grid,
+    .at-a-glance-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .glance-action {
+      grid-column: 1 / -1;
+    }
+
     .bill-detail-grid {
-      grid-template-columns: 1fr;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bill-detail-rail {
+      display: contents;
+    }
+
+    .position-panel {
+      order: 1;
+    }
+
+    .roll-panel {
+      order: 2;
+    }
+
+    .bill-context-panel {
+      order: 3;
+    }
+
+    .testimony-panel {
+      order: 4;
     }
 
     .testimony-total {
@@ -1559,6 +2301,72 @@ function publicTestimonySummaryLabel(counts = {}) {
   }
 
   @media (max-width: 520px) {
+    .bill-section-nav {
+      gap: 5px;
+      grid-template-columns: 1fr;
+      padding: 7px;
+      top: 58px;
+    }
+
+    .bill-section-nav > span {
+      display: none;
+    }
+
+    .bill-section-links {
+      display: none;
+    }
+
+    .bill-section-select {
+      display: grid;
+      gap: 4px;
+    }
+
+    .bill-section-select > span {
+      color: #6b4f2a;
+      font-size: 0.68rem;
+      font-weight: 950;
+      letter-spacing: 0.08em;
+      padding-left: 4px;
+      text-transform: uppercase;
+    }
+
+    .bill-section-select select {
+      appearance: none;
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      color: #1f2933;
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 900;
+      min-height: 42px;
+      padding: 8px 34px 8px 10px;
+      width: 100%;
+    }
+
+    .at-a-glance-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .bill-progress {
+      grid-template-columns: repeat(5, minmax(105px, 1fr));
+      overflow-x: auto;
+      padding-bottom: 5px;
+    }
+
+    .glance-action {
+      grid-column: auto;
+    }
+
+    #overview,
+    #public-input,
+    #votes,
+    #organization-positions,
+    #community-context,
+    #testimony {
+      scroll-margin-top: 120px;
+    }
+
     .context-tab-list {
       border-radius: 12px;
       grid-template-columns: 1fr;

@@ -12,9 +12,11 @@ import { getTrackedBills, normalizeBillCode } from "../../lib/trackedBills";
 const q = Astro.url.searchParams.get("q")?.trim() || "";
 const year = Astro.url.searchParams.get("year")?.trim() || "";
 const sort = Astro.url.searchParams.get("sort")?.trim() || "";
+const body = Astro.url.searchParams.get("body")?.trim() || "";
+const stage = Astro.url.searchParams.get("stage")?.trim() || "";
+const position = Astro.url.searchParams.get("position")?.trim() || "";
 
 let bills = [];
-let meta = {};
 let error = "";
 let trackedBills = new Map();
 
@@ -24,7 +26,6 @@ try {
     getTrackedBills(),
   ]);
   bills = data.bills || [];
-  meta = data.meta || {};
   trackedBills = tracked;
 } catch (loadError) {
   error = loadError?.message || "Unable to load bills.";
@@ -49,6 +50,31 @@ function previewText(text = "", maxLength = 180) {
   if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, maxLength).trim()}...`;
 }
+
+function billBody(value = "") {
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === "h" || normalized.includes("house")) return "House";
+  if (normalized === "s" || normalized.includes("senate")) return "Senate";
+  return value || "Other";
+}
+
+function billStage(description = "") {
+  const value = String(description).toLowerCase();
+  if (/signed|chapter\s+\d+|became law|effective\s+[a-z]+\s+\d+|veto(?:ed)?/.test(value)) return "Outcome";
+  if (/passed|adopted|enrolled/.test(value)) return "Passed Legislature";
+  if (/committee|hearing|referred|retained|interim study|re-referred|rereferred/.test(value)) return "Committee";
+  if (/introduced/.test(value)) return "Introduced";
+  return "Other";
+}
+
+function testimonyLead(bill = {}) {
+  const support = Number(bill.support_count || 0);
+  const oppose = Number(bill.oppose_count || 0);
+  const neutral = Number(bill.neutral_count || 0);
+  if (support + oppose + neutral === 0) return "No testimony";
+  if (support === oppose) return "Even";
+  return support > oppose ? "Support leads" : "Opposition leads";
+}
 ---
 
 <html lang="en">
@@ -71,7 +97,7 @@ function previewText(text = "", maxLength = 180) {
 
   <body>
     <TopNav />
-    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.bill-card[data-fuzzy-item]' })">
+    <main class="page" x-data="nhdbFuzzyFilter({ itemSelector: '.bill-card[data-fuzzy-item]', pageSize: 24 })">
       <PageHero
         backHref="/"
         backLabel="Back home"
@@ -81,7 +107,7 @@ function previewText(text = "", maxLength = 180) {
         <FilterBar
           action="/bills"
           submitLabel="Filter bills"
-          clearHref={q || year ? "/bills" : ""}
+          clearHref={q || year || body || stage || position || sort ? "/bills" : ""}
           columns="dense"
           live
         >
@@ -112,12 +138,45 @@ function previewText(text = "", maxLength = 180) {
           </label>
 
           <label>
+            <span>Chamber</span>
+            <select name="body" data-fuzzy-filter-field data-fuzzy-field="body" data-fuzzy-match="exact">
+              <option value="" selected={!body}>All chambers</option>
+              <option value="House" selected={body === "House"}>House</option>
+              <option value="Senate" selected={body === "Senate"}>Senate</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Stage</span>
+            <select name="stage" data-fuzzy-filter-field data-fuzzy-field="stage" data-fuzzy-match="exact">
+              <option value="" selected={!stage}>All stages</option>
+              <option value="Introduced" selected={stage === "Introduced"}>Introduced</option>
+              <option value="Committee" selected={stage === "Committee"}>Committee review</option>
+              <option value="Passed Legislature" selected={stage === "Passed Legislature"}>Passed Legislature</option>
+              <option value="Outcome" selected={stage === "Outcome"}>Signed or vetoed</option>
+              <option value="Other" selected={stage === "Other"}>Other/unknown</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Public input</span>
+            <select name="position" data-fuzzy-filter-field data-fuzzy-field="position" data-fuzzy-match="exact">
+              <option value="" selected={!position}>Any testimony</option>
+              <option value="Support leads" selected={position === "Support leads"}>Support leads</option>
+              <option value="Opposition leads" selected={position === "Opposition leads"}>Opposition leads</option>
+              <option value="Even" selected={position === "Even"}>Evenly divided</option>
+              <option value="No testimony" selected={position === "No testimony"}>No testimony</option>
+            </select>
+          </label>
+
+          <label>
             <span>Sort</span>
             <select name="sort" data-fuzzy-sort>
               <option value="" selected={!sort}>Default</option>
               <option value="name:asc" selected={sort === "name:asc"}>Title A-Z</option>
               <option value="bill:asc" selected={sort === "bill:asc"}>Bill code</option>
               <option value="updated:desc" selected={sort === "updated:desc"}>Recently updated</option>
+              <option value="testimony:desc" selected={sort === "testimony:desc"}>Most public testimony</option>
             </select>
           </label>
 
@@ -130,8 +189,11 @@ function previewText(text = "", maxLength = 180) {
       {!error && (
         <section class="results">
           <div class="results-heading">
-            <h2><span data-fuzzy-count>{meta.count ?? bills.length}</span> Bills</h2>
-            {(q || year) && <a href="/bills">Clear filters</a>}
+            <h2>
+              Showing <span data-fuzzy-count>{Math.min(bills.length, 24)}</span>
+              of <span data-fuzzy-matched-count>{bills.length}</span> matching bills
+            </h2>
+            {(q || year || body || stage || position || sort) && <a href="/bills">Clear filters</a>}
           </div>
 
           {bills.length ? (
@@ -146,9 +208,13 @@ function previewText(text = "", maxLength = 180) {
                     data-fuzzy-title={bill.name || bill.title || trackedBill?.name || bill.condensedbillno}
                     data-fuzzy-bill={bill.condensedbillno}
                     data-fuzzy-year={bill.sessionyear}
+                    data-fuzzy-body={billBody(bill.legislativebody)}
+                    data-fuzzy-stage={billStage(bill.description)}
+                    data-fuzzy-position={testimonyLead(bill)}
                     data-fuzzy-sort-name={bill.name || bill.title || trackedBill?.name || bill.condensedbillno}
                     data-fuzzy-sort-bill={bill.condensedbillno}
                     data-fuzzy-sort-updated={Date.parse(bill.statusdate || bill.updated_at || bill.updatedAt || "") || 0}
+                    data-fuzzy-sort-testimony={Number(bill.testimony_count || 0)}
                     data-fuzzy-text={[
                       bill.condensedbillno,
                       bill.sessionyear,
@@ -180,7 +246,8 @@ function previewText(text = "", maxLength = 180) {
                     </p>
                     <BillPositionSummary bill={bill} />
                     <div class="bill-meta">
-                      {bill.legislativebody && <span>{bill.legislativebody}</span>}
+                      {bill.legislativebody && <span>{billBody(bill.legislativebody)}</span>}
+                      <span>{billStage(bill.description)}</span>
                       {bill.statusdate && <span>{formatDate(bill.statusdate)}</span>}
                     </div>
                   </article>
@@ -205,6 +272,9 @@ function previewText(text = "", maxLength = 180) {
               <li>Search by issue keywords like housing, schools, or labor.</li>
             </ul>
           </div>
+          <button class="show-more-bills" type="button" data-fuzzy-more hidden>
+            Show more bills
+          </button>
         </section>
       )}
     </main>
@@ -339,6 +409,37 @@ function previewText(text = "", maxLength = 180) {
   .bill-meta {
     justify-content: start;
     margin-top: 14px;
+  }
+
+  .show-more-bills {
+    background: #1f2933;
+    border: 1px solid #1f2933;
+    border-radius: 999px;
+    color: white;
+    cursor: pointer;
+    display: block;
+    font: inherit;
+    font-weight: 950;
+    margin: 24px auto 0;
+    min-height: 44px;
+    padding: 10px 18px;
+  }
+
+  .show-more-bills:hover,
+  .show-more-bills:focus-visible {
+    background: #334155;
+  }
+
+  @media (max-width: 520px) {
+    .results-heading {
+      align-items: start;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .results-heading h2 {
+      font-size: 1.35rem;
+    }
   }
 
 </style>
