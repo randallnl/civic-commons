@@ -1,6 +1,9 @@
 import { env } from "cloudflare:workers";
 import { cleanText } from "./text";
 import { effectiveVoteVisibility, isProceduralAlignmentMotion } from "./voteVisibility";
+import { selectOneGradeVotePerBill } from "./gradeVoteSelection";
+
+export { gradeMotionCategory, gradeVoteSelectionReason } from "./gradeVoteSelection";
 
 const DEFAULT_TRACKED_BILLS_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vTHKkGGONM78RXb63Igvi2BXipOA4pV4X5CBY6yHaVAizO-l0q_WtU8uyXI-vhxxbKEib9nFlL1nIBz/pub?gid=1337871563&single=true&output=csv";
@@ -107,6 +110,16 @@ export function isExcludedAlignmentMotion(value = "") {
 
 export function isVoteIncludedInGrade(vote = {}) {
   return Boolean(effectiveVoteVisibility(vote).includeInGrades);
+}
+
+export function selectGradeRollCalls(votes = []) {
+  return selectOneGradeVotePerBill(votes.filter(isVoteIncludedInGrade));
+}
+
+export function selectVotesForAlignmentGrade(votes = []) {
+  return selectGradeRollCalls(votes).filter(
+    (vote) => isVotingAction(vote) && isKnownVote(vote),
+  );
 }
 
 export function isKnownVote(vote = {}) {
@@ -266,8 +279,7 @@ export function testimonyAlignmentPercentForGrade(grade = {}) {
 }
 
 export function representativeOnlineTestimonyGrade(votes = [], billSummaries = new Map()) {
-  const scoredVotes = votes
-    .filter((vote) => isVotingAction(vote) && isKnownVote(vote) && isVoteIncludedInGrade(vote))
+  const scoredVotes = selectVotesForAlignmentGrade(votes)
     .map((vote) => representativeOnlineTestimonyAnalysis(vote, billSummaryForVote(billSummaries, vote)))
     .filter((analysis) => Number.isFinite(analysis?.score));
 
@@ -295,9 +307,9 @@ export function representativeOnlineTestimonyGrade(votes = [], billSummaries = n
 }
 
 export function representativeGrade(votes = [], trackedBills = new Map(), billSummaries = new Map()) {
-  const scoredVotes = votes
+  const scoredVotes = selectGradeRollCalls(votes)
     .map((vote) => {
-      if (!isVotingAction(vote) || !isVoteIncludedInGrade(vote)) return null;
+      if (!isVotingAction(vote)) return null;
       const trackedBill = trackedBillForVote(trackedBills, vote);
       if (!trackedBill) return null;
       const billSummary = billSummaryForVote(billSummaries, vote);
@@ -335,9 +347,8 @@ export function representativeOnlineTestimonyVotePreviews(
   { limit = 3 } = {},
 ) {
   const nameKey = rep.name || `${rep.firstname || ""} ${rep.lastname || ""}`.trim();
-  return (rep.voteHistory || [])
+  return selectVotesForAlignmentGrade(rep.voteHistory || [])
     .map((vote) => {
-      if (!isVotingAction(vote) || !isKnownVote(vote) || !isVoteIncludedInGrade(vote)) return null;
       const billSummary = billSummaryForVote(billSummaries, vote);
       const analysis = representativeOnlineTestimonyAnalysis(vote, billSummary);
       if (!Number.isFinite(analysis.score) || !billSummary) return null;
@@ -726,7 +737,8 @@ export function inferredBillPositionForVote(vote = {}) {
     motionText.includes("laid on the table") ||
     motionText.includes("lay on the table") ||
     motionText.includes("indefinitely postpone") ||
-    motionText.includes("postpone indefinitely");
+    motionText.includes("postpone indefinitely") ||
+    motionText.includes("interim study");
 
   if (motionOpposesBill) return voteStance === "yea" ? "oppose" : "support";
   return voteStance === "yea" ? "support" : "oppose";

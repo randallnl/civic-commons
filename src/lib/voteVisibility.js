@@ -40,7 +40,11 @@ export async function ensureVoteVisibilityTable(db = voteVisibilityDb()) {
 
 export function isProceduralAlignmentMotion(value = "") {
   const motion = cleanText(value).toLowerCase();
-  return motion.includes("adopt amendment") || motion.includes("special order");
+  return (
+    motion.includes("adopt amendment") ||
+    motion.includes("special order") ||
+    motion.includes("reconsider")
+  );
 }
 
 export function defaultVoteVisibility(vote = {}) {
@@ -79,6 +83,7 @@ export function voteVisibilityCaseExpression(actionExpression) {
   return `CASE
     WHEN UPPER(COALESCE(${actionExpression}, '')) LIKE '%ADOPT AMENDMENT%'
       OR UPPER(COALESCE(${actionExpression}, '')) LIKE '%SPECIAL ORDER%'
+      OR UPPER(COALESCE(${actionExpression}, '')) LIKE '%RECONSIDER%'
     THEN 0
     ELSE 1
   END`;

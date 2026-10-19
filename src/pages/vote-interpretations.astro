@@ -20,6 +20,11 @@ const interpretationSteps = [
   },
   {
     step: "4",
+    title: "Select one vote per bill",
+    text: "For alignment, we prefer the latest eligible OTP, OTPA, ITL, table, or interim-study motion in the legislator's chamber, then fall back to the latest eligible motion.",
+  },
+  {
+    step: "5",
     title: "Compare to testimony",
     text: "When online testimony clearly leans support or oppose, vote cards say whether the legislator aligned with that online testimony position.",
   },
@@ -38,6 +43,13 @@ const examples = [
     motion: "Inexpedient to Legislate",
     yea: "Yea = Oppose",
     nay: "Nay = Support",
+    className: "oppose-example",
+  },
+  {
+    title: "Table / Interim Study",
+    motion: "Delay or set aside the bill",
+    yea: "Yea = Oppose the bill moving forward",
+    nay: "Nay = Support the bill moving forward",
     className: "oppose-example",
   },
   {

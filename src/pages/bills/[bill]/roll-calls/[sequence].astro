@@ -218,7 +218,8 @@ function inferredBillPosition(vote = {}, motion = "") {
     motionText.includes("laid on the table") ||
     motionText.includes("lay on the table") ||
     motionText.includes("indefinitely postpone") ||
-    motionText.includes("postpone indefinitely");
+    motionText.includes("postpone indefinitely") ||
+    motionText.includes("interim study");
 
   if (motionOpposesBill) return isYea ? "oppose" : "support";
   return isYea ? "support" : "oppose";

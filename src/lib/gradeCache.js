@@ -1,10 +1,8 @@
 import {
-  isKnownVote,
-  isVoteIncludedInGrade,
-  isVotingAction,
   normalizeBillCode,
   representativeOnlineTestimonyAnalysis,
   representativeOnlineTestimonyGrade,
+  selectVotesForAlignmentGrade,
 } from "./trackedBills";
 import { ensureVoteVisibilityTable, voteVisibilityCaseExpression } from "./voteVisibility";
 
@@ -133,8 +131,7 @@ export async function rebuildGradeCacheForPerson(db, person = {}, options = {}) 
     return { updated: true, personId: personRow.id, grade: null };
   }
 
-  const analyses = votes
-    .filter((vote) => isVotingAction(vote) && isKnownVote(vote) && isVoteIncludedInGrade(vote))
+  const analyses = selectVotesForAlignmentGrade(votes)
     .map((vote) => representativeOnlineTestimonyAnalysis(vote, summaries.get(normalizeBillCode(vote.condensedbillno))))
     .filter((analysis) => Number.isFinite(analysis?.score));
   const partial = analyses.filter((analysis) => analysis.alignment === "partial").length;

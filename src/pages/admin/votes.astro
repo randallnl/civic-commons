@@ -10,6 +10,12 @@ import {
 } from "../../lib/adminAuth";
 import { cleanText } from "../../lib/text";
 import {
+  gradeMotionCategory,
+  gradeVoteKey,
+  gradeVoteSelectionReason,
+  selectOneGradeVotePerBill,
+} from "../../lib/gradeVoteSelection";
+import {
   defaultVoteVisibility,
   ensureVoteVisibilityTable,
   voteVisibilityCaseExpression,
@@ -27,7 +33,7 @@ const filters = {
 };
 
 let votes = [];
-let summary = { total: 0, shown: 0, graded: 0, overridden: 0 };
+let summary = { total: 0, shown: 0, graded: 0, selected: 0, overridden: 0 };
 let loadError = "";
 
 if (session && canReviewVotes) {
@@ -35,8 +41,24 @@ if (session && canReviewVotes) {
     const db = adminDb();
     await ensureVoteVisibilityTable(db);
     await ensureBillOverrideTable(db);
-    votes = await getVoteRows(db, filters);
+    const selectionRows = await getGradeSelectionRows(db, filters.year);
+    const selectedKeys = new Set(
+      selectOneGradeVotePerBill(
+        selectionRows.filter((vote) => Number(vote.include_in_grades) === 1),
+        { groupByChamber: true },
+      ).map(gradeVoteKey),
+    );
+    votes = (await getVoteRows(db, filters))
+      .map((vote) => ({
+        ...vote,
+        selected_for_grade: selectedKeys.has(gradeVoteKey(vote)),
+        grade_motion_category: gradeMotionCategory(vote),
+        grade_selection_reason: gradeVoteSelectionReason(vote),
+      }))
+      .filter((vote) => filters.visibility !== "selected" || vote.selected_for_grade)
+      .slice(0, 250);
     summary = await getVoteSummary(db, filters.year);
+    summary.selected = selectedKeys.size;
   } catch (error) {
     loadError = error?.message || "Unable to load vote data.";
   }
@@ -62,12 +84,14 @@ function formatDate(value = "") {
 function visibilityLabel(row = {}) {
   if (!row.include_in_display) return "Hidden";
   if (!row.include_in_grades) return "Shown, not graded";
-  return "Shown and graded";
+  if (row.selected_for_grade) return "Selected alignment vote";
+  return "Grade eligible; another sequence selected";
 }
 
 function visibilityClass(row = {}) {
   if (!row.include_in_display) return "hidden";
   if (!row.include_in_grades) return "not-graded";
+  if (row.selected_for_grade) return "selected";
   return "graded";
 }
 
@@ -154,7 +178,7 @@ async function getVoteRows(db, filters) {
       AND UPPER(vvo.condensedbillno) = UPPER(rs.condensedbillno)
     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
     ORDER BY rs.sessionyear DESC, rs.votedate DESC, rs.votesequencenumber DESC
-    LIMIT 250
+    LIMIT ${filters.visibility === "selected" ? 2000 : 250}
   `;
 
   const result = await db.prepare(sql).bind(...binds).all();
@@ -167,6 +191,43 @@ async function getVoteRows(db, filters) {
       default_reason: defaults.reason,
     };
   });
+}
+
+async function getGradeSelectionRows(db, year) {
+  const actionExpression = `COALESCE(
+    NULLIF(TRIM(rs.question_motion), ''),
+    NULLIF(TRIM(rs.title1), ''),
+    NULLIF(TRIM(rs.title2), '')
+  )`;
+  const defaultVisibility = voteVisibilityCaseExpression(actionExpression);
+  const yearFilter = year ? "WHERE rs.sessionyear = ?" : "";
+  const binds = year ? [Number(year)] : [];
+  const result = await db
+    .prepare(
+      `SELECT
+        rs.sessionyear,
+        rs.legislativebody,
+        rs.votesequencenumber,
+        rs.condensedbillno,
+        rs.votedate,
+        rs.question_motion,
+        rs.title1,
+        rs.title2,
+        ${actionExpression} AS action_text,
+        COALESCE(vvo.include_in_grades, ${defaultVisibility}) AS include_in_grades
+      FROM d1_rollcallsummary rs
+      LEFT JOIN d1_vote_visibility_overrides vvo
+        ON vvo.sessionyear = rs.sessionyear
+        AND vvo.legislativebody = rs.legislativebody
+        AND vvo.votesequencenumber = rs.votesequencenumber
+        AND UPPER(vvo.condensedbillno) = UPPER(rs.condensedbillno)
+      ${yearFilter}
+      ORDER BY rs.votedate DESC, rs.votesequencenumber DESC`,
+    )
+    .bind(...binds)
+    .all();
+
+  return result.results || [];
 }
 
 async function ensureBillOverrideTable(db) {
@@ -256,10 +317,11 @@ async function getVoteSummary(db, year) {
               <p class="eyebrow">Vote Data</p>
               <h1>Review roll-call visibility</h1>
               <p>
-                Decide which roll-call actions are shown on profiles and which
-                actions count toward legislator grade calculations. Procedural
-                motions like Adopt Amendment and Special Order default to
-                hidden and excluded.
+                Each legislator receives at most one scored vote per bill. The
+                selector prefers the latest OTP, OTPA, ITL, table, or interim-study
+                motion in each chamber, then falls back to the latest eligible
+                motion. Amendment, special-order, and reconsideration actions
+                remain excluded by default.
               </p>
             </div>
             <a href="/admin/data">Back to data tools</a>
@@ -274,7 +336,8 @@ async function getVoteSummary(db, year) {
           <section class="summary-grid" aria-label="Vote review summary">
             <span><strong>{summary.total}</strong> Roll calls</span>
             <span><strong>{summary.shown}</strong> Shown</span>
-            <span><strong>{summary.graded}</strong> Used for grades</span>
+            <span><strong>{summary.graded}</strong> Grade eligible</span>
+            <span><strong>{summary.selected}</strong> Selected bill votes</span>
             <span><strong>{summary.overridden}</strong> Manually set</span>
           </section>
 
@@ -323,7 +386,8 @@ async function getVoteSummary(db, year) {
                 Status
                 <select name="visibility">
                   <option value="">All</option>
-                  <option value="graded" selected={filters.visibility === "graded"}>Shown and graded</option>
+                  <option value="graded" selected={filters.visibility === "graded"}>Grade eligible</option>
+                  <option value="selected" selected={filters.visibility === "selected"}>Selected alignment vote</option>
                   <option value="not-graded" selected={filters.visibility === "not-graded"}>Shown, not graded</option>
                   <option value="hidden" selected={filters.visibility === "hidden"}>Hidden</option>
                   <option value="overridden" selected={filters.visibility === "overridden"}>Manually set</option>
@@ -344,7 +408,9 @@ async function getVoteSummary(db, year) {
                       </a>
                       <span>{vote.sessionyear}</span>
                       <span>{bodyLabel(vote.legislativebody)}</span>
-                      <span>Roll call {vote.votesequencenumber}</span>
+                      <span class:list={["sequence-pill", vote.selected_for_grade && "selected"]}>
+                        Vote sequence {vote.votesequencenumber}
+                      </span>
                     </div>
                     <h2>{actionText(vote)}</h2>
                     {vote.bill_title && <p>{cleanText(vote.bill_title)}</p>}
@@ -355,6 +421,13 @@ async function getVoteSummary(db, year) {
                       <span>{vote.present || 0} Present</span>
                       <span>{vote.absent || 0} Absent</span>
                       <span>{vote.default_reason}</span>
+                      {vote.include_in_grades && (
+                        <span class:list={["grade-choice-note", vote.selected_for_grade && "selected"]}>
+                          {vote.selected_for_grade
+                            ? `Used for alignment: ${vote.grade_selection_reason}`
+                            : "Not used: another eligible sequence was selected"}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -393,7 +466,7 @@ async function getVoteSummary(db, year) {
                         value="1"
                         checked={Boolean(vote.include_in_grades)}
                       />
-                      Use for grades
+                      Grade eligible
                     </label>
                     <label>
                       Notes
@@ -498,7 +571,7 @@ async function getVoteSummary(db, year) {
 
   .summary-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
     margin: 18px 0;
   }
@@ -632,6 +705,18 @@ async function getVoteSummary(db, year) {
     color: #1f56c4;
   }
 
+  .vote-title-line .sequence-pill.selected,
+  .vote-meta .grade-choice-note.selected {
+    background: #dbeafe;
+    border-color: #2563eb;
+    color: #1e40af;
+  }
+
+  .vote-meta .grade-choice-note {
+    flex-basis: 100%;
+    border-radius: 8px;
+  }
+
   .vote-main h2 {
     margin: 0.75rem 0 0.4rem;
     font-size: 1.2rem;
@@ -660,8 +745,13 @@ async function getVoteSummary(db, year) {
   }
 
   .visibility-pill.graded {
-    background: #e8f7ed;
-    color: #126131;
+    background: #eef2f7;
+    color: #475569;
+  }
+
+  .visibility-pill.selected {
+    background: #dbeafe;
+    color: #1e40af;
   }
 
   .visibility-pill.not-graded {
