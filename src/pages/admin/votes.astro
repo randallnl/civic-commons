@@ -30,6 +30,8 @@ const filters = {
   year: Astro.url.searchParams.get("year")?.trim() || "2026",
   body: Astro.url.searchParams.get("body")?.trim().toUpperCase() || "",
   visibility: Astro.url.searchParams.get("visibility")?.trim() || "",
+  sort: normalizeVoteSort(Astro.url.searchParams.get("sort")),
+  direction: normalizeSortDirection(Astro.url.searchParams.get("direction")),
 };
 
 let votes = [];
@@ -99,6 +101,30 @@ function actionText(row = {}) {
   return cleanText(row.question_motion || row.title1 || row.title2 || "Motion not listed");
 }
 
+function normalizeVoteSort(value = "") {
+  const allowed = new Set(["date", "bill", "body", "sequence", "yeas", "nays", "status"]);
+  return allowed.has(value) ? value : "date";
+}
+
+function normalizeSortDirection(value = "") {
+  return value === "asc" ? "asc" : "desc";
+}
+
+function voteSortOrder(filters, defaultVisibility) {
+  const expressions = {
+    date: "rs.votedate",
+    bill: "UPPER(rs.condensedbillno)",
+    body: "rs.legislativebody",
+    sequence: "CAST(rs.votesequencenumber AS INTEGER)",
+    yeas: "CAST(COALESCE(rs.yeas, 0) AS INTEGER)",
+    nays: "CAST(COALESCE(rs.nays, 0) AS INTEGER)",
+    status: `COALESCE(vvo.include_in_grades, ${defaultVisibility})`,
+  };
+  const primary = expressions[filters.sort] || expressions.date;
+  const direction = filters.direction === "asc" ? "ASC" : "DESC";
+  return `${primary} ${direction}, rs.votedate DESC, rs.votesequencenumber DESC`;
+}
+
 async function getVoteRows(db, filters) {
   const where = [];
   const binds = [];
@@ -108,6 +134,7 @@ async function getVoteRows(db, filters) {
     NULLIF(TRIM(rs.title2), '')
   )`;
   const defaultVisibility = voteVisibilityCaseExpression(actionExpression);
+  const orderBy = voteSortOrder(filters, defaultVisibility);
 
   if (filters.year) {
     where.push("rs.sessionyear = ?");
@@ -177,7 +204,7 @@ async function getVoteRows(db, filters) {
       AND vvo.votesequencenumber = rs.votesequencenumber
       AND UPPER(vvo.condensedbillno) = UPPER(rs.condensedbillno)
     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-    ORDER BY rs.sessionyear DESC, rs.votedate DESC, rs.votesequencenumber DESC
+    ORDER BY ${orderBy}
     LIMIT ${filters.visibility === "selected" ? 2000 : 250}
   `;
 
@@ -391,6 +418,25 @@ async function getVoteSummary(db, year) {
                   <option value="not-graded" selected={filters.visibility === "not-graded"}>Shown, not graded</option>
                   <option value="hidden" selected={filters.visibility === "hidden"}>Hidden</option>
                   <option value="overridden" selected={filters.visibility === "overridden"}>Manually set</option>
+                </select>
+              </label>
+              <label>
+                Sort by
+                <select name="sort">
+                  <option value="date" selected={filters.sort === "date"}>Vote date</option>
+                  <option value="bill" selected={filters.sort === "bill"}>Bill number</option>
+                  <option value="body" selected={filters.sort === "body"}>Chamber</option>
+                  <option value="sequence" selected={filters.sort === "sequence"}>Vote sequence</option>
+                  <option value="yeas" selected={filters.sort === "yeas"}>Yea votes</option>
+                  <option value="nays" selected={filters.sort === "nays"}>Nay votes</option>
+                  <option value="status" selected={filters.sort === "status"}>Grade status</option>
+                </select>
+              </label>
+              <label>
+                Direction
+                <select name="direction">
+                  <option value="desc" selected={filters.direction === "desc"}>Descending</option>
+                  <option value="asc" selected={filters.direction === "asc"}>Ascending</option>
                 </select>
               </label>
               <button type="submit">Filter</button>
@@ -636,7 +682,7 @@ async function getVoteSummary(db, year) {
 
   .vote-filter-form {
     display: grid;
-    grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(130px, 0.7fr)) auto;
+    grid-template-columns: minmax(220px, 1.4fr) repeat(5, minmax(120px, 0.7fr)) auto;
     gap: 12px;
     align-items: end;
   }

@@ -82,3 +82,15 @@ test("grade cache and admin review both use the shared one-vote selector", async
   assert.match(admin, /Vote sequence \{vote\.votesequencenumber\}/);
   assert.match(admin, /selected_for_grade/);
 });
+
+test("admin vote review exposes allowlisted server-side sorting", async () => {
+  const admin = await readFile(
+    new URL("../src/pages/admin/votes.astro", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(admin, /name="sort"/);
+  assert.match(admin, /name="direction"/);
+  assert.match(admin, /const allowed = new Set\(\["date", "bill", "body", "sequence", "yeas", "nays", "status"\]\)/);
+  assert.match(admin, /ORDER BY \$\{orderBy\}/);
+});
