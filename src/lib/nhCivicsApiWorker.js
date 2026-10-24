@@ -1607,6 +1607,7 @@ async function handleRepProfile(request, env) {
       l.party,
       ${isFreeStaterSelectExpression(freeStateAlignedExpression("people.is_free_state_aligned_2026", "l.is_free_stater"))},
       ${isTpActionAlignedSelectExpression("people.is_tpaction_aligned_2026")},
+      COALESCE(people.show_alignment_rating, 1) AS show_alignment_rating,
       people.online_testimony_alignment_pct,
       people.online_testimony_grade,
       people.online_testimony_scored_votes,

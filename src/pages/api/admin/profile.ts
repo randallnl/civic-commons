@@ -69,6 +69,7 @@ const PERSON_FIELDS = [
   "is_free_stater",
   "isFreeStateAligned2026",
   "isTpActionAligned2026",
+  "showAlignmentRating",
   "substackUrl",
   "instagramUrl",
   "facebookUrl",
@@ -219,7 +220,12 @@ function normalizeFieldValue(field, value) {
   if (field === "nameAliases") return normalizeAliases(value);
   if (field === "electionYear") return Number(value) || value;
   if (field === "totalRaised" || field === "totalSpent") return Number(value) || 0;
-  if (field === "is_free_stater" || field === "isFreeStateAligned2026" || field === "isTpActionAligned2026") {
+  if (
+    field === "is_free_stater" ||
+    field === "isFreeStateAligned2026" ||
+    field === "isTpActionAligned2026" ||
+    field === "showAlignmentRating"
+  ) {
     return ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
   }
   return value;
@@ -1120,6 +1126,7 @@ async function updatePersonAlignmentFlags(db, identifiers = {}, data = {}) {
   const flagFields = [
     ["isFreeStateAligned2026", "is_free_state_aligned_2026"],
     ["isTpActionAligned2026", "is_tpaction_aligned_2026"],
+    ["showAlignmentRating", "show_alignment_rating"],
   ];
   const suppliedFields = flagFields.filter(([field]) =>
     Object.prototype.hasOwnProperty.call(data, field),

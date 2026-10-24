@@ -1,0 +1,2 @@
+ALTER TABLE d1_people
+ADD COLUMN show_alignment_rating INTEGER NOT NULL DEFAULT 1;

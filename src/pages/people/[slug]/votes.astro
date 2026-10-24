@@ -45,6 +45,9 @@ try {
 }
 
 const representative = apiData?.representative || null;
+const showAlignmentRating = Number(
+  representative?.show_alignment_rating ?? representative?.showAlignmentRating ?? 1,
+) !== 0;
 
 if (!error && !representative) {
   return Astro.redirect("/404");
@@ -494,26 +497,35 @@ function listText(value = "") {
             <div class="summary-intro">
               <p class="eyebrow">Vote Data Summary</p>
               <h2>
-                {voteDataSummary.alignmentLabel}
+                {showAlignmentRating ? voteDataSummary.alignmentLabel : "Vote activity summary"}
               </h2>
-              <p>
-                Testimony alignment is the share of scored voting actions that
-                matched the clear position in online public testimony. Every
-                eligible action counts once. Misaligned votes and documented
-                nonvotes remain in the scored total, while neutral, divided, or
-                missing testimony is excluded.
-              </p>
+              {showAlignmentRating ? (
+                <p>
+                  Testimony alignment is the share of scored voting actions that
+                  matched the clear position in online public testimony. Every
+                  eligible action counts once. Misaligned votes and documented
+                  nonvotes remain in the scored total, while neutral, divided, or
+                  missing testimony is excluded.
+                </p>
+              ) : (
+                <p>
+                  This summary shows the voting actions and tracked bills currently
+                  available for this legislator.
+                </p>
+              )}
             </div>
 
             <div class="summary-stats">
-              <span class="summary-good">
-                <strong>
-                  {voteDataSummary.testimonyAlignmentPercent === null
-                    ? "N/A"
-                    : `${voteDataSummary.testimonyAlignmentPercent}%`}
-                </strong>
-                Testimony aligned
-              </span>
+              {showAlignmentRating && (
+                <span class="summary-good">
+                  <strong>
+                    {voteDataSummary.testimonyAlignmentPercent === null
+                      ? "N/A"
+                      : `${voteDataSummary.testimonyAlignmentPercent}%`}
+                  </strong>
+                  Testimony aligned
+                </span>
+              )}
               <span>
                 <strong>{voteDataSummary.scoredVotes}</strong>
                 Scored actions

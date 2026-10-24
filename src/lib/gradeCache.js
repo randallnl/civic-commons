@@ -8,6 +8,7 @@ import { ensureVoteVisibilityTable, voteVisibilityCaseExpression } from "./voteV
 import { ensureGradeVoteSelectionOverrideTable } from "./gradeVoteOverrides";
 
 const GRADE_COLUMNS = [
+  ["show_alignment_rating", "INTEGER NOT NULL DEFAULT 1"],
   ["online_testimony_alignment_pct", "REAL"],
   ["online_testimony_grade", "TEXT"],
   ["online_testimony_scored_votes", "INTEGER"],

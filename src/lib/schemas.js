@@ -124,6 +124,8 @@ export const RepresentativeSchema = z
     is_tpaction_aligned_2026: z.unknown().optional(),
     isFreeStater: z.unknown().optional(),
     is_free_stater: z.unknown().optional(),
+    showAlignmentRating: z.unknown().optional(),
+    show_alignment_rating: z.unknown().optional(),
     alignmentPercent: numberish,
     alignment_percent: numberish,
     onlineTestimonyAlignmentPct: numberish,

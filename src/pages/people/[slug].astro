@@ -224,6 +224,9 @@ const voteGrade = representativeGradeFor(
   billSummaries,
 );
 const voteTestimonyAlignmentPercent = testimonyAlignmentPercentForGrade(voteGrade);
+const showAlignmentRating = Number(
+  representative?.show_alignment_rating ?? representative?.showAlignmentRating ?? 1,
+) !== 0;
 
 trackedVotes = await Promise.all(
   trackedVotes.map(async (vote) => {
@@ -1085,7 +1088,7 @@ function uniqueTowns(towns = []) {
         </section>
       )}
 
-      <section class:list={["profile-hero", hasLegislatorProfile && "has-alignment"]}>
+      <section class:list={["profile-hero", hasLegislatorProfile && showAlignmentRating && "has-alignment"]}>
         <div class="portrait-card">
           {portraitUrl ? (
             <img src={portraitUrl} alt={person.full_name} />
@@ -1098,7 +1101,7 @@ function uniqueTowns(towns = []) {
           <p class="eyebrow">{heroEyebrow}</p>
           <h1>{person.full_name}</h1>
 
-          {hasLegislatorProfile && (
+          {hasLegislatorProfile && showAlignmentRating && (
           <div class="profile-grade-row">
             <a
               class="profile-grade testimony-alignment"
@@ -2023,6 +2026,16 @@ function uniqueTowns(towns = []) {
                 </select>
               </label>
             </div>
+            <label>
+              Testimony Alignment Rating
+              <select name="showAlignmentRating">
+                <option value="true" selected={showAlignmentRating}>Show on profile</option>
+                <option value="false" selected={!showAlignmentRating}>Hide on profile</option>
+              </select>
+              <small class="field-help">
+                Hiding the rating preserves its calculation and vote data so it can be shown again later.
+              </small>
+            </label>
             <input
               type="hidden"
               name="reviewNote"
