@@ -122,3 +122,18 @@ test("admin vote review can override and rebuild an alignment vote", async () =>
   assert.match(endpoint, /rebuildGradeCacheForBillKey/);
   assert.match(cache, /selected_for_grade_override/);
 });
+
+test("admin grade rebuild shows in-flight, completion, and failure feedback", async () => {
+  const [admin, endpoint] = await Promise.all([
+    readFile(new URL("../src/pages/admin/votes.astro", import.meta.url), "utf8"),
+    readFile(new URL("../src/pages/api/admin/grades.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(admin, /hx-disabled-elt="find button"/);
+  assert.match(admin, /hx-indicator="find \.grade-cache-progress"/);
+  assert.match(admin, /Rebuild running\. Keep this page open/);
+  assert.match(admin, /Rebuilding grades…/);
+  assert.match(endpoint, /Finished rebuilding \$\{result\.rebuilt\} of \$\{result\.requested\}/);
+  assert.match(endpoint, /admin_grade_cache_rebuild_completed/);
+  assert.match(endpoint, /Rebuild failed: \$\{message\}/);
+});

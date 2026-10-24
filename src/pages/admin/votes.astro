@@ -396,16 +396,28 @@ async function getVoteSummary(db, year) {
               </p>
             </div>
             <form
+              class="grade-cache-form"
               action="/api/admin/grades"
               method="post"
               hx-post="/api/admin/grades"
               hx-target="find .grade-cache-status"
               hx-swap="innerHTML"
+              hx-disabled-elt="find button"
+              hx-indicator="find .grade-cache-progress"
             >
               <input type="hidden" name="scope" value="all" />
               <input type="hidden" name="limit" value="500" />
-              <button type="submit">Rebuild all grades</button>
-              <span class="grade-cache-status" aria-live="polite"></span>
+              <button type="submit">
+                <span class="idle-label">Rebuild all grades</span>
+                <span class="busy-label">Rebuilding grades…</span>
+              </button>
+              <span class="grade-cache-progress htmx-indicator" role="status" aria-live="assertive">
+                <span class="grade-cache-spinner" aria-hidden="true"></span>
+                Rebuild running. Keep this page open; the result will appear when it finishes.
+              </span>
+              <span class="grade-cache-status" aria-live="polite">
+                Rebuild results will appear here.
+              </span>
             </form>
           </section>
 
@@ -704,6 +716,70 @@ async function getVoteSummary(db, year) {
     padding: 11px 16px;
   }
 
+  .grade-cache-panel button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+  }
+
+  .grade-cache-panel .busy-label {
+    display: none;
+  }
+
+  .grade-cache-form.htmx-request .idle-label {
+    display: none;
+  }
+
+  .grade-cache-form.htmx-request .busy-label {
+    display: inline;
+  }
+
+  .grade-cache-progress {
+    align-items: center;
+    color: #1f56c4;
+    display: none;
+    flex-basis: 100%;
+    font-size: 0.88rem;
+    font-weight: 850;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .grade-cache-progress.htmx-request {
+    display: inline-flex;
+  }
+
+  .grade-cache-spinner {
+    animation: grade-cache-spin 0.8s linear infinite;
+    border: 3px solid #cfe0ff;
+    border-radius: 50%;
+    border-top-color: #245ae8;
+    height: 14px;
+    width: 14px;
+  }
+
+  .grade-cache-status {
+    color: #66758d;
+    flex-basis: 100%;
+    font-size: 0.85rem;
+    font-weight: 800;
+    min-height: 1.2rem;
+    text-align: right;
+  }
+
+  .grade-cache-status :global(.inline-status.success) {
+    color: #126131;
+  }
+
+  .grade-cache-status :global(.inline-status.error) {
+    color: #8d2314;
+  }
+
+  @keyframes grade-cache-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   .summary-grid span {
     border: 1px solid rgba(57, 102, 163, 0.18);
     border-radius: 16px;
@@ -929,6 +1005,12 @@ async function getVoteSummary(db, year) {
 
     .grade-cache-panel form {
       justify-content: flex-start;
+    }
+
+    .grade-cache-progress,
+    .grade-cache-status {
+      justify-content: flex-start;
+      text-align: left;
     }
 
     .vote-filter-form,
